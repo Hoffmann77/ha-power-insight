@@ -1,0 +1,107 @@
+{
+  "title": "Heat pump Signal",
+  "config": {
+    "flow_title": "Heat pump Signal",
+    "step": {
+      "user": {
+        "title": "Welcome to MyGrid",
+        "description": "Please configure the MyGrid component below. \n\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+        "data": {
+          "name": "Name",
+          "enable_pv": "Add a pv-system",
+          "enable_bat": "Add a battery",
+          "num_loads": "Number of loads",
+          "num_surplus_loads": "Number of controllable loads"
+        }
+      },
+      "grid": {
+        "title": "Grid configuration",
+        "description": "Please configure your grid entities.\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+        "data": {
+          "grid_power_entity": "Entity providing the grid power",
+          "grid_power_entity_inverted": "Invert the power entity",
+          "grid_electricity_price_entity": "Entity providing the price of electricity",
+          "grid_co2_intensity_entity": "Entity providing the CO2 intensity"
+        },
+        "data_description": {
+          "grid_power_entity": "Test data description"
+        }
+      },
+      "pv_system": {
+        "title": "PV system configuration",
+        "description": "Please configure your pv-system entities.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
+        "data": {
+          "pv_power_entity": "Entity providing the power of the pv-system",
+          "pv_production_over_lifetime": "Sum of electrical energy produced over lifetime",
+          "pv_costs_over_lifetime": "Total costs over lifetime",
+          "pv_co2_footprint": "Carbon footprint of your pv-system"
+        }
+      },
+      "battery": {
+        "title": "Battery configuration",
+        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
+        "data": {
+          "bat_soc_entity": "Entity providing the state of charge",
+          "bat_power_entity": "Entity providing the power of the battery",
+          "bat_power_entity_inverted": "Invert the power entity",
+          "bat_round_trip_efficiency": "Round trip efficiency",
+          "bat_energy_discharged_over_lifetime": "Sum of energy discharged over lifetime",
+          "bat_costs_over_lifetime": "Total costs over lifetime",
+          "bat_co2_footprint": "Carbon footprint of your battery"
+        }
+      }
+    },
+    "error": {
+      "unknown": "Unexpected error. See the logs for more details.",
+      "name_invalid": "Please provide a valid 'Name'.",
+      "no_signal_enabled": "Please enable at least one Signal."
+    },
+    "abort": {
+      "already_configured": "A Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Welcome to Heat pump Signal",
+        "description": "Please configure your Heat pump Signal below.\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+        "data": {
+          "name": "Name",
+          "lock_interval": "State change interval",
+          "pv_signal": "Enable the PV Signal",
+          "electicity_price_signal": "Enable the Electicity price Signal",
+          "co2_signal": "Enable the CO2 Signal"
+        }
+      },
+      "pv_signal": {
+        "title": "Set up the PV Signal",
+        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
+        "data": {
+          "grid_power_sensor": "Grid power entity",
+          "grid_power_sensor_inverted": "Grid export is a positive value",
+          "battery_soc_sensor": "Battery SoC entity",
+          "battery_power_sensor": "Battery power entity",
+          "battery_power_sensor_inverted": "Battery charging power is a positive value",
+          "heat_pump_power_sensor": "Heat pump power entity",
+          "heat_pump_power_sensor_inverted": "Heat pump power is a negative value",
+          "static_threshold": "Treshold",
+          "dynamic_threshold": "Enable the dynamic treshold",
+          "optional_thresholds": "Optional threshold",
+          "buffer_power": "Buffer power",
+          "hysteresis": "Hysteresis",
+          "battery_min_soc": "Battery minimal SoC",
+          "battery_min_power": "Battery minimal charging power"
+        }
+      }
+    }
+  },
+  "selector": {
+    "inverters_config": {
+      "options": {
+        "gateway_sensor": "Add inverters as gateway sensor",
+        "device": "Add inverters as dedicated devices",
+        "disabled": "Disable inverters"
+      }
+    }
+  }
+}
