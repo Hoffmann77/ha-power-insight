@@ -1,59 +1,27 @@
-"""Sensor entities for the Heat pump Signal integration."""
+"""Sensor entities for the PowerInsight integration."""
 
 from __future__ import annotations
 
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from operator import attrgetter
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+# from operator import attrgetter
 
-from homeassistant.components.event import EventEntity
 from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import PERCENTAGE, CURRENCY_EURO
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.const import PERCENTAGE  # , CURRENCY_EURO
 from homeassistant.components.sensor import (
     # SensorDeviceClass,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.helpers.event import (
-    async_call_later,
-    async_track_state_change_event,
-    async_track_state_report_event,
-)
-from homeassistant.const import (
-    ATTR_DEVICE_CLASS,
-    ATTR_UNIT_OF_MEASUREMENT,
-    CONF_METHOD,
-    CONF_NAME,
-    CONF_UNIQUE_ID,
-    STATE_UNAVAILABLE,
-    UnitOfTime,
-)
-from homeassistant.core import (
-    CALLBACK_TYPE,
-    Event,
-    EventStateChangedData,
-    EventStateReportedData,
-    HomeAssistant,
-    State,
-    callback,
-)
 
-from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
-
+from .entity import BaseEventSensorEntity
 from .const import DOMAIN  # , CONF_PV_SIGNAL, CONF_BATTERY, CONF_HEATPUMP
-from .coordinator import LocalGridUpdateCoordinator
-# from .entity import LocalGridBaseEntity
 from .utils import get_value
-
 from . import MyConfigEntry
 
-from .entity import BaseEventUpdateSensor
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -418,15 +386,15 @@ async def async_setup_entry(
 
     # Add the total power sensors
     for description in TOTAL_POWER_SENSORS:
-        source_entities = None
-        entity = UpdateSensorEntity(
+        source_entities = power_insight.source_entities_power
+        entity = EventSensorEntity(
             description, entry, source_entities, power_insight
         )
         key_entity_mapping[description.key] = entity.unique_id
         entities.append(entity)
 
     # Add the share sensors
-    for adapter in power_insight.share_adapters:
+    for adapter in power_insight.power_providing_adapters:
         description = SHARE_SENSOR
         description.key = f"{adapter.name}_share"
         description.name = f"{" ".join(adapter.name.split("_")).title()} Share"
@@ -436,7 +404,7 @@ async def async_setup_entry(
         source_entities = [
             key_entity_mapping[val] for val in description.depending_on
         ]
-        entity = UpdateSensorEntity(
+        entity = EventSensorEntity(
             description, entry, source_entities, power_insight
         )
         key_entity_mapping[description.key] = entity.unique_id
@@ -447,10 +415,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-
-
-
-class UpdateSensorEntity(BaseEventBasedUpdateSensor):
+class EventSensorEntity(BaseEventSensorEntity):
 
     entity_description: UpdateSensorEntityDescription
 
@@ -481,89 +446,3 @@ class UpdateSensorEntity(BaseEventBasedUpdateSensor):
         data = self.data.electricity_price
         assert data is not None
         return self.entity_description.value_fn(data)
-
-
-
-
-
-
-
-
-
-
-
-# class LocalGridSensorBaseEntity(LocalGridBaseEntity, SensorEntity):
-#     """Defines a base localGrid sensor entity."""
-
-
-# class LocalGridSensorEntity(LocalGridSensorBaseEntity):
-#     """Implementation of a Heat pump signal sensor."""
-
-#     def __init__(
-#             self,
-#             coordinator: LocalGridUpdateCoordinator,
-#             description: SensorEntityDescription,
-#     ) -> None:
-#         """Initialize the sensor entity."""
-#         super().__init__(coordinator, description)
-#         self._attr_unique_id = (
-#             f"{self.coordinator.config_entry.entry_id}"
-#             + f"_{self.entity_description.key}"
-#         )
-#         self._attr_device_info = DeviceInfo(
-#             entry_type=DeviceEntryType.SERVICE,
-#             identifiers={(DOMAIN, coordinator.config_entry.entry_id)},
-#             name=coordinator.config_entry.title or "localGrid",
-#         )
-
-
-# class ShareSensorEntity(LocalGridSensorEntity):
-#     """Power share entity."""
-
-#     entity_description: ShareSensorEntityDescription
-
-#     @property
-#     def native_value(self) -> float | None:
-#         """Return the state of the sensor."""
-#         data = self.data.shares
-#         assert data is not None
-#         return self.entity_description.value_fn(data)
-
-
-# class PriceSensorEntity(LocalGridSensorEntity):
-#     """Power share entity."""
-
-#     entity_description: PriceSensorEntityDescription
-
-#     @property
-#     def native_value(self) -> float | None:
-#         """Return the state of the sensor."""
-#         data = self.data.electricity_price
-#         assert data is not None
-#         return self.entity_description.value_fn(data)
-
-
-# class Co2IntensitySensorEntity(LocalGridSensorEntity):
-#     """Power share entity."""
-
-#     entity_description: PriceSensorEntityDescription
-
-#     @property
-#     def native_value(self) -> float | None:
-#         """Return the state of the sensor."""
-#         data = self.data.carbon_intensity
-#         assert data is not None
-#         return self.entity_description.value_fn(data)
-
-
-# class CostsSavingsSensorEntity(LocalGridSensorEntity):
-#     """Power share entity."""
-
-#     entity_description: SavingsSensorEntityDescription
-
-#     @property
-#     def native_value(self) -> float | None:
-#         """Return the state of the sensor."""
-#         data = self.data.savings
-#         assert data
-#         return self.entity_description.value_fn(data)

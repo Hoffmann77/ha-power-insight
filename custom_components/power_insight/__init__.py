@@ -33,7 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     power_insight = PowerInsight()
 
     if grid_config := entry.options.get(CONF_GRID):
-        power_insight.register_grid(
+        power_insight.register_adapter(
             GridAdapter.from_config("grid", grid_config)
         )
 
@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         if data := entry.data.get(CONF_PV):
             pv_config.update(data)
 
-        power_insight.register_power_source(
+        power_insight.register_adapter(
             PowerSourceAdapter.from_pv_config("pv_system", pv_config)
         )
 
