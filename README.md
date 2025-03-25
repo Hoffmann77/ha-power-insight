@@ -1,6 +1,6 @@
 # Power Insight for Home Assistant
 
-**A custom component for Home Assistant that provides you interesting insights about the electrical Power in your home.**
+**A Custom component that provides you useful insights about the electrical Power in your home.**
 
 Get useful insights about the carbon intensity, cost of electricity, savings and power distribution in your home.
 
