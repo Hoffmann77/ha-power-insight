@@ -1,45 +1,49 @@
 {
-  "title": "Heat pump Signal",
+  "title": "PowerInsight",
   "config": {
-    "flow_title": "Heat pump Signal",
+    "flow_title": "PowerInsight",
     "step": {
       "user": {
-        "title": "Welcome to MyGrid",
-        "description": "Please configure the MyGrid component below. \n\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+        "title": "Welcome to Power insight",
+        "description": "Please configure the PowerInsight component below. \n\n **Visit: https://github.com/Hoffmann77/ha-power-insight for additional information**",
         "data": {
           "name": "Name",
           "enable_pv": "Add a pv-system",
-          "enable_bat": "Add a battery",
-          "num_loads": "Number of loads",
-          "num_surplus_loads": "Number of controllable loads"
+          "enable_bat": "Add a battery"
         }
       },
       "grid": {
         "title": "Grid configuration",
-        "description": "Please configure your grid entities.\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+        "description": "Please configure your grid entities.\n **For more information please visit: https://github.com/Hoffmann77/ha-power-insight**",
         "data": {
-          "grid_power_entity": "Entity providing the grid power",
-          "grid_power_entity_inverted": "Invert the power entity",
+          "name": "Name",
+          "power_entity": "Grid power entity",
+          "power_entity_inverted": "Invert the grid power entity",
           "grid_electricity_price_entity": "Entity providing the price of electricity",
-          "grid_co2_intensity_entity": "Entity providing the CO2 intensity"
+          "co2_intensity_entity": "Entity providing the CO2 intensity"
         },
         "data_description": {
-          "grid_power_entity": "Test data description"
+          "co2_intensity_entity": "Test data description"
         }
       },
       "pv_system": {
         "title": "PV system configuration",
-        "description": "Please configure your pv-system entities.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
+        "description": "Please configure your pv-system entities.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
         "data": {
-          "pv_power_entity": "Entity providing the power of the pv-system",
-          "pv_production_over_lifetime": "Sum of electrical energy produced over lifetime",
-          "pv_costs_over_lifetime": "Total costs over lifetime",
-          "pv_co2_footprint": "Carbon footprint of your pv-system"
+          "name": "Name",
+          "power_entity": "Pv-system power entity",
+          "power_entity_inverted": "Invert the grid power entity",
+          "energy_over_lifetime": "Sum of electrical energy produced over lifetime",
+          "costs_over_lifetime": "Total costs over lifetime",
+          "co2_footprint": "Carbon footprint of your pv-system"
+        },
+        "data_description": {
+          "co2_footprint": "Test data description"
         }
       },
       "battery": {
         "title": "Battery configuration",
-        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
+        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
         "data": {
           "bat_soc_entity": "Entity providing the state of charge",
           "bat_power_entity": "Entity providing the power of the battery",
@@ -53,7 +57,8 @@
     },
     "error": {
       "unknown": "Unexpected error. See the logs for more details.",
-      "name_invalid": "Please provide a valid 'Name'.",
+      "name_invalid": "Please provide a valid Name.",
+      "name_not_unique": "Please provide a unique Name.",
       "no_signal_enabled": "Please enable at least one Signal."
     },
     "abort": {

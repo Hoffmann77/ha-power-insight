@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
-from typing import Iterable
-from dataclasses import dataclass, field
+# from typing import Iterable
+# from dataclasses import dataclass
 
-from .metrics import PowerMetric, PowerInput, PowerOutput, Load, Power
-from .utils import division_zero
 
 # "grid_config": {
 #   "grid_power_entity_inverted": false,
@@ -15,192 +14,117 @@ from .utils import division_zero
 #   "grid_co2_intensity_entity": "sensor.electricity_maps_co2_intensitat",
 #   "grid_power_entity": "sensor.enphase_gateway_122225053579_grid_power"
 
+from homeassistant.const import CONF_NAME
+
 from .const import (
-    CONF_GRID_POWER, CONF_GRID_INVERTED, CONF_GRID_PRICE,
-    CONF_GRID_CO2_INTENSITY, CONF_PV_POWER, CONF_LCOE, CONF_CO2_INTENSITY
+    CONF_KEY,
+    CONF_POWER_ENTITY, CONF_POWER_INVERTED, CONF_ELECTRICITY_PRICE,
+    CONF_LCOE, CONF_CO2_INTENSITY,
+    CONF_LCOS,
+    CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
 )
 
 
-@dataclass
-class AdapterConfig:
-    """Adapter configuration.
-
-    Parameters
-    ----------
-    entities : list of str
-        List of all entities used by the adapter.
-    provides_power : bool
-        Defines whether the adapter provides power.
-        A `share` entity is created if the adapter provides power.
-    Adapters that
-        provide power
+_LOGGER = logging.getLogger(__name__)
 
 
-    Returns
-    -------
-    None
-        DESCRIPTION.
+class AdapterContainer:
+    """Container for adapters."""
 
-    """
+    def __init__(self) -> None:
+        """Initialize instance."""
+        self.adapters = []
+        self.key_mapping = {}
 
+    @property
+    def source_entities(self) -> list[str]:
+        """Return all source entities."""
+        return self.source_entities_power
 
-    entities: list[str] = field(default_factory=list)
-    imports_power: bool = False
-    exports_power: bool = False
-    generates_power: bool = False
-    consumes_power: bool = False
+    @property
+    def source_entities_power(self) -> list[str]:
+        """Return the entities that affect power related attributes."""
+        entities = []
+        for adapter in self.adapters:
+            entities += adapter.source_entities_power
 
-    source_entities_power: list[str] = field(default_factory=list)
-    source_entities_price: list[str] = field(default_factory=list)
-    source_entities_co2: list[str] = field(default_factory=list)
+        return entities
 
-    total_power_entities: list[str] = field(default_factory=list)
+    @property
+    def entity_mapping(self) -> dict:
+        """Return the source entities mapped to the corresponding adapter."""
+        mapping = {}
+        for adapter in self.adapters:
+            for entity in adapter.source_entities:
+                mapping[entity] = adapter
 
+        return mapping
 
+    def __iter__(self):
+        """Return iterator."""
+        return iter(self.adapters)
 
-# class AdapterRegistry:
+    def add(self, adapter):
+        """Add the given adapter."""
+        self.adapters.append(adapter)
 
-#     def __init__(self) -> None:
-#         """Initialize instance."""
-#         self.adapters: list[BasePowerAdapter] = []
-#         self.entity_adapter_dict: dict[str, BasePowerAdapter] = {}
+        self.key_mapping[adapter.key] = adapter
 
-#         self.power_importing_adapters: list[BasePowerAdapter] = []
-#         self.power_exporting_adapters: list[BasePowerAdapter] = []
-#         self.power_generating_adapters: list[BasePowerAdapter] = []
-#         self.power_consuming_adapters: list[BasePowerAdapter] = []
-
-#         self.source_entities_power: list[str] = []
-#         self.source_entities_price: list[str] = []
-#         self.source_entities_co2: list[str] = []
-
-#     @property
-#     def as_list(self) -> list[BasePowerAdapter]:
-#         """Return all adapters as list."""
-#         return self.adapters
-
-#     def get_adapter(self, entity_id: str) -> BasePowerAdapter | None:
-#         """Return the adapter that corresponds to the entity_id."""
-#         return self._entity_adapter_dict.get(entity_id)
-
-#     def register(self, adapter) -> None:
-#         """Register an adapter."""
-#         config = adapter.config
-
-#         # Register the adapter
-#         self.adapters.append(adapter)
-
-#         # Register the source entities
-#         self._extend_list(
-#             self.source_entities_power, config.source_entities_power
-#         )
-#         self._extend_list(
-#             self.source_entities_price, config.source_entities_price
-#         )
-#         self._extend_list(
-#             self.source_entities_co2, config.source_entities_co2
-#         )
-
-#         # Categorize the adapters
-#         if adapter.config.imports_power:
-#             self.power_importing_adapters.append(adapter)
-#         if adapter.config.exports_power:
-#             self.power_exporting_adapters.append(adapter)
-#         if adapter.config.generates_power:
-#             self.power_generating_adapters.append(adapter)
-#         if adapter.config.consumes_power:
-#             self.power_consuming_adapters.append(adapter)
-
-#         # Add the adapters to the entity adapter mapping
-#         for entity in adapter.config.entities:
-#             self.entity_adapter_dict[entity] = adapter
+    def get_by_key(self, key: str):
+        """Return the adapter by key."""
+        return self.key_mapping.get(key)
 
 
+class ProductionAdapters(AdapterContainer):
+    """Container for production adapters."""
+
+    pass
 
 
-#     def _extend_list(self, to_extend: list, extend_with: list) -> list:
-#         """Extend the given list without duplicates."""
-#         return to_extend.extend(
-#             [val for val in extend_with if val not in to_extend]
-#         )
+class ConsumptionAdapters(AdapterContainer):
+    """Container for production adapters."""
 
-
-
-
-
-#     def get_source_entities_power(self) -> list[str]:
-#         """Return all entities that affect the total power."""
-#         entities = []
-#         for adapter in self.adapters:
-#             _entities = adapter.source_entities_power
-#             entities.extend([e for e in _entities if e not in entities])
-
-#         return entities
-
-#     def get_source_entities_price(self) -> list[str]:
-#         """Return all entities that affect the total price."""
-#         entities = []
-#         for adapter in self.adapters:
-#             _entities = adapter.source_entities_price
-#             entities.extend([e for e in _entities if e not in entities])
-
-#         return entities
-
-#     def get_source_entities_co2(self) -> list[str]:
-#         """Return all entities that affect the total co2 intensity."""
-#         entities = []
-#         for adapter in self.adapters:
-#             _entities = adapter.source_entities_co2
-#             entities.extend([e for e in _entities if e not in entities])
-
-#         return entities
-
-
-
-
-#     def get_power_providing_adapters(self) -> list[BasePowerAdapter]:
-#         """Return the adapters that provide power."""
-#         adapters = []
-#         for adapter in self.adapters:
-#             config = adapter.config
-#             if config.imports_power or config.generates_power:
-#                 adapters.append(adapter)
-
-#         return adapters
+    pass
 
 
 class PowerInsight:
     """Class used for the calculation of the power insights."""
 
-    def __init__(self) -> None:
+    def __init__(self, grid_adapter: GridAdapter) -> None:
         """Initialize instance."""
-        self._adapters: list[BasePowerAdapter] = []
-        self._entity_adapter_dict: dict[str, BasePowerAdapter] = {}
+        self.grid_adapter = grid_adapter
+        self.prod_adapters = ProductionAdapters()
+        self.cons_adapters = ConsumptionAdapters()
 
-        self.power_importing_adapters: list[BasePowerAdapter] = []
-        self.power_exporting_adapters: list[BasePowerAdapter] = []
-        self.power_generating_adapters: list[BasePowerAdapter] = []
-        self.power_consuming_adapters: list[BasePowerAdapter] = []
+        if not isinstance(grid_adapter, GridAdapter):
+            raise ValueError("Invalid adapter.")
+
+    @property
+    def entity_mapping(self) -> dict:
+        """Return the adapter by it's key."""
+        mapping = {}
+        for entity in self.grid_adapter.source_entities:
+            mapping[entity] = self.grid_adapter
+
+        mapping.update(self.prod_adapters.entity_mapping)
+        mapping.update(self.cons_adapters.entity_mapping)
+
+        return mapping
 
     @property
     def source_entities_power(self) -> list[str]:
-        """Return all entities that affect the total power."""
-        entities = []
-        for adapter in self._adapters:
-            _entities = adapter.config.source_entities_power
-            entities.extend([e for e in _entities if e not in entities])
-
-        return entities
+        """Return a list of all entities that affect power."""
+        return (
+            self.grid_adapter.source_entities_power
+            + self.prod_adapters.source_entities_power
+        )
 
     @property
     def source_entities_price(self) -> list[str]:
         """Return all entities that affect the total price."""
-        entities = []
-        for adapter in self._adapters:
-            _entities = adapter.config.source_entities_price
-            entities.extend([e for e in _entities if e not in entities])
-
-        return entities
+        return (
+            self.grid_adapter.source_entities_price
+        )
 
     @property
     def source_entities_co2(self) -> list[str]:
@@ -215,264 +139,1069 @@ class PowerInsight:
     @property
     def power_providing_adapters(self) -> list[BasePowerAdapter]:
         """Return the adapters that provide power."""
-        return self.power_importing_adapters.extend(
-            self.power_generating_adapters
-        )
+        return [self.grid_adapter] + self.production_adapters
 
     @property
-    def total_input(self) -> float | None:
-        """Return the total input power."""
-        power = 0
-        for adapter in self.power_importing_adapters:
-            power += adapter.import_power
-        for adapter in self.power_generating_adapters:
-            power += adapter.production
+    def grid_import(self) -> float | None:
+        """Return the power that is imported from the grid."""
+        if (power := self.grid_adapter.import_power) is None:
+            return None
 
         return power
 
     @property
-    def total_output(self) -> float | None:
-        """Return the total output."""
-        power = 0
-        for adapter in self.power_exporting_adapters:
-            power += adapter.export_power
-        # for adapter in self.power_consuming_adapters:
-        #     power += adapter.consumption
+    def grid_export(self) -> float | None:
+        """Return the power that is returned to the grid."""
+        if (power := self.grid_adapter.export_power) is None:
+            return None
 
         return power
 
     @property
-    def consumption(self) -> float | None:
-        """Return the consumption."""
-        return self.total_input - self.total_output
+    def production(self) -> float | None:
+        """Return the sum of power produced by the production adapters."""
+        power = 0.0
+        for adapter in self.prod_adapters:
+            if (prod := adapter.production) is not None:
+                power += prod
+            else:
+                return None
 
-#     @property
-#     def shares(self):
-#         """Return the shares."""
-#         shares = {
-#             "grid": division_zero(self._grid_import.power, self.total_input)
-#         }
-#         for name, val in self._production.items():
-#             shares[name] = val.power / self.total_input
+        return power
 
-#         return shares
+    @property
+    def utilization(self) -> float | None:
+        """Return the sum of power utilized by the production adapters."""
+        power = 0.0
+        for adapter in self.prod_adapters:
+            if (cons := adapter.consumption) is not None:
+                power += cons
+            else:
+                return None
 
-#     @property
-#     def carbon_intensity(self):
-#         """Return the carbon intensity."""
-#         write_off = self._grid_import.co2_intensity * self.shares["grid"]
-#         lifetime = write_off
-#         for name, val in self._production.items():
-#             # share = val[0] / self.total_input
-#             lifetime += val.co2_intensity * self.shares[name]
+        return power
 
-#         return {"write_off": write_off, "lifetime": lifetime}
+    @property
+    def total_power(self) -> float | None:
+        """Return the sum of power that is available."""
+        if (grid_import := self.grid_import) is None:
+            return None
 
-#     @property
-#     def electricity_price(self):
-#         """Return the electricity price."""
-#         write_off = lifetime = self._grid_import.price * self.shares["grid"]
-#         for name, val in self._production.items():
-#             # share = val[0] / self.total_input
-#             lifetime += val.price * self.shares[name]
+        if (production := self.production) is None:
+            return None
 
-#         return {"write_off": write_off, "lifetime": lifetime}
+        return grid_import + production
 
-#     @property
-#     def savings(self):
-#         """Return the savings."""
-#         savings = {}
-#         for name, val in self._production.items():
-#             grid_price = self._grid_import.price
-#             savings[name] = {
-#                 "write_off": grid_price * self.shares[name],
-#                 "lifetime": (grid_price - val.price) * self.shares[name],
-#             }
+    @property
+    def self_consumption(self) -> float | None:
+        """Return the sum of power that is neither exported or utilized.
 
-    def get_adapter(self, entity_id: str) -> BasePowerAdapter | None:
-        """Return the adapter that corresponds to the entity_id."""
-        return self._entity_adapter_dict.get(entity_id)
+        This is the the power that is self consumed.
 
-    def set_value(self, entity_id, new_value) -> None:
+        """
+        if (total_power := self.total_power) is None:
+            return None
+
+        if (power_utilized := self.utilization) is None:
+            return None
+
+        return total_power - power_utilized
+
+    #
+    # PRICES
+    #
+
+    @property
+    def coe_rate(self) -> float | None:
+        """Return the combined cost of electricity rate."""
+        result = 0.0
+        adapters = [self.grid_adapter] + self.prod_adapters.adapters
+        for adapter in adapters:
+            if (coe_rate := adapter.coe_rate) is None:
+                return None
+
+            result += coe_rate
+
+        return result
+
+    @property
+    def coe(self) -> float | None:
+        """Return the cost of electricity."""
+        if (coe_rate := self.coe_rate) is None:
+            return None
+
+        if coe_rate == 0.0:
+            return 0.0
+
+        if (total_power := self.total_power) is None:
+            return None
+
+        return self._divide(coe_rate, total_power)
+
+    @property
+    def lcoe_rate(self) -> float | None:
+        """Return the combined levelized cost of electricity rate."""
+        result = 0.0
+        adapters = [self.grid_adapter] + self.prod_adapters.adapters
+        for adapter in adapters:
+            if (lcoe_rate := adapter.lcoe_rate) is None:
+                return None
+
+            result += lcoe_rate
+
+        return result
+
+    @property
+    def lcoe(self) -> float | None:
+        """Return the levelized cost of electricity."""
+        if (lcoe_rate := self.lcoe_rate) is None:
+            return None
+
+        if lcoe_rate == 0.0:
+            return 0.0
+
+        if (total_power := self.total_power) is None:
+            return None
+
+        return self._divide(lcoe_rate, total_power)
+
+    @property
+    def adapters_coo_rates(self):
+        """Return the cost of consumption rates."""
+        coo_rates = {}
+        if (coe := self.coe) is None:
+            return {}
+
+        for adapter in self.prod_adapters:
+            if (consumption := adapter.consumption) is None:
+                coo_rates[adapter.key] = None
+                continue
+
+            coo_rates[adapter.key] = self._to_kilo(consumption) * coe
+
+        return coo_rates
+
+    @property
+    def adapters_lcoo_rates(self):
+        """Return the cost of consumption rates."""
+        lcoo_rates = {}
+        if (lcoe := self.lcoe) is None:
+            return {}
+
+        for adapter in self.prod_adapters:
+            if (consumption := adapter.consumption) is None:
+                lcoo_rates[adapter.key] = None
+                continue
+
+            lcoo_rates[adapter.key] = self._to_kilo(consumption) * lcoe
+
+        return lcoo_rates
+
+    #
+    # TOTAL SHARES
+    #
+
+    @property
+    def export_share(self) -> float | None:
+        """Return the share of total power that is returned to the grid."""
+        if (total_power := self.total_power) is None:
+            return None
+
+        if (grid_export := self.grid_export) is None:
+            return None
+
+        return self._divide(grid_export, total_power)
+
+    @property
+    def utilization_share(self) -> float | None:
+        """Return the share of total power that is utilized."""
+        if (total_power := self.total_power) is None:
+            return None
+
+        if (utilization_power := self.utilization) is None:
+            return None
+
+        return self._divide(utilization_power, total_power)
+
+    @property
+    def self_consumption_share(self) -> float | None:
+        """Return the share of total power that is self consumed."""
+        if (total_power := self.total_power) is None:
+            return None
+
+        if (self_consumption := self.self_consumption) is None:
+            return None
+
+        return self._divide(self_consumption, total_power)
+
+    @property
+    def applicable_utilization_share(self) -> float | None:
+        """Return the share of total_power that is self consumed.
+
+        This is the share of power that is utilized by the production adapters.
+
+        """
+        if (export_share := self.export_share) is None:
+            return None
+
+        if (utilization_share := self.utilization_share) is None:
+            return None
+
+        return self._divide(utilization_share, (1.0 - export_share))
+
+    @property
+    def applicable_self_consumption_share(self) -> float | None:
+        """Return the share of total_power that is self consumed."""
+        if (export_share := self.export_share) is None:
+            return None
+
+        if (self_cons_share := self.self_consumption_share) is None:
+            return None
+
+        return self._divide(self_cons_share, (1.0 - export_share))
+
+    #
+    # ADAPTER SHARES
+    #
+
+    @property
+    def adapters_total_power_shares(self) -> dict[str, float]:
+        """Return the production adapter's share of total power.
+
+        The fraction of total power that is generated by the adapter.
+
+        """
+        shares = {}
+        if (total_power := self.total_power) is None:
+            return {}
+
+        for adapter in self.prod_adapters.adapters:
+            if (production := adapter.production) is None:
+                shares[adapter.key] = None
+                continue
+
+            shares[adapter.key] = self._divide(production, total_power)
+
+        return shares
+
+    @property
+    def adapters_export_rates(self) -> dict[str, float]:
+        """Return the production adapter's export rates.
+
+        The fraction of generated power that is returned to the grid.
+        Equals: production / returned to grid.
+
+        How much of the power generated by the adapter is send to the grid.
+
+        """
+        export_rates = {}
+        if (total_export_share := self.export_share) is None:
+            return {}
+
+        power_shares = self.adapters_total_power_shares
+        export_shares = self.adapters_export_shares
+        for adapter in self.prod_adapters.adapters:
+            if (power_share := power_shares.get(adapter.key)) is None:
+                export_rates[adapter.key] = None
+
+            elif (export_share := export_shares.get(adapter.key)) is None:
+                export_rates[adapter.key] = None
+
+            else:
+                value = export_share * total_export_share
+                export_rates[adapter.key] = self._divide(value, power_share)
+
+        return export_rates
+
+    @property
+    def adapters_export_shares(self) -> dict[str, float]:
+        """Return the production adapter's share of exported power.
+
+        The fraction of exported power that is generated by the adapter.
+
+        How much of the total exported power is generated by the adapter.
+
+        """
+        shares = {}
+        exports = {}
+        total_share = 0.0
+
+        total_power_shares = self.adapters_total_power_shares
+        for adapter in self.prod_adapters.adapters:
+            if not adapter.exports_power:
+                shares[adapter.key] = 0.0
+                continue
+
+            if (share := total_power_shares.get(adapter.key)) is None:
+                return {}
+
+            total_share += share
+            exports[adapter.key] = share
+
+        for key, share in exports.items():
+            shares[key] = self._divide(share, total_share)
+
+        return shares
+
+    # @property
+    # def prod_adapters_abs_export_shares(self) -> dict[str, float]:
+    #     """Return the production adapter's share of exported power.
+
+    #     The fraction of exported power that is generated by the adapter.
+
+    #     How much of the total exported power is generated by the adapter.
+
+    #     """
+    #     shares = {}
+    #     exports = {}
+    #     total_share = 0.0
+
+    #     if (export_share := self.export_share) is None:
+    #         return {}
+
+    #     total_power_shares = self.adapters_total_power_shares
+    #     for adapter in self.prod_adapters.adapters:
+    #         if not adapter.exports_power:
+    #             shares[adapter.key] = 0.0
+    #             continue
+
+    #         if (share := total_power_shares.get(adapter.key)) is None:
+    #             return {}
+
+    #         total_share += share
+    #         exports[adapter.key] = share
+
+    #     for key, share in exports.items():
+    #         shares[key] = self._divide(share, total_share) * export_share
+
+    #     return shares
+
+    @property
+    def adapters_export_power(self) -> dict[str, float]:
+        """Return the production adapter's export power."""
+        export_power = {}
+        if (grid_export := self.grid_export) is None:
+            return {}
+
+        export_shares = self.adapters_export_shares
+        for adapter in self.prod_adapters.adapters:
+            if (export_share := export_shares.get(adapter.key)) is None:
+                export_power[adapter.key] = None
+            else:
+                export_power[adapter.key] = grid_export * export_share
+
+        return export_power
+
+    @property
+    def adapters_export_compensation_rates(self) -> dict[str, float]:
+        """Return the export compensation rates."""
+        compensation_rates = {}
+        export_power = self.adapters_export_power
+        for adapter in self.prod_adapters:
+            if (power := export_power.get(adapter.key)) is None:
+                compensation_rates[adapter.key] = None
+                continue
+
+            if (compensation := adapter.export_compensation) is None:
+                compensation_rates[adapter.key] = None
+                continue
+
+            power = self._to_kilo(power)
+            compensation_rates[adapter.key] = power * compensation
+
+        return compensation_rates
+
+    @property
+    def adapters_self_cons_rates(self) -> dict[str, float]:
+        """Return the relative export shares."""
+        rates = {}
+        applicable_share = self.applicable_self_consumption_share
+        if applicable_share is None:
+            return {}
+
+        export_rates = self.adapters_export_rates
+        for adapter in self.prod_adapters.adapters:
+            if (export_rate := export_rates.get(adapter.key)) is None:
+                rates[adapter.key] = None
+                continue
+
+            rates[adapter.key] = (1.0 - export_rate) * applicable_share
+
+        return rates
+
+    @property
+    def adapters_self_cons_shares(self) -> dict[str, float]:
+        """Return the absolute self consumption shares."""
+        shares = {}
+        if (self_cons_share := self.self_consumption_share) is None:
+            return {}
+
+        consumption_rates = self.adapters_self_cons_rates
+        total_power_shares = self.adapters_total_power_shares
+        for adapter in self.prod_adapters.adapters:
+            if (cons_rate := consumption_rates.get(adapter.key)) is None:
+                shares[adapter.key] = None
+                continue
+
+            if (power_share := total_power_shares.get(adapter.key)) is None:
+                shares[adapter.key] = None
+                continue
+
+            shares[adapter.key] = self._divide(
+                (cons_rate * power_share), self_cons_share
+            )
+
+        return shares
+
+    @property
+    def adapters_self_cons_power(self) -> dict[str, float]:
+        """Return the self consumption power."""
+        power = {}
+        self_cons_rates = self.adapters_self_cons_rates
+        for adapter in self.prod_adapters:
+            self_cons_rate = self_cons_rates.get(adapter.key)
+            if self_cons_rate is None:
+                power[adapter.key] = None
+                continue
+
+            self_cons_power = adapter.get_power_from_share(self_cons_rate)
+            if self_cons_power is None:
+                power[adapter.key] = None
+                continue
+
+            power[adapter.key] = self_cons_power
+
+        return power
+
+    @property
+    def adapters_self_cons_saving_rates(self) -> dict[str, float]:
+        """Return the self consumption power."""
+        saving_rates = {}
+        if (coe := self.grid_adapter.coe) is None:
+            return {}
+
+        self_cons_power = self.adapters_self_cons_power
+        for adapter in self.prod_adapters:
+            if (power := self_cons_power.get(adapter.key)) is None:
+                saving_rates[adapter.key] = None
+                continue
+
+            saving_rates[adapter.key] = self._to_kilo(power) * coe
+
+        return saving_rates
+
+    @property
+    def adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
+        """Return the self consumption power."""
+        saving_rates = {}
+        if (lcoe := self.grid_adapter.lcoe) is None:
+            return {}
+
+        self_cons_power = self.adapters_self_cons_power
+        for adapter in self.prod_adapters:
+            if (power := self_cons_power.get(adapter.key)) is None:
+                saving_rates[adapter.key] = None
+                continue
+
+            saving_rates[adapter.key] = self._to_kilo(power) * lcoe
+
+        return saving_rates
+
+    @property
+    def adapters_saving_rates(self) -> dict[str, float]:
+        """Return the production adapter's total saving rates."""
+        saving_rates = {}
+
+        export_compensations = self.adapters_export_compensation_rates
+        self_cons_savings = self.adapters_self_cons_saving_rates
+        coo_rates = self.adapters_coo_rates
+
+        for adapter in self.prod_adapters:
+            if (earnings := export_compensations.get(adapter.key)) is None:
+                return {}
+
+            if (savings := self_cons_savings.get(adapter.key)) is None:
+                return {}
+
+            if (coo_rate := coo_rates.get(adapter.key)) is None:
+                return {}
+
+            saving_rates[adapter.key] = earnings + savings - coo_rate
+
+        return saving_rates
+
+    @property
+    def adapters_levelized_saving_rates(self) -> dict[str, float]:
+        """Return the production adapter's total levelized saving rates."""
+        saving_rates = {}
+
+        export_compensations = self.adapters_export_compensation_rates
+        self_cons_savings = self.adapters_levelized_self_cons_saving_rates
+        lcoo_rates = self.adapters_lcoo_rates
+
+        for adapter in self.prod_adapters:
+            if (earnings := export_compensations.get(adapter.key)) is None:
+                return {}
+
+            if (savings := self_cons_savings.get(adapter.key)) is None:
+                return {}
+
+            if (lcoo_rate := lcoo_rates.get(adapter.key)) is None:
+                return {}
+
+            saving_rates[adapter.key] = earnings + savings - lcoo_rate
+
+        return saving_rates
+
+
+
+
+
+
+
+
+    def get_adapter_by_entity(self, entity: str) -> AbstractBaseAdapter | None:
+        """Return the adapter that corresponds to the entity."""
+        return self.entity_mapping.get(entity)
+
+    def set_value(self, entity_id: str, new_value: float | None) -> None:
         """Update the value of the given entity_id to new_value."""
-        adapter = self.get_adapter(entity_id)
+        _LOGGER.debug(f"Trying to set value: `{new_value}` on {entity_id}")
+        adapter = self.get_adapter_by_entity(entity_id)
         if adapter is not None:
             adapter.set_value(entity_id, new_value)
         else:
-            # TODO: implement
+            _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
             pass
+            # raise ValueError(f"Adapter {adapter} not registered.")
 
     def register_adapter(self, adapter) -> None:
         """Register an adapter."""
-        self._adapters.append(adapter)
+        if isinstance(adapter, GridAdapter):
+            self.grid_adapter = adapter
 
-        # Categorize the adapters
-        if adapter.config.imports_power:
-            self.power_importing_adapters.append(adapter)
-        if adapter.config.exports_power:
-            self.power_exporting_adapters.append(adapter)
-        if adapter.config.generates_power:
-            self.power_generating_adapters.append(adapter)
-        if adapter.config.consumes_power:
-            self.power_consuming_adapters.append(adapter)
+        elif isinstance(adapter, BaseGeneratorAdapter):
+            self.prod_adapters.add(adapter)
 
-        # Add the adapters to the entity adapter mapping
-        for entity in adapter.config.entities:
-            self._entity_adapter_dict[entity] = adapter
+        elif isinstance(adapter, BaseConsumerAdapter):
+            self.cons_adapters.add(adapter)
+
+        else:
+            raise ValueError("Error adding the adapter to the registry.")
+
+    def _to_kilo(self, power: float) -> float:
+        """Convert the value into the kilo prefix."""
+        if power == 0.0:
+            return 0.0
+
+        return power / 1000
+
+    def _divide(self, to_divide: float, divide_by: float) -> float:
+        """Divide value_1 by value_2."""
+        if to_divide == 0.0:
+            return 0.0
+
+        return to_divide / divide_by
 
 
+class AbstractBaseAdapter(ABC):
+    """Abstract base adapter."""
 
+    def __init__(self, key, verbose_name, **kwargs) -> None:
+        """Initialize base adapter."""
+        self.key = key
+        self.verbose_name = verbose_name
+        self._values = {}
 
-
-
-class BasePowerAdapter(ABC):
-    """Base class representing a power adapter."""
-
-    def __init__(
-            self,
-            name: str,
-            power_entity: str,
-            power_inverted: bool = False,
-            price_entity: str | None = None,
-            co2_entity: str | None = None,
-    ) -> None:
-        """Initialize instance."""
-        self.name = name
-        self._power_entity = power_entity
-        self._power_inverted = power_inverted
-        self._price_entity = price_entity
-        self._co2_entity = co2_entity
-        self._values = {
-            power_entity: None,
-            price_entity: None,
-            co2_entity: None,
-        }
+    @property
+    def source_entities(self) -> list[str]:
+        """Return the source entities for this adapter."""
+        return (
+            self.source_entities_power
+            + self.source_entities_price
+            + self.source_entities_co2
+        )
 
     @property
     @abstractmethod
-    def config(self) -> AdapterConfig:
-        """Return the configuration for this adapter."""
+    def source_entities_power(self) -> list[str]:
+        """Return the source price entities for this adapter."""
         pass
 
-    # @property
-    # def entity_ids(self) -> Iterable[str]:
-    #     """Return a list of entity_ids required by this adapter."""
-    #     return list(self._values.keys())
+    @property
+    @abstractmethod
+    def source_entities_price(self) -> list[str]:
+        """Return the source power entities for this adapter."""
+        pass
 
     @property
-    def power(self) -> float | None:
-        """Return the power."""
-        power = self._values.get(self._power_entity)
-        if power is not None:
-            return power * -1
-
-        return None
-
-    # @property
-    # def price(self) -> float:
-    #     """Return the price."""
-    #     return self._values.get(self._price_entity)
-
-    # @property
-    # def co2_intensity(self) -> float:
-    #     """Return the co2 internsity."""
-    #     return self._values.get(self._co2_entity)
+    @abstractmethod
+    def source_entities_co2(self) -> list[str]:
+        """Return the source co2 entities for this adapter."""
+        pass
 
     def set_value(self, entity_id, value) -> None:
         """Set the value for an entity."""
         self._values[entity_id] = value
 
-    def get_source_entities(self) -> list[str]:
-        """Return the required source entities."""
-        return [self._power_entity]
-
     @classmethod
     @abstractmethod
-    def from_config(cls, config: dict) -> BasePowerAdapter:
+    def from_config(cls, *args, **kwargs) -> BasePowerAdapter:
         """Initialize instance from a config entry."""
         pass
+
+
+class BasePowerAdapter(AbstractBaseAdapter):
+    """Base class representing a power adapter."""
+
+    def __init__(
+        self,
+        key: str,
+        verbose_name: str,
+        power_entity: str,
+        power_entity_inverted: bool = False,
+        **kwargs,
+    ) -> None:
+        """Initialize power adapter."""
+        super().__init__(key, verbose_name, **kwargs)
+
+        self._power_entity = power_entity
+        self._invert_power = power_entity_inverted
+        self._values[power_entity] = None
+
+    @property
+    def source_entities_power(self) -> list[str]:
+        """Return the source price entities for this adapter."""
+        return [self._power_entity]
+
+    @property
+    def power(self) -> float | None:
+        """Return the power in Watts."""
+        power = self._values.get(self._power_entity)
+        if power is not None:
+            return power  # * -1
+
+        return None
 
 
 class GridAdapter(BasePowerAdapter):
     """Grid power adapter."""
 
-    @property
-    def config(self) -> AdapterConfig:
-        """Return the configuration for this adapter."""
-        return AdapterConfig(
-            entities=[self._power_entity],
-            imports_power=True,
-            exports_power=True,
-            source_entities_power=[self._power_entity],
-            source_entities_price=[self._price_entity],
-            source_entities_co2=[self._co2_entity],
+    def __init__(
+        self,
+        key: str,
+        verbose_name: str,
+        power_entity: str,
+        power_entity_inverted: bool = False,
+        price_entity: str | None = None,
+        co2_entity: str | None = None,
+        **kwargs,
+    ) -> None:
+        """Initialize instance."""
+        super().__init__(
+            key, verbose_name, power_entity, power_entity_inverted, **kwargs,
         )
+        self._price_entity = price_entity
+        if self._price_entity is not None:
+            self._values[self._price_entity] = None
+
+        self._co2_entity = co2_entity
+        if self._co2_entity is not None:
+            self._values[self._co2_entity] = None
+
+    @property
+    def source_entities_price(self) -> list[str]:
+        """Return the source power entities for this adapter."""
+        return [self._price_entity]
+
+    @property
+    def source_entities_co2(self) -> list[str]:
+        """Return the source co2 entities for this adapter."""
+        return [self._co2_entity]
 
     @property
     def import_power(self) -> float | None:
-        """Return the import power."""
+        """Return the power imported from the grid."""
         if self.power is not None:
-            return self.power if self.power > 0 else 0
+            return self.power if self.power > 0. else 0.
 
         return None
 
     @property
     def export_power(self) -> float | None:
-        """Return the export power."""
+        """Return the power exported to the grid."""
         if self.power is not None:
-            return self.power if self.power < 0 else 0
+            return self.power * -1. if self.power < 0. else 0.
 
         return None
 
+    @property
+    def coe(self) -> float | None:
+        """Return the cost of electicity in Euro/kwh."""
+        if (_entity := self._price_entity) is None:
+            return None
+
+        return self._values.get(_entity)
+
+    @property
+    def coe_rate(self) -> float | None:
+        """Return the cost of electicity rate in Euro/h."""
+        if (coe := self.coe) is None:
+            return None
+
+        if (power := self.import_power) is None:
+            return None
+        elif power == 0.0:
+            return 0.0
+
+        return (power / 1000) * coe
+
+    @property
+    def lcoe(self) -> float | None:
+        """Return the levelized cost of electicity in Euro/kwh."""
+        return self.coe
+
+    @property
+    def lcoe_rate(self) -> float | None:
+        """Return the levelized cost of electicity rate in Euro/h."""
+        if (lcoe := self.lcoe) is None:
+            return None
+
+        if (power := self.import_power) is None:
+            return None
+        elif power == 0.0:
+            return 0.0
+
+        return (power / 1000) * lcoe
+
+    @property
+    def co2_intensity(self) -> float | None:
+        """Return the co2 intensity g/kwh."""
+        pass
+
+    @property
+    def co2_intensity_rate(self) -> float | None:
+        """Return the co2 intensity rate in g/h."""
+        pass
+
+    @property
+    def lco2_intensity(self) -> float | None:
+        """Return the levelized co2 intensity g/kwh."""
+        pass
+
+    @property
+    def lco2_intensity_rate(self) -> float | None:
+        """Return the levelized co2 intensity rate in g/h."""
+        pass
+
     @classmethod
-    def from_config(cls, name: str, config: dict) -> GridAdapter:
+    def from_config(cls, config: dict) -> GridAdapter:
         """Create instance from config."""
         return cls(
-            name,
-            config.get(CONF_GRID_POWER),
-            power_inverted=config.get(CONF_GRID_INVERTED),
-            price_entity=config.get(CONF_GRID_PRICE),
-            co2_entity=config.get(CONF_GRID_CO2_INTENSITY),
+            key="grid",
+            verbose_name="Grid",
+            power_entity=config[CONF_POWER_ENTITY],
+            power_entity_inverted=config.get(CONF_POWER_INVERTED),
+            price_entity=config.get(CONF_ELECTRICITY_PRICE),
+            co2_entity=config.get(CONF_CO2_INTENSITY),
         )
 
 
-class PowerSourceAdapter(BasePowerAdapter):
+class BaseGeneratorAdapter(BasePowerAdapter):
     """Grid power adapter."""
 
-    @property
-    def config(self) -> AdapterConfig:
-        """Return the configuration for this adapter."""
-        return AdapterConfig(
-            entities=[self._power_entity],
-            generates_power=True,
-            consumes_power=False,
-            source_entities_power=[self._power_entity],
+    def __init__(
+        self,
+        key: str,
+        verbose_name: str,
+        power_entity: str,
+        power_entity_inverted: bool = False,
+        exports_power: bool = False,
+        export_compensation: float = 0.0,
+        **kwargs,
+    ) -> None:
+        """Initialize instance."""
+        super().__init__(
+            key, verbose_name, power_entity, power_entity_inverted, **kwargs,
         )
+        self.exports_power = exports_power
+        self.export_compensation = export_compensation
 
     @property
-    def production(self) -> float:
+    def source_entities_price(self) -> list:
+        """Return the source power entities for this adapter."""
+        return []
+
+    @property
+    def source_entities_co2(self) -> list:
+        """Return the source co2 entities for this adapter."""
+        return []
+
+    @property
+    def production(self) -> float | None:
         """Return the import power."""
         if self.power is not None:
             return self.power if self.power > 0 else 0
 
         return None
 
-    # TODO: implement this feature. This allows to deduct the standby power
-    # and the resulting costs from the savings.
-    # @property
-    # def consumption(self) -> float:
-    #     """Return the export power."""
-    #     if self.power is not None:
-    #         return self.power if self.power < 0 else 0
+    @property
+    def consumption(self) -> float | None:
+        """Return the import power."""
+        if self.power is not None:
+            return self.power * -1. if self.power < 0 else 0
 
-    #     return None
+        return None
+
+    @property
+    def exportable_power(self) -> float | None:
+        """Return the exportable power."""
+        if not self.exports_power:
+            return 0.0
+
+        if self.production is None:
+            return None
+
+        return self.production
+
+    @property
+    def coe(self) -> float | None:
+        """Return the cost of electicity in Euro/kwh."""
+        return 0.0
+
+    @property
+    def coe_rate(self) -> float | None:
+        """Return the cost of electicity rate in Euro/h."""
+        if (coe := self.coe) is None:
+            return None
+
+        return self._multiply_prod(coe)
+
+    @property
+    def lcoe(self) -> float | None:
+        """Return the levelized cost of electicity in Euro/kwh."""
+        return self.coe
+
+    @property
+    def lcoe_rate(self) -> float | None:
+        """Return the levelized cost of electicity rate in Euro/h."""
+        if (lcoe := self.lcoe) is None:
+            return None
+
+        return self._multiply_prod(lcoe)
+
+    @property
+    def co2_intensity(self) -> float | None:
+        """Return the co2 intensity g/kwh."""
+        return 0.0
+
+    @property
+    def co2_intensity_rate(self) -> float | None:
+        """Return the co2 intensity rate in g/h."""
+        if (co2_intensity := self.co2_intensity) is None:
+            return None
+
+        return self._multiply_prod(co2_intensity)
+
+    @property
+    def lco2_intensity(self) -> float | None:
+        """Return the levelized co2 intensity g/kwh."""
+        return 0.0
+
+    @property
+    def lco2_intensity_rate(self) -> float | None:
+        """Return the levelized co2 intensity rate in g/h."""
+        if (lco2_intensity := self.lco2_intensity) is None:
+            return None
+
+        return self._multiply_prod(lco2_intensity)
+
+    def get_power_from_share(self, share: float)  -> float | None:
+        """Return the power."""
+        if (production := self.production) is None:
+            return None
+
+        return production * share
+
+
+    # def get_export_share(self, total_exportable_power: float) -> float | None:
+    #     """Return the export share."""
+    #     exportable_power = self.exportable_power
+    #     if exportable_power is None:
+    #         return None
+
+    #     if exportable_power == 0.0:
+    #         return 0.0
+
+    #     return exportable_power / total_exportable_power
+
+    # def get_self_consumption_power(self, export_power: float):
+    #     """Return the power that is used for self consumption."""
+    #     production = self.production
+    #     if production is None:
+    #         return None
+
+    #     return production - export_power
+
+    # def get_coc_rate(self, combined_coe: float) -> float | None:
+    #     """Return the cost of consumption rate."""
+    #     return self._multiply_cons(combined_coe)
+
+    # def get_lcoc_rate(self, combined_lcoe: float) -> float | None:
+    #     """Return the levelized cost of consumption rate."""
+    #     return self._multiply_cons(combined_lcoe)
+
+    # def get_consumption_rate(self, price: float) -> float | None:
+    #     """Return the consumption rate in Euro/h."""
+    #     return self._multiply_cons(price)
+
+    # def get_export_power(self, share: float) -> float | None:
+    #     """Return the power exported."""
+    #     if not self.exports_power:
+    #         return 0.0
+
+    #     return self._multiply_prod(share)
+
+    # def get_export_compensation_rate(self, share: float) -> float | None:
+    #     """Return the given value multiplied with the production."""
+    #     if (export_power := self.get_export_power(share)) is None:
+    #         return None
+
+    #     return export_power * self.export_compensation
+
+    def _multiply_prod(self, value: float) -> float | None:
+        """Return the given value multiplied with the consumption."""
+        if (prod := self.production) is None:
+            return None
+
+        if prod == 0.0:
+            return 0.0
+
+        return (prod / 1000) * value
+
+    def _multiply_cons(self, value: float) -> float | None:
+        """Return the rate for the given value."""
+        if (cons := self.consumption) is None:
+            return None
+
+        if cons == 0.0:
+            return 0.0
+
+        return (cons / 1000) * value
+
+    # @classmethod
+    # def from_config(
+    #         cls, key: str, verbose_name: str, config: dict
+    # ) -> BaseGeneratorAdapter:
+    #     """Create instance from config."""
+    #     return cls(
+    #         key,
+    #         verbose_name,
+    #         config.get(CONF_PV_POWER_ENTITY),
+    #         power_entity_inverted=False,
+    #         exports_power=False,
+    #         export_compensation=0.0,
+    #     )
+
+
+class PvAdapter(BaseGeneratorAdapter):
+    """Photovoltaic system adapter."""
+
+    def __init__(
+        self,
+        key: str,
+        verbose_name: str,
+        power_entity: str,
+        power_entity_inverted: bool,
+        lcoe: float,
+        lco2_intensity: float,
+        exports_power: bool,
+        export_compensation: float,
+        **kwargs,
+    ) -> None:
+        """Initialize instance."""
+        super().__init__(
+            key,
+            verbose_name,
+            power_entity,
+            power_entity_inverted=power_entity_inverted,
+            exports_power=exports_power,
+            export_compensation=export_compensation,
+            **kwargs,
+        )
+        self._lcoe = lcoe
+        self._lco2_intensity = lco2_intensity
+
+    @property
+    def lcoe(self) -> float | None:
+        """Return the levelized cost of electicity in Euro/kwh."""
+        return self._lcoe
 
     @classmethod
-    def from_pv_config(cls, name: str, config: dict) -> PowerSourceAdapter:
+    def from_config(cls, config: dict) -> PvAdapter:
         """Create instance from config."""
         return cls(
-            name,
-            config.get(CONF_PV_POWER),
-            price_entity=config.get(CONF_LCOE),
-            co2_entity=config.get(CONF_CO2_INTENSITY),
+            key=config[CONF_KEY],
+            verbose_name=config[CONF_NAME],
+            power_entity=config[CONF_POWER_ENTITY],
+            power_entity_inverted=config[CONF_POWER_INVERTED],
+            lcoe=config[CONF_LCOE],
+            lco2_intensity=config[CONF_CO2_INTENSITY],
+            exports_power=config[CONF_EXPORTS_POWER],
+            export_compensation=config[CONF_EXPORT_COMPENSATION],
         )
+
+
+class BatteryAdapter(BaseGeneratorAdapter):
+    """Battery adapter."""
+
+    def __init__(
+        self,
+        key: str,
+        verbose_name: str,
+        power_entity: str,
+        power_entity_inverted: bool,
+        lcos: float,
+        lco2_intensity: float,
+        exports_power: bool,
+        export_compensation: float,
+        **kwargs,
+    ) -> None:
+        """Initialize instance."""
+        super().__init__(
+            key,
+            verbose_name,
+            power_entity,
+            power_entity_inverted=power_entity_inverted,
+            exports_power=exports_power,
+            export_compensation=export_compensation,
+            **kwargs,
+        )
+        self._lcos = lcos
+        self._lco2_intensity = lco2_intensity
+
+    @property
+    def lcoe(self) -> float | None:
+        """Return the levelized cost of electicity in Euro/kwh."""
+        return self._lcos
+
+    @classmethod
+    def from_config(cls, config: dict) -> BatteryAdapter:
+        """Create instance from config."""
+        return cls(
+            key=config[CONF_KEY],
+            verbose_name=config[CONF_NAME],
+            power_entity=config[CONF_POWER_ENTITY],
+            power_entity_inverted=config[CONF_POWER_INVERTED],
+            lcos=config[CONF_LCOS],
+            lco2_intensity=config[CONF_CO2_INTENSITY],
+            exports_power=config[CONF_EXPORTS_POWER],
+            export_compensation=config[CONF_EXPORT_COMPENSATION],
+        )
+        # TODO: add CONF_BAT_EFFICIENCY
+
+
+class BaseConsumerAdapter(BasePowerAdapter):
+    """Base adapter for consumers."""
+
+    pass

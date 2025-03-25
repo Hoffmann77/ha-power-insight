@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .power_insight import PowerInsight, GridAdapter, PowerSourceAdapter
-from .const import PLATFORMS, CONF_GRID, CONF_PV, CONF_LCOE
+from .power_insight import (
+    PowerInsight, GridAdapter, PvAdapter, BatteryAdapter,
+)
+from .const import PLATFORMS, CONF_GRID, CONF_PV, CONF_BAT
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,19 +32,47 @@ class MyData:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     """Init the Mygrid instance from the config entry."""
-    power_insight = PowerInsight()
-
-    if grid_config := entry.options.get(CONF_GRID):
-        power_insight.register_adapter(
-            GridAdapter.from_config("grid", grid_config)
+    # Create instance
+    power_insight = PowerInsight(
+        GridAdapter.from_config(
+            key="grid", verbose_name="Grid", config=entry.options[CONF_GRID]
         )
+    )
 
+    # Add pv-system adapter
     if pv_config := entry.options.get(CONF_PV):
         if data := entry.data.get(CONF_PV):
             pv_config.update(data)
 
         power_insight.register_adapter(
-            PowerSourceAdapter.from_pv_config("pv_system", pv_config)
+            PvAdapter.from_config(
+                key="pv_system", verbose_name="PV-System", config=pv_config
+            )
+        )
+
+    # New
+    # for key, config in entry.options[CONF_PV].items():
+    #     if data := entry.data[CONF_PV].get(key):
+    #         config.update(data)
+
+    #     verbose_name = config[CONF_NAME]
+
+    #     power_insight.register_adapter(
+    #         PvAdapter.from_config(
+    #             key=key, verbose_name=config[CONF_NAME], config=config
+    #         )
+    #     )
+
+
+
+
+    # Add battery adapter
+    if bat_config := entry.options.get(CONF_BAT):
+        if data := entry.data.get(CONF_BAT):
+            bat_config.update(data)
+
+        power_insight.register_adapter(
+            BatteryAdapter.from_config("battery", "Battery", bat_config)
         )
 
     # Store the runtime data

@@ -1,5 +1,1 @@
-"""Module for tests."""
-
-
-
-
+"""Tests module."""
