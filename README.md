@@ -58,11 +58,16 @@ TBD
 
 ## Entities
 
+> [!WARNING]
+> Please note that entity names can be subject to changes until version 1.0.
+
+**Power Insight entities:**
+
 | Entitiy | Description |
 | ---- | ---- |
 | `Available power`| TBD |
 
-### PV-System, Battery
+**PV-System and Battery entities:**
 
 | Entitiy | Description |
 | ---- | ---- |
@@ -73,6 +78,10 @@ TBD
 | `Self consumption power`| TBD |
 | `Self consumption rate` | TBD |
 | `Self consumption share` | TBD |
+
+**Consumer entities:**
+> [!NOTE]
+> Coming soon. These entities are currently under development.
 
 ## Frequently asked questions:
 
