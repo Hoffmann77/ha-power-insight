@@ -13,7 +13,45 @@ By using instantaneous values for calculation this component works great with dy
 See below for a full list of entities provided by this component.
 
 ## Installation
-TBD
+### Install using HACS (recommended)
+If you do not have HACS installed yet visit https://hacs.xyz for installation instructions.
+
+To add the this repository to HACS in your Home Assistant instance, use this Button:
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Hoffmann77&repository=ha-power-insight&category=Integration)
+
+After installation, please restart Home Assistant. To add Power Insight to your Home Assistant instance, use this Button:
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=power_insight)
+
+<details>
+<summary>Manual configuration steps</summary>
+
+### Semi-Manual Installation with HACS
+1. Go HACS integrations section.
+2. Click on the 3 dots in the top right corner.
+3. Select "Custom repositories"
+4. Add the URL (https://github.com/hoffmann77/ha-power-insight) to the repository.
+5. Select the integration category.
+6. Click the "ADD" button.
+7. Now you are able to download the integration
+
+## Manual Installation
+1. Access the GitHub repository for this integration.
+2. Download the ZIP file of the repository and extract its contents.
+3. Copy the "power_insight" folder into the custom_components directory located typically at /config/custom_components/ in your Home Assistant directory.
+
+## Restart Home Assistant
+1. Restart your Home Assistant.
+
+## Add Integration
+1. Navigate to Settings > Devices & Services.
+2. Click Add Integration and search for "Power Insight".
+3. Select the Power Insight integration to initiate setup.
+
+</details>
+
+
 
 ## Limitations
 TBD
