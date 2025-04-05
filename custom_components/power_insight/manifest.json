@@ -9,5 +9,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Hoffmann77/ha-power-insight/issues",
   "requirements": [],
-  "version": "0.1.0-alpha"
+  "version": "0.1.0-beta.1"
 }
