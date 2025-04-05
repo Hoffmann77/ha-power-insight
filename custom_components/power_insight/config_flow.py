@@ -125,8 +125,16 @@ class MyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = user_input
 
+            data_dict = {
+                CONF_KEY: "grid",
+                CONF_NAME: "Grid",
+            }
+
+            options_dict = {**data}
+
             if not errors:
-                self.options[CONF_GRID] = data
+                self.data[CONF_GRID] = data_dict
+                self.options[CONF_GRID] = options_dict
                 return await self.async_step_pv_system()
 
         user_input = user_input or {}
@@ -371,7 +379,8 @@ class MyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_EXPORT_COMPENSATION): selector.NumberSelector(
                 selector.NumberSelectorConfig(
                     min=0.0,
-                    max=10.0**8,
+                    max=100.0,
+                    step="any",
                     unit_of_measurement="Euro",
                     mode="box",
                 ),
@@ -430,9 +439,10 @@ class MyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             vol.Required(CONF_EXPORT_COMPENSATION): selector.NumberSelector(
                 selector.NumberSelectorConfig(
-                    min=1,
-                    max=10**8,
-                    unit_of_measurement="Kg",
+                    min=0.0,
+                    max=100.0,
+                    step="any",
+                    unit_of_measurement="Euro",
                     mode="box",
                 ),
             ),

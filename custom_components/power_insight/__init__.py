@@ -32,47 +32,32 @@ class MyData:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     """Init the Mygrid instance from the config entry."""
-    # Create instance
+    grid_config = entry.data[CONF_GRID].copy()
+    if options := entry.options[CONF_GRID]:
+        grid_config.update(options)
+
+    # Create PowerInsight instance
     power_insight = PowerInsight(
-        GridAdapter.from_config(
-            key="grid", verbose_name="Grid", config=entry.options[CONF_GRID]
-        )
+        GridAdapter.from_config(grid_config)
     )
 
-    # Add pv-system adapter
-    if pv_config := entry.options.get(CONF_PV):
-        if data := entry.data.get(CONF_PV):
-            pv_config.update(data)
+    # Add pv-systems
+    for key, pv_system in entry.data[CONF_PV].items():
+        config = pv_system.copy()
+        if options := entry.options[CONF_PV].get(key):
+            config.update(options)
 
         power_insight.register_adapter(
-            PvAdapter.from_config(
-                key="pv_system", verbose_name="PV-System", config=pv_config
-            )
+            PvAdapter.from_config(config)
         )
 
-    # New
-    # for key, config in entry.options[CONF_PV].items():
-    #     if data := entry.data[CONF_PV].get(key):
-    #         config.update(data)
-
-    #     verbose_name = config[CONF_NAME]
-
-    #     power_insight.register_adapter(
-    #         PvAdapter.from_config(
-    #             key=key, verbose_name=config[CONF_NAME], config=config
-    #         )
-    #     )
-
-
-
-
-    # Add battery adapter
-    if bat_config := entry.options.get(CONF_BAT):
-        if data := entry.data.get(CONF_BAT):
-            bat_config.update(data)
+    for key, battery in entry.data[CONF_BAT].items():
+        config = battery.copy()
+        if options := entry.options[CONF_BAT].get(key):
+            config.update(options)
 
         power_insight.register_adapter(
-            BatteryAdapter.from_config("battery", "Battery", bat_config)
+            BatteryAdapter.from_config(config)
         )
 
     # Store the runtime data

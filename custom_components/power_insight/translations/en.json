@@ -31,27 +31,30 @@
         "description": "Please configure your pv-system entities.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
         "data": {
           "name": "Name",
-          "power_entity": "Pv-system power entity",
-          "power_entity_inverted": "Invert the grid power entity",
+          "power_entity": "PV-System power entity",
+          "power_entity_inverted": "Invert the PV-System power entity",
           "energy_over_lifetime": "Sum of electrical energy produced over lifetime",
           "costs_over_lifetime": "Total costs over lifetime",
-          "co2_footprint": "Carbon footprint of your pv-system"
-        },
-        "data_description": {
-          "co2_footprint": "Test data description"
+          "co2_footprint": "Carbon footprint of your PV-System",
+          "exports_power": "Returns energy to the grid",
+          "export_compensation": "Export compensation",
+          "add_another": "Add another PV-System"
         }
       },
       "battery": {
         "title": "Battery configuration",
         "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
         "data": {
-          "bat_soc_entity": "Entity providing the state of charge",
-          "bat_power_entity": "Entity providing the power of the battery",
-          "bat_power_entity_inverted": "Invert the power entity",
+          "name": "Name",
+          "power_entity": "Battery power entity",
+          "power_entity_inverted": "Invert the Battery power entity",
           "bat_round_trip_efficiency": "Round trip efficiency",
-          "bat_energy_discharged_over_lifetime": "Sum of energy discharged over lifetime",
-          "bat_costs_over_lifetime": "Total costs over lifetime",
-          "bat_co2_footprint": "Carbon footprint of your battery"
+          "energy_over_lifetime": "Sum of energy discharged over lifetime",
+          "costs_over_lifetime": "Total costs over lifetime",
+          "co2_footprint": "Carbon footprint of your Battery",
+          "exports_power": "Returns energy to the grid",
+          "export_compensation": "Export compensation",
+          "add_another": "Add another Battery"
         }
       }
     },

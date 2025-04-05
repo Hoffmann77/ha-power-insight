@@ -16,6 +16,14 @@ from homeassistant.const import (
     CURRENCY_EURO,
     UnitOfEnergy,
     UnitOfPower,
+    UnitOfTime,
+)
+from homeassistant.components.integration.const import (
+    METHOD_LEFT,
+)
+from homeassistant.helpers.device import async_device_info_to_link_from_entity
+from homeassistant.components.integration.sensor import (
+    IntegrationSensor,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -54,7 +62,7 @@ POWER_INSIGHT_SENSORS = (
         value_fn=lambda obj: obj.total_power,
     ),
     PowerInsightSensorEntityDescription(
-        key="self_consumption",
+        key="self_consumption_power",
         name="Self consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -64,7 +72,30 @@ POWER_INSIGHT_SENSORS = (
         value_fn=lambda obj: obj.self_consumption,
     ),
     PowerInsightSensorEntityDescription(
-        key="utilization",
+        key="self_consumption_share",
+        name="Self consumption share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.self_consumption_share,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="self_consumption_cost_savings_rate",
+        name="Self consumption cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_self_cons_saving_rate,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="utilization_power",
         name="Utilization power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -74,9 +105,20 @@ POWER_INSIGHT_SENSORS = (
         value_fn=lambda obj: obj.utilization,
     ),
     PowerInsightSensorEntityDescription(
+        key="utilization_share",
+        name="Utilization share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.utilization_share,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorEntityDescription(
         key="export_share",
         name="Export share",
-        icon="mdi:home-percent-outline",
+        icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
@@ -85,75 +127,138 @@ POWER_INSIGHT_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorEntityDescription(
-        key="self_consumption_share",
-        name="Self consumption share",
-        icon="mdi:home-percent-outline",
-        native_unit_of_measurement=PERCENTAGE,
+        key="export_compensation_rate",
+        name="Export compensation rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.self_consumption_share,
-        transform_fn=lambda val: val * 100,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_export_compensation_rate,
     ),
     PowerInsightSensorEntityDescription(
-        key="utilization_share",
-        name="Utilization share",
-        icon="mdi:home-percent-outline",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.utilization_share,
-        transform_fn=lambda val: val * 100,
-    ),
-    # PowerInsightSensorEntityDescription(
-    #     key="applicable_self_consumption_share",
-    #     name="Applicable self consumption share",
-    #     native_unit_of_measurement=PERCENTAGE,
-    #     state_class=SensorStateClass.MEASUREMENT,
-    #     suggested_display_precision=0,
-    #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.applicable_self_consumption_share,
-    # ),
-    PowerInsightSensorEntityDescription(
-        key="coe",
+        key="electricity_price",
         name="Electricity price",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=3,
-        entities_fn=lambda obj: obj.source_entities_power,  # TODO: add price entities #noqa
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
         value_fn=lambda obj: obj.coe,
     ),
     PowerInsightSensorEntityDescription(
-        key="coe_rate",
-        name="Cost of electricity",
-        icon="mdi:currency-eur",
-        native_unit_of_measurement="EUR/h",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=3,
-        entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.coe_rate,
-    ),
-    PowerInsightSensorEntityDescription(
-        key="lcoe",
+        key="levelized_electricity_price",
         name="Levelized electricity price",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=3,
-        entities_fn=lambda obj: obj.source_entities_power,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
         value_fn=lambda obj: obj.lcoe,
     ),
     PowerInsightSensorEntityDescription(
-        key="lcoe_rate",
-        name="Levelized cost of electricity",
+        key="cost_rate",
+        name="Cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=3,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.coe_rate,
+    ),
+
+    PowerInsightSensorEntityDescription(
+        key="levelized_cost_rate",
+        name="Levelized cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.lcoe_rate,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="operating_cost_rate",
+        name="Operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_coo_rate,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="levelized_operating_cost_rate",
+        name="Levelized operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_lcoo_rate,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="cost_savings_rate",
+        name="Cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_saving_rate,
+    ),
+    PowerInsightSensorEntityDescription(
+        key="levelized_cost_savings_rate",
+        name="Levelized cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.total_levelized_saving_rate,
+    ),
+)
+
+
+@dataclass(frozen=True, kw_only=True)
+class IntegrationSensorEntityDescription(SensorEntityDescription):
+    """Provide a description of a Heat pump Signal sensor."""
+
+    source_entity: str
+
+
+POWER_INSIGHT_INTEGRATION_SENSORS = (
+    IntegrationSensorEntityDescription(
+        key="export_compensation",
+        name="Export compensation",
+        source_entity="export_compensation_rate",
+        suggested_display_precision=2,
+    ),
+    IntegrationSensorEntityDescription(
+        key="cost_savings",
+        name="Cost savings",
+        source_entity="cost_savings_rate",
+        suggested_display_precision=2,
+    ),
+    IntegrationSensorEntityDescription(
+        key="levelized_cost_savings",
+        name="Levelized cost savings",
+        source_entity="levelized_cost_savings_rate",
+        suggested_display_precision=2,
     ),
 )
 
@@ -185,28 +290,6 @@ class PowerInsightAdapterSensorEntityDescription(SensorEntityDescription):
 
 POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
     PowerInsightAdapterSensorEntityDescription(
-        key="export_rate",
-        name="Export rate",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.adapters_export_rates,
-        transform_fn=lambda val: val * 100,
-    ),
-    PowerInsightAdapterSensorEntityDescription(
-        key="export_share",
-        name="Export share",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.adapters_export_shares,
-        transform_fn=lambda val: val * 100,
-    ),
-    PowerInsightAdapterSensorEntityDescription(
         key="export_power",
         name="Export power",
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -219,38 +302,44 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_export_power,
     ),
     PowerInsightAdapterSensorEntityDescription(
+        key="export_rate",
+        name="Export rate",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.adapters_export_rates,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightAdapterSensorEntityDescription(
+        key="export_share",
+        name="Export share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.adapters_export_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightAdapterSensorEntityDescription(
         key="export_compensation_rate",
         name="Export compensation rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.exports_power,
         value_fn=lambda obj: obj.adapters_export_compensation_rates,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="self_cons_rate",
-        name="Self consumption rate",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.adapters_self_cons_rates,
-        transform_fn=lambda val: val * 100,
-    ),
-    PowerInsightAdapterSensorEntityDescription(
-        key="self_cons_share",
-        name="Self consumption share",
-        native_unit_of_measurement=PERCENTAGE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=0,
-        entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.adapters_self_cons_shares,
-        transform_fn=lambda val: val * 100,
-    ),
-    PowerInsightAdapterSensorEntityDescription(
-        key="self_cons_power",
+        key="self_consumption_power",
         name="Self consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -261,8 +350,32 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_self_cons_power,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="self_cons_savings_rate",
-        name="Self consumption savings rate",
+        key="self_consumption_rate",
+        name="Self consumption rate",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.adapters_self_cons_rates,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightAdapterSensorEntityDescription(
+        key="self_consumption_share",
+        name="Self consumption share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.adapters_self_cons_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+
+    PowerInsightAdapterSensorEntityDescription(
+        key="self_consumption_cost_savings_rate",
+        name="Self consumption cost savings rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -272,21 +385,9 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_self_cons_saving_rates,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="levelized_self_cons_savings_rate",
-        name="Levelized self consumption savings rate",
-        native_unit_of_measurement="EUR/h",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        value_fn=lambda obj: (
-            obj.adapters_levelized_self_cons_saving_rates
-        ),
-    ),
-    PowerInsightAdapterSensorEntityDescription(
-        key="operational_cost_rate",
-        name="Cost of operations rate",
+        key="operating_cost_rate",
+        name="Operating cost rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -296,8 +397,9 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_coo_rates,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="levelized_operational_cost_rate",
-        name="Levelized cost of operations rate",
+        key="levelized_operating_cost_rate",
+        name="Levelized Operating cost rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -307,8 +409,9 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_lcoo_rates,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="savings_rate",
-        name="Savings rate",
+        key="cost_savings_rate",
+        name="Cost savings rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -318,8 +421,9 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.adapters_saving_rates,
     ),
     PowerInsightAdapterSensorEntityDescription(
-        key="levelized_savings_rate",
-        name="Levelized savings rate",
+        key="levelized_cost_savings_rate",
+        name="Levelized cost savings rate",
+        icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
@@ -343,6 +447,15 @@ async def async_setup_entry(
     # Access the runtime data form the config entry
     power_insight = entry.runtime_data.power_insight
 
+    integration_sensor_mapping = {}
+    for description in POWER_INSIGHT_INTEGRATION_SENSORS:
+        integration_sensor_mapping.update(
+            {description.source_entity: description}
+        )
+
+
+
+
     # entities: list = []
     # base_entities: list = []
     # key_entity_mapping = {}
@@ -358,9 +471,19 @@ async def async_setup_entry(
             source_entities=description.entities_fn(power_insight),
             power_insight=power_insight,
         )
-        _entities.append(entity)
+        async_add_entities([entity])
 
-    async_add_entities(_entities)
+        integration_description = integration_sensor_mapping.get(
+            description.key
+        )
+        if integration_description:
+            integration_entity = PowerInsightIntegrationSensorEntitiy(
+                description=integration_description,
+                config_entry=entry,
+                source_entity=entity.entity_id,
+            )
+            async_add_entities([integration_entity])
+
 
     # TOTAL_POWER_ENTITIES = [entity.entity_id for entity in base_entities]
     # for _entity in base_entities:
@@ -479,6 +602,39 @@ class PowerInsightSensorEntity(BaseSensorEntity):
             value = self.entity_description.transform_fn(value)
 
         return value
+
+
+class PowerInsightIntegrationSensorEntitiy(IntegrationSensor):
+    """Integration sensor entity with access to the `PowerInsight` instance."""
+
+    def __init__(self, description, config_entry, source_entity):
+        self.entity_description = description
+        self.config_entry = config_entry
+        self.source_entity = source_entity
+
+        unique_id = (
+            f"{self.config_entry.entry_id}_{self.entity_description.key}"
+        )
+
+        device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self.config_entry.entry_id)},
+            name=self.config_entry.title or "PowerInsight",
+        )
+
+        super().__init__(
+            integration_method=METHOD_LEFT,
+            name=description.name,
+            round_digits=1,
+            source_entity=source_entity,
+            unique_id=unique_id,
+            unit_prefix=None,
+            unit_time=UnitOfTime.HOURS,
+            device_info=device_info,
+            max_sub_interval=None,
+        )
+
+
 
 
 class BaseAdapterSensorEntity(BaseSensorEntity):

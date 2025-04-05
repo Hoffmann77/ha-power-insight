@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 from homeassistant.components.sensor import (
     SensorEntity,
 )
+from homeassistant.components.integration.sensor import (
+    IntegrationSensor,
+)
 from homeassistant.const import (
     STATE_UNAVAILABLE,
 )
@@ -56,10 +59,10 @@ class BaseEventSensorEntity(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added to hass."""
         await super().async_added_to_hass()
-        
+
         _LOGGER.debug(f"Added to hass: {self}")
         _LOGGER.debug(f"Source entities: {self._source_entities}")
-        
+
         # Collect the state of the state obj to provide initial data.
         for entity_id in self._source_entities:
             if (
@@ -107,13 +110,13 @@ class BaseEventSensorEntity(SensorEntity):
         @callback
         def _cancel_freeze_on_interval_exceeded_callback(now: datetime) -> None:
             """Integrate based on time and reschedule."""
-            
+
             self._attr_available = False
-            
+
             self.power_insight.set_value(entity_id, value)
-            
+
             self.async_write_ha_state()
-            
+
             # elapsed_seconds = Decimal(
             #     (now - self._last_integration_time).total_seconds()
             # )
@@ -136,7 +139,7 @@ class BaseEventSensorEntity(SensorEntity):
         #     freeze_for,
         #     _cancel_freeze_on_interval_exceeded_callback,
         # )
-        
+
         return async_call_later(
             self.hass,
             freeze_for,
@@ -188,7 +191,7 @@ class BaseEventSensorEntity(SensorEntity):
         if new_state is None:
             _LOGGER.debug("Update on state change new state None")
             return
-        
+
         helper = "state_obj None" if old_state is None else f"{old_state.state}"
         _LOGGER.debug(f"Update on state change entity: {entity_id} old: {helper}: new: {new_state.state}")
 
@@ -265,4 +268,3 @@ class BaseEventSensorEntity(SensorEntity):
     #     return {
     #         ATTR_SOURCE_ID: self._source_entity,
     #     }
-

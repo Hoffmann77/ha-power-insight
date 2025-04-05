@@ -205,7 +205,10 @@ class PowerInsight:
         if (power_utilized := self.utilization) is None:
             return None
 
-        return total_power - power_utilized
+        if (power_exported := self.grid_export) is None:
+            return None
+
+        return total_power - power_exported - power_utilized
 
     #
     # PRICES
@@ -235,6 +238,8 @@ class PowerInsight:
 
         if (total_power := self.total_power) is None:
             return None
+        else:
+            total_power = self._to_kilo(total_power)
 
         return self._divide(coe_rate, total_power)
 
@@ -262,6 +267,8 @@ class PowerInsight:
 
         if (total_power := self.total_power) is None:
             return None
+        else:
+            total_power = self._to_kilo(total_power)
 
         return self._divide(lcoe_rate, total_power)
 
@@ -273,11 +280,11 @@ class PowerInsight:
             return {}
 
         for adapter in self.prod_adapters:
-            if (consumption := adapter.consumption) is None:
+            if (coo_rate := adapter.get_coo_rate(coe)) is None:
                 coo_rates[adapter.key] = None
                 continue
 
-            coo_rates[adapter.key] = self._to_kilo(consumption) * coe
+            coo_rates[adapter.key] = coo_rate
 
         return coo_rates
 
@@ -289,11 +296,11 @@ class PowerInsight:
             return {}
 
         for adapter in self.prod_adapters:
-            if (consumption := adapter.consumption) is None:
+            if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
                 lcoo_rates[adapter.key] = None
                 continue
 
-            lcoo_rates[adapter.key] = self._to_kilo(consumption) * lcoe
+            lcoo_rates[adapter.key] = lcoo_rate
 
         return lcoo_rates
 
@@ -359,6 +366,88 @@ class PowerInsight:
             return None
 
         return self._divide(self_cons_share, (1.0 - export_share))
+
+    #
+    # TOTAL POWER VALUES
+    #
+
+    @property
+    def total_export_compensation_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        compensation_rates = self.adapters_export_compensation_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := compensation_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def total_self_cons_saving_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        self_cons_saving_rates = self.adapters_self_cons_saving_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := self_cons_saving_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def total_coo_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        coo_rates = self.adapters_coo_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := coo_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def total_lcoo_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        lcoo_rates = self.adapters_lcoo_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := lcoo_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def total_saving_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        saving_rates = self.adapters_saving_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := saving_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def total_levelized_saving_rate(self) -> float | None:
+        """Total export compensation rate."""
+        result = 0.0
+        levelized_saving_rates = self.adapters_levelized_saving_rates
+        for adapter in self.prod_adapters.adapters:
+            if (rate := levelized_saving_rates.get(adapter.key)) is None:
+                return None
+
+            result += rate
+
+        return result
 
     #
     # ADAPTER SHARES
@@ -590,22 +679,23 @@ class PowerInsight:
 
         return saving_rates
 
-    @property
-    def adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
-        """Return the self consumption power."""
-        saving_rates = {}
-        if (lcoe := self.grid_adapter.lcoe) is None:
-            return {}
+    # NOTE: This is not required at the moment (Grid COE == Grid LCOE).
+    # @property
+    # def adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
+    #     """Return the self consumption power."""
+    #     saving_rates = {}
+    #     if (lcoe := self.grid_adapter.lcoe) is None:
+    #         return {}
 
-        self_cons_power = self.adapters_self_cons_power
-        for adapter in self.prod_adapters:
-            if (power := self_cons_power.get(adapter.key)) is None:
-                saving_rates[adapter.key] = None
-                continue
+    #     self_cons_power = self.adapters_self_cons_power
+    #     for adapter in self.prod_adapters:
+    #         if (power := self_cons_power.get(adapter.key)) is None:
+    #             saving_rates[adapter.key] = None
+    #             continue
 
-            saving_rates[adapter.key] = self._to_kilo(power) * lcoe
+    #         saving_rates[adapter.key] = self._to_kilo(power) * lcoe
 
-        return saving_rates
+    #     return saving_rates
 
     @property
     def adapters_saving_rates(self) -> dict[str, float]:
@@ -617,6 +707,9 @@ class PowerInsight:
         coo_rates = self.adapters_coo_rates
 
         for adapter in self.prod_adapters:
+            if (coe_rate := adapter.coe_rate) is None:
+                return {}
+
             if (earnings := export_compensations.get(adapter.key)) is None:
                 return {}
 
@@ -626,7 +719,9 @@ class PowerInsight:
             if (coo_rate := coo_rates.get(adapter.key)) is None:
                 return {}
 
-            saving_rates[adapter.key] = earnings + savings - coo_rate
+            saving_rates[adapter.key] = (
+                earnings + savings - coo_rate - coe_rate
+            )
 
         return saving_rates
 
@@ -636,10 +731,15 @@ class PowerInsight:
         saving_rates = {}
 
         export_compensations = self.adapters_export_compensation_rates
-        self_cons_savings = self.adapters_levelized_self_cons_saving_rates
+        # Disabled see: adapters_levelized_self_cons_saving_rates
+        # self_cons_savings = self.adapters_levelized_self_cons_saving_rates
+        self_cons_savings = self.adapters_self_cons_saving_rates
         lcoo_rates = self.adapters_lcoo_rates
 
         for adapter in self.prod_adapters:
+            if (lcoe_rate := adapter.lcoe_rate) is None:
+                return {}
+
             if (earnings := export_compensations.get(adapter.key)) is None:
                 return {}
 
@@ -649,7 +749,9 @@ class PowerInsight:
             if (lcoo_rate := lcoo_rates.get(adapter.key)) is None:
                 return {}
 
-            saving_rates[adapter.key] = earnings + savings - lcoo_rate
+            saving_rates[adapter.key] = (
+                earnings + savings - lcoo_rate - lcoe_rate
+            )
 
         return saving_rates
 
@@ -939,7 +1041,7 @@ class BaseGeneratorAdapter(BasePowerAdapter):
 
     @property
     def production(self) -> float | None:
-        """Return the import power."""
+        """Return the amount of power that is generated."""
         if self.power is not None:
             return self.power if self.power > 0 else 0
 
@@ -947,22 +1049,22 @@ class BaseGeneratorAdapter(BasePowerAdapter):
 
     @property
     def consumption(self) -> float | None:
-        """Return the import power."""
+        """Return the amount of power that is consumed."""
         if self.power is not None:
             return self.power * -1. if self.power < 0 else 0
 
         return None
 
-    @property
-    def exportable_power(self) -> float | None:
-        """Return the exportable power."""
-        if not self.exports_power:
-            return 0.0
+    # @property
+    # def exportable_power(self) -> float | None:
+    #     """Return the exportable power."""
+    #     if not self.exports_power:
+    #         return 0.0
 
-        if self.production is None:
-            return None
+    #     if self.production is None:
+    #         return None
 
-        return self.production
+    #     return self.production
 
     @property
     def coe(self) -> float | None:
@@ -1024,50 +1126,17 @@ class BaseGeneratorAdapter(BasePowerAdapter):
         return production * share
 
 
-    # def get_export_share(self, total_exportable_power: float) -> float | None:
-    #     """Return the export share."""
-    #     exportable_power = self.exportable_power
-    #     if exportable_power is None:
-    #         return None
+    def get_coo_rate(self, coe: float) -> float | None:
+        """Return the cost of operations rate."""
+        return self._multiply_cons(coe)
 
-    #     if exportable_power == 0.0:
-    #         return 0.0
+    def get_lcoo_rate(self, lcoe: float) -> float | None:
+        """Return the cost of operations rate."""
+        return self._multiply_cons(lcoe)
 
-    #     return exportable_power / total_exportable_power
 
-    # def get_self_consumption_power(self, export_power: float):
-    #     """Return the power that is used for self consumption."""
-    #     production = self.production
-    #     if production is None:
-    #         return None
 
-    #     return production - export_power
 
-    # def get_coc_rate(self, combined_coe: float) -> float | None:
-    #     """Return the cost of consumption rate."""
-    #     return self._multiply_cons(combined_coe)
-
-    # def get_lcoc_rate(self, combined_lcoe: float) -> float | None:
-    #     """Return the levelized cost of consumption rate."""
-    #     return self._multiply_cons(combined_lcoe)
-
-    # def get_consumption_rate(self, price: float) -> float | None:
-    #     """Return the consumption rate in Euro/h."""
-    #     return self._multiply_cons(price)
-
-    # def get_export_power(self, share: float) -> float | None:
-    #     """Return the power exported."""
-    #     if not self.exports_power:
-    #         return 0.0
-
-    #     return self._multiply_prod(share)
-
-    # def get_export_compensation_rate(self, share: float) -> float | None:
-    #     """Return the given value multiplied with the production."""
-    #     if (export_power := self.get_export_power(share)) is None:
-    #         return None
-
-    #     return export_power * self.export_compensation
 
     def _multiply_prod(self, value: float) -> float | None:
         """Return the given value multiplied with the consumption."""
