@@ -1,0 +1,82 @@
+{
+    "version": 1,
+    "minor_version": 5,
+    "key": "core.config_entries",
+    "data": {
+        "entries": [
+            {
+                "created_at": "2025-03-28T18:55:33.356630+00:00",
+                "data": {
+                    "batteries": {
+                        "enphase_battery": {
+                            "co2_intensity": 800.0,
+                            "co2_intensity_cf": 1.0,
+                            "key": "enphase_battery",
+                            "levelized_cost_of_storage": 0.9,
+                            "levelized_cost_of_storage_cf": 1.0,
+                            "name": "Enphase Battery"
+                        }
+                    },
+                    "grid": {
+                        "key": "grid",
+                        "name": "Grid"
+                    },
+                    "pv_systems": {
+                        "enphase_pv": {
+                            "co2_intensity": 42.857142857142854,
+                            "co2_intensity_cf": 1.0,
+                            "key": "enphase_pv",
+                            "levelized_cost_of_electricity": 0.14285714285714285,
+                            "levelized_cost_of_electricity_cf": 1.0,
+                            "name": "Enphase PV"
+                        }
+                    }
+                },
+                "disabled_by": null,
+                "discovery_keys": {},
+                "domain": "power_insight",
+                "entry_id": "01JQF1R1FCHUJHADSFASDHAKSJD",
+                "minor_version": 1,
+                "modified_at": "2025-03-28T18:55:33.356639+00:00",
+                "options": {
+                    "batteries": {
+                        "enphase_battery": {
+                            "bat_round_trip_efficiency": 93.0,
+                            "co2_footprint": 8000.0,
+                            "costs_over_lifetime": 8000.0,
+                            "energy_over_lifetime": 10000.0,
+                            "export_compensation": 0.0,
+                            "exports_power": false,
+                            "power_entity": "sensor.enphase_gateway_122225053579_encharge_power",
+                            "power_entity_inverted": false
+                        }
+                    },
+                    "grid": {
+                        "co2_intensity_entity": "sensor.electricity_maps_co2_intensitat",
+                        "grid_electricity_price_entity": "input_number.strompreis",
+                        "power_entity": "sensor.enphase_gateway_122225053579_grid_power",
+                        "power_entity_inverted": false
+                    },
+                    "pv_systems": {
+                        "enphase_pv": {
+                            "co2_footprint": 5000.0,
+                            "costs_over_lifetime": 10000.0,
+                            "energy_over_lifetime": 100000.0,
+                            "export_compensation": 0.08,
+                            "exports_power": true,
+                            "power_entity": "sensor.enphase_gateway_122225053579_current_power_production",
+                            "power_entity_inverted": false
+                        }
+                    }
+                },
+                "pref_disable_new_entities": false,
+                "pref_disable_polling": false,
+                "source": "user",
+                "subentries": [],
+                "title": "Fixpreis Analyse",
+                "unique_id": null,
+                "version": 1
+            }
+    ]
+    }
+}
