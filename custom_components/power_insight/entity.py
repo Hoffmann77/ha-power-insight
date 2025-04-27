@@ -28,7 +28,6 @@ from homeassistant.helpers.event import (
     async_track_state_report_event,
 )
 
-
 from .power_insight import PowerInsight
 
 
@@ -255,6 +254,7 @@ class BaseEventSensorEntity(SensorEntity):
         self.async_write_ha_state()
 
     def _state_to_value(self, state_obj: State) -> float | None:
+
         """Return the state of the given state object as float."""
         try:
             value = float(state_obj.state)

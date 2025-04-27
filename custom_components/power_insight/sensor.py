@@ -138,7 +138,6 @@ POWER_INSIGHT_SENSORS = (
         value_fn=lambda obj: obj.utilization_share,
         transform_fn=lambda val: val * 100,
     ),
-
     PowerInsightSensorEntityDescription(
         key="electricity_price",
         name="Electricity price",
@@ -598,6 +597,7 @@ async def async_setup_entry(
                 power_insight=power_insight,
                 adapter=adapter,
             )
+
             async_add_entities([entity])
 
             integration_description = adapter_integration_sensor_mapping.get(
@@ -611,9 +611,6 @@ async def async_setup_entry(
                     adapter=adapter,
                 )
                 async_add_entities([integration_entity])
-
-
-
 
     # Add the entities
     async_add_entities(_entities)
