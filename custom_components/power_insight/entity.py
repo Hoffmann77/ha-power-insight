@@ -28,7 +28,7 @@ from homeassistant.helpers.event import (
     async_track_state_report_event,
 )
 
-# from .const import ()
+
 from .power_insight import PowerInsight
 
 
@@ -39,7 +39,17 @@ UNIT_PREFIXES = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
 
 
 class BaseEventSensorEntity(SensorEntity):
-    """Representation of an integration sensor."""
+    """Sensor entity that updates the power insight instance.
+
+    This entity updates the underlying instance of `PowerInsight`
+    when the state changed or state reported events for any of the
+    source entities is fired.
+
+    This allows us to pass data from the any source entity to a single
+    underlying instance of `PowerInsight` which can perform calculations
+    using all necessary values.
+
+    """
 
     _attr_should_poll = False
 
@@ -47,14 +57,15 @@ class BaseEventSensorEntity(SensorEntity):
         self,
         source_entities: list[str],
         power_insight: PowerInsight,
-        allow_freeze: bool = False,
+        keep_alive: float | None = None,
     ) -> None:
-        """Initialize the integration sensor."""
+        """Initialize the sensor entity."""
         self._source_entities = source_entities
         self.power_insight = power_insight
         self._state: float | None = None
-        self._allow_freeze = allow_freeze
+        self._keep_alive = keep_alive
         self._freeze_callbacks = {}
+        self._cancel_report_listener_callbacks = {}
 
     async def async_added_to_hass(self) -> None:
         """Handle entity which will be added to hass."""
@@ -63,17 +74,37 @@ class BaseEventSensorEntity(SensorEntity):
         _LOGGER.debug(f"Added to hass: {self}")
         _LOGGER.debug(f"Source entities: {self._source_entities}")
 
-        # Collect the state of the state obj to provide initial data.
+        missing_data_entities = []
+
+        # Try to get the states of the entity ids to provide initial data.
         for entity_id in self._source_entities:
-            if (
-                state := self.hass.states.get(entity_id)
-            ) and state.state != STATE_UNAVAILABLE:
-                value = self._state_to_value(state)
-                self.power_insight.set_value(entity_id, value)
-                _LOGGER.debug(f"Set initial value at startup {entity_id}: {value}")
+            state_obj = self.hass.states.get(entity_id)
+
+            if state_obj:
+                # Set initial data if the state is available.
+                if state_obj.state != STATE_UNAVAILABLE:
+                    value = self._state_to_value(state_obj)
+                    self.power_insight.set_value(entity_id, value)
+                    # _LOGGER.debug(f"Set initial value at startup {entity_id}: {value}")
+                else:
+                    # We add the entity to the missing data entities
+                    # which are getting set up to listen for report events.
+                    missing_data_entities.append(entity_id)
+            else:
+                # TODO: what to do if no state for the entity_id exists?
+                pass
 
         handle_state_change = self._update_on_state_change_callback
         handle_state_report = self._update_on_state_report_callback
+
+        # Track the report events of entities that are missing
+        # initial data to get data as fast as possible.
+        # for entity_id in missing_data_entities:
+        #     unsub = async_track_state_report_event(
+        #         self.hass, entity_id, handle_state_report,
+        #     )
+        #     self._cancel_report_listener_callbacks[entity_id] = unsub
+        #     self.async_on_remove(unsub)
 
         self.async_on_remove(
             async_track_state_change_event(
@@ -82,13 +113,6 @@ class BaseEventSensorEntity(SensorEntity):
                 handle_state_change,
             )
         )
-        # self.async_on_remove(
-        #     async_track_state_report_event(
-        #         self.hass,
-        #         self._source_entities,
-        #         handle_state_report,
-        #     )
-        # )
 
     def _schedule_freeze_cancellation(
         self, freeze_for: timedelta, entity_id, value,
@@ -187,42 +211,27 @@ class BaseEventSensorEntity(SensorEntity):
         Ref: https://www.home-assistant.io/docs/configuration/events/#state_changed  #noqa
 
         """
-        # The state has been removed.
         if new_state is None:
-            _LOGGER.debug("Update on state change new state None")
             return
 
         helper = "state_obj None" if old_state is None else f"{old_state.state}"
         _LOGGER.debug(f"Update on state change entity: {entity_id} old: {helper}: new: {new_state.state}")
 
-        # Detect unexpected behaviour in future hass updates.
-        # if not new_state.state == old_state.state:
-        #     raise ValueError("Not expected behaviour detected.")
-
-        # The new state does not provide usable data.
         if new_state.state == STATE_UNAVAILABLE:
-            # TODO:
-            # Try to use the old data for a short period of time
-            # to compensate for short sensor hickups.
-            if self._allow_freeze:
-                freeze_for = None
+            # The entity is currently not available.
+            if self._keep_alive and old_state:
                 cancel = self._schedule_freeze_cancellation(
-                    freeze_for, entity_id, None
+                    self._keep_alive, entity_id, None
                 )
                 self.async_on_remove(cancel)
-                self._freeze_callbacks[entity_id, cancel]
-
+                self._freeze_callbacks[entity_id] = cancel
             else:
                 self._attr_available = False
                 self.async_write_ha_state()
 
             return
 
-        # The state is set for the first time.
-        if old_state is None:
-            pass
-
-        elif old_state.state == STATE_UNAVAILABLE:
+        if old_state and old_state.state == STATE_UNAVAILABLE:
             # The state changed from state_unavailable to usable data
             # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity.py LN 1332
             cancel = self._freeze_callbacks.pop(entity_id, False)
@@ -230,16 +239,23 @@ class BaseEventSensorEntity(SensorEntity):
                 self._on_remove.remove(cancel)
                 cancel()
 
+        # Remove the entity from the report event listener
+        # as soon as we get the initial data.
+        if entity_id in self._cancel_report_listener_callbacks:
+            cancel = self.report_cancel_callbacks[entity_id]
+            self._on_remove.remove(cancel)
+            cancel()
+
         self._attr_available = True
 
-        # Set new value
+        # Pass the value of the state to the `PowerInsight` instance.
         value = self._state_to_value(new_state)
         self.power_insight.set_value(entity_id, value)
 
         self.async_write_ha_state()
 
     def _state_to_value(self, state_obj: State) -> float | None:
-        """Convert the state obj into a float value."""
+        """Return the state of the given state object as float."""
         try:
             value = float(state_obj.state)
         except ValueError:
@@ -249,22 +265,3 @@ class BaseEventSensorEntity(SensorEntity):
             unit = unit[0]
 
         return value * UNIT_PREFIXES.get(unit, 1.0)
-
-    @property
-    def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        # if isinstance(self._state, Decimal) and self._round_digits:
-        #     return round(self._state, self._round_digits)
-        # return self._state
-
-    # @property
-    # def native_unit_of_measurement(self) -> str | None:
-    #     """Return the unit the value is expressed in."""
-    #     return self._unit_of_measurement
-
-    # @property
-    # def extra_state_attributes(self) -> dict[str, str] | None:
-    #     """Return the state attributes of the sensor."""
-    #     return {
-    #         ATTR_SOURCE_ID: self._source_entity,
-    #     }
