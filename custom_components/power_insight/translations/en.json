@@ -62,7 +62,7 @@
       "unknown": "Unexpected error. See the logs for more details.",
       "name_invalid": "Please provide a valid Name.",
       "name_not_unique": "Please provide a unique Name.",
-      "no_signal_enabled": "Please enable at least one Signal."
+      "no_device_selected": "Please select the device you want to add."
     },
     "abort": {
       "already_configured": "A Device is already configured"

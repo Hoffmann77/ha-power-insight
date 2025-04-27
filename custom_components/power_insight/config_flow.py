@@ -99,6 +99,9 @@ class MyConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._add_pv = data[CONF_ADD_PV]
             self._add_bat = data[CONF_ADD_BAT]
 
+            if not (self._add_pv or self._add_bat):
+                errors["base"] = "no_device_selected"
+
             if not errors:
                 self.title = title
                 self.config = data
