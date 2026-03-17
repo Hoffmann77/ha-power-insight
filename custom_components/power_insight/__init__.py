@@ -1,23 +1,23 @@
-"""The Heat pump Signal integration."""
+"""Set up the PowerInsight integration."""
 
 import logging
 from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.exceptions import ConfigEntryNotReady
 
+
+from .const import DOMAIN, PLATFORMS
+from .utils import state_to_value
 from .power_insight import (
-    PowerInsight, GridAdapter, PvAdapter, BatteryAdapter,
+    DEVICE_ADAPTERS, PowerInsight, EventHandler,
 )
-from .const import PLATFORMS, CONF_GRID, CONF_PV, CONF_BAT
 
 
 _LOGGER = logging.getLogger(__name__)
-
-
-# GridInsights
-# InHouseGrid
-# HomePower Insights
 
 
 type MyConfigEntry = ConfigEntry[MyData]
@@ -28,46 +28,93 @@ class MyData:
     """Runtime data definition."""
 
     power_insight: PowerInsight
+    event_handler: EventHandler
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     """Init the Mygrid instance from the config entry."""
-    grid_config = entry.data[CONF_GRID].copy()
-    if options := entry.options[CONF_GRID]:
-        grid_config.update(options)
+    #grid_adapter_data = entry.data["adapter"].copy()
+    #grid_adapter = DEVICE_ADAPTERS["grid"]
 
-    # Create PowerInsight instance
-    power_insight = PowerInsight(
-        GridAdapter.from_config(grid_config)
-    )
+    # power_insight = PowerInsight(
+    #     grid_adapter.from_entry(
+    #         unique_id=entry.entry_id,
+    #         name="Grid",
+    #         config=grid_adapter_data["config"],
+    #     )
+    # )
 
-    # Add pv-systems
-    for key, pv_system in entry.data[CONF_PV].items():
-        config = pv_system.copy()
-        if options := entry.options[CONF_PV].get(key):
-            config.update(options)
+    power_insight = PowerInsight()
+
+    for subentry in entry.subentries.values():
+        adapter_data = subentry.data["adapter"].copy()
+        adapter_type = adapter_data.get("adapter_type")
+        if not adapter_type:
+            continue
+
+        adapter_cls = DEVICE_ADAPTERS.get(adapter_type)
+        if adapter_cls is None:
+            _LOGGER.warning("Unknown adapter type %r in subentry %s — skipping.", adapter_type, subentry.subentry_id)
+            continue
 
         power_insight.register_adapter(
-            PvAdapter.from_config(config)
+            adapter_cls.from_entry(
+                unique_id=subentry.subentry_id,
+                name=subentry.title,
+                config=adapter_data["config"],
+            )
         )
-
-    for key, battery in entry.data[CONF_BAT].items():
-        config = battery.copy()
-        if options := entry.options[CONF_BAT].get(key):
-            config.update(options)
-
-        power_insight.register_adapter(
-            BatteryAdapter.from_config(config)
+    
+    if power_insight.grid_adapter is None:
+        ir.async_create_issue(
+        hass,
+        DOMAIN,
+        "no_grid_configured",
+        is_fixable=False,
+        severity=ir.IssueSeverity.ERROR,
+        translation_key="no_grid_configured",
+        translation_placeholders={"entry_title": entry.title},
         )
+        raise ConfigEntryNotReady("grid_not_configured")
+    
+    # Grid is present — dismiss any previously raised issue
+    ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")
 
-    # Store the runtime data
-    entry.runtime_data = MyData(power_insight)
+    source_entities = power_insight.source_entities
 
-    # Forward the Config Entry to the platform.
+    # Try to get the states of the entity ids to provide initial data.
+    for entity_id in source_entities:
+        state_obj = hass.states.get(entity_id)
+        if state_obj:
+            # Set initial data if the state is available.
+            if state_obj.state != STATE_UNAVAILABLE:
+                value = state_to_value(state_obj)
+                power_insight.set_value(entity_id, value)
+
+    event_handler = EventHandler(hass, entry.entry_id, power_insight)
+
+    event_handler.track_entities(source_entities)
+
+    entry.runtime_data = MyData(power_insight, event_handler)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Reload the entry when it's updated.
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
+
+    async def handle_set_value(call: ServiceCall):
+        entity_id = call.data["entity_id"]
+        value = call.data["value"]
+
+        # Look up your entity
+        entity = hass.data[DOMAIN]["entities"].get(entity_id)
+        if entity:
+            await entity.async_set_value(value)
+
+    hass.services.async_register(
+        DOMAIN,
+        "set_value",
+        handle_set_value,
+    )
 
     return True
 
@@ -84,19 +131,19 @@ async def async_unload_entry(
 ) -> bool:
     """Unload the config entries."""
     unload = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload:
-        pass
+
+    data = entry.runtime_data
+    event_handler = data.event_handler
+    event_handler.untrack_entities()
 
     return unload
 
 
-# async def async_migrate_entry(
-#         hass: HomeAssistant,
-#         entry: MyConfigEntry,
-# ) -> bool:
-#     """Migrate old entry."""
-#     if entry.version == 0:
-#         pass
-#         _LOGGER.info("Migration to version {config_entry.version} successful")
+async def async_migrate_entry(
+    hass: HomeAssistant, entry: MyConfigEntry,
+) -> bool:
+    """Migrate the old config entry to a newer version."""
+    if entry.version > 1:
+        pass
 
-#     return True
+    return True

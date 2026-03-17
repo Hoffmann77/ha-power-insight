@@ -1,115 +1,139 @@
 {
-  "title": "PowerInsight",
   "config": {
-    "flow_title": "PowerInsight",
     "step": {
       "user": {
-        "title": "Welcome to Power insight",
-        "description": "Please configure the PowerInsight component below. \n\n **Visit: https://github.com/Hoffmann77/ha-power-insight for additional information**",
+        "title": "Power Insight",
+        "description": "Give this energy mix a name and choose which calculations to enable. Use the **Add device** button after setup to add your grid connection and devices.\n\n**Visit: https://github.com/Hoffmann77/ha-power-insight for additional information**",
         "data": {
           "name": "Name",
-          "enable_pv": "Add a pv-system",
-          "enable_bat": "Add a battery"
-        }
-      },
-      "grid": {
-        "title": "Grid configuration",
-        "description": "Please configure your grid entities.\n **For more information please visit: https://github.com/Hoffmann77/ha-power-insight**",
-        "data": {
-          "name": "Name",
-          "power_entity": "Grid power entity",
-          "power_entity_inverted": "Invert the grid power entity",
-          "grid_electricity_price_entity": "Entity providing the price of electricity",
-          "co2_intensity_entity": "Entity providing the CO2 intensity"
+          "calculate_instantaneous_rates": "Instantaneous rate sensors",
+          "calculate_instantaneous_saving_rates": "Instantaneous saving rate sensors",
+          "calculate_accumulated_entities": "Accumulated total sensors"
         },
         "data_description": {
-          "co2_intensity_entity": "Test data description"
-        }
-      },
-      "pv_system": {
-        "title": "PV system configuration",
-        "description": "Please configure your pv-system entities.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
-        "data": {
-          "name": "Name",
-          "power_entity": "PV-System power entity",
-          "power_entity_inverted": "Invert the PV-System power entity",
-          "energy_over_lifetime": "Sum of electrical energy produced over lifetime",
-          "costs_over_lifetime": "Total costs over lifetime",
-          "co2_footprint": "Carbon footprint of your PV-System",
-          "exports_power": "Returns energy to the grid",
-          "export_compensation": "Export compensation",
-          "add_another": "Add another PV-System"
-        }
-      },
-      "battery": {
-        "title": "Battery configuration",
-        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/ha-power-insight",
-        "data": {
-          "name": "Name",
-          "power_entity": "Battery power entity",
-          "power_entity_inverted": "Invert the Battery power entity",
-          "bat_round_trip_efficiency": "Round trip efficiency",
-          "energy_over_lifetime": "Sum of energy discharged over lifetime",
-          "costs_over_lifetime": "Total costs over lifetime",
-          "co2_footprint": "Carbon footprint of your Battery",
-          "exports_power": "Returns energy to the grid",
-          "export_compensation": "Export compensation",
-          "add_another": "Add another Battery"
+          "name": "A name for this energy mix configuration.",
+          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (\u20ac/h) or CO\u2082 intensity rate.",
+          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (\u20ac/h). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
+          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings (\u20ac) or export compensation (\u20ac)."
         }
       }
     },
     "error": {
-      "unknown": "Unexpected error. See the logs for more details.",
-      "name_invalid": "Please provide a valid Name.",
-      "name_not_unique": "Please provide a unique Name.",
-      "no_device_selected": "Please select the device you want to add."
+      "invalid_name": "The name cannot be empty or invalid.",
+      "invalid_input": "Invalid input."
     },
     "abort": {
-      "already_configured": "A Device is already configured"
+      "already_configured": "This integration is already configured."
     }
   },
   "options": {
     "step": {
-      "user": {
-        "title": "Welcome to Heat pump Signal",
-        "description": "Please configure your Heat pump Signal below.\n **For more information please visit: https://github.com/Hoffmann77/heat_pump_signal**",
+      "init": {
+        "title": "Options",
+        "description": "Adjust calculation settings and enable or disable groups of sensor entities.\nChanges take effect after reloading the integration.",
         "data": {
-          "name": "Name",
-          "lock_interval": "State change interval",
-          "pv_signal": "Enable the PV Signal",
-          "electicity_price_signal": "Enable the Electicity price Signal",
-          "co2_signal": "Enable the CO2 Signal"
+          "calculate_instantaneous_rates": "Instantaneous rate sensors",
+          "calculate_instantaneous_saving_rates": "Instantaneous saving rate sensors",
+          "calculate_accumulated_entities": "Accumulated total sensors",
+          "enable_power_shares": "Power share sensors",
+          "debug_power_entities": "Enable debug power entities"
+        },
+        "data_description": {
+          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (\u20ac/h) or CO\u2082 intensity rate.",
+          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (\u20ac/h). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
+          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings (\u20ac) or export compensation (\u20ac).",
+          "enable_power_shares": "Create sensors for percentage shares such as export share and self-consumption share.",
+          "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
+        }
+      }
+    },
+    "error": {
+      "reconfigure_adapters_first": "One or more adapters are missing data required by the new settings.\nPlease reconfigure the following adapters first: {adapters_needing_reconfigure}."
+    }
+  },
+  "config_subentries": {
+    "adapter": {
+      "initiate_flow": {
+        "user": "Add device"
+      },
+      "entry_type": "Device",
+      "step": {
+        "user": {
+          "title": "Add Device",
+          "description": "Choose the type of adapter you want to add to your energy system.",
+          "menu_options": {
+            "grid": "Grid sensor",
+            "pv_system": "PV System",
+            "battery": "Battery",
+            "consumer": "Electrical consumer"
+          }
+        },
+        "configure": {
+          "title": "Configure {adapter_type}",
+          "description": "Configure your {adapter_type}. Fields marked as required depend on which calculations are enabled in the integration options.",
+          "data": {
+            "name": "Name",
+            "power_entity": "Power Entity",
+            "power_entity_inverted": "Invert Power Direction",
+            "grid_electricity_price_entity": "Electricity Price Entity",
+            "co2_intensity_entity": "CO\u2082 Intensity Entity",
+            "exports_power": "Exports Power to Grid",
+            "export_compensation": "Export Compensation Rate",
+            "battery_efficiency": "Round-Trip Efficiency",
+            "lifetime_production": "Lifetime Production",
+            "lifetime_cost": "Total Lifetime Cost",
+            "co2_footprint": "CO\u2082 Footprint"
+          },
+          "data_description": {
+            "name": "A unique name for this device.",
+            "power_entity": "Sensor reporting power in W, kW, or MW. For the grid: positive = import, negative = export.",
+            "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
+            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price in \u20ac/kWh. Required when cost calculations are enabled.",
+            "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled.",
+            "exports_power": "Enable if this device can export excess power to the grid.",
+            "export_compensation": "Rate received per kWh exported to the grid (\u20ac/kWh). Required when cost savings calculation is enabled.",
+            "battery_efficiency": "The round-trip efficiency of the battery in percent.",
+            "lifetime_production": "Total expected energy production over the device lifetime (kWh). Required when levelized calculation is enabled.",
+            "lifetime_cost": "Total investment and installation cost over the device lifetime (\u20ac). Required when levelized cost calculation is enabled.",
+            "co2_footprint": "Total CO\u2082 emissions from manufacturing and installation (kg). Required when levelized CO\u2082 calculation is enabled."
+          }
+        },
+        "reconfigure": {
+          "title": "Reconfigure {adapter_type}",
+          "description": "Update entity IDs for this adapter. To change lifetime cost or production values, remove and re-add the device.",
+          "data": {
+            "power_entity": "Power Entity",
+            "power_entity_inverted": "Invert Power Direction",
+            "grid_electricity_price_entity": "Electricity Price Entity",
+            "co2_intensity_entity": "CO\u2082 Intensity Entity"
+          },
+          "data_description": {
+            "power_entity": "Sensor reporting power in W, kW, or MW.",
+            "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
+            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price in \u20ac/kWh. Required when cost calculations are enabled.",
+            "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled."
+          }
         }
       },
-      "pv_signal": {
-        "title": "Set up the PV Signal",
-        "description": "Please configure the PV Signal below.\n \n For more information please visit: https://github.com/Hoffmann77/heat_pump_signal",
-        "data": {
-          "grid_power_sensor": "Grid power entity",
-          "grid_power_sensor_inverted": "Grid export is a positive value",
-          "battery_soc_sensor": "Battery SoC entity",
-          "battery_power_sensor": "Battery power entity",
-          "battery_power_sensor_inverted": "Battery charging power is a positive value",
-          "heat_pump_power_sensor": "Heat pump power entity",
-          "heat_pump_power_sensor_inverted": "Heat pump power is a negative value",
-          "static_threshold": "Treshold",
-          "dynamic_threshold": "Enable the dynamic treshold",
-          "optional_thresholds": "Optional threshold",
-          "buffer_power": "Buffer power",
-          "hysteresis": "Hysteresis",
-          "battery_min_soc": "Battery minimal SoC",
-          "battery_min_power": "Battery minimal charging power"
-        }
+      "error": {
+        "invalid_name": "The name cannot be empty or invalid.",
+        "name_not_unique": "A device with this name already exists. Please choose a unique name.",
+        "invalid_power_entity": "The selected entity does not exist or does not report power (W, kW, MW).",
+        "invalid_price_entity": "The selected entity does not exist or is unavailable.",
+        "invalid_co2_entity": "The selected entity does not exist or is unavailable.",
+        "invalid_input": "Invalid input.",
+        "required": "This field is required with the current calculation settings."
+      },
+      "abort": {
+        "grid_already_configured": "A grid adapter is already configured for this integration. Only one grid adapter is supported.",
+        "reconfigure_successful": "Device reconfigured successfully."
       }
     }
   },
-  "selector": {
-    "inverters_config": {
-      "options": {
-        "gateway_sensor": "Add inverters as gateway sensor",
-        "device": "Add inverters as dedicated devices",
-        "disabled": "Disable inverters"
-      }
+  "issues": {
+    "no_grid_configured": {
+      "title": "No grid configured for {entry_title}",
+      "description": "The Power Insight integration **{entry_title}** could not load because no grid adapter has been configured. Open the integration and use the **Add device** button to add a Grid adapter."
     }
   }
 }

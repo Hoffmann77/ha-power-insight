@@ -1,0 +1,13 @@
+set_value:
+  name: Set value
+  description: Set the state/value of an entity
+  target:
+    entity:
+      domain: "power_insight"
+  fields:
+    value:
+      required: true
+      description: "The new value to set"
+      example: 42
+      selector:
+        number:
