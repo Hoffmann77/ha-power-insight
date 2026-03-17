@@ -4,56 +4,11 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Iterable
-
-
-from homeassistant.const import (
-    CONF_NAME,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-    EVENT_STATE_CHANGED,
-    EVENT_STATE_REPORTED,
-)
-
-from homeassistant.core import (
-    Event,
-    EventStateChangedData,
-    EventStateReportedData,
-    State,
-    callback,
-)
-
-from homeassistant.helpers.event import (
-    async_track_state_change_event,
-)
-
-from .const import (
-    DOMAIN,
-    CONF_KEY,
-    CONF_POWER_ENTITY, CONF_POWER_ENTITY_INVERTED,
-    CONF_ELECTRICITY_PRICE_ENTITY, CONF_CO2_INTENSITY_ENTITY,
-    CONF_INITIAL_LCOE, CONF_INITIAL_CO2_INTENSITY,
-    CONF_INITIAL_LCOS,
-    CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
-    CONF_CHARGE_FROM_GRID, CONF_CHARGE_FROM_ADAPTERS,
-)
-
-from .exceptions import create_hass_exception
 
 
 _LOGGER = logging.getLogger(__name__)
 
 UNIT_PREFIXES = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
-
-DEVICE_ADAPTERS = {}
-
-
-def register_adapter(adapter: AbstractBaseAdapter) -> AbstractBaseAdapter:
-    """Register the given StorageRule class."""
-    for adapter_type in adapter.ADAPTER_TYPES:
-        DEVICE_ADAPTERS[adapter_type] = adapter
-
-    return adapter
 
 
 class AdapterContainer:
@@ -337,7 +292,7 @@ class PowerInsight:
             return None
 
         if grid_export and not total_power:
-            create_hass_exception(ValueError("Data discrepancy."))
+            _LOGGER.warning("Data discrepancy: grid export without total power.")
 
         return self._divide(grid_export, total_power)
 
@@ -351,7 +306,7 @@ class PowerInsight:
             return None
 
         if utilization_power and not total_power:
-            create_hass_exception(ValueError("Mising device."))
+            _LOGGER.warning("Data discrepancy: utilization without total power.")
 
         return self._divide(utilization_power, total_power)
 
@@ -365,7 +320,7 @@ class PowerInsight:
             return None
 
         if self_consumption and not total_power:
-            create_hass_exception(ValueError("Mising device."))
+            _LOGGER.warning("Data discrepancy: self-consumption without total power.")
 
         return self._divide(self_consumption, total_power)
 
@@ -1075,148 +1030,6 @@ class PowerInsight:
 
 
 
-class EventHandler:
-    """Handle the communication between power_insight and the event bus."""
-
-    def __init__(self, hass, entry_id, power_insight) -> None:
-        self.hass = hass
-        self.power_insight = power_insight
-
-        self._event_prefix = f"{DOMAIN}_{entry_id}_"
-
-        self._unsub_state_change_listener = []
-
-
-    def track_entities(self, entity_ids: Iterable[str]) -> None:
-
-        handle_state_change = self._update_on_state_change_callback
-        handle_state_report = self._update_on_state_report_callback
-
-        unsub = (
-            async_track_state_change_event(
-                self.hass,
-                entity_ids,
-                handle_state_change,
-            ),
-            async_track_state_change_event(
-                self.hass,
-                entity_ids,
-                handle_state_report,
-            ),
-        )
-        self._unsub_state_change_listener.extend(unsub)
-
-    def untrack_entities(self) -> None:
-        for unsub in self._unsub_state_change_listener:
-            unsub()
-
-
-    @callback
-    def _update_on_state_change_callback(
-        self, event: Event[EventStateChangedData]
-    ) -> None:
-        """Handle sensor state change."""
-        return self._update_on_state_change(
-            event.data,
-            event.data["entity_id"],
-            event.data["old_state"],
-            event.data["new_state"],
-            None,
-        )
-
-    @callback
-    def _update_on_state_report_callback(
-        self, event: Event[EventStateReportedData]
-    ) -> None:
-        """Handle sensor state report."""
-        return self._update_on_state_change(
-            event.data,
-            event.data["entity_id"],
-            None,
-            None,
-            event.data["new_state"],
-        )
-
-    def _update_on_state_change(
-        self,
-        event_data: EventStateChangedData | EventStateReportedData,
-        entity_id: str,
-        old_state: State | None,
-        new_state: State | None,
-        curr_state: State | None,
-        # old_timestamp: datetime | None,
-        # new_timestamp: datetime | None,
-    ) -> None:
-        """Update the data on state change.
-
-        Ref: https://www.home-assistant.io/docs/configuration/events/#state_changed  #noqa
-
-        """
-        INVALID_STATES = (STATE_UNAVAILABLE, STATE_UNKNOWN)
-
-        if curr_state:
-            new_state = curr_state
-
-        # Entity was removed from Home Assistant.
-        if new_state is None:
-            value = None
-
-        # Entity does not provide valid data.
-        elif new_state.state in INVALID_STATES:
-
-            # The old state was a valid value.
-            if old_state and old_state not in INVALID_STATES:
-                # TODO: implement a short keep alive period for the value.
-                # cancel = self._schedule_freeze_cancellation(
-                #     self._keep_alive, entity_id, None
-                # )
-                # self.async_on_remove(cancel)
-                # self._freeze_callbacks[entity_id] = cancel
-                value = None
-            else:
-                value = None
-
-        # We expect a valid state value
-        else:
-            value = self._state_to_value(new_state)
-
-
-        # Unfreeze the value as soon we have a new valid value.
-        # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity.py LN 1332  # noqa
-        # if value and entity_id in self._freeze_callbacks:
-        #     cancel = self._freeze_callbacks.pop(entity_id)
-        #     cancel()
-
-        # Set the value of the entity in power_insight.
-        self.power_insight.set_value(entity_id, value)
-
-        # Fire an event to notify all entities that depend on this entity_id.
-        # We send a custom event to ensure that the instance is updated
-        # before the entities retrieve the signal to update.
-        if curr_state is not None:
-            event_type = self._event_prefix + EVENT_STATE_REPORTED
-        else:
-            event_type = self._event_prefix + EVENT_STATE_CHANGED
-
-        self.hass.bus.async_fire(event_type, event_data)
-
-    def _state_to_value(self, state_obj: State) -> float | None:
-        """Return the state of the given state object as float."""
-        try:
-            value = float(state_obj.state)
-        except ValueError:
-            return None
-
-        if unit := state_obj.attributes.get("unit_of_measurement"):
-            unit = unit[0]
-
-        return value * UNIT_PREFIXES.get(unit, 1.0)
-
-
-
-
-
-
 
 class AbstractBaseAdapter(ABC):
     """Abstract base adapter."""
@@ -1257,12 +1070,6 @@ class AbstractBaseAdapter(ABC):
     def set_value(self, entity_id, value) -> None:
         """Set the value for an entity."""
         self._values[entity_id] = value
-
-    @classmethod
-    @abstractmethod
-    def from_entry(cls, *args, **kwargs) -> BasePowerAdapter:
-        """Initialize instance from a config entry."""
-        pass
 
 
 class BasePowerAdapter(AbstractBaseAdapter):
@@ -1329,7 +1136,6 @@ class BasePowerProvidingAdapter(BasePowerAdapter):
         pass
 
 
-@register_adapter
 class GridAdapter(BasePowerProvidingAdapter):
     """Grid power adapter."""
 
@@ -1447,19 +1253,6 @@ class GridAdapter(BasePowerProvidingAdapter):
     def lco2_intensity_rate(self) -> float | None:
         """Return the levelized co2 intensity rate in g/h."""
         pass
-
-    @classmethod
-    def from_entry(cls, unique_id: str, name: str, config: dict) -> GridAdapter:
-        """Create instance from config."""
-        return cls(
-            unique_id=unique_id,
-            verbose_name=name,
-            power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED),
-            price_entity=config.get(CONF_ELECTRICITY_PRICE_ENTITY),
-            co2_entity=config.get(CONF_CO2_INTENSITY_ENTITY),
-        )
-
 
 class BaseProductionAdapter(BasePowerProvidingAdapter):
     """Grid power adapter."""
@@ -1606,7 +1399,6 @@ class BaseProductionAdapter(BasePowerProvidingAdapter):
         return (cons / 1000) * value
 
 
-@register_adapter
 class PvAdapter(BaseProductionAdapter):
     """Photovoltaic system adapter."""
 
@@ -1642,22 +1434,6 @@ class PvAdapter(BaseProductionAdapter):
         """Return the levelized cost of electicity in Euro/kwh."""
         return self._lcoe
 
-    @classmethod
-    def from_entry(cls, unique_id: str, name: str, config: dict) -> PvAdapter:
-        """Create instance from config."""
-        return cls(
-            unique_id=unique_id,
-            verbose_name=name,
-            power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
-            lcoe=config[CONF_INITIAL_LCOE],
-            lco2_intensity=config[CONF_INITIAL_CO2_INTENSITY],
-            exports_power=config[CONF_EXPORTS_POWER],
-            export_compensation=config[CONF_EXPORT_COMPENSATION],
-        )
-
-
-@register_adapter
 class BatteryAdapter(BaseProductionAdapter):
     """Battery adapter."""
 
@@ -1699,24 +1475,6 @@ class BatteryAdapter(BaseProductionAdapter):
     def lcoe(self) -> float | None:
         """Return the levelized cost of electicity in Euro/kwh."""
         return self._lcos
-
-    @classmethod
-    def from_entry(cls, unique_id: str, name: str, config: dict) -> BatteryAdapter:
-        """Create instance from config."""
-        return cls(
-            unique_id=unique_id,
-            verbose_name=name,
-            power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
-            lcos=config[CONF_INITIAL_LCOS],
-            lco2_intensity=config[CONF_INITIAL_CO2_INTENSITY],
-            exports_power=config[CONF_EXPORTS_POWER],
-            export_compensation=config[CONF_EXPORT_COMPENSATION],
-            charge_from_grid=config.get(CONF_CHARGE_FROM_GRID, True),
-            charge_from_adapters=config.get(CONF_CHARGE_FROM_ADAPTERS),
-        )
-        # TODO: add CONF_BAT_EFFICIENCY
-
 
 class BaseConsumerAdapter(BasePowerAdapter):
     """Base adapter for consumers."""
@@ -1761,17 +1519,6 @@ class BaseConsumerAdapter(BasePowerAdapter):
         return (cons / 1000) * value
 
 
-@register_adapter
 class ConsumerAdapter(BaseConsumerAdapter):
 
-    ADAPTER_TYPES = ("consumer",)
-
-    @classmethod
-    def from_entry(cls, unique_id: str, name: str, config: dict) -> ConsumerAdapter:
-        """Create instance from config."""
-        return cls(
-            unique_id=unique_id,
-            verbose_name=name,
-            power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
-        )
+    pass
