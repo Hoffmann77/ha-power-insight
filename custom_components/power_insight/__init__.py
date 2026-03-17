@@ -12,9 +12,9 @@ from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN, PLATFORMS
 from .utils import state_to_value
-from .power_insight import (
-    DEVICE_ADAPTERS, PowerInsight, EventHandler,
-)
+from .power_insight import PowerInsight
+from .event_handler import EventHandler
+from .adapter_models import ADAPTER_MODELS
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,37 +33,20 @@ class MyData:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     """Init the Mygrid instance from the config entry."""
-    #grid_adapter_data = entry.data["adapter"].copy()
-    #grid_adapter = DEVICE_ADAPTERS["grid"]
-
-    # power_insight = PowerInsight(
-    #     grid_adapter.from_entry(
-    #         unique_id=entry.entry_id,
-    #         name="Grid",
-    #         config=grid_adapter_data["config"],
-    #     )
-    # )
-
     power_insight = PowerInsight()
 
     for subentry in entry.subentries.values():
-        adapter_data = subentry.data["adapter"].copy()
-        adapter_type = adapter_data.get("adapter_type")
+        adapter_type = subentry.data["adapter"].get("adapter_type")
         if not adapter_type:
             continue
 
-        adapter_cls = DEVICE_ADAPTERS.get(adapter_type)
-        if adapter_cls is None:
+        model_cls = ADAPTER_MODELS.get(adapter_type)
+        if model_cls is None:
             _LOGGER.warning("Unknown adapter type %r in subentry %s — skipping.", adapter_type, subentry.subentry_id)
             continue
 
-        power_insight.register_adapter(
-            adapter_cls.from_entry(
-                unique_id=subentry.subentry_id,
-                name=subentry.title,
-                config=adapter_data["config"],
-            )
-        )
+        model = model_cls.from_subentry(subentry)
+        power_insight.register_adapter(model.create_adapter())
     
     if power_insight.grid_adapter is None:
         ir.async_create_issue(
