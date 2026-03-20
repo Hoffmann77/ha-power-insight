@@ -139,6 +139,29 @@ def _levelized_production_required(options: dict) -> bool:
 
 
 # ============================================================================
+# HELPERS
+# ============================================================================
+
+def _build_charge_from_selector(
+    entry: ConfigEntry,
+    exclude_subentry_id: str | None = None,
+) -> selector.SelectSelector:
+    """Build the dynamic multi-select selector for charge_from_adapters.
+
+    Called by ``build_schema`` when resolving ``AdapterField.selector_fn``
+    for ``CONF_CHARGE_FROM_ADAPTERS``.
+    """
+    pv_options = _get_pv_adapter_options(entry, exclude_subentry_id=exclude_subentry_id)
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=pv_options,
+            multiple=True,
+            mode=selector.SelectSelectorMode.LIST,
+        )
+    )
+
+
+# ============================================================================
 # VALIDATION FUNCTIONS
 # ============================================================================
 
@@ -964,23 +987,7 @@ def _get_pv_adapter_options(
     return options
 
 
-def _build_charge_from_selector(
-    entry: ConfigEntry,
-    exclude_subentry_id: str | None = None,
-) -> selector.SelectSelector:
-    """Build the dynamic multi-select selector for charge_from_adapters.
 
-    Called by ``build_schema`` when resolving ``AdapterField.selector_fn``
-    for ``CONF_CHARGE_FROM_ADAPTERS``.
-    """
-    pv_options = _get_pv_adapter_options(entry, exclude_subentry_id=exclude_subentry_id)
-    return selector.SelectSelector(
-        selector.SelectSelectorConfig(
-            options=pv_options,
-            multiple=True,
-            mode=selector.SelectSelectorMode.LIST,
-        )
-    )
 
 
 # ============================================================================
