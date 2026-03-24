@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE
@@ -142,6 +142,33 @@ async def async_unload_entry(
     event_handler.untrack_entities()
 
     return unload
+
+
+async def async_remove_subentry(
+    hass: HomeAssistant,
+    entry: MyConfigEntry,
+    subentry: ConfigSubentry,
+) -> None:
+    """Raise repair issues for batteries that referenced the removed adapter."""
+    removed_type = subentry.data.get("adapter", {}).get("adapter_type")
+    if removed_type not in ("grid", "pv_system"):
+        return
+
+    removed_id = subentry.subentry_id
+    for remaining in entry.subentries.values():
+        if remaining.data.get("adapter", {}).get("adapter_type") != "battery":
+            continue
+        charge_from = remaining.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
+        if removed_id in charge_from:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"reconfigure_battery_{remaining.subentry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="reconfigure_battery_adapters",
+                translation_placeholders={"battery_name": remaining.title},
+            )
 
 
 async def async_migrate_entry(
