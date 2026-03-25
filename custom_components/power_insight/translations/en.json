@@ -80,6 +80,7 @@
             "exports_power": "Exports Power to Grid",
             "export_compensation": "Export Compensation Rate",
             "battery_efficiency": "Round-Trip Efficiency",
+            "charge_from_adapters": "Charge From",
             "lifetime_production": "Lifetime Production",
             "lifetime_cost": "Total Lifetime Cost",
             "co2_footprint": "CO\u2082 Footprint"
@@ -93,6 +94,7 @@
             "exports_power": "Enable if this device can export excess power to the grid.",
             "export_compensation": "Rate received per kWh exported to the grid (\u20ac/kWh). Required when cost savings calculation is enabled.",
             "battery_efficiency": "The round-trip efficiency of the battery in percent.",
+            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from.",
             "lifetime_production": "Total expected energy production over the device lifetime (kWh). Required when levelized calculation is enabled.",
             "lifetime_cost": "Total investment and installation cost over the device lifetime (\u20ac). Required when levelized cost calculation is enabled.",
             "co2_footprint": "Total CO\u2082 emissions from manufacturing and installation (kg). Required when levelized CO\u2082 calculation is enabled."
@@ -105,13 +107,15 @@
             "power_entity": "Power Entity",
             "power_entity_inverted": "Invert Power Direction",
             "grid_electricity_price_entity": "Electricity Price Entity",
-            "co2_intensity_entity": "CO\u2082 Intensity Entity"
+            "co2_intensity_entity": "CO\u2082 Intensity Entity",
+            "charge_from_adapters": "Charge From"
           },
           "data_description": {
             "power_entity": "Sensor reporting power in W, kW, or MW.",
             "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
             "grid_electricity_price_entity": "Sensor or input number providing the current electricity price in \u20ac/kWh. Required when cost calculations are enabled.",
-            "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled."
+            "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled.",
+            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from."
           }
         }
       },
@@ -134,6 +138,10 @@
     "no_grid_configured": {
       "title": "No grid configured for {entry_title}",
       "description": "The Power Insight integration **{entry_title}** could not load because no grid adapter has been configured. Open the integration and use the **Add device** button to add a Grid adapter."
+    },
+    "reconfigure_battery_adapters": {
+      "title": "Battery '{battery_name}' needs reconfiguration",
+      "description": "An adapter was added or removed. Please reconfigure **{battery_name}** to ensure the correct charge sources are applied. Open the integration, find the device, and use the **Reconfigure** option."
     }
   }
 }

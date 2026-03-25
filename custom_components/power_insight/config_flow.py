@@ -17,7 +17,7 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import selector
+from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.const import CONF_NAME
 from homeassistant.util import slugify
 
@@ -149,12 +149,32 @@ def _build_charge_from_selector(
     """Build the dynamic multi-select selector for charge_from_adapters.
 
     Called by ``build_schema`` when resolving ``AdapterField.selector_fn``
-    for ``CONF_CHARGE_FROM_ADAPTERS``.
+    for ``CONF_CHARGE_FROM_ADAPTERS``.  Includes the grid adapter (if
+    configured) followed by all PV-system adapters.
     """
-    pv_options = _get_pv_adapter_options(entry, exclude_subentry_id=exclude_subentry_id)
+    options: list[selector.SelectOptionDict] = []
+
+    # Include the grid adapter as a selectable charge source.
+    for subentry in entry.subentries.values():
+        if exclude_subentry_id and subentry.subentry_id == exclude_subentry_id:
+            continue
+        adapter = subentry.data.get("adapter", {})
+        if adapter.get("adapter_type") == "grid":
+            options.append(
+                selector.SelectOptionDict(
+                    value=subentry.subentry_id,
+                    label="Grid",
+                )
+            )
+
+    # Include PV-system adapters.
+    options.extend(
+        _get_pv_adapter_options(entry, exclude_subentry_id=exclude_subentry_id)
+    )
+
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=pv_options,
+            options=options,
             multiple=True,
             mode=selector.SelectSelectorMode.LIST,
         )
@@ -655,14 +675,6 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         default=0.0,
         in_config_flow=True,
         in_reconfigure_flow=False,
-        store_in_adapter_config=True,
-    ),
-    CONF_CHARGE_FROM_GRID: AdapterField(
-        selector=BOOLEAN_SELECTOR,
-        required=True,
-        default=True,
-        in_config_flow=True,
-        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_CHARGE_FROM_ADAPTERS: AdapterField(
@@ -1224,10 +1236,21 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
                 result = self.async_create_entry(title=title, data=entry_data)
 
-                # Reload the parent entry so the repair-issue check in
-                # async_setup_entry fires immediately for grid and pv_system
-                # additions (batteries don't affect other batteries).
+                # When a charge source (grid or pv_system) is added, prompt
+                # every existing battery adapter to be reconfigured so the user
+                # can update their charge_from_adapters settings.
                 if self._adapter_type in ("grid", "pv_system"):
+                    for sub in parent_entry.subentries.values():
+                        if sub.data.get("adapter", {}).get("adapter_type") == "battery":
+                            ir.async_create_issue(
+                                self.hass,
+                                DOMAIN,
+                                f"reconfigure_battery_{sub.subentry_id}",
+                                is_fixable=False,
+                                severity=ir.IssueSeverity.WARNING,
+                                translation_key="reconfigure_battery_adapters",
+                                translation_placeholders={"battery_name": sub.title},
+                            )
                     self.hass.async_create_task(
                         self.hass.config_entries.async_reload(parent_entry.entry_id)
                     )
@@ -1288,8 +1311,12 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                     "key": adapter.get("key"),
                     "config": adapter_config,
                 }
-                # async_update_reload_and_abort triggers a reload so
-                # async_setup_entry will clear the repair issue automatically.
+                # Dismiss the per-battery reconfigure issue (raised when a
+                # charge-source adapter was added or removed) now that the
+                # user has reconfigured this battery.
+                ir.async_delete_issue(
+                    self.hass, DOMAIN, f"reconfigure_battery_{subentry.subentry_id}"
+                )
                 return self.async_update_reload_and_abort(
                     self._get_entry(), subentry, data=updated
                 )
@@ -1303,14 +1330,15 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
         # For charge_from_adapters, strip stale subentry IDs before seeding so
         # the selector is pre-populated with only currently valid selections.
+        # Valid sources are grid and pv_system adapters.
         if CONF_CHARGE_FROM_ADAPTERS in seed:
-            valid_pv_ids = {
+            valid_source_ids = {
                 sub.subentry_id
                 for sub in parent_entry.subentries.values()
-                if sub.data.get("adapter", {}).get("adapter_type") == "pv_system"
+                if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
             }
             seed[CONF_CHARGE_FROM_ADAPTERS] = [
-                i for i in seed[CONF_CHARGE_FROM_ADAPTERS] if i in valid_pv_ids
+                i for i in seed[CONF_CHARGE_FROM_ADAPTERS] if i in valid_source_ids
             ]
 
         schema = build_schema(

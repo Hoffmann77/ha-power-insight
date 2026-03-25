@@ -3,14 +3,14 @@
 import logging
 from dataclasses import dataclass
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.exceptions import ConfigEntryNotReady
 
 
-from .const import DOMAIN, PLATFORMS
+from .const import CONF_CHARGE_FROM_ADAPTERS, DOMAIN, PLATFORMS
 from .utils import state_to_value
 from .power_insight import PowerInsight
 from .event_handler import EventHandler
@@ -50,18 +50,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     
     if power_insight.grid_adapter is None:
         ir.async_create_issue(
-        hass,
-        DOMAIN,
-        "no_grid_configured",
-        is_fixable=False,
-        severity=ir.IssueSeverity.ERROR,
-        translation_key="no_grid_configured",
-        translation_placeholders={"entry_title": entry.title},
+            hass,
+            DOMAIN,
+            "no_grid_configured",
+            is_fixable=False,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="no_grid_configured",
+            translation_placeholders={"entry_title": entry.title},
         )
         raise ConfigEntryNotReady("grid_not_configured")
-    
-    # Grid is present — dismiss any previously raised issue
+
+    # Grid is present — dismiss any previously raised issue.
     ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")
+
+    # Raise a repair issue for each battery adapter whose charge_from_adapters
+    # contains stale references (i.e. adapters that have since been removed).
+    valid_source_ids = {
+        sub.subentry_id
+        for sub in entry.subentries.values()
+        if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
+    }
+    for subentry in entry.subentries.values():
+        if subentry.data.get("adapter", {}).get("adapter_type") != "battery":
+            continue
+        charge_from = subentry.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
+        if any(source_id not in valid_source_ids for source_id in charge_from):
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"reconfigure_battery_{subentry.subentry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="reconfigure_battery_adapters",
+                translation_placeholders={"battery_name": subentry.title},
+            )
 
     source_entities = power_insight.source_entities
 
@@ -120,6 +142,33 @@ async def async_unload_entry(
     event_handler.untrack_entities()
 
     return unload
+
+
+async def async_remove_subentry(
+    hass: HomeAssistant,
+    entry: MyConfigEntry,
+    subentry: ConfigSubentry,
+) -> None:
+    """Raise repair issues for batteries that referenced the removed adapter."""
+    removed_type = subentry.data.get("adapter", {}).get("adapter_type")
+    if removed_type not in ("grid", "pv_system"):
+        return
+
+    removed_id = subentry.subentry_id
+    for remaining in entry.subentries.values():
+        if remaining.data.get("adapter", {}).get("adapter_type") != "battery":
+            continue
+        charge_from = remaining.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
+        if removed_id in charge_from:
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"reconfigure_battery_{remaining.subentry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="reconfigure_battery_adapters",
+                translation_placeholders={"battery_name": remaining.title},
+            )
 
 
 async def async_migrate_entry(
