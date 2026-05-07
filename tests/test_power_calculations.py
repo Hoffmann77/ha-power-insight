@@ -179,7 +179,7 @@ class TestSinglePVwithExport:
             "net_zero": 0.0,
             "nighttime": 500.0,
         }
-        assert power_insight.grid_import == results[test_case]
+        assert power_insight.combined_grid_import == results[test_case]
 
     def test_grid_export(self, power_insight, entity_values, test_case):
         results = {
@@ -189,7 +189,7 @@ class TestSinglePVwithExport:
             "nighttime": 0.0,
         }
 
-        assert power_insight.grid_export == results[test_case]
+        assert power_insight.combined_grid_export == results[test_case]
 
     def test_production(self, power_insight, entity_values, test_case):
 
@@ -210,7 +210,7 @@ class TestSinglePVwithExport:
             "nighttime": 50.0,
         }
 
-        assert power_insight.combined_utilization == results[test_case]
+        assert power_insight.combined_standby_power == results[test_case]
 
     # def test_total_power(self, power_insight, entity_values):
     #     grid_import = max(entity_values[self.GRID_ENTITY], 0)
@@ -232,7 +232,7 @@ class TestSinglePVwithExport:
             "nighttime": 0.0,
         }
 
-        assert power_insight.combined_export_ratio == results[test_case]
+        assert power_insight.gross_power_export_ratio == results[test_case]
 
     # def test_utilization_share(self, power_insight, entity_values):
     #     assert power_insight.utilization_share == pytest.approx(0.0)

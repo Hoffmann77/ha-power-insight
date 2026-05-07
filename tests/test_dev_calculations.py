@@ -1,34 +1,21 @@
-"""Tests for PowerInsight core calculation logic.
+"""Tests for PowerInsight — Grid + 3 PV + 3 Battery + 1 Consumer.
 
-Four scenarios of increasing complexity:
-  1. Grid + PV  (excess production → exporting)
-  2. Grid + PV + Battery  (all consumed, no export)
-  3. Grid + PV + Battery + Consumer  (consumer cost allocation)
-  4. Grid + PV_1 + PV_2  (multiple adapters of same class)
+Each test method derives its expected value directly from entity_values using
+the same formulas that the production code implements.  Adding a new scenario
+case requires only a new ENTITY_VALUES entry; no test methods change.
 
-Each scenario class defines ENTITY_VALUES as a nested dict:
-
-    ENTITY_VALUES = {
-        "case_name": {"sensor.entity_id": value, ...},
-        ...
-    }
-
-The ``entity_values`` fixture is parametrized over every key so that all
-test methods run once per named case.  Test methods compute expected results
-directly from ``entity_values`` — adding a new test case requires only a
-single new entry in ENTITY_VALUES, no changes to test methods.
+Sign convention (matches power_insight.py):
+  Grid   : positive = import, negative = export
+  PV/Bat : positive = producing/discharging, negative = standby/charging
 """
 
 from __future__ import annotations
 
 import importlib.util
 import os
-import sys
 
 import pytest
 
-# Import power_insight.py directly (bypassing the package __init__.py
-# which depends on Home Assistant).
 _MODULE_PATH = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
@@ -52,7 +39,6 @@ ConsumerAdapter = _mod.ConsumerAdapter
 # ---------------------------------------------------------------------------
 
 def build_power_insight(adapters, entity_values):
-    """Create a PowerInsight instance, register adapters, and set entity values."""
     pi = PowerInsight()
     for adapter in adapters:
         pi.register_adapter(adapter)
@@ -61,666 +47,183 @@ def build_power_insight(adapters, entity_values):
     return pi
 
 
-def create_grid(unique_id, power_entity, price_entity):
-    return GridAdapter(
-        unique_id=unique_id,
-        verbose_name=unique_id.upper(),
-        power_entity=power_entity,
-        price_entity=price_entity,
-    )
+def _divide(a, b):
+    if a == 0.0:
+        return 0.0
+    return a / b
 
 
-def create_pv(unique_id, power_entity, lcoe, lco2_intensity, exports_power, export_compensation):
-    return PvAdapter(
-        unique_id=unique_id,
-        verbose_name=unique_id.upper(),
-        power_entity=power_entity,
-        power_entity_inverted=False,
-        lcoe=lcoe,
-        lco2_intensity=lco2_intensity,
-        exports_power=exports_power,
-        export_compensation=export_compensation,
-    )
+# ---------------------------------------------------------------------------
+# Scenario: Grid-1 + PV-1 + PV-2 + PV-3 + Bat-1 + Bat-2 + Bat-3 + Cons-1
+#
+# PV-1, PV-2  : exports_power=True,  export_compensation=0.08 €/kWh, lcoe=0.10/0.12
+# PV-3        : exports_power=False, export_compensation=0.00,        lcoe=0.15
+# Bat-1..3    : exports_power=False, charge_from_adapters=[] (no source tracking)
+# Cons-1      : plain consumer
+# ---------------------------------------------------------------------------
 
+class TestFullScenario:
+    """Full adapter set — formula-derived expected values."""
 
-def create_battery(unique_id, power_entity, lcos, lco2_intensity, exports_power, export_compensation):
-    return BatteryAdapter(
-        unique_id=unique_id,
-        verbose_name=unique_id.upper(),
-        power_entity=power_entity,
-        power_entity_inverted=False,
-        lcos=lcos,
-        lco2_intensity=lco2_intensity,
-        exports_power=exports_power,
-        export_compensation=export_compensation,
-    )
+    # --- entity IDs ---
+    GRID_POWER   = "sensor.grid_power"
+    GRID_PRICE   = "sensor.grid_price"
+    PV1_POWER    = "sensor.pv1_power"
+    PV2_POWER    = "sensor.pv2_power"
+    PV3_POWER    = "sensor.pv3_power"
+    BAT1_POWER   = "sensor.bat1_power"
+    BAT2_POWER   = "sensor.bat2_power"
+    BAT3_POWER   = "sensor.bat3_power"
+    CONS1_POWER  = "sensor.cons1_power"
 
-
-def create_consumer(unique_id, power_entity):
-    return ConsumerAdapter(
-        unique_id=unique_id,
-        verbose_name=unique_id.upper(),
-        power_entity=power_entity,
-    )
-
-
-# ===================================================================
-# Scenario 1 — Grid + PV  (PV overproducing → exporting to grid)
-# ===================================================================
-
-class TestDefaultScenarios:
-    """Grid + PV with excess production (exporting)."""
-
-    EXPORT_COMPENSATION = "sensor.export_compensation"
-
-    GRID_1_PRICE_ENTITY = "sensor.grid_1_price"
-    GRID_1_POWER_ENTITY = "sensor.grid_1_power"
-    PV_1_POWER_ENTITY = "sensor.pv_1_power"
-    PV_2_POWER_ENTITY = "sensor.pv_2_power"
-    PV_3_POWER_ENTITY = "sensor.pv_3_power"
-    BAT_1_POWER_ENTITY = "sensor.bat_1_power"
-    BAT_2_POWER_ENTITY = "sensor.bat_2_power"
-    CONS_1_POWER_ENTITY = "sensor.cons_1_power"
-    CONS_2_POWER_ENTITY = "sensor.cons_2_power"
+    PV1_LCOE = 0.10
+    PV2_LCOE = 0.12
+    PV3_LCOE = 0.15
+    PV1_EXPORT_COMP = 0.08
+    PV2_EXPORT_COMP = 0.08
 
     ENTITY_VALUES = {
+        # Morning: grid imports, PV-1 producing, PV-3 in standby,
+        #          Bat-1 discharging, consumer on.
         "morning": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: 1000.0,
-            PV_1_POWER_ENTITY: 200.0,
-            PV_2_POWER_ENTITY: 0.0,
-            PV_3_POWER_ENTITY: -25.0,       # No sun yet, standby power
-            BAT_1_POWER_ENTITY: 200.0,      # low on charge, discharging
-            BAT_2_POWER_ENTITY: 0.0,        # empty
-            CONS_1_POWER_ENTITY: 1000.0,    # heating
+            GRID_POWER:  1000.0,
+            GRID_PRICE:  0.30,
+            PV1_POWER:   2000.0,
+            PV2_POWER:      0.0,
+            PV3_POWER:    -30.0,   # standby draw
+            BAT1_POWER:   500.0,   # discharging
+            BAT2_POWER:     0.0,
+            BAT3_POWER:     0.0,
+            CONS1_POWER:  800.0,
         },
+        # Midday: grid exporting, all PV at peak, all batteries charging.
         "midday": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: -4000.0,   # Lot of excess power
-            PV_1_POWER_ENTITY: 3000.0,
-            PV_2_POWER_ENTITY: 2000.0,
-            PV_3_POWER_ENTITY: 1000.0,
-            BAT_1_POWER_ENTITY: -1000.0,    # charging
-            BAT_2_POWER_ENTITY: -1000.0,    # charging
-            CONS_1_POWER_ENTITY: 0.0,
+            GRID_POWER:  -3000.0,
+            GRID_PRICE:   0.30,
+            PV1_POWER:   3000.0,
+            PV2_POWER:   2000.0,
+            PV3_POWER:   1500.0,
+            BAT1_POWER:  -800.0,   # charging
+            BAT2_POWER:  -600.0,   # charging
+            BAT3_POWER:  -400.0,   # charging
+            CONS1_POWER:    0.0,
         },
+        # Evening: grid neutral, PV-1 in standby, batteries discharging,
+        #          consumer on.
         "evening": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: 0.0,
-            PV_1_POWER_ENTITY: -50.0,       # No sun yet, standby power
-            PV_2_POWER_ENTITY: 0.0,         # Litte sun, net zero
-            PV_3_POWER_ENTITY: 0.0,
-            BAT_1_POWER_ENTITY: 1000.0,     # discharging
-            BAT_2_POWER_ENTITY: 800.0,      # discharging
-            CONS_1_POWER_ENTITY: 1000.0,    # heating
+            GRID_POWER:     0.0,
+            GRID_PRICE:   0.30,
+            PV1_POWER:    -25.0,   # standby draw
+            PV2_POWER:      0.0,
+            PV3_POWER:      0.0,
+            BAT1_POWER:   800.0,   # discharging
+            BAT2_POWER:   600.0,   # discharging
+            BAT3_POWER:   200.0,   # discharging
+            CONS1_POWER:  800.0,
+        },
+        # Nighttime: grid imports, all PV in standby, no battery activity.
+        "nighttime": {
+            GRID_POWER:   700.0,
+            GRID_PRICE:   0.25,
+            PV1_POWER:    -20.0,
+            PV2_POWER:    -10.0,
+            PV3_POWER:      0.0,
+            BAT1_POWER:     0.0,
+            BAT2_POWER:     0.0,
+            BAT3_POWER:     0.0,
+            CONS1_POWER:  300.0,
+        },
+        # None: one sensor unavailable → all derived properties return None.
+        "none": {
+            GRID_POWER:  None,
+            GRID_PRICE:  0.30,
+            PV1_POWER:   1000.0,
+            PV2_POWER:      0.0,
+            PV3_POWER:      0.0,
+            BAT1_POWER:     0.0,
+            BAT2_POWER:     0.0,
+            BAT3_POWER:     0.0,
+            CONS1_POWER:  500.0,
         },
     }
 
     ADAPTERS = (
         GridAdapter(
-            unique_id="grid_1",
-            verbose_name="Grid-1",
-            power_entity=GRID_1_POWER_ENTITY,
-            price_entity=GRID_1_PRICE_ENTITY,
+            unique_id="grid",
+            verbose_name="Grid",
+            power_entity=GRID_POWER,
+            price_entity=GRID_PRICE,
         ),
         PvAdapter(
-            unique_id="pv_system_1",
-            verbose_name="PV-System-1",
-            power_entity=PV_1_POWER_ENTITY,
+            unique_id="pv1",
+            verbose_name="PV-1",
+            power_entity=PV1_POWER,
             power_entity_inverted=False,
-            lcoe=0.1,
+            lcoe=PV1_LCOE,
             lco2_intensity=35.0,
             exports_power=True,
-            export_compensation=0.08,
+            export_compensation=PV1_EXPORT_COMP,
         ),
         PvAdapter(
-            unique_id="pv_system_2",
-            verbose_name="PV-System-2",
-            power_entity=PV_2_POWER_ENTITY,
+            unique_id="pv2",
+            verbose_name="PV-2",
+            power_entity=PV2_POWER,
             power_entity_inverted=False,
-            lcoe=0.15,
+            lcoe=PV2_LCOE,
             lco2_intensity=40.0,
             exports_power=True,
-            export_compensation=0.08,
+            export_compensation=PV2_EXPORT_COMP,
         ),
         PvAdapter(
-            unique_id="pv_system_3",
-            verbose_name="PV-System-3",
-            power_entity=PV_3_POWER_ENTITY,
+            unique_id="pv3",
+            verbose_name="PV-3",
+            power_entity=PV3_POWER,
             power_entity_inverted=False,
-            lcoe=0.2,
-            lco2_intensity=50.0,
-            exports_power=False,
-            export_compensation=0.00,
-        ),
-        BatteryAdapter(
-            unique_id="battery_1",
-            verbose_name="Battery-1",
-            power_entity=BAT_1_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcos=0.15,
-            lco2_intensity=50.0,
-            exports_power=False,
-            export_compensation=0.08,
-            charge_from_grid=False,
-            charge_from_adapters=[],
-        ),
-        BatteryAdapter(
-            unique_id="battery_2",
-            verbose_name="Battery-2",
-            power_entity=BAT_2_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcos=0.15,
-            lco2_intensity=50.0,
-            exports_power=False,
-            export_compensation=0.08,
-            charge_from_grid=False,
-            charge_from_adapters=[],
-        ),
-    )
-
-    @pytest.fixture(params=list(ENTITY_VALUES))
-    def entity_values(self, request):
-        return self.ENTITY_VALUES[request.param]
-
-    @pytest.fixture()
-    def test_case(self, request):
-        # entity_values is parameterized, so its param is accessible via the parent fixture's node
-        return request.node.callspec.params["entity_values"]
-
-    @pytest.fixture()
-    def power_insight(self, entity_values):
-        return build_power_insight(self.ADAPTERS, entity_values)
-
-    #
-    # TESTS --------------------------------------------------------------->
-    #
-
-    def test_combined_grid_import(
-            self, power_insight, entity_values, test_case
-    ) -> None:
-        """Power imported from the grid."""
-        results = {
-            "morning": 0.0,
-            "midday": 0.0,
-            "evening": 0.0,
-        }
-
-        assert power_insight.combined_grid_import == results[test_case]
-
-
-
-
-    @property
-    def combined_grid_export(self) -> float | None:
-        """Power returned to the grid."""
-        if (power := self.grid_adapter.export_power) is None:
-            return None
-
-        return power
-
-    @property
-    def combined_production(self) -> float | None:
-        """Sum of power generated by the production adapters."""
-        power = 0.0
-        for adapter in self.prod_adapters:
-            if (prod := adapter.production) is not None:
-                power += prod
-            else:
-                return None
-
-        return power
-
-    @property
-    def combined_consumption(self) -> float | None:
-        """Sum of power consumed by electrical loads (W).
-
-        Sum of power that is neither exported or utilized.
-
-        This is the the power that is self consumed.
-
-        """
-        if (total_power := self.gross_power) is None:
-            return None
-
-        if (power_utilized := self.combined_utilization) is None:
-            return None
-
-        if (power_exported := self.combined_grid_export) is None:
-            return None
-
-        return total_power - power_exported - power_utilized
-
-    @property
-    def combined_utilization(self) -> float | None:
-        """Sum of power utilized by production adapters (W).
-
-        E.g. standby power of inverters or charging power of energy storages.
-
-        """
-        power = 0.0
-        for adapter in self.prod_adapters:
-            if (cons := adapter.consumption) is not None:
-                power += cons
-            else:
-                return None
-
-        return power
-
-    @property
-    def gross_power(self) -> float | None:
-        """Sum of all power entering the system (W).
-
-        The total power available to the system before export and
-        utilization are accounted for.
-
-        """
-        if (grid_import := self.combined_grid_import) is None:
-            return None
-
-        if (production := self.combined_production) is None:
-            return None
-
-        return grid_import + production
-
-    # ------------------------->
-    # COMBINED POWER RATIOS --->
-    # ------------------------->
-
-    @property
-    def combined_export_ratio(self) -> float | None:
-        """Fraction of total available power that is returned to the grid.
-
-        In conjunction with our Idealization that we only have one grid power sensor
-        this describes the fraction of the combined produced power that is returned to the grid.
-
-        Simple: How much of the generated power is returned to the grid.
-
-        """
-        if (total_power := self.gross_power) is None:
-            return None
-
-        if (grid_export := self.combined_grid_export) is None:
-            return None
-
-        if grid_export and not total_power:
-            _LOGGER.warning("Data discrepancy: grid export without total power.")
-
-        return self._divide(grid_export, total_power)
-
-    @property
-    def combined_consumption_ratio(self) -> float | None:
-        """Return the share of total power that is self consumed.
-
-        How much of the gross power is consumed.
-
-        """
-        if (gross_power := self.gross_power) is None:
-            return None
-
-        if (consumption := self.combined_consumption) is None:
-            return None
-
-        if consumption and not gross_power:
-            _LOGGER.warning("Data discrepancy: self-consumption without total power.")
-
-        return self._divide(consumption, gross_power)
-
-    @property
-    def combined_utilization_ratio(self) -> float | None:
-        """Share of total power that is utilized.
-
-        How much of the gross power is utilized.
-
-        """
-        if (total_power := self.gross_power) is None:
-            return None
-
-        if (utilization_power := self.combined_utilization) is None:
-            return None
-
-        if utilization_power and not total_power:
-            _LOGGER.warning("Data discrepancy: utilization without total power.")
-
-        return self._divide(utilization_power, total_power)
-
-    @property
-    def applicable_combined_utilization_ratio(self) -> float | None:
-        """Return the share of total_power that is self consumed.
-
-        This is the share of power that is utilized by the production adapters.
-
-        """
-        if (export_share := self.combined_export_ratio) is None:
-            return None
-
-        if (utilization_share := self.combined_utilization_share) is None:
-            return None
-
-        return self._divide(utilization_share, (1.0 - export_share))
-
-    @property
-    def applicable_consumption_ratio(self) -> float | None:
-        """Return the share of total_power that is self consumed."""
-        if (export_share := self.combined_export_ratio) is None:
-            return None
-
-        if (self_cons_share := self.combined_consumption_ratio) is None:
-            return None
-
-        return self._divide(self_cons_share, (1.0 - export_share))
-
-    # --------------------------->
-    # COMBINED MONETARY RATES --->
-    # --------------------------->
-
-    @property
-    def combined_export_compensation_rate(self) -> float | None:
-        """Combined export compensation rate."""
-        result = 0.0
-        compensation_rates = self.prod_adapters_export_compensation_rates
-        for adapter in self.prod_adapters:
-            if (rate := compensation_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    @property
-    def combined_avoided_cost_rate(self) -> float | None:
-        """Combined avoided cost by self consumption cost rate."""
-        result = 0.0
-        self_cons_saving_rates = self.prod_adapters_avoided_cost_rates
-        for adapter in self.prod_adapters:
-            if (rate := self_cons_saving_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    @property
-    def combined_coe_rate(self) -> float | None:
-        """Combined cost of electricity rate."""
-        result = 0.0
-        adapters = [self.grid_adapter] + self.prod_adapters
-        for adapter in adapters:
-            if (coe_rate := adapter.coe_rate) is None:
-                return None
-
-            result += coe_rate
-
-        return result
-
-    @property
-    def combined_lcoe_rate(self) -> float | None:
-        """Combined levelized cost of electricity rate."""
-        result = 0.0
-        adapters = [self.grid_adapter] + self.prod_adapters
-        for adapter in adapters:
-            if (lcoe_rate := adapter.lcoe_rate) is None:
-                return None
-
-            result += lcoe_rate
-
-        return result
-
-    @property
-    def combined_coo_rate(self) -> float | None:
-        """Total export compensation rate."""
-        result = 0.0
-        coo_rates = self.prod_adapters_coo_rates
-        for adapter in self.prod_adapters:
-            if (rate := coo_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    @property
-    def combined_lcoo_rate(self) -> float | None:
-        """Total export compensation rate."""
-        result = 0.0
-        lcoo_rates = self.prod_adapters_lcoo_rates
-        for adapter in self.prod_adapters:
-            if (rate := lcoo_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    @property
-    def combined_saving_rate(self) -> float | None:
-        """Total export compensation rate."""
-        result = 0.0
-        saving_rates = self.prod_adapters_cost_saving_rates
-        for adapter in self.prod_adapters:
-            if (rate := saving_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    @property
-    def combined_levelized_saving_rate(self) -> float | None:
-        """Total export compensation rate."""
-        result = 0.0
-        levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
-        for adapter in self.prod_adapters:
-            if (rate := levelized_saving_rates.get(adapter.uid)) is None:
-                return None
-
-            result += rate
-
-        return result
-
-    # ------------------->
-    # COMBINED PRICES --->
-    # ------------------->
-
-    @property
-    def combined_coe(self) -> float | None:
-        """Cost of electricity."""
-        if (coe_rate := self.combined_coe_rate) is None:
-            return None
-
-        if coe_rate == 0.0:
-            return 0.0
-
-        if (gross_power := self.gross_power) is None:
-            return None
-        else:
-            gross_power = self._to_kilo(gross_power)
-
-        return self._divide(coe_rate, gross_power)
-
-    @property
-    def combined_lcoe(self) -> float | None:
-        """Levelized cost of electricity."""
-        if (lcoe_rate := self.combined_lcoe_rate) is None:
-            return None
-
-        if lcoe_rate == 0.0:
-            return 0.0
-
-        if (total_power := self.gross_power) is None:
-            return None
-        else:
-            total_power = self._to_kilo(total_power)
-
-        return self._divide(lcoe_rate, total_power)
-
-
-
-
-
-
-class TestExtendedScenarios:
-    """Grid + PV with excess production (exporting)."""
-
-    EXPORT_COMPENSATION = "sensor.export_compensation"
-
-    GRID_1_PRICE_ENTITY = "sensor.grid_1_price"
-    GRID_1_POWER_ENTITY = "sensor.grid_1_power"
-    PV_1_POWER_ENTITY = "sensor.pv_1_power"
-    PV_2_POWER_ENTITY = "sensor.pv_2_power"
-    PV_3_POWER_ENTITY = "sensor.pv_3_power"
-    PV_4_POWER_ENTITY = "sensor.pv_4_power"
-    BAT_1_POWER_ENTITY = "sensor.bat_1_power"
-    BAT_2_POWER_ENTITY = "sensor.bat_2_power"
-    BAT_3_POWER_ENTITY = "sensor.bat_3_power"
-    CONS_1_POWER_ENTITY = "sensor.cons_1_power"
-
-    ENTITY_VALUES = {
-        "morning": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: 1000.0,
-            PV_1_POWER_ENTITY: 200.0,
-            PV_2_POWER_ENTITY: 0.0,
-            PV_3_POWER_ENTITY: -25.0,       # No sun yet, standby power
-            PV_4_POWER_ENTITY: -25.0,       # No sun yet, standby power
-            BAT_1_POWER_ENTITY: 200.0,      # low on charge, discharging
-            BAT_2_POWER_ENTITY: 0.0,        # empty
-            BAT_3_POWER_ENTITY: 0.0,        # empty
-            CONS_1_POWER_ENTITY: 1000.0,    # heating
-        },
-        "midday": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: -4000.0,   # Lot of excess power
-            PV_1_POWER_ENTITY: 3000.0,
-            PV_2_POWER_ENTITY: 2000.0,
-            PV_3_POWER_ENTITY: 1000.0,
-            PV_4_POWER_ENTITY: 1000.0,
-            BAT_1_POWER_ENTITY: -1000.0,    # charging
-            BAT_2_POWER_ENTITY: -1000.0,    # charging
-            BAT_3_POWER_ENTITY: -500.0,     # charging
-            CONS_1_POWER_ENTITY: 0.0,
-        },
-        "evening": {
-            GRID_1_PRICE_ENTITY: 0.3,
-            GRID_1_POWER_ENTITY: 0.0,
-            PV_1_POWER_ENTITY: -50.0,       # No sun yet, standby power
-            PV_2_POWER_ENTITY: 0.0,         # Litte sun, net zero
-            PV_3_POWER_ENTITY: 0.0,
-            PV_4_POWER_ENTITY: 200.0,
-            BAT_1_POWER_ENTITY: 1000.0,     # discharging
-            BAT_2_POWER_ENTITY: 800.0,      # discharging
-            BAT_3_POWER_ENTITY: 0.0,        # empty
-            CONS_1_POWER_ENTITY: 1000.0,    # heating
-        },
-        # High energy price: try to sell as much energy to the grid as possible
-        # "high_price": {
-        #     GRID_1_PRICE_ENTITY = 0.3,
-        #     GRID_1_POWER_ENTITY: 1000.0,
-        #     PV_1_POWER_ENTITY: 300.0,
-        #     PV_2_POWER_ENTITY: 100.0,
-        #     PV_3_POWER_ENTITY: 0.0,         # Litte sun, net zero
-        #     PV_4_POWER_ENTITY: -20.0,       # No sun yet, standby power
-        #     BAT_1_POWER_ENTITY: 100.0,      # low on charge, discharging
-        #     BAT_2_POWER_ENTITY: 0.0,        # empty
-        #     CONS_1_POWER_ENTITY: 1000.0,    # heating
-        # },
-
-        # # Negative price: try to receive all power from the grid
-        # "negative_price": {
-        #     GRID_1_PRICE_ENTITY = 0.3,
-        #     GRID_1_POWER_ENTITY: 1000.0,
-        #     PV_1_POWER_ENTITY: 300.0,
-        #     PV_2_POWER_ENTITY: 100.0,
-        #     PV_3_POWER_ENTITY: 0.0,         # Litte sun, net zero
-        #     PV_4_POWER_ENTITY: -20.0,       # No sun yet, standby power
-        #     BAT_1_POWER_ENTITY: 100.0,      # low on charge, discharging
-        #     BAT_2_POWER_ENTITY: 0.0,        # empty
-        #     CONS_1_POWER_ENTITY: 1000.0,    # heating
-        # },
-    }
-
-    ADAPTERS = (
-        GridAdapter(
-            unique_id="grid_1",
-            verbose_name="Grid-1",
-            power_entity=GRID_1_POWER_ENTITY,
-            price_entity=GRID_1_PRICE_ENTITY,
-        ),
-        PvAdapter(
-            unique_id="pv_system_1",
-            verbose_name="PV-System-1",
-            power_entity=PV_1_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcoe=0.1,
-            lco2_intensity=35.0,
-            exports_power=True,
-            export_compensation=0.08,
-        ),
-        PvAdapter(
-            unique_id="pv_system_2",
-            verbose_name="PV-System-2",
-            power_entity=PV_2_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcoe=0.15,
-            lco2_intensity=40.0,
-            exports_power=True,
-            export_compensation=0.08,
-        ),
-        PvAdapter(
-            unique_id="pv_system_3",
-            verbose_name="PV-System-3",
-            power_entity=PV_3_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcoe=0.2,
-            lco2_intensity=50.0,
-            exports_power=True,
-            export_compensation=0.08,
-        ),
-        PvAdapter(
-            unique_id="pv_system_4",
-            verbose_name="PV-System-4",
-            power_entity=PV_4_POWER_ENTITY,
-            power_entity_inverted=False,
-            lcoe=0.2,
+            lcoe=PV3_LCOE,
             lco2_intensity=50.0,
             exports_power=False,
             export_compensation=0.0,
         ),
         BatteryAdapter(
-            unique_id="battery_1",
+            unique_id="bat1",
             verbose_name="Battery-1",
-            power_entity=BAT_1_POWER_ENTITY,
+            power_entity=BAT1_POWER,
             power_entity_inverted=False,
             lcos=0.15,
             lco2_intensity=50.0,
             exports_power=False,
-            export_compensation=0.08,
+            export_compensation=0.0,
             charge_from_grid=False,
             charge_from_adapters=[],
         ),
         BatteryAdapter(
-            unique_id="battery_2",
+            unique_id="bat2",
             verbose_name="Battery-2",
-            power_entity=BAT_2_POWER_ENTITY,
+            power_entity=BAT2_POWER,
             power_entity_inverted=False,
             lcos=0.15,
             lco2_intensity=50.0,
             exports_power=False,
-            export_compensation=0.08,
+            export_compensation=0.0,
             charge_from_grid=False,
             charge_from_adapters=[],
         ),
         BatteryAdapter(
-            unique_id="battery_3",
+            unique_id="bat3",
             verbose_name="Battery-3",
-            power_entity=BAT_2_POWER_ENTITY,
+            power_entity=BAT3_POWER,
             power_entity_inverted=False,
             lcos=0.15,
             lco2_intensity=50.0,
             exports_power=False,
-            export_compensation=0.08,
+            export_compensation=0.0,
             charge_from_grid=False,
             charge_from_adapters=[],
+        ),
+        ConsumerAdapter(
+            unique_id="cons1",
+            verbose_name="Consumer-1",
+            power_entity=CONS1_POWER,
         ),
     )
 
@@ -730,266 +233,325 @@ class TestExtendedScenarios:
 
     @pytest.fixture()
     def test_case(self, request):
-        # entity_values is parameterized, so its param is accessible via the parent fixture's node
         return request.node.callspec.params["entity_values"]
 
     @pytest.fixture()
     def power_insight(self, entity_values):
         return build_power_insight(self.ADAPTERS, entity_values)
 
-    #
-    # TESTS --------------------------------------------------------------->
-    #
+    # ------------------------------------------------------------------
+    # Helpers: derive primitive quantities from raw entity_values.
+    # All returned values are floats; None inputs propagate naturally.
+    # ------------------------------------------------------------------
 
+    def _ev(self, ev):
+        """Unpack the seven power readings from entity_values."""
+        grid  = ev[self.GRID_POWER]
+        pv1   = ev[self.PV1_POWER]
+        pv2   = ev[self.PV2_POWER]
+        pv3   = ev[self.PV3_POWER]
+        bat1  = ev[self.BAT1_POWER]
+        bat2  = ev[self.BAT2_POWER]
+        bat3  = ev[self.BAT3_POWER]
+        return grid, pv1, pv2, pv3, bat1, bat2, bat3
 
+    def _base(self, ev):
+        """Return the fundamental derived scalars used across many tests."""
+        grid, pv1, pv2, pv3, bat1, bat2, bat3 = self._ev(ev)
+        if grid is None:
+            return None, None, None, None, None, None, None, None
 
+        grid_import   = max(grid, 0.0)
+        grid_export   = max(-grid, 0.0)
+        pv_prod       = max(pv1, 0.0) + max(pv2, 0.0) + max(pv3, 0.0)
+        pv_standby    = max(-pv1, 0.0) + max(-pv2, 0.0) + max(-pv3, 0.0)
+        bat_discharge = max(bat1, 0.0) + max(bat2, 0.0) + max(bat3, 0.0)
+        bat_charging  = max(-bat1, 0.0) + max(-bat2, 0.0) + max(-bat3, 0.0)
+        gross         = grid_import + pv_prod + bat_discharge
+        consumption   = gross - grid_export - bat_charging - pv_standby
+        return (grid_import, grid_export, pv_prod, pv_standby,
+                bat_discharge, bat_charging, gross, consumption)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    #
-
-    def test_grid_adapters_consumption_shares(
-            self, power_insight, entity_values, test_case
-    ):
-        results = {
-            "morning": {
-                "grid_1": 0.0,
-                "pv_system_1": 0.0,
-                "pv_system_2": 0.0,
-                "pv_system_3": 0.0,
-                "pv_system_4": 0.0,
-                "battery_1": 0.0,
-                "battery_2": 0.0,
-                "battery_3": 0.0,
-                "consumer_1": 0.0,
-            },
-            "midday": {
-            },
-            "evening": {
-            },
-        }
-        assert power_insight.combined_grid_import == results[test_case]
-
-
-
-
-
-
-
-
-
+    # ------------------------------------------------------------------
+    # Layer 1 — direct power readings
+    # ------------------------------------------------------------------
 
     def test_combined_grid_import(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 1000.0,
-            "export": 0.0,
-            "net_zero": 0.0,
-            "nighttime": 500.0,
-        }
-        assert power_insight.combined_grid_import == results[test_case]
+        grid = entity_values[self.GRID_POWER]
+        expected = None if grid is None else max(grid, 0.0)
+        assert power_insight.combined_grid_import == expected
 
     def test_combined_grid_export(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 0.0,
-            "export": 2000.0,
-            "net_zero": 3000.0,
-            "nighttime": 0.0,
-        }
-
-        assert power_insight.combined_grid_export == results[test_case]
+        grid = entity_values[self.GRID_POWER]
+        expected = None if grid is None else max(-grid, 0.0)
+        assert power_insight.combined_grid_export == expected
 
     def test_combined_production(self, power_insight, entity_values, test_case):
+        pv1 = entity_values[self.PV1_POWER]
+        pv2 = entity_values[self.PV2_POWER]
+        pv3 = entity_values[self.PV3_POWER]
+        expected = max(pv1, 0.0) + max(pv2, 0.0) + max(pv3, 0.0)
+        assert power_insight.combined_production == expected
 
-        results = {
-            "import": 4000.0,
-            "export": 4000.0,
-            "net_zero": 4000.0,
-            "nighttime": 1000.0,
-        }
+    def test_combined_standby_power(self, power_insight, entity_values, test_case):
+        pv1 = entity_values[self.PV1_POWER]
+        pv2 = entity_values[self.PV2_POWER]
+        pv3 = entity_values[self.PV3_POWER]
+        expected = max(-pv1, 0.0) + max(-pv2, 0.0) + max(-pv3, 0.0)
+        assert power_insight.combined_standby_power == expected
 
-        assert power_insight.combined_production == results[test_case]
+    def test_combined_discharging_power(self, power_insight, entity_values, test_case):
+        bat1 = entity_values[self.BAT1_POWER]
+        bat2 = entity_values[self.BAT2_POWER]
+        bat3 = entity_values[self.BAT3_POWER]
+        expected = max(bat1, 0.0) + max(bat2, 0.0) + max(bat3, 0.0)
+        assert power_insight.combined_discharging_power == expected
+
+    def test_combined_charging_power(self, power_insight, entity_values, test_case):
+        bat1 = entity_values[self.BAT1_POWER]
+        bat2 = entity_values[self.BAT2_POWER]
+        bat3 = entity_values[self.BAT3_POWER]
+        expected = max(-bat1, 0.0) + max(-bat2, 0.0) + max(-bat3, 0.0)
+        assert power_insight.combined_charging_power == expected
+
+    # ------------------------------------------------------------------
+    # Layer 2 — derived scalars
+    # ------------------------------------------------------------------
 
     def test_gross_power(self, power_insight, entity_values, test_case):
-
-        results = {
-            "import": 5000.0,
-            "export": 4000.0,
-            "net_zero": 4000.0,
-            "nighttime": 1500.0,
-        }
-
-        assert power_insight.gross_power == results[test_case]
-
-    def test_combined_utilization(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 0.0,
-            "export": 1000.0,
-            "net_zero": 0.0,
-            "nighttime": 50.0,
-        }
-
-        assert power_insight.combined_utilization == results[test_case]
+        b = self._base(entity_values)
+        expected = None if b[0] is None else b[6]  # gross
+        assert power_insight.gross_power == expected
 
     def test_combined_consumption(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 5000.0,
-            "export": 1000.0,
-            "net_zero": 1000.0,
-            "nighttime": 1450.0,
+        b = self._base(entity_values)
+        expected = None if b[0] is None else b[7]  # consumption
+        assert power_insight.combined_consumption == expected
+
+    # ------------------------------------------------------------------
+    # Layer 3 — gross power ratios
+    # ------------------------------------------------------------------
+
+    def test_gross_power_export_ratio(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.gross_power_export_ratio is None
+            return
+        _, grid_export, _, _, _, _, gross, _ = b
+        expected = _divide(grid_export, gross)
+        assert power_insight.gross_power_export_ratio == pytest.approx(expected)
+
+    def test_gross_power_consumption_ratio(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.gross_power_consumption_ratio is None
+            return
+        _, _, _, _, _, _, gross, consumption = b
+        expected = _divide(consumption, gross)
+        assert power_insight.gross_power_consumption_ratio == pytest.approx(expected)
+
+    def test_gross_power_standby_ratio(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.gross_power_standby_ratio is None
+            return
+        _, _, _, pv_standby, _, _, gross, _ = b
+        expected = _divide(pv_standby, gross)
+        assert power_insight.gross_power_standby_ratio == pytest.approx(expected)
+
+    def test_gross_power_charging_ratio(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.gross_power_charging_ratio is None
+            return
+        _, _, _, _, _, bat_charging, gross, _ = b
+        expected = _divide(bat_charging, gross)
+        assert power_insight.gross_power_charging_ratio == pytest.approx(expected)
+
+    def test_gross_power_applicable_consumption_ratio(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.gross_power_applicable_consumption_ratio is None
+            return
+        _, grid_export, _, _, _, bat_charging, gross, consumption = b
+        export_ratio   = _divide(grid_export, gross)
+        charging_ratio = _divide(bat_charging, gross)
+        cons_ratio     = _divide(consumption, gross)
+        denom = 1.0 - export_ratio - charging_ratio
+        expected = _divide(cons_ratio, denom)
+        assert power_insight.gross_power_applicable_consumption_ratio == pytest.approx(expected)
+
+    # ------------------------------------------------------------------
+    # Layer 4 — per-adapter allocation (PV adapters only; batteries have
+    # exports_power=False and charge_from_adapters=[], simplifying shares)
+    # ------------------------------------------------------------------
+
+    def _pv_export_shares(self, ev):
+        """
+        Compute prod_adapters_export_shares for pv1/pv2 (the only exporters).
+        pv3, bat1..3 have exports_power=False → share = 0.
+        """
+        b = self._base(ev)
+        if b[0] is None:
+            return {}
+        grid_import, _, _, _, bat_discharge, _, gross, _ = b
+        pv1 = max(ev[self.PV1_POWER], 0.0)
+        pv2 = max(ev[self.PV2_POWER], 0.0)
+        # gross_power_shares for pv1, pv2
+        s1 = _divide(pv1, gross)
+        s2 = _divide(pv2, gross)
+        total_exportable = s1 + s2
+        return {
+            "pv1": _divide(s1, total_exportable),
+            "pv2": _divide(s2, total_exportable),
+            "pv3": 0.0,
         }
 
-        assert power_insight.combined_consumption == results[test_case]
-
-    def test_combined_consumption_ratio(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 0.8,
-            "export": 1000.0,
-            "net_zero": 1000.0,
-            "nighttime": 1450.0,
+    def test_prod_adapters_gross_power_shares(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.prod_adapters_gross_power_shares == {}
+            return
+        _, _, _, _, _, _, gross, _ = b
+        pv1 = max(entity_values[self.PV1_POWER], 0.0)
+        pv2 = max(entity_values[self.PV2_POWER], 0.0)
+        pv3 = max(entity_values[self.PV3_POWER], 0.0)
+        bat1 = max(entity_values[self.BAT1_POWER], 0.0)
+        bat2 = max(entity_values[self.BAT2_POWER], 0.0)
+        bat3 = max(entity_values[self.BAT3_POWER], 0.0)
+        expected = {
+            "pv1":  _divide(pv1,  gross),
+            "pv2":  _divide(pv2,  gross),
+            "pv3":  _divide(pv3,  gross),
+            "bat1": _divide(bat1, gross),
+            "bat2": _divide(bat2, gross),
+            "bat3": _divide(bat3, gross),
         }
+        assert power_insight.prod_adapters_gross_power_shares == pytest.approx(expected)
 
-        assert power_insight.combined_consumption_ratio == results[test_case]
+    def test_prod_adapters_export_shares(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.prod_adapters_export_shares == {}
+            return
+        expected_pv = self._pv_export_shares(entity_values)
+        result = power_insight.prod_adapters_export_shares
+        assert result.get("pv1", 0.0) == pytest.approx(expected_pv["pv1"])
+        assert result.get("pv2", 0.0) == pytest.approx(expected_pv["pv2"])
+        assert result.get("pv3", 0.0) == pytest.approx(expected_pv["pv3"])
+        # batteries do not export
+        for uid in ("bat1", "bat2", "bat3"):
+            assert result.get(uid, 0.0) == pytest.approx(0.0)
 
-    def test_combined_utizilation_ratio(self, power_insight, entity_values, test_case):
-        results = {
-            "import": 0.0,
-            "export": 0.25,
-            "net_zero": 0.0,
-            "nighttime": 0.0,
+    def test_prod_adapters_export_power(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.prod_adapters_export_power == {}
+            return
+        _, grid_export, _, _, _, _, _, _ = b
+        export_shares = self._pv_export_shares(entity_values)
+        expected = {uid: grid_export * s for uid, s in export_shares.items()}
+        # batteries: export_share=0 → export_power=0
+        for uid in ("bat1", "bat2", "bat3"):
+            expected[uid] = 0.0
+        result = power_insight.prod_adapters_export_power
+        assert result == pytest.approx(expected)
+
+    def test_prod_adapters_export_compensation_rates(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            result = power_insight.prod_adapters_export_compensation_rates
+            assert all(v is None for v in result.values())
+            return
+        _, grid_export, _, _, _, _, _, _ = b
+        export_shares = self._pv_export_shares(entity_values)
+        expected = {
+            "pv1":  (grid_export * export_shares["pv1"]  / 1000) * self.PV1_EXPORT_COMP,
+            "pv2":  (grid_export * export_shares["pv2"]  / 1000) * self.PV2_EXPORT_COMP,
+            "pv3":  0.0,
+            "bat1": 0.0,
+            "bat2": 0.0,
+            "bat3": 0.0,
         }
+        result = power_insight.prod_adapters_export_compensation_rates
+        assert result == pytest.approx(expected)
 
-        assert power_insight.combined_utizilation_ratio == results[test_case]
+    def test_prod_adapters_avoided_cost_rates(self, power_insight, entity_values, test_case):
+        """
+        avoided_cost_rate[uid] = (consumption_power[uid] / 1000) * grid_coe
+        consumption_power[uid] = production[uid] * consumption_ratio[uid]
 
+        For adapters with exports_power=False and no charging tracking,
+        consumption_ratio = (1 - 0 - 0) * applicable_ratio = applicable_ratio.
+        For exporting PV adapters:
+        consumption_ratio = (1 - export_ratio_adapter - 0) * applicable_ratio
+        """
+        b = self._base(entity_values)
+        if b[0] is None:
+            result = power_insight.prod_adapters_avoided_cost_rates
+            assert all(v is None for v in result.values())
+            return
+        grid_import, grid_export, _, _, _, bat_charging, gross, consumption = b
+        grid_coe = entity_values[self.GRID_PRICE]
 
-    # def test_total_power(self, power_insight, entity_values):
-    #     grid_import = max(entity_values[self.GRID_ENTITY], 0)
-    #     pv_power = entity_values[self.PV_ENTITY]
-    #     assert power_insight.total_power == pytest.approx(grid_import + pv_power)
+        export_ratio   = _divide(grid_export, gross)
+        charging_ratio = _divide(bat_charging, gross)
+        cons_ratio     = _divide(consumption, gross)
+        denom          = 1.0 - export_ratio - charging_ratio
+        applicable     = _divide(cons_ratio, denom)
 
-    # def test_self_consumption(self, power_insight, entity_values):
-    #     grid_import = max(entity_values[self.GRID_ENTITY], 0)
-    #     grid_export = max(-entity_values[self.GRID_ENTITY], 0)
-    #     pv_power = entity_values[self.PV_ENTITY]
-    #     total_power = grid_import + pv_power
-    #     assert power_insight.self_consumption == pytest.approx(total_power - grid_export)
+        export_shares = self._pv_export_shares(entity_values)
 
-    #
-    # Consumption shares
-    #
+        def _avoided(prod, exp_share):
+            if not prod:
+                return 0.0
+            power_share = _divide(prod, gross)
+            # adapter export_ratio = exp_share * total_export_ratio / power_share
+            adapter_exp_ratio = _divide(exp_share * export_ratio, power_share)
+            cons_r = (1.0 - adapter_exp_ratio) * applicable
+            return (prod * cons_r / 1000) * grid_coe
 
-    def test_grid_adapters_consumption_shares(self, power_insight, entity_values, test_case):
-        results = {
-            "import": {
-                "grid": 0.2,
-            },
-            "export": {
-                "grid": 0.0,
-            },
-            "net_zero": {
-                "grid": 0.0,
-            },
-            "nighttime": {
-                "grid": 0.345,
-            },
+        pv1 = max(entity_values[self.PV1_POWER], 0.0)
+        pv2 = max(entity_values[self.PV2_POWER], 0.0)
+        pv3 = max(entity_values[self.PV3_POWER], 0.0)
+        bat1 = max(entity_values[self.BAT1_POWER], 0.0)
+        bat2 = max(entity_values[self.BAT2_POWER], 0.0)
+        bat3 = max(entity_values[self.BAT3_POWER], 0.0)
+
+        expected = {
+            "pv1":  _avoided(pv1,  export_shares["pv1"]),
+            "pv2":  _avoided(pv2,  export_shares["pv2"]),
+            "pv3":  _avoided(pv3,  0.0),
+            "bat1": _avoided(bat1, 0.0),
+            "bat2": _avoided(bat2, 0.0),
+            "bat3": _avoided(bat3, 0.0),
         }
-        assert power_insight.grid_adapters_consumption_shares == pytest.approx(results[test_case])
+        result = power_insight.prod_adapters_avoided_cost_rates
+        assert result == pytest.approx(expected)
 
-    def test_prod_adapters_consumption_shares(self, power_insight, entity_values, test_case):
-        results = {
-            "import": {
-                "pv_system": 0.4,
-                "battery": 0.4,
-            },
-            "export": {
-                "pv_system": 1.0,
-                "battery": 0.0,
-            },
-            "net_zero": {
-                "pv_system": 0.0,
-                "battery": 1.0,
-            },
-            "nighttime": {
-                "pv_system": 0.0,
-                "battery": 0.69,
-            },
-        }
-        assert power_insight.prod_adapters_consumption_shares == results[test_case]
+    # ------------------------------------------------------------------
+    # Layer 5 — combined monetary rates
+    # ------------------------------------------------------------------
 
-        #
-        # Consumption ratios
-        #
+    def test_combined_export_compensation_rate(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.combined_export_compensation_rate is None
+            return
+        _, grid_export, _, _, _, _, _, _ = b
+        export_shares = self._pv_export_shares(entity_values)
+        expected = (
+            (grid_export * export_shares["pv1"] / 1000) * self.PV1_EXPORT_COMP
+            + (grid_export * export_shares["pv2"] / 1000) * self.PV2_EXPORT_COMP
+        )
+        assert power_insight.combined_export_compensation_rate == pytest.approx(expected)
 
-        # def test_grid_adapters_consumption_ratios(self, power_insight, entity_values, test_case):
-        #     results = {
-        #         "import": {
-        #             "grid": 0.2,
-        #         },
-        #         "export": {
-        #             "grid": 0.0,
-        #         },
-        #         "net_zero": {
-        #             "grid": 0.0,
-        #         },
-        #         "nighttime": {
-        #             "grid": 0.345,
-        #         },
-        #     }
-        #     assert power_insight.grid_adapters_consumption_ratios == results[test_case]
-
-        # def test_prod_adapters_consumption_ratios(self, power_insight, entity_values, test_case):
-        #     results = {
-        #         "import": {
-        #             "pv_system": 0.4,
-        #             "battery": 0.4,
-        #         },
-        #         "export": {
-        #             "pv_system": 1.0,
-        #             "battery": 0.0,
-        #         },
-        #         "net_zero": {
-        #             "pv_system": 0.0,
-        #             "battery": 1.0,
-        #         },
-        #         "nighttime": {
-        #             "pv_system": 0.0,
-        #             "battery": 0.69,
-        #         },
-        #     }
-        #     assert power_insight.prod_adapters_consumption_ratios == results[test_case]
-
-
-
-    # def test_prod_adapters_avoided_cost_rates(self, power_insight, entity_values, test_case):
-    #     results = {
-    #         "import": {
-    #             "pv_system": 1,
-    #             "battery": 1,
-    #         },
-    #         "export": {
-    #             "pv_system": 1,
-    #             "battery": 1,
-    #         },
-    #         "net_zero": {
-    #             "pv_system": 1,
-    #             "battery": 1,
-    #         },
-    #         "nighttime": {
-    #             "pv_system": 1,
-    #             "battery": 1,
-    #         },
-    #     }
-    #     assert power_insight.prod_adapters_avoided_cost_rates == results[test_case]
+    def test_combined_avoided_cost_rate(self, power_insight, entity_values, test_case):
+        b = self._base(entity_values)
+        if b[0] is None:
+            assert power_insight.combined_avoided_cost_rate is None
+            return
+        # combined_avoided_cost_rate = sum of prod_adapters_avoided_cost_rates
+        avoided = power_insight.prod_adapters_avoided_cost_rates
+        expected = sum(avoided.values())
+        assert power_insight.combined_avoided_cost_rate == pytest.approx(expected)
