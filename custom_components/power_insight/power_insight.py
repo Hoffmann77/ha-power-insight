@@ -83,7 +83,7 @@ class PowerInsight:
     def __init__(self) -> None:
         """Initialize instance."""
         self.grid_adapter = None
-        self.pv_sytem_adapters = PvSystemAdapters()
+        self.pv_system_adapters = PvSystemAdapters()
         self.storage_adapters = BatteryAdapters()
         self.consumer_adapters = ConsumerAdapters()
 
@@ -289,7 +289,7 @@ class PowerInsight:
         if (production := self.combined_production) is None:
             return None
 
-        if (discharge := self.combined_discharge) is None:
+        if (discharge := self.combined_discharging_power) is None:
             return None
 
         return grid_import + production + discharge
@@ -871,14 +871,14 @@ class PowerInsight:
         for adapter in self.prod_adapters:
             if (power_share := gross_power_shares.get(adapter.uid)) is None:
                 charging_ratios[adapter.uid] = None
+                continue
 
-            elif (charging_shares := charging_shares.get(adapter.uid)) is None:
-                charging_ratios[adapter.uid] = None
-
-            else:
-                for uid, charging_share in charging_shares.items():
-                    value = charging_share * combined_charging_ratio
-                    charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
+            # No entry means no battery tracks this adapter as a source → ratio = 0.
+            adapter_charging_shares = charging_shares.get(adapter.uid, {})
+            charging_ratios[adapter.uid]  # initialise as empty dict via defaultdict
+            for uid, charging_share in adapter_charging_shares.items():
+                value = charging_share * combined_charging_ratio
+                charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
 
         return charging_ratios
 
@@ -887,15 +887,16 @@ class PowerInsight:
 
         combined_charging_ratios = {}
 
-        charging_ratios = self.prod_adapters_charging_ratios
+        all_charging_ratios = self.prod_adapters_charging_ratios
 
         for adapter in self.prod_adapters:
-            if (charging_ratios := charging_ratios.get(adapter.uid)) is None:
+            adapter_ratios = all_charging_ratios.get(adapter.uid)
+            if adapter_ratios is None:
                 combined_charging_ratios[adapter.uid] = None
+                continue
 
             combined_ratio = 0.0
-
-            for uid, charging_ratio in charging_ratios.items():
+            for uid, charging_ratio in adapter_ratios.items():
                 combined_ratio += charging_ratio
 
             combined_charging_ratios[adapter.uid] = combined_ratio
@@ -1346,14 +1347,14 @@ class PowerInsight:
         for adapter in self.storage_adapters:
             if (power_share := gross_power_shares.get(adapter.uid)) is None:
                 charging_ratios[adapter.uid] = None
+                continue
 
-            elif (charging_shares := charging_shares.get(adapter.uid)) is None:
-                charging_ratios[adapter.uid] = None
-
-            else:
-                for uid, charging_share in charging_shares.items():
-                    value = charging_share * combined_charging_ratio
-                    charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
+            # No entry means no battery tracks this adapter as a source → ratio = 0.
+            adapter_charging_shares = charging_shares.get(adapter.uid, {})
+            charging_ratios[adapter.uid]  # initialise as empty dict via defaultdict
+            for uid, charging_share in adapter_charging_shares.items():
+                value = charging_share * combined_charging_ratio
+                charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
 
         return charging_ratios
 
@@ -1362,15 +1363,16 @@ class PowerInsight:
 
         combined_charging_ratios = {}
 
-        charging_ratios = self.storage_adapters_charging_ratios
+        all_charging_ratios = self.storage_adapters_charging_ratios
 
         for adapter in self.storage_adapters:
-            if (charging_ratios := charging_ratios.get(adapter.uid)) is None:
+            adapter_ratios = all_charging_ratios.get(adapter.uid)
+            if adapter_ratios is None:
                 combined_charging_ratios[adapter.uid] = None
+                continue
 
             combined_ratio = 0.0
-
-            for uid, charging_ratio in charging_ratios.items():
+            for uid, charging_ratio in adapter_ratios.items():
                 combined_ratio += charging_ratio
 
             combined_charging_ratios[adapter.uid] = combined_ratio
@@ -1636,7 +1638,7 @@ class PowerInsight:
         if (total_power := self.gross_power) is None:
             return {}
 
-        for adapter in self.cons_adapters.adapters:
+        for adapter in self.consumer_adapters.adapters:
             if (consumption := adapter.consumption) is None:
                 shares[adapter.uid] = None
                 continue
@@ -1653,7 +1655,7 @@ class PowerInsight:
             return {}
 
         total_power_shares = self.cons_adapter_total_power_shares
-        for adapter in self.cons_adapters.adapters:
+        for adapter in self.consumer_adapters.adapters:
             if (power_share := total_power_shares.get(adapter.uid)) is None:
                 shares[adapter.uid] = None
                 continue
@@ -1671,7 +1673,7 @@ class PowerInsight:
             | self.grid_adapters_consumption_shares
         )
 
-        for cons_adapter in self.cons_adapters.adapters:
+        for cons_adapter in self.consumer_adapters.adapters:
             _shares = {}
             for power_adapter in self.gross_power_adapters:
                 if (power_adapter_cons_share := power_adapter_cons_shares.get(power_adapter.uid)) is None:
@@ -1691,7 +1693,7 @@ class PowerInsight:
         if (coe := self.combined_coe) is None:
             return {}
 
-        for adapter in self.cons_adapters.adapters:
+        for adapter in self.consumer_adapters.adapters:
             if (coo_rate := adapter.get_coo_rate(coe)) is None:
                 coo_rates[adapter.uid] = None
                 continue
@@ -1707,7 +1709,7 @@ class PowerInsight:
         if (lcoe := self.combined_lcoe) is None:
             return {}
 
-        for adapter in self.cons_adapters.adapters:
+        for adapter in self.consumer_adapters.adapters:
             if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
                 lcoo_rates[adapter.uid] = None
                 continue
@@ -1753,7 +1755,7 @@ class PowerInsight:
             _LOGGER.debug(f"Registered Battery adapter: {adapter}.")
 
         elif isinstance(adapter, BaseConsumerAdapter):
-            self.cons_adapters.add(adapter)
+            self.consumer_adapters.add(adapter)
             _LOGGER.debug(f"Registered consumption adapter: {adapter}.")
 
         else:
