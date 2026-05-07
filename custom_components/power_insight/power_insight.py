@@ -84,7 +84,7 @@ class PowerInsight:
         """Initialize instance."""
         self.grid_adapter = None
         self.pv_sytem_adapters = PvSystemAdapters()
-        self.battery_adapters = BatteryAdapters()
+        self.storage_adapters = BatteryAdapters()
         self.consumer_adapters = ConsumerAdapters()
 
     @property
@@ -95,8 +95,21 @@ class PowerInsight:
             mapping[entity] = self.grid_adapter
 
         mapping.update(self.pv_system_adapters.entity_mapping)
-        mapping.update(self.battery_adapters.entity_mapping)
+        mapping.update(self.storage_adapters.entity_mapping)
         mapping.update(self.consumer_adapters.entity_mapping)
+
+        return mapping
+
+    @property
+    def uid_mapping(self) -> dict:
+        """Return the adapters by it's uid."""
+        mapping = {
+            self.grid_adapter.uid: self.grid_adapter
+        }
+
+        mapping.update(self.pv_system_adapters.uid_mapping)
+        mapping.update(self.storage_adapters.uid_mapping)
+        mapping.update(self.consumer_adapters.uid_mapping)
 
         return mapping
 
@@ -109,7 +122,7 @@ class PowerInsight:
         """Return the power producing adatpers."""
         return (
             self.pv_system_adapters.adapters
-            + self.battery_adapters.adapters
+            + self.storage_adapters.adapters
         )
 
     @property
@@ -118,7 +131,7 @@ class PowerInsight:
         return (
             [self.grid_adapter]
             + self.pv_system_adapters.adapters
-            + self.battery_adapters.adapters
+            + self.storage_adapters.adapters
         )
 
     # ------------------->
@@ -140,7 +153,7 @@ class PowerInsight:
         return (
             self.grid_adapter.source_entities_power
             + self.pv_system_adapters.source_entities_power
-            + self.battery_adapters.source_entities_power
+            + self.storage_adapters.source_entities_power
         )
 
     @property
@@ -200,7 +213,7 @@ class PowerInsight:
     def combined_charging_power(self) -> float | None:
         """Sum of power charged by battery adapters."""
         power = 0.0
-        for adapter in self.battery_adapters:
+        for adapter in self.storage_adapters:
             if (cons := adapter.consumption) is not None:
                 power += cons
             else:
@@ -212,7 +225,7 @@ class PowerInsight:
     def combined_discharging_power(self) -> float | None:
         """Sum of power discharged by the battery adapters."""
         power = 0.0
-        for adapter in self.battery_adapters:
+        for adapter in self.storage_adapters:
             if (prod := adapter.production) is not None:
                 power += prod
             else:
@@ -593,19 +606,19 @@ class PowerInsight:
 
         return rates
 
-    @property
-    def grid_adapters_utilization_ratios(self) -> float | None:
-        """Return the relative utilization rate."""
-        rates = {}
-        # ???: use applicable share or not?
-        applicable_ratio = self.applicable_combined_utilization_ratio
-        if applicable_ratio is None:
-            return {}
+    # @property
+    # def grid_adapters_utilization_ratios(self) -> float | None:
+    #     """Return the relative utilization rate."""
+    #     rates = {}
+    #     # ???: use applicable share or not?
+    #     applicable_ratio = self.applicable_combined_utilization_ratio
+    #     if applicable_ratio is None:
+    #         return {}
 
-        for adapter in [self.grid_adapter]:
-            rates[adapter.uid] = applicable_ratio
+    #     for adapter in [self.grid_adapter]:
+    #         rates[adapter.uid] = applicable_ratio
 
-        return rates
+    #     return rates
 
     @property
     def grid_adapters_consumption_shares(self) -> float | None:
@@ -631,29 +644,64 @@ class PowerInsight:
 
         return shares
 
+    # Replaced by charging_shares
+    # @property
+    # def grid_adapters_utilization_shares(self) -> float | None:
+    #     """Return the relative utilization shares."""
+    #     shares = {}
+    #     if (utilization_share := self.combined_utilization_share) is None:
+    #         return {}
+
+    #     utilization_rates = self.grid_adapters_utilization_ratios
+    #     total_power_shares = self.grid_adapters_gross_power_shares
+    #     for adapter in [self.grid_adapter]:
+    #         if (utilization_rate := utilization_rates.get(adapter.uid)) is None:
+    #             shares[adapter.uid] = None
+    #             continue
+
+    #         if (power_share := total_power_shares.get(adapter.uid)) is None:
+    #             shares[adapter.uid] = None
+    #             continue
+
+    #         shares[adapter.uid] = self._divide(
+    #             (utilization_rate * power_share), utilization_share
+    #         )
+
+    #     return shares
+
     @property
-    def grid_adapters_utilization_shares(self) -> float | None:
-        """Return the relative utilization shares."""
-        shares = {}
-        if (utilization_share := self.combined_utilization_share) is None:
-            return {}
+    def grid_adapters_charging_shares(self) -> dict[str, float]:
+        """Return the production adapter's share of charging power.
 
-        utilization_rates = self.grid_adapters_utilization_ratios
-        total_power_shares = self.grid_adapters_gross_power_shares
-        for adapter in [self.grid_adapter]:
-            if (utilization_rate := utilization_rates.get(adapter.uid)) is None:
-                shares[adapter.uid] = None
+        The fraction of charging power that is generated by the adapter.
+
+        """
+        charging_shares = defaultdict(dict)
+        gross_power_shares = self.grid_adapters_gross_power_shares
+
+        for storage in self.storage_adapters:
+            if not storage.charge_from_grid:
                 continue
 
-            if (power_share := total_power_shares.get(adapter.uid)) is None:
-                shares[adapter.uid] = None
-                continue
+            grid_share = gross_power_shares.get(self.grid_adapter.uid, 0.0)
+            total_share = grid_share
 
-            shares[adapter.uid] = self._divide(
-                (utilization_rate * power_share), utilization_share
-            )
+            if (charge_from := storage.charge_from_adapters):
+                prod_shares = self.prod_adapters_gross_power_shares
+                storage_shares = self.storage_adapters_gross_power_shares
 
-        return shares
+                shares = (
+                    prod_shares
+                    | storage_shares
+                )
+
+                for uid in charge_from:
+                    total_share += shares.get(uid, 0.0)
+
+            share = self._divide(grid_share, total_share)
+            charging_shares[self.grid_adapter.uid][storage.uid] = share
+
+        return charging_shares
 
     # ----------------------->
     # PRODUCTION ADAPTERS --->
@@ -864,7 +912,7 @@ class PowerInsight:
         charging_shares = defaultdict(dict)
         gross_power_shares = self.prod_adapters_gross_power_shares
 
-        for battery in self.battery_adapters:
+        for battery in self.storage_adapters:
             if not (charge_from := battery.charge_from_adapters):
                 continue
 
@@ -884,9 +932,9 @@ class PowerInsight:
                 total_share += share
                 charging_shares[adapter_uid][battery.uid] = share
 
-            for adapter_uid in charge_from.items():
+            for adapter_uid in charge_from:
                 share = charging_shares[adapter_uid][battery.uid]
-                share = self._divide(share, total_share)
+                charging_shares[adapter_uid][battery.uid] = self._divide(share, total_share)
 
         return charging_shares
 
@@ -1087,14 +1135,60 @@ class PowerInsight:
     # -------------------->
 
     @property
+    def storage_adapters_dynamic_coe(self) -> dict[str, float | None]:
+        dynamic_coe = {}
+        source_shares = self.storage_adapters_charging_source_shares
+
+        for storage in self.storage_adapters:
+            sources = source_shares.get(storage.uid, {})
+            if not sources:
+                # TODO implement
+                continue
+
+            blended = 0.0
+
+            for source_uid, share in sources.items():
+                if (adapter := self.get_adapter_by_uid(source_uid)) is None:
+                    dynamic_coe[storage.uid] = None
+                    break
+
+                blended += adapter.coe * share
+
+        return dynamic_coe
+
+    @property
+    def storage_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
+        dynamic_lcoe = {}
+        source_shares = self.storage_adapters_charging_source_shares
+
+        for storage in self.storage_adapters:
+            sources = source_shares.get(storage.uid, {})
+            if not sources:
+                # TODO implement
+                continue
+
+            blended = 0.0
+
+            for source_uid, share in sources.items():
+                if (adapter := self.get_adapter_by_uid(source_uid)) is None:
+                    dynamic_lcoe[storage.uid] = None
+                    break
+
+                blended += adapter.lcoe * share
+
+        return dynamic_lcoe
+
+    @property
     def storage_adapters_coo_rates(self):
         """Cost of consumption rates."""
         coo_rates = {}
-        if (coe := self.combined_coe) is None:
-            return {}
-
+        dynamic_coe = self.storage_adapters_dynamic_coe
         for adapter in self.storage_adapters:
-            if (coo_rate := adapter.get_coo_rate(coe)) is None:
+            if (coe_rate := dynamic_coe.get(adapter.uid)) is None:
+                coo_rates[adapter.uid] = None
+                continue
+
+            if (coo_rate := adapter.get_coo_rate(coe_rate)) is None:
                 coo_rates[adapter.uid] = None
                 continue
 
@@ -1106,11 +1200,13 @@ class PowerInsight:
     def storage_adapters_lcoo_rates(self):
         """Cost of consumption rates."""
         lcoo_rates = {}
-        if (lcoe := self.combined_lcoe) is None:
-            return {}
-
+        dynamic_lcoe = self.storage_adapters_dynamic_lcoe
         for adapter in self.storage_adapters:
-            if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
+            if (lcoe_rate := dynamic_lcoe.get(adapter.uid)) is None:
+                lcoo_rates[adapter.uid] = None
+                continue
+
+            if (lcoo_rate := adapter.get_coo_rate(lcoe_rate)) is None:
                 lcoo_rates[adapter.uid] = None
                 continue
 
@@ -1291,7 +1387,7 @@ class PowerInsight:
         charging_shares = defaultdict(dict)
         gross_power_shares = self.storage_adapters_gross_power_shares
 
-        for battery in self.battery_adapters:
+        for battery in self.storage_adapters:
             if not (charge_from := battery.charge_from_adapters):
                 continue
 
@@ -1332,41 +1428,6 @@ class PowerInsight:
                 source_shares[battery_uid][adapter_uid] = share
 
         return source_shares
-
-
-    @property
-    def cons_adapters_coo_rates(self):
-        """Cost of consumption rates."""
-        coo_rates = {}
-        if (coe := self.combined_coe) is None:
-            return {}
-
-        for adapter in self.cons_adapters.adapters:
-            if (coo_rate := adapter.get_coo_rate(coe)) is None:
-                coo_rates[adapter.uid] = None
-                continue
-
-            coo_rates[adapter.uid] = coo_rate
-
-        return coo_rates
-
-    @property
-    def cons_adapters_lcoo_rates(self):
-        """Cost of consumption rates."""
-        lcoo_rates = {}
-        if (lcoe := self.combined_lcoe) is None:
-            return {}
-
-        for adapter in self.cons_adapters.adapters:
-            if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
-                lcoo_rates[adapter.uid] = None
-                continue
-
-            lcoo_rates[adapter.uid] = lcoo_rate
-
-        return lcoo_rates
-
-
 
     # @property
     # def storage_adapters_charging_power(self) -> dict[str, float]:
@@ -1560,351 +1621,6 @@ class PowerInsight:
 
         return
 
-
-
-
-    # ----------------------->
-    # STORAGE ADAPTERS OLD --->
-    # ----------------------->
-
-    @property
-    def battery_adapters_coo_rates(self):
-        """Cost of consumption rates."""
-        coo_rates = {}
-        if (coe := self.combined_coe) is None:
-            return {}
-
-        for adapter in self.storage_adapters:
-            if (coo_rate := adapter.get_coo_rate(coe)) is None:
-                coo_rates[adapter.uid] = None
-                continue
-
-            coo_rates[adapter.uid] = coo_rate
-
-        return coo_rates
-
-    @property
-    def battery_adapters_lcoo_rates(self):
-        """Cost of consumption rates."""
-        lcoo_rates = {}
-        if (lcoe := self.combined_lcoe) is None:
-            return {}
-
-        for adapter in self.prod_adapters:
-            if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
-                lcoo_rates[adapter.uid] = None
-                continue
-
-            lcoo_rates[adapter.uid] = lcoo_rate
-
-        return lcoo_rates
-
-    @property
-    def battery_adapters_gross_power_shares(self) -> dict[str, float]:
-        """Return the production adapter's share of total power.
-
-        The fraction of total power that is generated by the adapter.
-
-        """
-        shares = {}
-        if (total_power := self.gross_power) is None:
-            return {}
-
-        for adapter in self.prod_adapters:
-            if (production := adapter.production) is None:
-                shares[adapter.uid] = None
-                continue
-
-            shares[adapter.uid] = self._divide(production, total_power)
-
-        return shares
-
-    @property
-    def battery_adapters_export_ratios(self) -> dict[str, float]:
-        """Return the production adapter's export ratio.
-
-        The fraction of generated power that is returned to the grid.
-        Equals: production / returned to grid.
-
-        How much of the power generated by the adapter is send to the grid.
-
-        """
-        export_rates = {}
-        if (total_export_share := self.gross_power_export_ratio) is None:
-            return {}
-
-        power_shares = self.battery_adapters_gross_power_shares
-        export_shares = self.prod_adapters_export_shares
-        for adapter in self.prod_adapters:
-            if (power_share := power_shares.get(adapter.uid)) is None:
-                export_rates[adapter.uid] = None
-
-            elif (export_share := export_shares.get(adapter.uid)) is None:
-                export_rates[adapter.uid] = None
-
-            else:
-                value = export_share * total_export_share
-                export_rates[adapter.uid] = self._divide(value, power_share)
-
-        return export_rates
-
-    @property
-    def battery_adapters_export_shares(self) -> dict[str, float]:
-        """Return the production adapter's share of exported power.
-
-        The fraction of exported power that is generated by the adapter.
-
-        How much of the total exported power is generated by the adapter.
-
-        """
-        shares = {}
-        exports = {}
-        total_share = 0.0
-
-        total_power_shares = self.battery_adapters_gross_power_shares
-        for adapter in self.prod_adapters:
-            if not adapter.exports_power:
-                shares[adapter.uid] = 0.0
-                continue
-
-            if (share := total_power_shares.get(adapter.uid)) is None:
-                return {}
-
-            total_share += share
-            exports[adapter.uid] = share
-
-        for uid, share in exports.items():
-            shares[uid] = self._divide(share, total_share)
-
-        return shares
-
-    # @property
-    # def storage_adapters_abs_export_shares(self) -> dict[str, float]:
-    #     """Return the production adapter's share of exported power.
-
-    #     The fraction of exported power that is generated by the adapter.
-
-    #     How much of the total exported power is generated by the adapter.
-
-    #     """
-    #     shares = {}
-    #     exports = {}
-    #     total_share = 0.0
-
-    #     if (export_share := self.gross_power_export_ratio) is None:
-    #         return {}
-
-    #     total_power_shares = self.battery_adapters_gross_power_shares
-    #     for adapter in self.prod_adapters:
-    #         if not adapter.exports_power:
-    #             shares[adapter.uid] = 0.0
-    #             continue
-
-    #         if (share := total_power_shares.get(adapter.uid)) is None:
-    #             return {}
-
-    #         total_share += share
-    #         exports[adapter.uid] = share
-
-    #     for uid, share in exports.items():
-    #         shares[uid] = self._divide(share, total_share) * export_share
-
-    #     return shares
-
-    @property
-    def battery_adapters_export_power(self) -> dict[str, float]:
-        """Return the production adapter's export power."""
-        export_power = {}
-        if (grid_export := self.combined_grid_export) is None:
-            return {}
-
-        export_shares = self.prod_adapters_export_shares
-        for adapter in self.prod_adapters:
-            if (export_share := export_shares.get(adapter.uid)) is None:
-                export_power[adapter.uid] = None
-            else:
-                export_power[adapter.uid] = grid_export * export_share
-
-        return export_power
-
-    @property
-    def battery_adapters_export_compensation_rates(self) -> dict[str, float]:
-        """Return the export compensation rates."""
-        compensation_rates = {}
-        export_power = self.prod_adapters_export_power
-        for adapter in self.prod_adapters:
-            if (power := export_power.get(adapter.uid)) is None:
-                compensation_rates[adapter.uid] = None
-                continue
-
-            if (compensation := adapter.export_compensation) is None:
-                compensation_rates[adapter.uid] = None
-                continue
-
-            power = self._to_kilo(power)
-            compensation_rates[adapter.uid] = power * compensation
-
-        return compensation_rates
-
-    @property
-    def battery_adapters_consumption_ratios(self) -> dict[str, float]:
-        """Return the relative export shares."""
-        rates = {}
-        applicable_share = self.gross_power_applicable_consumption_ratio
-        if applicable_share is None:
-            return {}
-
-        export_rates = self.prod_adapters_export_ratios
-        for adapter in self.prod_adapters:
-            if not (prod := adapter.production):
-                rates[adapter.uid] = prod
-                continue
-
-            if (export_rate := export_rates.get(adapter.uid)) is None:
-                rates[adapter.uid] = None
-                continue
-
-            rates[adapter.uid] = (1.0 - export_rate) * applicable_share
-
-        return rates
-
-    @property
-    def battery_adapters_consumption_shares(self) -> dict[str, float]:
-        """Return the absolute self consumption shares."""
-        shares = {}
-        if (self_cons_share := self.gross_power_consumption_ratio) is None:
-            return {}
-
-        consumption_rates = self.prod_adapters_consumption_ratios
-        total_power_shares = self.battery_adapters_gross_power_shares
-        for adapter in self.prod_adapters:
-            if (cons_rate := consumption_rates.get(adapter.uid)) is None:
-                shares[adapter.uid] = None
-                continue
-
-            if (power_share := total_power_shares.get(adapter.uid)) is None:
-                shares[adapter.uid] = None
-                continue
-
-            shares[adapter.uid] = self._divide(
-                (cons_rate * power_share), self_cons_share
-            )
-
-        return shares
-
-    @property
-    def battery_adapters_consumption_power(self) -> dict[str, float]:
-        """Return the self consumption power."""
-        power = {}
-        self_cons_rates = self.prod_adapters_consumption_ratios
-        for adapter in self.prod_adapters:
-            self_cons_rate = self_cons_rates.get(adapter.uid)
-            if self_cons_rate is None:
-                power[adapter.uid] = None
-                continue
-
-            self_cons_power = adapter.get_power_from_ratio(self_cons_rate)
-            if self_cons_power is None:
-                power[adapter.uid] = None
-                continue
-
-            power[adapter.uid] = self_cons_power
-
-        return power
-
-    @property
-    def battery_adapters_avoided_cost_rates(self) -> dict[str, float]:
-        """Return the self consumption power."""
-        saving_rates = {}
-        if (coe := self.grid_adapter.coe) is None:
-            return {}
-
-        self_cons_power = self.prod_adapters_consumption_power
-        for adapter in self.prod_adapters:
-            if (power := self_cons_power.get(adapter.uid)) is None:
-                saving_rates[adapter.uid] = None
-                continue
-
-            saving_rates[adapter.uid] = self._to_kilo(power) * coe
-
-        return saving_rates
-
-    # NOTE: This is not required at the moment (Grid COE == Grid LCOE).
-    # @property
-    # def storage_adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
-    #     """Return the self consumption power."""
-    #     saving_rates = {}
-    #     if (lcoe := self.grid_adapter.lcoe) is None:
-    #         return {}
-
-    #     self_cons_power = self.prod_adapters_consumption_power
-    #     for adapter in self.prod_adapters:
-    #         if (power := self_cons_power.get(adapter.uid)) is None:
-    #             saving_rates[adapter.uid] = None
-    #             continue
-
-    #         saving_rates[adapter.uid] = self._to_kilo(power) * lcoe
-
-    #     return saving_rates
-
-    @property
-    def battery_adapters_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total saving rates."""
-        saving_rates = {}
-
-        export_compensations = self.prod_adapters_export_compensation_rates
-        avoided_costs = self.prod_adapters_avoided_cost_rates
-        coo_rates = self.prod_adapters_coo_rates
-
-        for adapter in self.prod_adapters:
-            if (coe_rate := adapter.coe_rate) is None:
-                return {}
-
-            if (earnings := export_compensations.get(adapter.uid)) is None:
-                return {}
-
-            if (avoided := avoided_costs.get(adapter.uid)) is None:
-                return {}
-
-            if (coo_rate := coo_rates.get(adapter.uid)) is None:
-                return {}
-
-            saving_rates[adapter.uid] = (
-                earnings + avoided - coo_rate - coe_rate
-            )
-
-        return saving_rates
-
-    @property
-    def battery_adapters_levelized_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total levelized saving rates."""
-        saving_rates = {}
-
-        export_compensations = self.prod_adapters_export_compensation_rates
-        # Disabled see: adapters_levelized_self_cons_saving_rates
-        # self_cons_savings = self.prod_adapters_levelized_self_cons_saving_rates
-        avoided_costs = self.prod_adapters_avoided_cost_rates
-        lcoo_rates = self.prod_adapters_lcoo_rates
-
-        for adapter in self.prod_adapters:
-            if (lcoe_rate := adapter.lcoe_rate) is None:
-                return {}
-
-            if (earnings := export_compensations.get(adapter.uid)) is None:
-                return {}
-
-            if (avoided := avoided_costs.get(adapter.uid)) is None:
-                return {}
-
-            if (lcoo_rate := lcoo_rates.get(adapter.uid)) is None:
-                return {}
-
-            saving_rates[adapter.uid] = (
-                earnings + avoided - lcoo_rate - lcoe_rate
-            )
-
-        return saving_rates
-
     # ----------------------->
     # CONSUMPTION ADAPTERS --->
     # ----------------------->
@@ -2008,6 +1724,9 @@ class PowerInsight:
         """Return the adapter that corresponds to the entity."""
         return self.entity_mapping.get(entity)
 
+    def get_adapter_by_uid(self, uid: str):
+        return self.uid_mapping.get(uid)
+
     def set_value(self, entity_id: str, new_value: float | None) -> None:
         """Update the value of the given entity_id to new_value."""
         _LOGGER.debug(f"Trying to set value: `{new_value}` on {entity_id}")
@@ -2030,7 +1749,7 @@ class PowerInsight:
             _LOGGER.debug(f"Registered PV-System adapter: {adapter}.")
 
         elif isinstance(adapter, BatteryAdapter):
-            self.battery_adapters.add(adapter)
+            self.storage_adapters.add(adapter)
             _LOGGER.debug(f"Registered Battery adapter: {adapter}.")
 
         elif isinstance(adapter, BaseConsumerAdapter):
