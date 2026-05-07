@@ -172,15 +172,22 @@ class EventHandler:
         else:
             value = self._state_to_value(new_state)
 
-        self.power_insight.set_value(entity_id, value)
+        value_changed = self.power_insight.set_value(entity_id, value)
 
-        # Fire the scoped custom event so only this entry's sensors are notified.
+        is_report = curr_state is not None
         event_type = (
             self._event_prefix + EVENT_STATE_REPORTED
-            if curr_state is not None
+            if is_report
             else self._event_prefix + EVENT_STATE_CHANGED
         )
-        self.hass.bus.async_fire(event_type, event_data)
+
+        # state_reported: always fire — integration sensors need the new
+        # timestamp to advance their accumulation even if the rate is unchanged.
+        # state_changed: only fire when the stored numeric value actually
+        # changed; if the HA state string changed but the float is identical
+        # there is nothing for sensors to recalculate.
+        if is_report or value_changed:
+            self.hass.bus.async_fire(event_type, event_data)
 
     def _state_to_value(self, state_obj: State) -> float | None:
         """Convert a HA state object to a numeric Watts value.

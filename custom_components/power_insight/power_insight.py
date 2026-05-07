@@ -1729,16 +1729,19 @@ class PowerInsight:
     def get_adapter_by_uid(self, uid: str):
         return self.uid_mapping.get(uid)
 
-    def set_value(self, entity_id: str, new_value: float | None) -> None:
-        """Update the value of the given entity_id to new_value."""
+    def set_value(self, entity_id: str, new_value: float | None) -> bool:
+        """Update the value of the given entity_id to new_value.
+
+        Returns True if the stored value changed, False if it was already
+        identical.  EventHandler uses this to suppress unnecessary custom events
+        when a source entity fires state_changed but the numeric value is the same.
+        """
         _LOGGER.debug(f"Trying to set value: `{new_value}` on {entity_id}")
         adapter = self.get_adapter_by_entity(entity_id)
         if adapter is not None:
-            adapter.set_value(entity_id, new_value)
-        else:
-            _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
-            pass
-            # raise ValueError(f"Adapter {adapter} not registered.")
+            return adapter.set_value(entity_id, new_value)
+        _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
+        return False
 
     def register_adapter(self, adapter) -> None:
         """Register an adapter."""
@@ -1818,9 +1821,11 @@ class AbstractBaseAdapter(ABC):
     #     """Return the source co2 entities for this adapter."""
     #     pass
 
-    def set_value(self, entity_id, value) -> None:
-        """Set the value for an entity."""
+    def set_value(self, entity_id, value) -> bool:
+        """Set the value for an entity, returning True if it changed."""
+        changed = self._values.get(entity_id) != value
         self._values[entity_id] = value
+        return changed
 
 
 class BasePowerAdapter(AbstractBaseAdapter):

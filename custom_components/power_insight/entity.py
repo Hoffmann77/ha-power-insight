@@ -82,6 +82,17 @@ class BaseEventSensorEntity(SensorEntity):
     Both ``state_changed`` and ``state_reported`` events are tracked so that
     the first known value is picked up via a state-report even before any
     actual state change occurs.
+
+    Write coalescing
+    ----------------
+    When several source entities change in the same event-loop tick (common at
+    HA startup or with multi-channel energy meters), each fires its own custom
+    event.  Without coalescing every event would produce a separate
+    ``async_write_ha_state()`` call, each computing the same final
+    ``PowerInsight`` result.  Instead, the first event sets a ``_pending_write``
+    flag and schedules a single ``_flush_write`` with ``call_soon``; subsequent
+    events in the same tick see the flag is already set and do nothing.  The
+    flush runs in the next iteration when ``PowerInsight`` holds all updates.
     """
 
     _attr_should_poll = False
@@ -103,6 +114,7 @@ class BaseEventSensorEntity(SensorEntity):
         """
         self._source_entities = source_entities
         self.power_insight = power_insight
+        self._pending_write = False
 
     async def async_added_to_hass(self) -> None:
         """Register event listeners once the entity is part of HA."""
@@ -129,23 +141,34 @@ class BaseEventSensorEntity(SensorEntity):
             )
         )
 
+    def _schedule_write(self) -> None:
+        """Schedule a single state write for the current event-loop tick.
+
+        Safe to call from any number of callbacks in the same tick — only the
+        first call schedules the flush; the rest are no-ops.
+        """
+        if not self._pending_write:
+            self._pending_write = True
+            self.hass.loop.call_soon(self._flush_write)
+
+    def _flush_write(self) -> None:
+        """Write state to HA once all same-tick events have been processed."""
+        self._pending_write = False
+        self.async_write_ha_state()
+
     @callback
     def _update_on_state_change_callback(
         self, event: Event[EventStateChangedData]
     ) -> None:
-        """Push the current PowerInsight value to HA.
-
-        EventHandler has already updated PowerInsight before this event fires,
-        so native_value will return the freshly computed result.
-        """
-        self.async_write_ha_state()
+        """Schedule a coalesced state write on source state change."""
+        self._schedule_write()
 
     @callback
     def _update_on_state_report_callback(
         self, event: Event[EventStateReportedData]
     ) -> None:
-        """Push the current PowerInsight value to HA (state-report variant)."""
-        self.async_write_ha_state()
+        """Schedule a coalesced state write on source state report."""
+        self._schedule_write()
 
 
 # ---------------------------------------------------------------------------
