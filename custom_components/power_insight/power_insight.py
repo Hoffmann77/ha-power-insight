@@ -670,6 +670,25 @@ class PowerInsight:
     #     return shares
 
     @property
+    def grid_adapters_import_power(self) -> dict[str, float | None]:
+        """Return the grid adapter's import power keyed by uid."""
+        return {self.grid_adapter.uid: self.combined_grid_import}
+
+    @property
+    def grid_adapters_export_power(self) -> dict[str, float | None]:
+        """Return the grid adapter's export power keyed by uid."""
+        return {self.grid_adapter.uid: self.combined_grid_export}
+
+    @property
+    def grid_adapters_coe_rate(self) -> dict[str, float | None]:
+        """Return the grid import cost rate (EUR/h) keyed by uid."""
+        if (import_power := self.combined_grid_import) is None:
+            return {self.grid_adapter.uid: None}
+        if (coe := self.grid_adapter.coe) is None:
+            return {self.grid_adapter.uid: None}
+        return {self.grid_adapter.uid: (import_power / 1000) * coe}
+
+    @property
     def grid_adapters_charging_shares(self) -> dict[str, float]:
         """Return the production adapter's share of charging power.
 
@@ -1409,9 +1428,9 @@ class PowerInsight:
                 total_share += share
                 charging_shares[adapter_uid][battery.uid] = share
 
-            for adapter_uid in charge_from.items():
+            for adapter_uid in charge_from:
                 share = charging_shares[adapter_uid][battery.uid]
-                share = self._divide(share, total_share)
+                charging_shares[adapter_uid][battery.uid] = self._divide(share, total_share)
 
         return charging_shares
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-# from operator import attrgetter
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -13,17 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.const import (
     PERCENTAGE,
-    CURRENCY_EURO,
-    UnitOfEnergy,
     UnitOfPower,
-    UnitOfTime,
-)
-from homeassistant.components.integration.const import (
-    METHOD_LEFT,
-)
-from homeassistant.helpers.device import async_device_info_to_link_from_entity
-from homeassistant.components.integration.sensor import (
-    IntegrationSensor,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -33,7 +22,7 @@ from homeassistant.components.sensor import (
 
 from .entity import BaseEventSensorEntity, BaseEventIntegrationSensorEntity
 from .utils import get_value
-from .power_insight import PowerInsight
+from .power_insight import PowerInsight, AbstractBaseAdapter
 from . import MyConfigEntry
 from .const import (
     DOMAIN,
@@ -42,7 +31,6 @@ from .const import (
     CONF_CALCULATE_LEVELIZED_COST_RATES,
     CONF_CALCULATE_COST_SAVING_RATES,
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
-
     CONF_ACCUMULATE_COST_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     CONF_ACCUMULATE_COST_SAVING_RATES,
@@ -54,27 +42,27 @@ _LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True, kw_only=True)
 class PowerInsightSensorDescription(SensorEntityDescription):
-    """Provide the description of a Power insight sensor."""
+    """Provide the description of a PowerInsight sensor."""
 
-    entities_fn: Callable[[dict], float | None]
-    exists_fn: Callable[[dict], bool] = lambda value: True
-    value_fn: Callable[[dict], float | None]
-    transform_fn: Callable = lambda value: value
+    entities_fn: Callable[[PowerInsight], list[str]]
+    exists_fn: Callable[..., bool] = lambda _: True
+    value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
+    transform_fn: Callable[[float], float] = lambda value: value
 
 
 @dataclass(frozen=True, kw_only=True)
 class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
-    """Provide a description of a Heat pump Signal sensor."""
+    """Provide a description of a PowerInsight integration sensor."""
 
-    entities_fn: Callable[[dict], float | None]
-    exists_fn: Callable[[dict], bool] = lambda value: True
-    integration_value_fn: Callable[[dict], float | None]
-    transform_fn: Callable = lambda value: value
+    entities_fn: Callable[[PowerInsight], list[str]]
+    exists_fn: Callable[..., bool] = lambda _: True
+    integration_value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
+    transform_fn: Callable[[float], float] = lambda value: value
 
 
-#
-# PowerInsight sensors
-#
+# ---------------------------------------------------------------------------
+# Hub-level sensors
+# ---------------------------------------------------------------------------
 
 POWER_INSIGHT_SENSORS = (
     PowerInsightSensorDescription(
@@ -86,7 +74,7 @@ POWER_INSIGHT_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_ENABLE_DEBUG_ENTITIES),
-        value_fn=lambda obj: obj.total_power,
+        value_fn=lambda obj: obj.gross_power,
     ),
     PowerInsightSensorDescription(
         key="combined_export_ratio",
@@ -96,8 +84,7 @@ POWER_INSIGHT_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        # exists_fn=lambda options: options.check(),
-        value_fn=lambda obj: obj.export_share,
+        value_fn=lambda obj: obj.gross_power_export_ratio,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -111,7 +98,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
-        value_fn=lambda obj: obj.total_export_compensation_rate,
+        value_fn=lambda obj: obj.combined_export_compensation_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_power",
@@ -121,8 +108,7 @@ POWER_INSIGHT_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.self_consumption,
+        value_fn=lambda obj: obj.combined_consumption,
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_ratio",
@@ -132,8 +118,7 @@ POWER_INSIGHT_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.self_consumption_share,
+        value_fn=lambda obj: obj.gross_power_consumption_ratio,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -147,29 +132,48 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_SAVING_RATES),
-        value_fn=lambda obj: obj.total_self_cons_saving_rate,
+        value_fn=lambda obj: obj.combined_avoided_cost_rate,
     ),
     PowerInsightSensorDescription(
-        key="combined_utilization_power",
-        name="Combined utilization power",
+        key="combined_charging_power",
+        name="Combined charging power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.utilization,
+        value_fn=lambda obj: obj.combined_charging_power,
     ),
     PowerInsightSensorDescription(
-        key="combined_utilization_ratio",
-        name="Combined utilization ratio",
+        key="combined_standby_power",
+        name="Combined standby power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.combined_standby_power,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_charging_ratio",
+        name="Combined charging ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.utilization_share,
+        value_fn=lambda obj: obj.gross_power_charging_ratio,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_standby_ratio",
+        name="Combined standby ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.gross_power_standby_ratio,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -182,8 +186,7 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.coe,
+        value_fn=lambda obj: obj.combined_coe,
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_price_of_electricity",
@@ -195,8 +198,7 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        # exists_fn=lambda options: adapter.exports_power,
-        value_fn=lambda obj: obj.lcoe,
+        value_fn=lambda obj: obj.combined_lcoe,
     ),
     PowerInsightSensorDescription(
         key="combined_cost_rate",
@@ -207,9 +209,8 @@ POWER_INSIGHT_SENSORS = (
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
-        value_fn=lambda obj: obj.coe_rate,
+        value_fn=lambda obj: obj.combined_coe_rate,
     ),
-
     PowerInsightSensorDescription(
         key="combined_levelized_cost_rate",
         name="Combined levelized cost rate",
@@ -219,7 +220,7 @@ POWER_INSIGHT_SENSORS = (
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
-        value_fn=lambda obj: obj.lcoe_rate,
+        value_fn=lambda obj: obj.combined_lcoe_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_operating_cost_rate",
@@ -232,7 +233,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
-        value_fn=lambda obj: obj.total_coo_rate,
+        value_fn=lambda obj: obj.combined_coo_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_operating_cost_rate",
@@ -245,7 +246,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
-        value_fn=lambda obj: obj.total_lcoo_rate,
+        value_fn=lambda obj: obj.combined_lcoo_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_cost_savings_rate",
@@ -258,7 +259,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_SAVING_RATES),
-        value_fn=lambda obj: obj.total_saving_rate,
+        value_fn=lambda obj: obj.combined_saving_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_cost_savings_rate",
@@ -271,10 +272,9 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES),
-        value_fn=lambda obj: obj.total_levelized_saving_rate,
+        value_fn=lambda obj: obj.combined_levelized_saving_rate,
     ),
 )
-
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
@@ -288,7 +288,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
-        integration_value_fn=lambda obj: obj.total_export_compensation_rate,
+        integration_value_fn=lambda obj: obj.combined_export_compensation_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_operating_costs",
@@ -301,7 +301,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
-        integration_value_fn=lambda obj: obj.total_coo_rate,
+        integration_value_fn=lambda obj: obj.combined_coo_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_levelized_operating_costs",
@@ -314,7 +314,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_RATES),
-        integration_value_fn=lambda obj: obj.total_lcoo_rate,
+        integration_value_fn=lambda obj: obj.combined_lcoo_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_self_consumption_cost_savings",
@@ -327,7 +327,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_SAVING_RATES),
-        integration_value_fn=lambda obj: obj.total_self_cons_saving_rate,
+        integration_value_fn=lambda obj: obj.combined_avoided_cost_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_cost_savings",
@@ -340,7 +340,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_SAVING_RATES),
-        integration_value_fn=lambda obj: obj.total_saving_rate,
+        integration_value_fn=lambda obj: obj.combined_saving_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_levelized_cost_savings",
@@ -353,40 +353,122 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES),
-        integration_value_fn=lambda obj: obj.total_levelized_saving_rate,
+        integration_value_fn=lambda obj: obj.combined_levelized_saving_rate,
     ),
 )
 
 
+# ---------------------------------------------------------------------------
+# Grid adapter sensors
+# ---------------------------------------------------------------------------
 
 POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
+    PowerInsightSensorDescription(
+        key="cost_rate",
+        name="Cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
+        value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+    PowerInsightSensorDescription(
+        key="consumption_ratio",
+        name="Consumption ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_consumption_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="consumption_share",
+        name="Consumption share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_consumption_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    # --- Requires new power_insight.py dict-properties; uncomment when ready ---
     # PowerInsightSensorDescription(
-    #     key="self_consumption_rate",
-    #     name="Self consumption rate",
+    #     key="charging_ratio",
+    #     name="Charging ratio",
     #     icon="mdi:percent",
     #     native_unit_of_measurement=PERCENTAGE,
     #     state_class=SensorStateClass.MEASUREMENT,
     #     suggested_display_precision=0,
     #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.grid_adapter_self_cons_rates,
+    #     value_fn=lambda obj: obj.grid_adapters_charging_ratio,
+    #     transform_fn=lambda val: val * 100,
+    # ),
+    # PowerInsightSensorDescription(
+    #     key="charging_share",
+    #     name="Charging share",
+    #     icon="mdi:percent",
+    #     native_unit_of_measurement=PERCENTAGE,
+    #     state_class=SensorStateClass.MEASUREMENT,
+    #     suggested_display_precision=0,
+    #     entities_fn=lambda obj: obj.source_entities_power,
+    #     value_fn=lambda obj: obj.grid_adapters_combined_charging_share,
+    #     transform_fn=lambda val: val * 100,
+    # ),
+    # PowerInsightSensorDescription(
+    #     key="standby_ratio",
+    #     name="Standby ratio",
+    #     icon="mdi:percent",
+    #     native_unit_of_measurement=PERCENTAGE,
+    #     state_class=SensorStateClass.MEASUREMENT,
+    #     suggested_display_precision=0,
+    #     entities_fn=lambda obj: obj.source_entities_power,
+    #     value_fn=lambda obj: obj.grid_adapters_standby_ratio,
+    #     transform_fn=lambda val: val * 100,
+    # ),
+    # PowerInsightSensorDescription(
+    #     key="standby_share",
+    #     name="Standby share",
+    #     icon="mdi:percent",
+    #     native_unit_of_measurement=PERCENTAGE,
+    #     state_class=SensorStateClass.MEASUREMENT,
+    #     suggested_display_precision=0,
+    #     entities_fn=lambda obj: obj.source_entities_power,
+    #     value_fn=lambda obj: obj.grid_adapters_standby_share,
     #     transform_fn=lambda val: val * 100,
     # ),
 )
 
+POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
+    PowerInsightIntegrationSensorDescription(
+        key="total_cost",
+        name="Total cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
+        integration_value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+)
 
 
-#
-# PowerInsight production adapter sensors
-#
+# ---------------------------------------------------------------------------
+# PV adapter sensors
+# ---------------------------------------------------------------------------
 
-POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
+POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="export_power",
         name="Export power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
-        suggested_unit_of_measurement=UnitOfPower.WATT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
@@ -401,7 +483,7 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.prod_adapters_export_rates,
+        value_fn=lambda obj: obj.prod_adapters_export_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -435,10 +517,9 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
-        suggested_unit_of_measurement=UnitOfPower.WATT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_self_cons_power,
+        value_fn=lambda obj: obj.prod_adapters_consumption_power,
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
@@ -448,7 +529,7 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_self_cons_rates,
+        value_fn=lambda obj: obj.prod_adapters_consumption_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -459,7 +540,7 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_self_cons_shares,
+        value_fn=lambda obj: obj.prod_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -472,7 +553,7 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_self_cons_saving_rates,
+        value_fn=lambda obj: obj.prod_adapters_avoided_cost_rates,
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
@@ -508,7 +589,7 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_saving_rates,
+        value_fn=lambda obj: obj.prod_adapters_cost_saving_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
@@ -520,12 +601,11 @@ POWER_INSIGHT_PROD_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_levelized_saving_rates,
+        value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
     ),
 )
 
-
-POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS = (
+POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
         name="Total export compensation",
@@ -550,7 +630,6 @@ POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         integration_value_fn=lambda obj: obj.prod_adapters_coo_rates,
-
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_costs",
@@ -574,7 +653,7 @@ POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_self_cons_saving_rates,
+        integration_value_fn=lambda obj: obj.prod_adapters_avoided_cost_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
@@ -586,7 +665,7 @@ POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_saving_rates,
+        integration_value_fn=lambda obj: obj.prod_adapters_cost_saving_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
@@ -598,22 +677,241 @@ POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_levelized_saving_rates,
+        integration_value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
     ),
 )
 
 
-#
-# PowerInsight consumption adapter sensors
-#
+# ---------------------------------------------------------------------------
+# Storage (battery) adapter sensors
+# ---------------------------------------------------------------------------
+# Identical structure to POWER_INSIGHT_PV_ADAPTER_SENSORS but pointing to
+# storage_adapters_* properties.  Charging-source-share sensors are added
+# dynamically in async_setup_entry.
 
-# consumption
-# Power from grid, pv, ...
-# total power from grid, pv, ...
+POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
+    PowerInsightSensorDescription(
+        key="export_power",
+        name="Export power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.storage_adapters_export_power,
+    ),
+    PowerInsightSensorDescription(
+        key="export_ratio",
+        name="Export ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.storage_adapters_export_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="export_share",
+        name="Export share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.storage_adapters_export_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="export_compensation_rate",
+        name="Export compensation rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        exists_fn=lambda adapter: adapter.exports_power,
+        value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
+    ),
+    PowerInsightSensorDescription(
+        key="self_consumption_power",
+        name="Self-consumption power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_consumption_power,
+    ),
+    PowerInsightSensorDescription(
+        key="self_consumption_ratio",
+        name="Self-consumption ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_consumption_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="self_consumption_share",
+        name="Self-consumption share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_consumption_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="self_consumption_cost_savings_rate",
+        name="Self-consumption cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.storage_adapters_avoided_cost_rates,
+    ),
+    PowerInsightSensorDescription(
+        key="operating_cost_rate",
+        name="Operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.storage_adapters_coo_rates,
+    ),
+    PowerInsightSensorDescription(
+        key="levelized_operating_cost_rate",
+        name="Levelized operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+    ),
+    PowerInsightSensorDescription(
+        key="cost_savings_rate",
+        name="Cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.storage_adapters_cost_saving_rates,
+    ),
+    PowerInsightSensorDescription(
+        key="levelized_cost_savings_rate",
+        name="Levelized cost savings rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+    ),
+)
 
-# total consumption
-# grid, pv,... shares
+POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
+    PowerInsightIntegrationSensorDescription(
+        key="total_export_compensation",
+        name="Total export compensation",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        exists_fn=lambda adapter: adapter.exports_power,
+        integration_value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_operating_costs",
+        name="Total operating costs",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.storage_adapters_coo_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_levelized_operating_costs",
+        name="Total levelized operating costs",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_self_consumption_cost_savings",
+        name="Total self-consumption cost savings",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.storage_adapters_avoided_cost_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_cost_savings",
+        name="Total cost savings",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.storage_adapters_cost_saving_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_levelized_cost_savings",
+        name="Total levelized cost savings",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+    ),
+)
 
+
+# ---------------------------------------------------------------------------
+# Consumer adapter sensors
+# ---------------------------------------------------------------------------
 
 POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
@@ -629,8 +927,8 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.cons_adapters_coo_rates,
     ),
     PowerInsightSensorDescription(
-        key="operating_cost_rate_levelized",
-        name="Operating cost rate levelized",
+        key="levelized_operating_cost_rate",
+        name="Levelized operating cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -642,20 +940,23 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     ),
 )
 
+POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS: tuple[
+    PowerInsightIntegrationSensorDescription, ...
+] = ()
 
-POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = ()
 
-
-
-
+# ---------------------------------------------------------------------------
+# Options wrapper
+# ---------------------------------------------------------------------------
 
 
 class OptionsWrapper:
     """Wrapper around the raw options dict providing a unified check interface."""
 
     def __init__(self, options: dict) -> None:
+        """Initialise from the raw options dict."""
         self._options = options
-        self._selected: set = set()
+        self._selected: set[str] = set()
         for key, value in options.items():
             if isinstance(value, list):
                 self._selected.update(value)
@@ -667,153 +968,204 @@ class OptionsWrapper:
         return bool(self._options.get(key, False))
 
 
+# ---------------------------------------------------------------------------
+# Platform setup
+# ---------------------------------------------------------------------------
 
 
 async def async_setup_entry(
         hass: HomeAssistant,
         entry: MyConfigEntry,
-        async_add_entities: AddEntitiesCallback
+        async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
     power_insight = entry.runtime_data.power_insight
-    entities = []
-
     options_wrapped = OptionsWrapper(entry.options)
 
+    # --- Hub-level sensors ---
+    entities: list = []
     for description in POWER_INSIGHT_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
-        
-        entity = PowerInsightSensor(
+        entities.append(PowerInsightSensor(
             description=description,
             config_entry=entry,
             source_entities=description.entities_fn(power_insight),
             power_insight=power_insight,
-        )
-        entities.append(entity)
+        ))
 
     for description in POWER_INSIGHT_INTEGRATION_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
-
-        entity = PowerInsightIntegrationSensor(
+        entities.append(PowerInsightIntegrationSensor(
             description=description,
             config_entry=entry,
             source_entities=description.entities_fn(power_insight),
             power_insight=power_insight,
-        )
-        entities.append(entity)
+        ))
 
     async_add_entities(entities)
 
-
+    # --- Grid adapter sensors ---
     grid_adapter = power_insight.grid_adapter
     entities = []
     for description in POWER_INSIGHT_GRID_ADAPTER_SENSORS:
-        entity = PowerInsightAdapterSensor(
+        if not description.exists_fn(options_wrapped):
+            continue
+        entities.append(PowerInsightAdapterSensor(
             description=description,
             config_entry=entry,
             source_entities=description.entities_fn(power_insight),
             power_insight=power_insight,
             device_adapter=grid_adapter,
-        )
-        entities.append(entity)
-    
+        ))
+
+    for description in POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS:
+        if not description.exists_fn(options_wrapped):
+            continue
+        entities.append(PowerInsightAdapterIntegrationSensor(
+            description=description,
+            config_entry=entry,
+            source_entities=description.entities_fn(power_insight),
+            power_insight=power_insight,
+            device_adapter=grid_adapter,
+        ))
+
     async_add_entities(entities, config_subentry_id=grid_adapter.uid)
 
-
-    for adapter in power_insight.prod_adapters:
+    # --- PV adapter sensors ---
+    for adapter in power_insight.pv_system_adapters:
         entities = []
-        for description in POWER_INSIGHT_PROD_ADAPTER_SENSORS:
+        for description in POWER_INSIGHT_PV_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
                 continue
-
-            entity = PowerInsightAdapterSensor(
+            entities.append(PowerInsightAdapterSensor(
                 description=description,
                 config_entry=entry,
                 source_entities=description.entities_fn(power_insight),
                 power_insight=power_insight,
                 device_adapter=adapter,
-            )
-            entities.append(entity)
+            ))
 
-        for description in POWER_INSIGHT_PROD_ADAPTER_INTEGRATION_SENSORS:
+        for description in POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
-
-            entity = PowerInsightAdapterIntegrationSensor(
+            entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
                 source_entities=description.entities_fn(power_insight),
                 power_insight=power_insight,
                 device_adapter=adapter,
-            )
-            entities.append(entity)
+            ))
 
         async_add_entities(entities, config_subentry_id=adapter.uid)
 
-    for adapter in power_insight.cons_adapters:
+    # --- Battery adapter sensors ---
+    for adapter in power_insight.storage_adapters:
         entities = []
-        for description in POWER_INSIGHT_CONS_ADAPTER_SENSORS:
+
+        for description in POWER_INSIGHT_STORAGE_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
                 continue
-
-            entity = PowerInsightAdapterSensor(
+            entities.append(PowerInsightAdapterSensor(
                 description=description,
                 config_entry=entry,
                 source_entities=description.entities_fn(power_insight),
                 power_insight=power_insight,
                 device_adapter=adapter,
-            )
-            entities.append(entity)
+            ))
 
-        for description in POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS:
+        for description in POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
-
-            entity = PowerInsightAdapterIntegrationSensor(
+            entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
                 source_entities=description.entities_fn(power_insight),
                 power_insight=power_insight,
                 device_adapter=adapter,
-            )
-            entities.append(entity)
+            ))
 
-
-        for power_adapter in power_insight.power_providing_adapters:
-
-            name = power_adapter.verbose_name
-
-
+        # Dynamic charging source share sensors — one per power-providing adapter
+        for source_adapter in power_insight.gross_power_adapters:
+            name = source_adapter.verbose_name
             dynamic_description = PowerInsightSensorDescription(
-                key=f"{name}_ratio",
-                name=f"{name} Ratio",
+                key=f"charging_share_from_{name}",
+                name=f"Charging share from {name}",
                 icon="mdi:percent",
                 native_unit_of_measurement=PERCENTAGE,
                 state_class=SensorStateClass.MEASUREMENT,
                 suggested_display_precision=0,
-                entities_fn=lambda obj: (
-                    obj.source_entities_power
-                ),
-                value_fn=lambda obj: obj.cons_adapters_source_shares,
+                entities_fn=lambda obj: obj.source_entities_power,
+                value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
                 transform_fn=lambda val: val * 100,
             )
-
-            if not description.exists_fn(adapter):
-                continue
-
-            entity = PowerInsightDynamicAdapterSensor(
+            entities.append(PowerInsightDynamicAdapterSensor(
                 description=dynamic_description,
                 config_entry=entry,
                 source_entities=dynamic_description.entities_fn(power_insight),
                 power_insight=power_insight,
                 device_adapter=adapter,
-                dynamic_adapter=power_adapter,
-            )
-            entities.append(entity)
+                dynamic_adapter=source_adapter,
+            ))
 
         async_add_entities(entities, config_subentry_id=adapter.uid)
+
+    # --- Consumer adapter sensors ---
+    for adapter in power_insight.consumer_adapters:
+        entities = []
+
+        for description in POWER_INSIGHT_CONS_ADAPTER_SENSORS:
+            if not description.exists_fn(adapter):
+                continue
+            entities.append(PowerInsightAdapterSensor(
+                description=description,
+                config_entry=entry,
+                source_entities=description.entities_fn(power_insight),
+                power_insight=power_insight,
+                device_adapter=adapter,
+            ))
+
+        for description in POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS:
+            if not description.exists_fn(adapter):
+                continue
+            entities.append(PowerInsightAdapterIntegrationSensor(
+                description=description,
+                config_entry=entry,
+                source_entities=description.entities_fn(power_insight),
+                power_insight=power_insight,
+                device_adapter=adapter,
+            ))
+
+        # Dynamic consumption source share sensors — one per power-providing adapter
+        for source_adapter in power_insight.gross_power_adapters:
+            name = source_adapter.verbose_name
+            dynamic_description = PowerInsightSensorDescription(
+                key=f"{name}_ratio",
+                name=f"{name} ratio",
+                icon="mdi:percent",
+                native_unit_of_measurement=PERCENTAGE,
+                state_class=SensorStateClass.MEASUREMENT,
+                suggested_display_precision=0,
+                entities_fn=lambda obj: obj.source_entities_power,
+                value_fn=lambda obj: obj.cons_adapters_source_shares,
+                transform_fn=lambda val: val * 100,
+            )
+            entities.append(PowerInsightDynamicAdapterSensor(
+                description=dynamic_description,
+                config_entry=entry,
+                source_entities=dynamic_description.entities_fn(power_insight),
+                power_insight=power_insight,
+                device_adapter=adapter,
+                dynamic_adapter=source_adapter,
+            ))
+
+        async_add_entities(entities, config_subentry_id=adapter.uid)
+
+
+# ---------------------------------------------------------------------------
+# Sensor entity classes
+# ---------------------------------------------------------------------------
 
 
 class BasePowerInsightSensor(BaseEventSensorEntity):
@@ -825,7 +1177,7 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
@@ -837,19 +1189,17 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
 
 
 class PowerInsightSensor(BasePowerInsightSensor):
-    """Sensor entity with access to the `PowerInsight` instance."""
+    """Hub-level sensor reading directly from PowerInsight."""
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
     ) -> None:
         """Initialize sensor entity."""
-        super().__init__(
-            description, config_entry, source_entities, power_insight
-        )
+        super().__init__(description, config_entry, source_entities, power_insight)
         self._attr_unique_id = (
             f"{self.config_entry.entry_id}_{self.entity_description.key}"
         )
@@ -862,41 +1212,29 @@ class PowerInsightSensor(BasePowerInsightSensor):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        data = self.power_insight
-        assert data is not None
-        value = self.entity_description.value_fn(data)
+        value = self.entity_description.value_fn(self.power_insight)
         if value is not None:
             value = self.entity_description.transform_fn(value)
-
         return value
 
 
 class PowerInsightAdapterSensor(BasePowerInsightSensor):
-    """Sensor entity with access to the `Adapter` instance.
-
-    Used for adapter sensors entities that require
-    additional access to the `PowerInsight` instance.
-
-    """
+    """Per-adapter sensor that extracts its value from a uid-keyed dict."""
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
-            device_adapter,
+            device_adapter: AbstractBaseAdapter,
     ) -> None:
-        """Initialize device sensor entity."""
-        super().__init__(
-            description, config_entry, source_entities, power_insight
-        )
+        """Initialize adapter sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
         self.device_adapter = device_adapter
 
         uid = f"{self.config_entry.entry_id}_{self.device_adapter.uid}"
-
         self._attr_unique_id = f"{uid}_{self.entity_description.key}"
-
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.device_adapter.uid)},
@@ -906,44 +1244,36 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        assert self.power_insight is not None
         value = self.entity_description.value_fn(self.power_insight)
         value = get_value(self.device_adapter.uid, value)
         if value is not None:
             value = self.entity_description.transform_fn(value)
-
         return value
 
 
-
 class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
-    """Sensor entity with access to the `Adapter` instance.
+    """Per-adapter sensor that extracts its value from a nested uid-keyed dict.
 
-    Used for adapter sensors entities that require
-    additional access to the `PowerInsight` instance.
-
+    Used for sensors where the result depends on two adapters:
+    ``value_fn`` returns ``{device_adapter_uid: {dynamic_adapter_uid: value}}``.
     """
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
-            device_adapter,
-            dynamic_adapter
+            device_adapter: AbstractBaseAdapter,
+            dynamic_adapter: AbstractBaseAdapter,
     ) -> None:
-        """Initialize device sensor entity."""
-        super().__init__(
-            description, config_entry, source_entities, power_insight
-        )
+        """Initialize dynamic adapter sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
         self.device_adapter = device_adapter
         self.dynamic_adapter = dynamic_adapter
 
         uid = f"{self.config_entry.entry_id}_{self.device_adapter.uid}"
-
         self._attr_unique_id = f"{uid}_{self.entity_description.key}"
-
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.device_adapter.uid)},
@@ -953,20 +1283,21 @@ class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
     @property
     def native_value(self) -> float | None:
         """Return the state of the sensor."""
-        assert self.power_insight is not None
         value = self.entity_description.value_fn(self.power_insight)
         value = get_value(self.device_adapter.uid, value)
         value = get_value(self.dynamic_adapter.uid, value)
         if value is not None:
             value = self.entity_description.transform_fn(value)
-
         return value
 
 
+# ---------------------------------------------------------------------------
+# Integration sensor entity classes
+# ---------------------------------------------------------------------------
 
 
 class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
-    """Integration sensor entity with access to the `PowerInsight` instance."""
+    """Base integration sensor entity."""
 
     entity_description: PowerInsightIntegrationSensorDescription
 
@@ -974,32 +1305,29 @@ class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightIntegrationSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
     ) -> None:
-        """Initialize the base sensor entity."""
+        """Initialize the base integration sensor entity."""
         super().__init__(source_entities, power_insight)
         self.entity_description = description
         self.config_entry = config_entry
 
 
 class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
-    """Integration sensor entity with access to the `PowerInsight` instance."""
+    """Hub-level integration sensor."""
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightIntegrationSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
     ) -> None:
-
-        super().__init__(
-            description, config_entry, source_entities, power_insight
-        )
-
+        """Initialize the integration sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
         self._attr_unique_id = (
             f"{self.config_entry.entry_id}_{self.entity_description.key}"
         )
@@ -1011,37 +1339,30 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
 
     @property
     def integration_value(self) -> float | None:
-        """Return the state of the sensor."""
-        data = self.power_insight
-        assert data is not None
-        value = self.entity_description.integration_value_fn(data)
+        """Return the current rate value to integrate."""
+        value = self.entity_description.integration_value_fn(self.power_insight)
         if value is not None:
             value = self.entity_description.transform_fn(value)
-
         return value
 
 
 class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
-    """Integration sensor entity with access to the `PowerInsight` instance."""
+    """Per-adapter integration sensor that extracts its value from a uid-keyed dict."""
 
     def __init__(
             self,
-            description: SensorEntityDescription,
+            description: PowerInsightIntegrationSensorDescription,
             config_entry: ConfigEntry,
             source_entities: list[str],
             power_insight: PowerInsight,
-            device_adapter,
+            device_adapter: AbstractBaseAdapter,
     ) -> None:
-
-        super().__init__(
-            description, config_entry, source_entities, power_insight
-        )
+        """Initialize the adapter integration sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
         self.device_adapter = device_adapter
 
         uid = f"{self.config_entry.entry_id}_{self.device_adapter.uid}"
-
         self._attr_unique_id = f"{uid}_{self.entity_description.key}"
-
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.device_adapter.uid)},
@@ -1050,12 +1371,9 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
     @property
     def integration_value(self) -> float | None:
-        """Return the state of the sensor."""
-        data = self.power_insight
-        assert data is not None
-        value = self.entity_description.integration_value_fn(data)
+        """Return the current rate value to integrate."""
+        value = self.entity_description.integration_value_fn(self.power_insight)
         value = get_value(self.device_adapter.uid, value)
         if value is not None:
             value = self.entity_description.transform_fn(value)
-
         return value
