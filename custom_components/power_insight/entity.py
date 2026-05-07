@@ -19,9 +19,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from enum import Enum
 import logging
-from typing import TYPE_CHECKING, Any, Final, Self
+from typing import Any, Self
 
 from homeassistant.components.sensor import (
     RestoreSensor,
@@ -37,7 +36,6 @@ from homeassistant.core import (
     EventStateReportedData,
     State,
     callback,
-    HomeAssistant,
 )
 from homeassistant.helpers.event import async_call_later
 

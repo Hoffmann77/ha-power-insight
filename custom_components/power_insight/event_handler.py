@@ -6,12 +6,11 @@ import logging
 from typing import Iterable
 
 from homeassistant.const import (
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
     EVENT_STATE_CHANGED,
     EVENT_STATE_REPORTED,
+    STATE_UNAVAILABLE,
+    STATE_UNKNOWN,
 )
-
 from homeassistant.core import (
     Event,
     EventStateChangedData,
@@ -19,9 +18,9 @@ from homeassistant.core import (
     State,
     callback,
 )
-
 from homeassistant.helpers.event import (
     async_track_state_change_event,
+    async_track_state_report_event,
 )
 
 from .const import DOMAIN
@@ -30,49 +29,89 @@ from .power_insight import UNIT_PREFIXES
 
 _LOGGER = logging.getLogger(__name__)
 
+_INVALID_STATES = frozenset({STATE_UNAVAILABLE, STATE_UNKNOWN})
+
 
 class EventHandler:
-    """Handle the communication between power_insight and the event bus."""
+    """Bridge between the HA event bus and the PowerInsight calculation engine.
+
+    Responsibilities
+    ----------------
+    - Track ``state_changed`` and ``state_reported`` events for all source
+      entities registered across all adapters.
+    - Translate raw HA state strings to numeric Watt values (applying SI prefix
+      scaling) and store them on the shared ``PowerInsight`` instance.
+    - Fire scoped custom events — prefixed with ``"{DOMAIN}_{entry_id}_"`` — so
+      that sensor entities belonging to *this* config entry update without
+      interfering with other PowerInsight instances.
+
+    Initialisation
+    --------------
+    ``track_entities`` reads the current HA state for every entity immediately
+    on registration, bootstrapping ``PowerInsight`` before any event arrives.
+    This means sensors display correct values as soon as the integration loads,
+    rather than showing ``None`` until each source entity next changes.
+    """
 
     def __init__(self, hass, entry_id, power_insight) -> None:
+        """Initialise the event handler."""
         self.hass = hass
         self.power_insight = power_insight
-
+        # Prefix isolates custom events for this config entry from all others.
         self._event_prefix = f"{DOMAIN}_{entry_id}_"
-
-        self._unsub_state_change_listener = []
-
+        self._unsub_listeners: list = []
 
     def track_entities(self, entity_ids: Iterable[str]) -> None:
+        """Start tracking source entities and bootstrap PowerInsight immediately.
 
-        handle_state_change = self._update_on_state_change_callback
-        handle_state_report = self._update_on_state_report_callback
+        For each entity, reads the current HA state synchronously so that
+        ``PowerInsight`` is populated before any event fires.  This avoids a
+        startup gap where all sensor values are ``None`` while waiting for the
+        first ``state_changed`` event.
 
-        unsub = (
+        Registers two persistent listeners per entity set:
+        - ``state_changed``: fired when the numeric value changes.
+        - ``state_reported``: fired when the value is re-reported without
+          changing (advances the clock for integration sensors).
+        """
+        entity_ids = list(entity_ids)
+
+        # Bootstrap: populate PowerInsight with whatever states HA already has.
+        for entity_id in entity_ids:
+            if (state := self.hass.states.get(entity_id)) is not None:
+                value = (
+                    None
+                    if state.state in _INVALID_STATES
+                    else self._state_to_value(state)
+                )
+                self.power_insight.set_value(entity_id, value)
+
+        # Register persistent listeners for ongoing updates.
+        self._unsub_listeners.extend([
             async_track_state_change_event(
                 self.hass,
                 entity_ids,
-                handle_state_change,
+                self._update_on_state_change_callback,
             ),
-            async_track_state_change_event(
+            async_track_state_report_event(
                 self.hass,
                 entity_ids,
-                handle_state_report,
+                self._update_on_state_report_callback,
             ),
-        )
-        self._unsub_state_change_listener.extend(unsub)
+        ])
 
     def untrack_entities(self) -> None:
-        for unsub in self._unsub_state_change_listener:
+        """Cancel all active event listeners."""
+        for unsub in self._unsub_listeners:
             unsub()
-
+        self._unsub_listeners.clear()
 
     @callback
     def _update_on_state_change_callback(
         self, event: Event[EventStateChangedData]
     ) -> None:
-        """Handle sensor state change."""
-        return self._update_on_state_change(
+        """Handle a source entity state change."""
+        self._update_on_state_change(
             event.data,
             event.data["entity_id"],
             event.data["old_state"],
@@ -84,8 +123,8 @@ class EventHandler:
     def _update_on_state_report_callback(
         self, event: Event[EventStateReportedData]
     ) -> None:
-        """Handle sensor state report."""
-        return self._update_on_state_change(
+        """Handle a source entity state report (same value, updated timestamp)."""
+        self._update_on_state_change(
             event.data,
             event.data["entity_id"],
             None,
@@ -100,69 +139,63 @@ class EventHandler:
         old_state: State | None,
         new_state: State | None,
         curr_state: State | None,
-        # old_timestamp: datetime | None,
-        # new_timestamp: datetime | None,
     ) -> None:
-        """Update the data on state change.
+        """Store the updated value on PowerInsight and notify sensor entities.
 
-        Ref: https://www.home-assistant.io/docs/configuration/events/#state_changed  #noqa
+        Translates the new HA state to a numeric Watts value and writes it to
+        the ``PowerInsight`` engine.  Then fires the appropriate scoped custom
+        event so downstream sensor entities know to re-read their calculated
+        values.
+
+        The custom event is always fired — even for ``state_reported`` where the
+        numeric value is unchanged — because integration sensors need to
+        accumulate the elapsed time regardless of whether the rate has changed.
+
+        Args:
+            event_data: Raw event data forwarded verbatim to the custom event.
+            entity_id:  The entity whose state changed or was reported.
+            old_state:  Previous state (``state_changed`` only, else ``None``).
+            new_state:  New state (``state_changed`` only, else ``None``).
+            curr_state: Current state (``state_reported`` only, else ``None``).
 
         """
-        INVALID_STATES = (STATE_UNAVAILABLE, STATE_UNKNOWN)
-
-        if curr_state:
+        # Unify the two event paths: curr_state is set for state_reported,
+        # new_state for state_changed.
+        if curr_state is not None:
             new_state = curr_state
 
-        # Entity was removed from Home Assistant.
         if new_state is None:
+            # Entity was removed from HA; mark as unavailable.
             value = None
-
-        # Entity does not provide valid data.
-        elif new_state.state in INVALID_STATES:
-
-            # The old state was a valid value.
-            if old_state and old_state not in INVALID_STATES:
-                # TODO: implement a short keep alive period for the value.
-                # cancel = self._schedule_freeze_cancellation(
-                #     self._keep_alive, entity_id, None
-                # )
-                # self.async_on_remove(cancel)
-                # self._freeze_callbacks[entity_id] = cancel
-                value = None
-            else:
-                value = None
-
-        # We expect a valid state value
+        elif new_state.state in _INVALID_STATES:
+            value = None
         else:
             value = self._state_to_value(new_state)
 
-
-        # Unfreeze the value as soon we have a new valid value.
-        # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/entity.py LN 1332  # noqa
-        # if value and entity_id in self._freeze_callbacks:
-        #     cancel = self._freeze_callbacks.pop(entity_id)
-        #     cancel()
-
-        # Set the value of the entity in power_insight.
         self.power_insight.set_value(entity_id, value)
 
-        # Fire an event to notify all entities that depend on this entity_id.
-        # We send a custom event to ensure that the instance is updated
-        # before the entities retrieve the signal to update.
-        if curr_state is not None:
-            event_type = self._event_prefix + EVENT_STATE_REPORTED
-        else:
-            event_type = self._event_prefix + EVENT_STATE_CHANGED
-
+        # Fire the scoped custom event so only this entry's sensors are notified.
+        event_type = (
+            self._event_prefix + EVENT_STATE_REPORTED
+            if curr_state is not None
+            else self._event_prefix + EVENT_STATE_CHANGED
+        )
         self.hass.bus.async_fire(event_type, event_data)
 
     def _state_to_value(self, state_obj: State) -> float | None:
-        """Return the state of the given state object as float."""
+        """Convert a HA state object to a numeric Watts value.
+
+        Reads the ``unit_of_measurement`` attribute to apply SI prefix scaling
+        so that kW, MW, etc. are all stored as Watts internally.  An unknown
+        prefix is treated as ×1 (no scaling).
+        """
         try:
             value = float(state_obj.state)
         except ValueError:
             return None
 
+        # Apply SI prefix (k=10³, M=10⁶, …) based on the first character of
+        # the unit string.  None key matches plain "W" or any unrecognised unit.
         if unit := state_obj.attributes.get("unit_of_measurement"):
             unit = unit[0]
 
