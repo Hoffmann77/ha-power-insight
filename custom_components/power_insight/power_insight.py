@@ -252,15 +252,6 @@ class PowerInsight:
         return power
 
     @property
-    def combined_utilization(self) -> float | None:
-        """Sum of power used for battery charging and production adapter standby (W)."""
-        if (charging := self.combined_charging_power) is None:
-            return None
-        if (standby := self.combined_standby_power) is None:
-            return None
-        return charging + standby
-
-    @property
     def combined_consumption(self) -> float | None:
         """Sum of power consumed by electrical loads (W).
 
@@ -382,15 +373,6 @@ class PowerInsight:
             _LOGGER.warning("Data discrepancy: utilization without total power.")
 
         return self._divide(charging_power, gross_power)
-
-    @property
-    def gross_power_utilization_ratio(self) -> float | None:
-        """Fraction of gross power used for charging and standby."""
-        if (charging_ratio := self.gross_power_charging_ratio) is None:
-            return None
-        if (standby_ratio := self.gross_power_standby_ratio) is None:
-            return None
-        return charging_ratio + standby_ratio
 
     # --------------------------------->
     # APPLICABLE GROSS POWER RATIOS --->
@@ -696,11 +678,6 @@ class PowerInsight:
     def grid_adapters_export_power(self) -> dict[str, float | None]:
         """Return the grid adapter's export power keyed by uid."""
         return {self.grid_adapter.uid: self.combined_grid_export}
-
-    @property
-    def grid_adapters_export_ratio(self) -> dict[str, float | None]:
-        """Return the gross power export ratio keyed by grid adapter uid."""
-        return {self.grid_adapter.uid: self.gross_power_export_ratio}
 
     @property
     def grid_adapters_coe_rate(self) -> dict[str, float | None]:
