@@ -1981,7 +1981,7 @@ class GridAdapter(BasePowerProvidingAdapter):
     @property
     def coe_rate(self) -> float | None:
         """Return the cost of electicity rate in Euro/h."""
-        if (coe := self.combined_coe) is None:
+        if (coe := self.coe) is None:
             return None
 
         if (power := self.import_power) is None:
@@ -1994,12 +1994,12 @@ class GridAdapter(BasePowerProvidingAdapter):
     @property
     def lcoe(self) -> float | None:
         """Return the levelized cost of electicity in Euro/kwh."""
-        return self.combined_coe
+        return self.coe
 
     @property
     def lcoe_rate(self) -> float | None:
         """Return the levelized cost of electicity rate in Euro/h."""
-        if (lcoe := self.combined_lcoe) is None:
+        if (lcoe := self.lcoe) is None:
             return None
 
         if (power := self.import_power) is None:
@@ -2094,7 +2094,7 @@ class BaseProductionAdapter(BasePowerProvidingAdapter):
     @property
     def coe_rate(self) -> float | None:
         """Return the cost of electicity rate in Euro/h."""
-        if (coe := self.combined_coe) is None:
+        if (coe := self.coe) is None:
             return None
 
         return self._multiply_prod(coe)
@@ -2102,12 +2102,12 @@ class BaseProductionAdapter(BasePowerProvidingAdapter):
     @property
     def lcoe(self) -> float | None:
         """Return the levelized cost of electicity in Euro/kwh."""
-        return self.combined_coe
+        return self.coe
 
     @property
     def lcoe_rate(self) -> float | None:
         """Return the levelized cost of electicity rate in Euro/h."""
-        if (lcoe := self.combined_lcoe) is None:
+        if (lcoe := self.lcoe) is None:
             return None
 
         return self._multiply_prod(lcoe)

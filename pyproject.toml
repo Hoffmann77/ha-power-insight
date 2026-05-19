@@ -2,12 +2,15 @@
 name = "ha-power-insight"
 version = "0.1.0b1"
 description = "Home Assistant custom component for electrical power insights"
-requires-python = ">=3.12"
+requires-python = ">=3.13.2"
 
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "pytest-homeassistant-custom-component==0.13.316",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+pythonpath = ["."]
