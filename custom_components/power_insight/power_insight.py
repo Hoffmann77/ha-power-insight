@@ -670,6 +670,25 @@ class PowerInsight:
     #     return shares
 
     @property
+    def grid_adapters_import_power(self) -> dict[str, float | None]:
+        """Return the grid adapter's import power keyed by uid."""
+        return {self.grid_adapter.uid: self.combined_grid_import}
+
+    @property
+    def grid_adapters_export_power(self) -> dict[str, float | None]:
+        """Return the grid adapter's export power keyed by uid."""
+        return {self.grid_adapter.uid: self.combined_grid_export}
+
+    @property
+    def grid_adapters_coe_rate(self) -> dict[str, float | None]:
+        """Return the grid import cost rate (EUR/h) keyed by uid."""
+        if (import_power := self.combined_grid_import) is None:
+            return {self.grid_adapter.uid: None}
+        if (coe := self.grid_adapter.coe) is None:
+            return {self.grid_adapter.uid: None}
+        return {self.grid_adapter.uid: (import_power / 1000) * coe}
+
+    @property
     def grid_adapters_charging_shares(self) -> dict[str, float]:
         """Return the production adapter's share of charging power.
 
@@ -1409,9 +1428,9 @@ class PowerInsight:
                 total_share += share
                 charging_shares[adapter_uid][battery.uid] = share
 
-            for adapter_uid in charge_from.items():
+            for adapter_uid in charge_from:
                 share = charging_shares[adapter_uid][battery.uid]
-                share = self._divide(share, total_share)
+                charging_shares[adapter_uid][battery.uid] = self._divide(share, total_share)
 
         return charging_shares
 
@@ -1729,16 +1748,19 @@ class PowerInsight:
     def get_adapter_by_uid(self, uid: str):
         return self.uid_mapping.get(uid)
 
-    def set_value(self, entity_id: str, new_value: float | None) -> None:
-        """Update the value of the given entity_id to new_value."""
+    def set_value(self, entity_id: str, new_value: float | None) -> bool:
+        """Update the value of the given entity_id to new_value.
+
+        Returns True if the stored value changed, False if it was already
+        identical.  EventHandler uses this to suppress unnecessary custom events
+        when a source entity fires state_changed but the numeric value is the same.
+        """
         _LOGGER.debug(f"Trying to set value: `{new_value}` on {entity_id}")
         adapter = self.get_adapter_by_entity(entity_id)
         if adapter is not None:
-            adapter.set_value(entity_id, new_value)
-        else:
-            _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
-            pass
-            # raise ValueError(f"Adapter {adapter} not registered.")
+            return adapter.set_value(entity_id, new_value)
+        _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
+        return False
 
     def register_adapter(self, adapter) -> None:
         """Register an adapter."""
@@ -1818,9 +1840,11 @@ class AbstractBaseAdapter(ABC):
     #     """Return the source co2 entities for this adapter."""
     #     pass
 
-    def set_value(self, entity_id, value) -> None:
-        """Set the value for an entity."""
+    def set_value(self, entity_id, value) -> bool:
+        """Set the value for an entity, returning True if it changed."""
+        changed = self._values.get(entity_id) != value
         self._values[entity_id] = value
+        return changed
 
 
 class BasePowerAdapter(AbstractBaseAdapter):
