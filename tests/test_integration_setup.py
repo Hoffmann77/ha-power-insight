@@ -20,12 +20,12 @@ from .conftest import (
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
-async def test_setup_fails_without_grid(
+async def test_setup_standby_without_grid(
     hass: HomeAssistant, mock_config_entry_no_grid: MockConfigEntry
 ) -> None:
-    """Entry should enter SETUP_RETRY when no grid adapter is configured."""
+    """Entry should load successfully (standby) when no grid adapter is configured."""
     await setup_integration(hass, mock_config_entry_no_grid)
-    assert mock_config_entry_no_grid.state == ConfigEntryState.SETUP_RETRY
+    assert mock_config_entry_no_grid.state == ConfigEntryState.LOADED
 
 
 async def test_no_grid_creates_repair_issue(

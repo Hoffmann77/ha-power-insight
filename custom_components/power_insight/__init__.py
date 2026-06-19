@@ -7,8 +7,6 @@ from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE
-from homeassistant.exceptions import ConfigEntryNotReady
-
 
 from .const import CONF_CHARGE_FROM_ADAPTERS, DOMAIN, PLATFORMS
 from .utils import state_to_value
@@ -54,11 +52,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
             DOMAIN,
             "no_grid_configured",
             is_fixable=False,
-            severity=ir.IssueSeverity.ERROR,
+            severity=ir.IssueSeverity.WARNING,
             translation_key="no_grid_configured",
             translation_placeholders={"entry_title": entry.title},
         )
-        raise ConfigEntryNotReady("grid_not_configured")
+        event_handler = EventHandler(hass, entry.entry_id, power_insight)
+        event_handler.track_entities([])
+        entry.runtime_data = MyData(power_insight, event_handler)
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+        entry.async_on_unload(entry.add_update_listener(async_update_listener))
+        return True
 
     # Grid is present — dismiss any previously raised issue.
     ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")

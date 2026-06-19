@@ -980,6 +980,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the sensor platform."""
     power_insight = entry.runtime_data.power_insight
+    if power_insight.grid_adapter is None:
+        return
     options_wrapped = OptionsWrapper(entry.options)
 
     # --- Hub-level sensors ---
