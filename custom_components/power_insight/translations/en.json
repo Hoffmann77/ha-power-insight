@@ -140,7 +140,7 @@
       "description": "The Power Insight integration **{entry_title}** could not load because no grid adapter has been configured. Open the integration and use the **Add device** button to add a Grid adapter."
     },
     "reconfigure_battery_adapters": {
-      "title": "Battery '{battery_name}' needs reconfiguration",
+      "title": "Battery {battery_name} needs reconfiguration",
       "description": "An adapter was added or removed. Please reconfigure **{battery_name}** to ensure the correct charge sources are applied. Open the integration, find the device, and use the **Reconfigure** option."
     }
   }
