@@ -1020,6 +1020,19 @@ class OptionsWrapper:
         return bool(self._options.get(key, False))
 
 
+def _resolve_currency_unit(unit: str | None, hass: HomeAssistant | None) -> str | None:
+    """Replace the ``EUR`` placeholder in a unit with the configured currency.
+
+    Falls back to the literal (``EUR``) when no currency is configured, so
+    existing setups keep their units unchanged.
+    """
+    if unit and "EUR" in unit and hass is not None:
+        currency = hass.config.currency
+        if currency:
+            return unit.replace("EUR", currency)
+    return unit
+
+
 def _retired_ledger_sum(config_entry: ConfigEntry, per_adapter_key: str) -> float:
     """Sum the frozen contributions of retired adapters for a levelized key.
 
@@ -1268,6 +1281,13 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         self.entity_description = description
         self.config_entry = config_entry
 
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Substitute the HA-configured currency for the EUR placeholder."""
+        return _resolve_currency_unit(
+            self.entity_description.native_unit_of_measurement, self.hass
+        )
+
 
 class PowerInsightSensor(BasePowerInsightSensor):
     """Hub-level sensor reading directly from PowerInsight."""
@@ -1443,6 +1463,13 @@ class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
         super().__init__(source_entities, power_insight)
         self.entity_description = description
         self.config_entry = config_entry
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Substitute the HA-configured currency for the EUR placeholder."""
+        return _resolve_currency_unit(
+            self.entity_description.native_unit_of_measurement, self.hass
+        )
 
 
 class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):

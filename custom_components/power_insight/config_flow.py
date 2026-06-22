@@ -311,6 +311,8 @@ class AdapterField:
 
     selector: selector.Selector | None = None
     selector_fn: Callable[..., selector.Selector] | None = None
+    # Builds a selector from the HA-configured currency code (money fields).
+    currency_selector_fn: Callable[[str], selector.Selector] | None = None
     required: bool = False
     # When provided, overrides `required` dynamically based on current entry options.
     required_fn: Callable[[dict], bool] | None = None
@@ -365,9 +367,14 @@ ENERGY_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="kWh", mode="box")
 )
 
-MONEY_SELECTOR = selector.NumberSelector(
-    selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="€", mode="box")
-)
+def make_money_selector(currency: str) -> selector.NumberSelector:
+    """Build a money input selector labelled with the configured currency."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1, max=10**8, unit_of_measurement=currency, mode="box"
+        )
+    )
+
 
 CO2_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="kg", mode="box")
@@ -377,11 +384,14 @@ PERCENT_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=100, unit_of_measurement="%", mode="slider")
 )
 
-COMPENSATION_SELECTOR = selector.NumberSelector(
-    selector.NumberSelectorConfig(
-        min=0.0, max=100.0, step=0.01, unit_of_measurement="€/kWh", mode="box"
+def make_compensation_selector(currency: str) -> selector.NumberSelector:
+    """Build an export-compensation selector labelled with ``<currency>/kWh``."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=100.0, step=0.01,
+            unit_of_measurement=f"{currency}/kWh", mode="box",
+        )
     )
-)
 
 INSTANTANEOUS_RATES_SELECTOR = selector.SelectSelector(
     selector.SelectSelectorConfig(
@@ -566,7 +576,7 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
-        selector=COMPENSATION_SELECTOR,
+        currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
         default=0.08,
@@ -593,7 +603,7 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         ),
     ),
     CONF_LIFETIME_COST: AdapterField(
-        selector=MONEY_SELECTOR,
+        currency_selector_fn=make_money_selector,
         required=False,
         required_fn=_levelized_cost_required,
         default=vol.UNDEFINED,
@@ -693,7 +703,7 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
-        selector=COMPENSATION_SELECTOR,
+        currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
         default=0.0,
@@ -728,7 +738,7 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         ),
     ),
     CONF_LIFETIME_COST: AdapterField(
-        selector=MONEY_SELECTOR,
+        currency_selector_fn=make_money_selector,
         required=False,
         required_fn=_levelized_cost_required,
         default=vol.UNDEFINED,
@@ -863,6 +873,7 @@ def build_schema(
     options: dict | None = None,
     entry: ConfigEntry | None = None,
     exclude_subentry_id: str | None = None,
+    currency: str = "EUR",
 ) -> vol.Schema:
     """Build a voluptuous schema from field definitions.
 
@@ -872,6 +883,7 @@ def build_schema(
     exclude_subentry_id:  passed through to selector_fn (e.g. to omit the
                           subentry currently being reconfigured from its own
                           selector options).
+    currency:             ISO currency code used to label money input fields.
     """
     options = options or {}
     schema_dict: dict = {}
@@ -905,8 +917,11 @@ def build_schema(
             else vol.Optional(field_name, default=default)
         )
 
-        # Resolve the selector: prefer selector_fn (dynamic) over selector (static).
-        if isinstance(field_def, AdapterField) and field_def.selector_fn is not None:
+        # Resolve the selector: prefer the currency factory, then selector_fn
+        # (dynamic), then the static selector.
+        if isinstance(field_def, AdapterField) and field_def.currency_selector_fn is not None:
+            resolved_selector = field_def.currency_selector_fn(currency)
+        elif isinstance(field_def, AdapterField) and field_def.selector_fn is not None:
             resolved_selector = field_def.selector_fn(
                 entry, exclude_subentry_id=exclude_subentry_id
             )
@@ -1334,6 +1349,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
         schema = build_schema(
             self._adapter_fields, "config", user_input, options, entry=parent_entry,
+            currency=self.hass.config.currency or "EUR",
         )
 
         return self.async_show_form(
@@ -1435,6 +1451,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             options,
             entry=parent_entry,
             exclude_subentry_id=subentry.subentry_id,
+            currency=self.hass.config.currency or "EUR",
         )
 
         return self.async_show_form(
