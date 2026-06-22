@@ -44,6 +44,12 @@ CONF_CURRENT_CO2_INTENSITY = "current_co2_intensity"
 CONF_INITIAL_LCOS = "default_lcos"
 CONF_CURRENT_LCOS = "current_lcos"
 
+# Correction factor (current_lcoe / default_lcoe), stored in adapter.config
+CONF_CORRECTION_FACTOR = "correction_factor"
+
+# Ledger of retired (removed end-of-life) adapters, stored in ConfigEntry.data
+CONF_RETIRED_ADAPTERS = "retired_adapters"
+
 # PV/Battery user settings (stored in adapter.config)
 CONF_EXPORTS_POWER = "exports_power"
 CONF_EXPORT_COMPENSATION = "export_compensation"

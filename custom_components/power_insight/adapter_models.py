@@ -9,6 +9,7 @@ from .const import (
     CONF_ELECTRICITY_PRICE_ENTITY, CONF_CO2_INTENSITY_ENTITY,
     CONF_INITIAL_LCOE, CONF_INITIAL_CO2_INTENSITY,
     CONF_INITIAL_LCOS,
+    CONF_CORRECTION_FACTOR,
     CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
     CONF_CHARGE_FROM_GRID, CONF_CHARGE_FROM_ADAPTERS,
 )
@@ -74,10 +75,11 @@ class PvAdapterModel:
     name: str
     power_entity: str
     power_entity_inverted: bool
-    lcoe: float
-    lco2_intensity: float
+    lcoe: float | None
+    lco2_intensity: float | None
     exports_power: bool
     export_compensation: float
+    correction_factor: float = 1.0
 
     @classmethod
     def from_subentry(cls, subentry) -> PvAdapterModel:
@@ -87,11 +89,12 @@ class PvAdapterModel:
             unique_id=subentry.subentry_id,
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
-            lcoe=config[CONF_INITIAL_LCOE],
-            lco2_intensity=config[CONF_INITIAL_CO2_INTENSITY],
-            exports_power=config[CONF_EXPORTS_POWER],
-            export_compensation=config[CONF_EXPORT_COMPENSATION],
+            power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
+            lcoe=config.get(CONF_INITIAL_LCOE),
+            lco2_intensity=config.get(CONF_INITIAL_CO2_INTENSITY),
+            exports_power=config.get(CONF_EXPORTS_POWER, False),
+            export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
+            correction_factor=config.get(CONF_CORRECTION_FACTOR) or 1.0,
         )
 
     def create_adapter(self) -> PvAdapter:
@@ -105,6 +108,7 @@ class PvAdapterModel:
             lco2_intensity=self.lco2_intensity,
             exports_power=self.exports_power,
             export_compensation=self.export_compensation,
+            correction_factor=self.correction_factor,
         )
 
 
@@ -117,12 +121,13 @@ class BatteryAdapterModel:
     name: str
     power_entity: str
     power_entity_inverted: bool
-    lcos: float
-    lco2_intensity: float
+    lcos: float | None
+    lco2_intensity: float | None
     exports_power: bool
     export_compensation: float
     charge_from_grid: bool = True
     charge_from_adapters: list[str] = field(default_factory=list)
+    correction_factor: float = 1.0
 
     @classmethod
     def from_subentry(cls, subentry) -> BatteryAdapterModel:
@@ -132,13 +137,14 @@ class BatteryAdapterModel:
             unique_id=subentry.subentry_id,
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
-            lcos=config[CONF_INITIAL_LCOS],
-            lco2_intensity=config[CONF_INITIAL_CO2_INTENSITY],
-            exports_power=config[CONF_EXPORTS_POWER],
-            export_compensation=config[CONF_EXPORT_COMPENSATION],
+            power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
+            lcos=config.get(CONF_INITIAL_LCOS),
+            lco2_intensity=config.get(CONF_INITIAL_CO2_INTENSITY),
+            exports_power=config.get(CONF_EXPORTS_POWER, False),
+            export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
             charge_from_grid=config.get(CONF_CHARGE_FROM_GRID, True),
             charge_from_adapters=config.get(CONF_CHARGE_FROM_ADAPTERS, []),
+            correction_factor=config.get(CONF_CORRECTION_FACTOR) or 1.0,
         )
 
     def create_adapter(self) -> BatteryAdapter:
@@ -154,6 +160,7 @@ class BatteryAdapterModel:
             export_compensation=self.export_compensation,
             charge_from_grid=self.charge_from_grid,
             charge_from_adapters=self.charge_from_adapters,
+            correction_factor=self.correction_factor,
         )
 
 
