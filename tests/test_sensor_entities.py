@@ -8,6 +8,13 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
+    GRID_SUB_ID,
+    PV_SUB_ID,
+    BAT_SUB_ID,
+    BASE_OPTIONS,
+    make_grid_subentry_data,
+    make_pv_subentry_data,
+    make_battery_subentry_data,
     setup_integration,
 )
 
@@ -100,6 +107,41 @@ async def test_pv_adapter_sensors_created(
     pv_prefix = f"{mock_config_entry_with_pv.entry_id}_{PV_SUB_ID}"
     pv_sensors = [uid for uid in unique_ids if uid and uid.startswith(pv_prefix)]
     assert len(pv_sensors) > 0, "Expected at least one PV adapter sensor"
+
+
+async def test_battery_charging_share_sensors_only_for_selected_sources(
+    hass: HomeAssistant,
+) -> None:
+    """A battery should only get a "charging share from X" sensor for each
+    source it is actually configured to charge from.
+
+    Here the battery may charge from the grid but NOT from the PV system, so
+    only the grid charging-share sensor should exist.
+    """
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    for ent in ("grid_power", "pv_power", "battery_power"):
+        hass.states.async_set(f"sensor.{ent}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    entries = get_entry_entities(hass, entry)
+    keys = {e.unique_id for e in entries if e.unique_id}
+
+    bat_prefix = f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_"
+    charging_share_keys = {k for k in keys if k.startswith(bat_prefix)}
+
+    # Exactly one charging-share sensor (Grid), none for the unselected PV.
+    assert charging_share_keys == {f"{bat_prefix}Grid"}
 
 
 # ---------------------------------------------------------------------------

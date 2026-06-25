@@ -1184,8 +1184,13 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        # Dynamic charging source share sensors — one per power-providing adapter
+        # Dynamic charging source share sensors — one per power-providing
+        # adapter the battery is actually configured to charge from. A source
+        # the user did not select under "Charge From" gets no sensor (e.g. no
+        # "Charging share from Grid" when the battery cannot charge from grid).
         for source_adapter in power_insight.gross_power_adapters:
+            if source_adapter.uid not in adapter.charge_from_adapters:
+                continue
             name = source_adapter.verbose_name
             dynamic_description = PowerInsightSensorDescription(
                 key=f"charging_share_from_{name}",
