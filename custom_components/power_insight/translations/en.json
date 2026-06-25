@@ -37,7 +37,8 @@
           "pv_system": "PV systems",
           "battery": "Batteries",
           "consumer": "Consumers",
-          "diagnostics": "Diagnostics"
+          "diagnostics": "Diagnostics",
+          "done": "Done"
         }
       },
       "combined": {

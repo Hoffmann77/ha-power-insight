@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -221,6 +222,49 @@ async def test_grid_owns_import_export_and_compensation_sensors(
     # Export compensation no longer exists at the combined/hub level.
     assert f"{entry.entry_id}_combined_export_compensation_rate" not in uids
     assert f"{entry.entry_id}_combined_total_export_compensation" not in uids
+
+
+async def test_options_submit_reloads_entry_live(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Submitting a section reloads the entry so the change takes effect, and
+    the flow stays open on the menu."""
+    hass.states.async_set(
+        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
+    )
+    await setup_integration(hass, mock_config_entry)
+    ent_reg = er.async_get(hass)
+    uid = f"{mock_config_entry.entry_id}_combined_export_ratio"
+    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
+    assert entity_id is not None
+    assert ent_reg.async_get(entity_id).disabled_by is None
+
+    result = await hass.config_entries.options.async_init(
+        mock_config_entry.entry_id
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "combined"}
+    )
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            "cost_rates": [],
+            "cost_savings_rates": [],
+            "accumulated_costs": [],
+            "accumulated_cost_savings": [],
+            "distribution_power": True,
+            "distribution_ratios": False,  # drop ratios → export ratio disabled
+        },
+    )
+    # Flow stayed open on the menu.
+    assert result["type"] == FlowResultType.MENU
+    await hass.async_block_till_done()
+
+    # The submit reloaded the entry and applied the change.
+    assert (
+        ent_reg.async_get(entity_id).disabled_by
+        is er.RegistryEntryDisabler.INTEGRATION
+    )
 
 
 # ---------------------------------------------------------------------------

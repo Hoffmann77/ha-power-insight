@@ -1515,9 +1515,10 @@ class PowerInsightOptionsFlow(OptionsFlow):
     A menu offers the whole-home (combined) scope plus one section per
     configured device type, and a diagnostics section. Each section shows only
     the categories its scope supports and is **saved immediately on submit** —
-    there is no separate save step, so "Submit" always persists. When the
-    submitted selection needs data a device has not provided yet, a confirm
-    step lets the user save anyway and reconfigure the device afterwards.
+    submitting persists that scope and returns to the menu (reloading the entry
+    so the change takes effect), so the flow stays open to edit more sections.
+    "Done" closes the dialog. When a submitted selection needs data a device has
+    not provided yet, a confirm step lets the user save anyway.
     """
 
     def __init__(self) -> None:
@@ -1554,6 +1555,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
                 SCOPE_COMBINED,
                 *self._present_device_scopes(),
                 "diagnostics",
+                "done",
             ],
         )
 
@@ -1621,8 +1623,25 @@ class PowerInsightOptionsFlow(OptionsFlow):
                     "adapters_needing_reconfigure": ", ".join(problems),
                 },
             )
-        return self.async_create_entry(title="", data=options)
+        return await self._persist(options)
+
+    async def _persist(self, options: dict) -> FlowResult:
+        """Write the options (triggering a reload) and return to the menu.
+
+        Persisting via ``async_update_entry`` rather than ending the flow with
+        ``async_create_entry`` keeps the options dialog open, so the user can
+        edit several sections in one sitting while each submit takes effect.
+        """
+        self.hass.config_entries.async_update_entry(
+            self.config_entry, options=options
+        )
+        self._pending = None
+        return await self.async_step_init()
 
     async def async_step_confirm(self, user_input=None) -> FlowResult:
         """Apply the pending selection after the under-configured warning."""
-        return self.async_create_entry(title="", data=self._pending)
+        return await self._persist(self._pending)
+
+    async def async_step_done(self, user_input=None) -> FlowResult:
+        """Close the options dialog (changes are already saved)."""
+        return self.async_create_entry(title="", data=self._current_options())
