@@ -228,8 +228,8 @@
   },
   "issues": {
     "no_grid_configured": {
-      "title": "No grid configured for {entry_title}",
-      "description": "The Power Insight integration **{entry_title}** could not load because no grid connection has been configured. Open the integration and use the **Add device** button to add a grid connection."
+      "title": "Add a grid connection to {entry_title}",
+      "description": "**{entry_title}** has no grid connection yet, so Power Insight cannot calculate any costs, savings or power distribution — every device in your energy mix is measured against the grid.\n\nTo fix this:\n1. Open **Settings → Devices & services** and select the Power Insight integration.\n2. Click **Add device** and choose **Grid connection**.\n3. Select the sensor that reports your home's grid power (positive = import, negative = export).\n\nThis warning clears automatically once a grid connection is added."
     },
     "reconfigure_battery_adapters": {
       "title": "Battery {battery_name} needs reconfiguration",
