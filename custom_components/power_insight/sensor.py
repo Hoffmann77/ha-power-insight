@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -33,6 +33,7 @@ from . import MyConfigEntry
 from .const import (
     DOMAIN,
     CONF_ENABLE_DEBUG_ENTITIES,
+    CONF_ENABLE_POWER_SHARES,
     CONF_CALCULATE_COST_RATES,
     CONF_CALCULATE_LEVELIZED_COST_RATES,
     CONF_CALCULATE_COST_SAVING_RATES,
@@ -1024,6 +1025,81 @@ class OptionsWrapper:
         return bool(self._options.get(key, False))
 
 
+# ---------------------------------------------------------------------------
+# Option gating
+# ---------------------------------------------------------------------------
+#
+# Maps a sensor description ``key`` to the integration option that controls
+# whether it is created. A sensor whose key is absent here is not option-gated
+# (it is still subject to its adapter-capability ``exists_fn``). This is the
+# single source of truth for which option enables which sensor, so toggling an
+# option in the options flow takes effect for *every* matching sensor — hub,
+# grid and per-adapter alike. Dynamic per-source sensors (charging shares,
+# consumer source ratios) are gated inline in ``async_setup_entry`` instead,
+# since their keys are built at runtime.
+_SENSOR_OPTION_GATE: dict[str, str] = {
+    # --- Power-share (percentage) sensors ---
+    "combined_export_ratio": CONF_ENABLE_POWER_SHARES,
+    "combined_self_consumption_ratio": CONF_ENABLE_POWER_SHARES,
+    "combined_charging_ratio": CONF_ENABLE_POWER_SHARES,
+    "combined_standby_ratio": CONF_ENABLE_POWER_SHARES,
+    "consumption_ratio": CONF_ENABLE_POWER_SHARES,   # grid
+    "consumption_share": CONF_ENABLE_POWER_SHARES,   # grid
+    "export_ratio": CONF_ENABLE_POWER_SHARES,        # pv / storage
+    "export_share": CONF_ENABLE_POWER_SHARES,        # pv / storage
+    "self_consumption_ratio": CONF_ENABLE_POWER_SHARES,
+    "self_consumption_share": CONF_ENABLE_POWER_SHARES,
+    # --- Per-adapter instantaneous rate sensors ---
+    "export_compensation_rate": CONF_CALCULATE_COST_RATES,
+    "operating_cost_rate": CONF_CALCULATE_COST_RATES,
+    "levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "self_consumption_cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    "cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    "levelized_cost_savings_rate": CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    # --- Per-adapter accumulated total sensors ---
+    "total_export_compensation": CONF_ACCUMULATE_COST_RATES,
+    "total_operating_costs": CONF_ACCUMULATE_COST_RATES,
+    "total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "total_self_consumption_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "total_levelized_cost_savings": CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+}
+
+
+def _option_gated_out(description, options: OptionsWrapper) -> bool:
+    """Return True if *description* is gated off by the current options."""
+    gate = _SENSOR_OPTION_GATE.get(description.key)
+    return gate is not None and not options.check(gate)
+
+
+@callback
+def _sync_entity_enabled_state(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    wanted_unique_ids: set[str],
+) -> None:
+    """Disable entities whose option is off; re-enable them when it is back on.
+
+    Rather than deleting the entities of a disabled sensor group (which would
+    drop their recorded history), we mark them disabled in the entity registry.
+    They are hidden and stop updating, but keep their history and are restored
+    the moment the option is re-enabled. Entities the user disabled themselves
+    (``disabled_by == USER``) are never touched.
+    """
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if ent.platform != DOMAIN or ent.domain != "sensor":
+            continue
+        if ent.unique_id in wanted_unique_ids:
+            if ent.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+                ent_reg.async_update_entity(ent.entity_id, disabled_by=None)
+        elif ent.disabled_by is None:
+            ent_reg.async_update_entity(
+                ent.entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+
+
 def _resolve_currency_unit(unit: str | None, hass: HomeAssistant | None) -> str | None:
     """Replace the ``EUR`` placeholder in a unit with the configured currency.
 
@@ -1067,11 +1143,21 @@ async def async_setup_entry(
     if power_insight.grid_adapter is None:
         return
     options_wrapped = OptionsWrapper(entry.options)
+    # Unique IDs of every sensor we create this run, used afterwards to disable
+    # (and later re-enable) entities whose controlling option has been toggled.
+    created_unique_ids: set[str] = set()
+
+    def _add(entities: list, **kwargs) -> None:
+        """Register a batch of entities and record their unique IDs."""
+        created_unique_ids.update(ent.unique_id for ent in entities)
+        async_add_entities(entities, **kwargs)
 
     # --- Hub-level sensors ---
     entities: list = []
     for description in POWER_INSIGHT_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped):
             continue
         entities.append(PowerInsightSensor(
             description=description,
@@ -1082,6 +1168,8 @@ async def async_setup_entry(
 
     for description in POWER_INSIGHT_INTEGRATION_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped):
             continue
         entities.append(PowerInsightIntegrationSensor(
             description=description,
@@ -1095,6 +1183,8 @@ async def async_setup_entry(
     for description in POWER_INSIGHT_COMBINED_LEDGER_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
+        if _option_gated_out(description, options_wrapped):
+            continue
         entities.append(PowerInsightCombinedLedgerSensor(
             description=description,
             config_entry=entry,
@@ -1102,13 +1192,15 @@ async def async_setup_entry(
             power_insight=power_insight,
         ))
 
-    async_add_entities(entities)
+    _add(entities)
 
     # --- Grid adapter sensors ---
     grid_adapter = power_insight.grid_adapter
     entities = []
     for description in POWER_INSIGHT_GRID_ADAPTER_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped):
             continue
         entities.append(PowerInsightAdapterSensor(
             description=description,
@@ -1121,6 +1213,8 @@ async def async_setup_entry(
     for description in POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
+        if _option_gated_out(description, options_wrapped):
+            continue
         entities.append(PowerInsightAdapterIntegrationSensor(
             description=description,
             config_entry=entry,
@@ -1129,13 +1223,15 @@ async def async_setup_entry(
             device_adapter=grid_adapter,
         ))
 
-    async_add_entities(entities, config_subentry_id=grid_adapter.uid)
+    _add(entities, config_subentry_id=grid_adapter.uid)
 
     # --- PV adapter sensors ---
     for adapter in power_insight.pv_system_adapters:
         entities = []
         for description in POWER_INSIGHT_PV_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1148,6 +1244,8 @@ async def async_setup_entry(
         for description in POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
+            if _option_gated_out(description, options_wrapped):
+                continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
@@ -1156,7 +1254,7 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
 
     # --- Battery adapter sensors ---
     for adapter in power_insight.storage_adapters:
@@ -1164,6 +1262,8 @@ async def async_setup_entry(
 
         for description in POWER_INSIGHT_STORAGE_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1175,6 +1275,8 @@ async def async_setup_entry(
 
         for description in POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped):
                 continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
@@ -1188,31 +1290,33 @@ async def async_setup_entry(
         # adapter the battery is actually configured to charge from. A source
         # the user did not select under "Charge From" gets no sensor (e.g. no
         # "Charging share from Grid" when the battery cannot charge from grid).
-        for source_adapter in power_insight.gross_power_adapters:
-            if source_adapter.uid not in adapter.charge_from_adapters:
-                continue
-            name = source_adapter.verbose_name
-            dynamic_description = PowerInsightSensorDescription(
-                key=f"charging_share_from_{name}",
-                name=f"Charging share from {name}",
-                icon="mdi:percent",
-                native_unit_of_measurement=PERCENTAGE,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                entities_fn=lambda obj: obj.source_entities_power,
-                value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
-                transform_fn=lambda val: val * 100,
-            )
-            entities.append(PowerInsightDynamicAdapterSensor(
-                description=dynamic_description,
-                config_entry=entry,
-                source_entities=dynamic_description.entities_fn(power_insight),
-                power_insight=power_insight,
-                device_adapter=adapter,
-                dynamic_adapter=source_adapter,
-            ))
+        # These are power-share sensors, so gate them on that option too.
+        if options_wrapped.check(CONF_ENABLE_POWER_SHARES):
+            for source_adapter in power_insight.gross_power_adapters:
+                if source_adapter.uid not in adapter.charge_from_adapters:
+                    continue
+                name = source_adapter.verbose_name
+                dynamic_description = PowerInsightSensorDescription(
+                    key=f"charging_share_from_{name}",
+                    name=f"Charging share from {name}",
+                    icon="mdi:percent",
+                    native_unit_of_measurement=PERCENTAGE,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=0,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
+                    transform_fn=lambda val: val * 100,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=dynamic_description,
+                    config_entry=entry,
+                    source_entities=dynamic_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
 
     # --- Consumer adapter sensors ---
     for adapter in power_insight.consumer_adapters:
@@ -1220,6 +1324,8 @@ async def async_setup_entry(
 
         for description in POWER_INSIGHT_CONS_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1232,6 +1338,8 @@ async def async_setup_entry(
         for description in POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
+            if _option_gated_out(description, options_wrapped):
+                continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
@@ -1240,30 +1348,36 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        # Dynamic consumption source share sensors — one per power-providing adapter
-        for source_adapter in power_insight.gross_power_adapters:
-            name = source_adapter.verbose_name
-            dynamic_description = PowerInsightSensorDescription(
-                key=f"{name}_ratio",
-                name=f"{name} ratio",
-                icon="mdi:percent",
-                native_unit_of_measurement=PERCENTAGE,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                entities_fn=lambda obj: obj.source_entities_power,
-                value_fn=lambda obj: obj.cons_adapters_source_shares,
-                transform_fn=lambda val: val * 100,
-            )
-            entities.append(PowerInsightDynamicAdapterSensor(
-                description=dynamic_description,
-                config_entry=entry,
-                source_entities=dynamic_description.entities_fn(power_insight),
-                power_insight=power_insight,
-                device_adapter=adapter,
-                dynamic_adapter=source_adapter,
-            ))
+        # Dynamic consumption source share sensors — one per power-providing
+        # adapter. These are power-share sensors, so gate them on that option.
+        if options_wrapped.check(CONF_ENABLE_POWER_SHARES):
+            for source_adapter in power_insight.gross_power_adapters:
+                name = source_adapter.verbose_name
+                dynamic_description = PowerInsightSensorDescription(
+                    key=f"{name}_ratio",
+                    name=f"{name} ratio",
+                    icon="mdi:percent",
+                    native_unit_of_measurement=PERCENTAGE,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=0,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    value_fn=lambda obj: obj.cons_adapters_source_shares,
+                    transform_fn=lambda val: val * 100,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=dynamic_description,
+                    config_entry=entry,
+                    source_entities=dynamic_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
+
+    # Disable entities whose controlling option is now off (keeping their
+    # history), and re-enable any we previously disabled that are wanted again.
+    _sync_entity_enabled_state(hass, entry, created_unique_ids)
 
 
 # ---------------------------------------------------------------------------

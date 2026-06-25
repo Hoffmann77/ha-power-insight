@@ -30,7 +30,7 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Adjust calculation settings and enable or disable groups of sensor entities.\nChanges take effect after reloading the integration.",
+        "description": "Adjust calculation settings and enable or disable groups of sensor entities.\nChanges are applied automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
         "data": {
           "calculate_instantaneous_rates": "Instantaneous rate sensors",
           "calculate_instantaneous_saving_rates": "Instantaneous saving rate sensors",

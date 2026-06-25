@@ -144,6 +144,47 @@ async def test_battery_charging_share_sensors_only_for_selected_sources(
     assert charging_share_keys == {f"{bat_prefix}Grid"}
 
 
+async def test_disabling_option_disables_entity_but_keeps_it(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Turning an option off should disable (not delete) the matching sensors,
+    and turning it back on should re-enable them.
+
+    Power-share sensors are gated on ``enable_power_shares``; toggling it must
+    therefore take effect on the registered entities.
+    """
+    hass.states.async_set(
+        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
+    )
+    await setup_integration(hass, mock_config_entry)
+    ent_reg = er.async_get(hass)
+
+    uid = f"{mock_config_entry.entry_id}_combined_export_ratio"
+    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
+    assert entity_id is not None
+    assert ent_reg.async_get(entity_id).disabled_by is None
+
+    # Turn power shares off → the entity is kept but disabled by the integration.
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        options={**mock_config_entry.options, "enable_power_shares": False},
+    )
+    await hass.async_block_till_done()
+
+    reg_entry = ent_reg.async_get(entity_id)
+    assert reg_entry is not None, "entity should be kept, not deleted"
+    assert reg_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+    # Turn it back on → the integration re-enables the entity.
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        options={**mock_config_entry.options, "enable_power_shares": True},
+    )
+    await hass.async_block_till_done()
+
+    assert ent_reg.async_get(entity_id).disabled_by is None
+
+
 # ---------------------------------------------------------------------------
 # State update tests
 # ---------------------------------------------------------------------------

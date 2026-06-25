@@ -29,6 +29,29 @@ BASE_OPTIONS = {
     "calculate_instantaneous_rates": [],
     "calculate_instantaneous_saving_rates": [],
     "calculate_accumulated_entities": [],
+    # Fresh installs seed the power-share option to True from the field default.
+    "enable_power_shares": True,
+}
+
+# Every sensor group enabled — used by tests that assert a specific rate /
+# total / levelized sensor exists, since those are now gated by their option.
+FULL_OPTIONS = {
+    "calculate_instantaneous_rates": [
+        "calculate_cost_rates",
+        "calculate_levelized_cost_rates",
+    ],
+    "calculate_instantaneous_saving_rates": [
+        "calculate_cost_saving_rates",
+        "calculate_levelized_cost_saving_rates",
+    ],
+    "calculate_accumulated_entities": [
+        "accumulate_cost_rates",
+        "accumulate_levelized_cost_rates",
+        "accumulate_cost_saving_rates",
+        "accumulate_levelized_cost_saving_rates",
+    ],
+    "enable_power_shares": True,
+    "debug_power_entities": False,
 }
 
 

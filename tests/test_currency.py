@@ -15,7 +15,7 @@ from custom_components.power_insight.config_flow import (
 from custom_components.power_insight.sensor import _resolve_currency_unit
 from .conftest import (
     DOMAIN,
-    BASE_OPTIONS,
+    FULL_OPTIONS,
     PV_SUB_ID,
     make_grid_subentry_data,
     make_pv_subentry_data,
@@ -69,7 +69,7 @@ async def test_sensor_units_follow_currency(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
-        options=BASE_OPTIONS,
+        options=FULL_OPTIONS,
         subentries_data=[grid, make_pv_subentry_data()],
     )
     hass.states.async_set("sensor.grid_power", "1000", {"unit_of_measurement": "W"})
