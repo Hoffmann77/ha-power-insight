@@ -165,40 +165,12 @@ async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> No
 
 
 # ---------------------------------------------------------------------------
-# C5b — removal ledger + combined derived sensor
+# C5b — combined derived sensor reads the retired-adapter ledger
+#
+# The full removal lifecycle (accumulate -> remove -> snapshot -> reload) is
+# covered end-to-end in tests/test_end_to_end.py; here we only check the read
+# side: a pre-seeded ledger is reflected in the combined derived sensor.
 # ---------------------------------------------------------------------------
-
-async def test_removal_snapshots_levelized_total_into_ledger(
-    hass: HomeAssistant,
-) -> None:
-    """Removing a PV adapter freezes its levelized total into the ledger."""
-    from custom_components.power_insight import async_remove_subentry
-    from custom_components.power_insight.const import CONF_RETIRED_ADAPTERS
-
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="My PowerInsight",
-        options=BASE_OPTIONS,
-        subentries_data=[make_grid_subentry_data(), make_pv_subentry_data()],
-    )
-    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
-    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
-    await setup_integration(hass, entry)
-
-    # Give the per-adapter accumulated levelized sensor a concrete value.
-    ent_reg = er.async_get(hass)
-    uid = f"{entry.entry_id}_{PV_SUB_ID}_total_levelized_operating_costs"
-    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
-    assert entity_id is not None
-    hass.states.async_set(entity_id, "12.5")
-
-    await async_remove_subentry(hass, entry, entry.subentries[PV_SUB_ID])
-
-    ledger = entry.data.get(CONF_RETIRED_ADAPTERS, [])
-    assert len(ledger) == 1
-    assert ledger[0]["subentry_id"] == PV_SUB_ID
-    assert ledger[0]["totals"]["total_levelized_operating_costs"] == 12.5
-
 
 async def test_combined_ledger_sensor_includes_retired_totals(
     hass: HomeAssistant,

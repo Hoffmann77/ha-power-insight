@@ -2,16 +2,14 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
 
-from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.helpers import issue_registry as ir, entity_registry as er
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import STATE_UNAVAILABLE
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
-    CONF_RETIRED_ADAPTERS,
     DOMAIN,
     PLATFORMS,
 )
@@ -151,91 +149,6 @@ async def async_unload_entry(
     event_handler.untrack_entities()
 
     return unload
-
-
-# Per-adapter levelized accumulated sensor keys whose final value is frozen
-# into the retired-adapter ledger on removal (see sensor.py).
-LEVELIZED_TOTAL_KEYS = (
-    "total_levelized_operating_costs",
-    "total_levelized_cost_savings",
-)
-
-
-def _snapshot_retired_adapter(
-    hass: HomeAssistant,
-    entry: MyConfigEntry,
-    subentry: ConfigSubentry,
-) -> None:
-    """Freeze a removed PV/battery adapter's levelized totals into the ledger.
-
-    The per-adapter accumulated sensors already display ``base × correction``,
-    so snapshotting their live state captures the final corrected contribution.
-    This keeps the combined levelized totals from dropping when an end-of-life
-    device is removed.
-    """
-    ent_reg = er.async_get(hass)
-    totals: dict[str, float] = {}
-    for key in LEVELIZED_TOTAL_KEYS:
-        unique_id = f"{entry.entry_id}_{subentry.subentry_id}_{key}"
-        entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
-        if entity_id is None:
-            continue
-        state = hass.states.get(entity_id)
-        if state is None or state.state in (STATE_UNAVAILABLE, "unknown"):
-            continue
-        try:
-            totals[key] = float(state.state)
-        except (ValueError, TypeError):
-            continue
-
-    if not totals:
-        return
-
-    ledger = list(entry.data.get(CONF_RETIRED_ADAPTERS, []))
-    ledger.append(
-        {
-            "subentry_id": subentry.subentry_id,
-            "adapter_type": subentry.data.get("adapter", {}).get("adapter_type"),
-            "title": subentry.title,
-            "retired_at": datetime.now(UTC).isoformat(),
-            "totals": totals,
-        }
-    )
-    hass.config_entries.async_update_entry(
-        entry, data={**entry.data, CONF_RETIRED_ADAPTERS: ledger}
-    )
-
-
-async def async_remove_subentry(
-    hass: HomeAssistant,
-    entry: MyConfigEntry,
-    subentry: ConfigSubentry,
-) -> None:
-    """Snapshot retired levelized totals and raise battery repair issues."""
-    removed_type = subentry.data.get("adapter", {}).get("adapter_type")
-
-    # Freeze a removed end-of-life PV/battery adapter's contribution.
-    if removed_type in ("pv_system", "battery"):
-        _snapshot_retired_adapter(hass, entry, subentry)
-
-    if removed_type not in ("grid", "pv_system"):
-        return
-
-    removed_id = subentry.subentry_id
-    for remaining in entry.subentries.values():
-        if remaining.data.get("adapter", {}).get("adapter_type") != "battery":
-            continue
-        charge_from = remaining.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
-        if removed_id in charge_from:
-            ir.async_create_issue(
-                hass,
-                DOMAIN,
-                f"reconfigure_battery_{remaining.subentry_id}",
-                is_fixable=False,
-                severity=ir.IssueSeverity.WARNING,
-                translation_key="reconfigure_battery_adapters",
-                translation_placeholders={"battery_name": remaining.title},
-            )
 
 
 async def async_migrate_entry(

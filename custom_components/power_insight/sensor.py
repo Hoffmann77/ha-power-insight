@@ -364,6 +364,10 @@ COMBINED_LEDGER_ADAPTER_KEYS: dict[str, str] = {
     "combined_total_levelized_cost_savings": "total_levelized_cost_savings",
 }
 
+# Per-adapter accumulated keys whose final corrected value is frozen into the
+# retired-adapter ledger when a device is removed.
+LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
+
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
         key="combined_total_levelized_operating_costs",
@@ -1554,4 +1558,52 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
             self._state,
             self.native_unit_of_measurement,
             self._last_valid_state,
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Freeze this levelized total into the ledger on device removal.
+
+        HA core never calls a component-level subentry-removal hook, and it
+        clears the removed subentry's entities synchronously before any reload
+        runs — so the only reliable place to capture a removed device's final
+        accumulated total is here, in its own teardown. We distinguish a genuine
+        device removal (the subentry is gone from the config entry) from an
+        ordinary reload (the subentry still exists), and only snapshot the former.
+        """
+        await super().async_will_remove_from_hass()
+
+        key = self.entity_description.key
+        if (
+            not self.entity_description.apply_correction_factor
+            or key not in LEVELIZED_TOTAL_KEYS
+        ):
+            return
+
+        uid = self.device_adapter.uid
+        # Subentry still present -> this is a reload/unload, not a removal.
+        if uid in self.config_entry.subentries:
+            return
+
+        value = self.native_value  # corrected (base * factor) total
+        if value is None:
+            return
+
+        ledger = list(self.config_entry.data.get(CONF_RETIRED_ADAPTERS, []))
+        # Idempotent: skip if this (device, key) was already captured.
+        if any(
+            entry.get("subentry_id") == uid and key in entry.get("totals", {})
+            for entry in ledger
+        ):
+            return
+
+        ledger.append(
+            {
+                "subentry_id": uid,
+                "title": self.device_adapter.verbose_name,
+                "totals": {key: float(value)},
+            }
+        )
+        self.hass.config_entries.async_update_entry(
+            self.config_entry,
+            data={**self.config_entry.data, CONF_RETIRED_ADAPTERS: ledger},
         )
