@@ -3,18 +3,12 @@
     "step": {
       "user": {
         "title": "Power Insight",
-        "description": "Give this energy mix a name and choose which calculations to enable. Use the **Add device** button after setup to add your grid connection and devices.\n\n**Visit: https://github.com/Hoffmann77/ha-power-insight for additional information**",
+        "description": "Power Insight tracks the cost, savings, CO₂ impact and power distribution of your home's energy mix.\n\nGive this configuration a name to get started. After setup, use the **Add device** button to add your grid connection, PV systems, batteries and consumers — then open the integration's options to choose which sensors to create.\n\n**See https://github.com/Hoffmann77/ha-power-insight for more information.**",
         "data": {
-          "name": "Name",
-          "calculate_instantaneous_rates": "Instantaneous rate sensors",
-          "calculate_instantaneous_saving_rates": "Instantaneous saving rate sensors",
-          "calculate_accumulated_entities": "Accumulated total sensors"
+          "name": "Name"
         },
         "data_description": {
-          "name": "A name for this energy mix configuration.",
-          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (per hour) or CO₂ intensity rate.",
-          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (per hour). Requires a price or CO₂ entity on the grid adapter depending on your selection.",
-          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings or export compensation."
+          "name": "A name for this energy-mix configuration, for example \"Home\"."
         }
       }
     },
@@ -30,7 +24,7 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Choose which sensors to create. Each device type shows only the options it supports.\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
+        "description": "Choose which sensors Power Insight should create. Each section covers one device type and offers only the sensors that type supports.\n\nTwo terms are used below:\n• **Ratio** — how a single device's own power splits up (e.g. how much of this PV system's output is exported vs. used at home).\n• **Share** — a device's slice of a whole-home total (e.g. how much of all exported power comes from this device).\n\n'Levelized' sensors add the device's purchase and installation cost (spread over its lifetime) on top of its running cost.\n\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
         "sections": {
           "combined": {
             "name": "Whole-home (combined)",
@@ -43,12 +37,12 @@
               "distribution_ratios": "Power distribution ratios"
             },
             "data_description": {
-              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-              "accumulated_costs": "Running totals of operating cost.",
-              "accumulated_cost_savings": "Running totals of cost savings.",
-              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby."
+              "distribution_power": "Power in watts for each part of your home's energy flow: self-consumption, battery charging and standby.",
+              "cost_rates": "Current operating cost of your whole energy mix (per hour). The levelized version also spreads in your devices' lifetime purchase and installation cost.",
+              "cost_savings_rates": "Current savings (per hour) from using your own generation instead of importing from the grid. The levelized version also accounts for your devices' lifetime cost.",
+              "accumulated_costs": "Running total of operating cost over time. The levelized version also includes lifetime device cost.",
+              "accumulated_cost_savings": "Running total of savings over time. The levelized version also accounts for lifetime device cost.",
+              "distribution_ratios": "How your home's total power splits across export, self-consumption, charging and standby, as percentages."
             }
           },
           "grid": {
@@ -62,12 +56,12 @@
               "distribution_shares": "Power distribution shares"
             },
             "data_description": {
-              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-              "accumulated_costs": "Running totals of operating cost.",
-              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-              "distribution_shares": "A device's share of the combined export / self-consumption."
+              "distribution_power": "Power in watts currently imported from and exported to the grid.",
+              "cost_rates": "Current cost of the electricity you import from the grid (per hour).",
+              "accumulated_costs": "Running total of your grid import cost over time.",
+              "export_compensation": "Money you earn for power fed into the grid: the current rate (per hour) and/or the running total.",
+              "distribution_ratios": "What percentage of your home's consumption is currently covered by the grid.",
+              "distribution_shares": "The grid's share of your home's total consumption."
             }
           },
           "pv_system": {
@@ -83,14 +77,14 @@
               "distribution_shares": "Power distribution shares"
             },
             "data_description": {
-              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-              "accumulated_costs": "Running totals of operating cost.",
-              "accumulated_cost_savings": "Running totals of cost savings.",
-              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-              "distribution_shares": "A device's share of the combined export / self-consumption."
+              "distribution_power": "Power in watts this PV system exports to the grid and supplies to your home (self-consumption).",
+              "cost_rates": "Operating cost of running this PV system (per hour), e.g. its night-time standby draw. The levelized version also includes the system's lifetime purchase and installation cost.",
+              "cost_savings_rates": "Savings (per hour) from using this PV system's power instead of importing from the grid. The levelized version also accounts for the system's lifetime cost.",
+              "export_compensation": "Money you earn for this system's power fed into the grid: the current rate (per hour) and/or the running total.",
+              "accumulated_costs": "Running total of this system's operating cost over time. The levelized version also includes its lifetime cost.",
+              "accumulated_cost_savings": "Running total of this system's savings over time. The levelized version also accounts for its lifetime cost.",
+              "distribution_ratios": "How this system's own output splits between export and self-consumption, as percentages.",
+              "distribution_shares": "This system's share of the whole-home totals — e.g. how much of all exported and self-consumed power comes from it."
             }
           },
           "battery": {
@@ -107,15 +101,15 @@
               "charging_source_shares": "Charging source shares"
             },
             "data_description": {
-              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-              "accumulated_costs": "Running totals of operating cost.",
-              "accumulated_cost_savings": "Running totals of cost savings.",
-              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-              "distribution_shares": "A device's share of the combined export / self-consumption.",
-              "charging_source_shares": "For each selected charge source, its share of the battery's charging."
+              "distribution_power": "Power in watts this battery exports to the grid and supplies to your home (self-consumption).",
+              "cost_rates": "Operating cost of running this battery (per hour), mainly the energy used while charging. The levelized version also includes the battery's lifetime purchase and installation cost.",
+              "cost_savings_rates": "Savings (per hour) from using this battery's power instead of importing from the grid. The levelized version also accounts for the battery's lifetime cost.",
+              "export_compensation": "Money you earn for this battery's power fed into the grid: the current rate (per hour) and/or the running total.",
+              "accumulated_costs": "Running total of this battery's operating cost over time. The levelized version also includes its lifetime cost.",
+              "accumulated_cost_savings": "Running total of this battery's savings over time. The levelized version also accounts for its lifetime cost.",
+              "distribution_ratios": "How this battery's own output splits between export and self-consumption, as percentages.",
+              "distribution_shares": "This battery's share of the whole-home totals — e.g. how much of all exported and self-consumed power comes from it.",
+              "charging_source_shares": "For each charging source you selected, the percentage of this battery's charging that came from it (e.g. grid vs. PV)."
             }
           },
           "consumer": {
@@ -125,8 +119,8 @@
               "power_source_shares": "Power source shares"
             },
             "data_description": {
-              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-              "power_source_shares": "The share of this consumer's power coming from each source."
+              "cost_rates": "Cost of the electricity this consumer uses (per hour). The levelized version values self-generated power at its production cost instead of the grid price.",
+              "power_source_shares": "The percentage of this consumer's power coming from each source (grid, PV, battery)."
             }
           },
           "diagnostics": {
@@ -135,14 +129,14 @@
               "debug_power_entities": "Enable debug power entities"
             },
             "data_description": {
-              "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
+              "debug_power_entities": "Expose the raw power values used by the internal calculations as extra sensors. Useful for troubleshooting."
             }
           }
         }
       }
     },
     "error": {
-      "reconfigure_adapters_first": "These devices are missing data required by your selection: {adapters_needing_reconfigure}. Reconfigure them, or deselect those options."
+      "reconfigure_adapters_first": "These devices are missing data required by your selection: {adapters_needing_reconfigure}. Reconfigure them, or turn those sensors off again."
     }
   },
   "config_subentries": {
@@ -154,66 +148,66 @@
       "step": {
         "user": {
           "title": "Add Device",
-          "description": "Choose the type of adapter you want to add to your energy system.",
+          "description": "Choose the type of device you want to add to your energy mix.",
           "menu_options": {
-            "grid": "Grid sensor",
-            "pv_system": "PV System",
+            "grid": "Grid connection",
+            "pv_system": "PV system",
             "battery": "Battery",
             "consumer": "Electrical consumer"
           }
         },
         "configure": {
           "title": "Configure {adapter_type}",
-          "description": "Configure your {adapter_type}. Fields marked as required depend on which calculations are enabled in the integration options.",
+          "description": "Set up your {adapter_type}. Which fields are required depends on the sensors you enabled in the integration's options — for example, cost sensors need a price entity and levelized sensors need lifetime values.",
           "data": {
             "name": "Name",
-            "power_entity": "Power Entity",
-            "power_entity_inverted": "Invert Power Direction",
-            "grid_electricity_price_entity": "Electricity Price Entity",
-            "co2_intensity_entity": "CO₂ Intensity Entity",
-            "exports_power": "Exports Power to Grid",
-            "export_compensation": "Export Compensation Rate",
-            "battery_efficiency": "Round-Trip Efficiency",
-            "charge_from_adapters": "Charge From",
-            "lifetime_production": "Lifetime Production",
-            "lifetime_cost": "Total Lifetime Cost",
-            "co2_footprint": "CO₂ Footprint"
+            "power_entity": "Power entity",
+            "power_entity_inverted": "Invert power direction",
+            "grid_electricity_price_entity": "Electricity price entity",
+            "co2_intensity_entity": "CO₂ intensity entity",
+            "exports_power": "Exports power to grid",
+            "export_compensation": "Export compensation rate",
+            "battery_efficiency": "Round-trip efficiency",
+            "charge_from_adapters": "Charges from",
+            "lifetime_production": "Lifetime production",
+            "lifetime_cost": "Total lifetime cost",
+            "co2_footprint": "CO₂ footprint"
           },
           "data_description": {
             "name": "A unique name for this device.",
-            "power_entity": "Sensor reporting power in W, kW, or MW. For the grid: positive = import, negative = export.",
-            "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
-            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price per kWh (in your Home Assistant currency). Required when cost calculations are enabled.",
-            "co2_intensity_entity": "Sensor providing the current grid CO₂ intensity in g/kWh. Required when CO₂ calculations are enabled.",
-            "exports_power": "Enable if this device can export excess power to the grid.",
-            "export_compensation": "Rate received per kWh exported to the grid (in your configured currency per kWh). Required when cost savings calculation is enabled.",
-            "battery_efficiency": "The round-trip efficiency of the battery in percent.",
-            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from.",
-            "lifetime_production": "Total expected energy production over the device lifetime (kWh). Required when levelized calculation is enabled.",
-            "lifetime_cost": "Total investment and installation cost over the device lifetime (in your configured currency). Required when levelized cost calculation is enabled.",
-            "co2_footprint": "Total CO₂ emissions from manufacturing and installation (kg). Required when levelized CO₂ calculation is enabled."
+            "power_entity": "Sensor that reports this device's power in W, kW or MW. Grid: positive = import, negative = export. PV/battery: positive = producing/discharging, negative = consuming/charging. Use 'Invert power direction' if your sensor uses the opposite sign.",
+            "power_entity_inverted": "Turn on if your sensor reports power with the opposite sign to the convention above.",
+            "grid_electricity_price_entity": "Sensor or input number with the current grid import price per kWh, in your Home Assistant currency. Required when cost or savings sensors are enabled.",
+            "co2_intensity_entity": "Sensor with the current grid CO₂ intensity in g/kWh. Required when CO₂ sensors are enabled.",
+            "exports_power": "Turn on if this device can feed surplus power back into the grid.",
+            "export_compensation": "Amount you are paid per kWh fed into the grid, in your currency. Required when cost-savings or export-compensation sensors are enabled.",
+            "battery_efficiency": "Round-trip efficiency in percent — the share of stored energy you get back when discharging. Used to attribute charging losses.",
+            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from. Used to attribute its stored energy and charging cost to each source.",
+            "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Combined with lifetime cost to derive the levelized (per-kWh) cost. Required when any levelized sensor is enabled.",
+            "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Combined with lifetime production to derive the levelized (per-kWh) cost. Required when any levelized cost sensor is enabled.",
+            "co2_footprint": "Total CO₂ emitted to manufacture and install this device (kg). Used to derive its levelized CO₂ intensity per kWh. Required when any levelized CO₂ sensor is enabled."
           }
         },
         "reconfigure": {
           "title": "Reconfigure {adapter_type}",
-          "description": "Update this adapter. Editing the lifetime cost or production values applies a correction factor that retroactively rescales this device's displayed levelized values.",
+          "description": "Update this device. Changing the lifetime cost or production values applies a correction factor that retroactively rescales this device's already-recorded levelized values.",
           "data": {
-            "power_entity": "Power Entity",
-            "power_entity_inverted": "Invert Power Direction",
-            "grid_electricity_price_entity": "Electricity Price Entity",
-            "co2_intensity_entity": "CO₂ Intensity Entity",
-            "charge_from_adapters": "Charge From",
-            "lifetime_production": "Lifetime Production",
-            "lifetime_cost": "Total Lifetime Cost"
+            "power_entity": "Power entity",
+            "power_entity_inverted": "Invert power direction",
+            "grid_electricity_price_entity": "Electricity price entity",
+            "co2_intensity_entity": "CO₂ intensity entity",
+            "charge_from_adapters": "Charges from",
+            "lifetime_production": "Lifetime production",
+            "lifetime_cost": "Total lifetime cost"
           },
           "data_description": {
-            "power_entity": "Sensor reporting power in W, kW, or MW.",
-            "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
-            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price per kWh (in your Home Assistant currency). Required when cost calculations are enabled.",
-            "co2_intensity_entity": "Sensor providing the current grid CO₂ intensity in g/kWh. Required when CO₂ calculations are enabled.",
-            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from.",
-            "lifetime_production": "Total expected energy production over the device lifetime (kWh). Updating this rescales the displayed levelized values.",
-            "lifetime_cost": "Total investment and installation cost over the device lifetime (in your configured currency). Updating this rescales the displayed levelized values."
+            "power_entity": "Sensor that reports this device's power in W, kW or MW.",
+            "power_entity_inverted": "Turn on if your sensor reports power with the opposite sign to the expected convention.",
+            "grid_electricity_price_entity": "Sensor or input number with the current grid import price per kWh, in your Home Assistant currency. Required when cost or savings sensors are enabled.",
+            "co2_intensity_entity": "Sensor with the current grid CO₂ intensity in g/kWh. Required when CO₂ sensors are enabled.",
+            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from.",
+            "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this rescales the device's already-recorded levelized values.",
+            "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this rescales the device's already-recorded levelized values."
           }
         }
       },
@@ -224,10 +218,10 @@
         "invalid_price_entity": "The selected entity does not exist or is unavailable.",
         "invalid_co2_entity": "The selected entity does not exist or is unavailable.",
         "invalid_input": "Invalid input.",
-        "required": "This field is required with the current calculation settings."
+        "required": "This field is required with the sensors you currently have enabled."
       },
       "abort": {
-        "grid_already_configured": "A grid adapter is already configured for this integration. Only one grid adapter is supported.",
+        "grid_already_configured": "A grid connection is already configured for this integration. Only one grid connection is supported per configuration.",
         "reconfigure_successful": "Device reconfigured successfully."
       }
     }
@@ -235,11 +229,11 @@
   "issues": {
     "no_grid_configured": {
       "title": "No grid configured for {entry_title}",
-      "description": "The Power Insight integration **{entry_title}** could not load because no grid adapter has been configured. Open the integration and use the **Add device** button to add a Grid adapter."
+      "description": "The Power Insight integration **{entry_title}** could not load because no grid connection has been configured. Open the integration and use the **Add device** button to add a grid connection."
     },
     "reconfigure_battery_adapters": {
       "title": "Battery {battery_name} needs reconfiguration",
-      "description": "An adapter was added or removed. Please reconfigure **{battery_name}** to ensure the correct charge sources are applied. Open the integration, find the device, and use the **Reconfigure** option."
+      "description": "A charging source was added or removed. Please reconfigure **{battery_name}** so the correct charging sources are applied. Open the integration, find the device, and use the **Reconfigure** option."
     }
   }
 }
