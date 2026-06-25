@@ -36,6 +36,7 @@ from .const import (
     CONF_CURRENT_LCOE,
     CONF_INITIAL_LCOS,
     CONF_CURRENT_LCOS,
+    CONF_CORRECTION_FACTOR,
     CONF_INITIAL_CO2_INTENSITY,
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
@@ -247,6 +248,34 @@ def calculate_co2_intensity(
     return (footprint / production) * 1000
 
 
+def calculate_correction_factor(
+    fields: dict[str, Any], existing_data: dict[str, Any] | None = None
+) -> float:
+    """Return current_lcoe / default_lcoe for a PV adapter.
+
+    The base (default) LCOE is immutable and read from the existing adapter
+    config; the current LCOE is derived from the edited lifetime values. The
+    factor is time-constant, so multiplying an accumulated base total by it is
+    exact and retroactive. Defaults to 1.0 when either value is unavailable.
+    """
+    base = (existing_data or {}).get(CONF_INITIAL_LCOE)
+    current = calculate_lcoe(fields)
+    if not base or current is None:
+        return 1.0
+    return current / base
+
+
+def calculate_correction_factor_lcos(
+    fields: dict[str, Any], existing_data: dict[str, Any] | None = None
+) -> float:
+    """Return current_lcos / default_lcos for a battery adapter."""
+    base = (existing_data or {}).get(CONF_INITIAL_LCOS)
+    current = calculate_lcos(fields)
+    if not base or current is None:
+        return 1.0
+    return current / base
+
+
 # ============================================================================
 # FIELD DEFINITION CLASSES
 # ============================================================================
@@ -282,6 +311,8 @@ class AdapterField:
 
     selector: selector.Selector | None = None
     selector_fn: Callable[..., selector.Selector] | None = None
+    # Builds a selector from the HA-configured currency code (money fields).
+    currency_selector_fn: Callable[[str], selector.Selector] | None = None
     required: bool = False
     # When provided, overrides `required` dynamically based on current entry options.
     required_fn: Callable[[dict], bool] | None = None
@@ -336,9 +367,14 @@ ENERGY_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="kWh", mode="box")
 )
 
-MONEY_SELECTOR = selector.NumberSelector(
-    selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="€", mode="box")
-)
+def make_money_selector(currency: str) -> selector.NumberSelector:
+    """Build a money input selector labelled with the configured currency."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1, max=10**8, unit_of_measurement=currency, mode="box"
+        )
+    )
+
 
 CO2_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="kg", mode="box")
@@ -348,11 +384,14 @@ PERCENT_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=100, unit_of_measurement="%", mode="slider")
 )
 
-COMPENSATION_SELECTOR = selector.NumberSelector(
-    selector.NumberSelectorConfig(
-        min=0.0, max=100.0, step=0.01, unit_of_measurement="€/kWh", mode="box"
+def make_compensation_selector(currency: str) -> selector.NumberSelector:
+    """Build an export-compensation selector labelled with ``<currency>/kWh``."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=100.0, step=0.01,
+            unit_of_measurement=f"{currency}/kWh", mode="box",
+        )
     )
-)
 
 INSTANTANEOUS_RATES_SELECTOR = selector.SelectSelector(
     selector.SelectSelectorConfig(
@@ -362,12 +401,6 @@ INSTANTANEOUS_RATES_SELECTOR = selector.SelectSelector(
             ),
             selector.SelectOptionDict(
                 value=CONF_CALCULATE_LEVELIZED_COST_RATES, label="Levelized costs"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_CALCULATE_CO2_INTENSITY_RATES, label="CO2 intensity"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_CALCULATE_LEVELIZED_CO2_INTENSITY_RATES, label="Levelized CO2 intensity"
             ),
         ],
         mode=selector.SelectSelectorMode.LIST,
@@ -383,12 +416,6 @@ INSTANTANEOUS_SAVING_RATES_SELECTOR = selector.SelectSelector(
             ),
             selector.SelectOptionDict(
                 value=CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES, label="Levelized cost savings rate"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_CALCULATE_CO2_SAVING_RATES, label="CO2 savings rate"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_CALCULATE_LEVELIZED_CO2_SAVING_RATES, label="Levelized CO2 savings rate"
             ),
         ],
         mode=selector.SelectSelectorMode.LIST,
@@ -406,22 +433,10 @@ ACCUMULATED_ENTITIES_SELECTOR = selector.SelectSelector(
                 value=CONF_ACCUMULATE_LEVELIZED_COST_RATES, label="Levelized cost rate"
             ),
             selector.SelectOptionDict(
-                value=CONF_ACCUMULATE_CO2_INTENSITY_RATES, label="CO2 intensity rate"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_ACCUMULATE_LEVELIZED_CO2_INTENSITY_RATES, label="Levelized CO2 intensity rate"
-            ),
-            selector.SelectOptionDict(
                 value=CONF_ACCUMULATE_COST_SAVING_RATES, label="Cost savings rate"
             ),
             selector.SelectOptionDict(
                 value=CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES, label="Levelized cost savings rate"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_ACCUMULATE_CO2_SAVING_RATES, label="CO2 savings rate"
-            ),
-            selector.SelectOptionDict(
-                value=CONF_ACCUMULATE_LEVELIZED_CO2_SAVING_RATES, label="Levelized CO2 savings rate"
             ),
         ],
         mode=selector.SelectSelectorMode.LIST,
@@ -439,25 +454,27 @@ ACCUMULATED_ENTITIES_SELECTOR = selector.SelectSelector(
 
 CONFIG_ENTRY_FIELDS: dict[str, EntryField] = {
     # --- Shown in both initial config and options flow ---
+    # Moved to options-only so the initial config step asks for the name only.
+    # Fresh installs default to cost-savings rates + accumulated totals.
     CONF_CALCULATE_INSTANTANEOUS_RATES: EntryField(
         selector=INSTANTANEOUS_RATES_SELECTOR,
         required=True,
         default=[],
-        in_config_flow=True,
+        in_config_flow=False,
         in_options_flow=True,
     ),
     CONF_CALCULATE_INSTANTANEOUS_SAVING_RATES: EntryField(
         selector=INSTANTANEOUS_SAVING_RATES_SELECTOR,
         required=True,
-        default=[],
-        in_config_flow=True,
+        default=[CONF_CALCULATE_COST_SAVING_RATES],
+        in_config_flow=False,
         in_options_flow=True,
     ),
     CONF_CALCULATE_ACCUMULATED_ENTITIES: EntryField(
         selector=ACCUMULATED_ENTITIES_SELECTOR,
         required=True,
-        default=[],
-        in_config_flow=True,
+        default=[CONF_ACCUMULATE_COST_SAVING_RATES],
+        in_config_flow=False,
         in_options_flow=True,
     ),
 
@@ -559,7 +576,7 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
-        selector=COMPENSATION_SELECTOR,
+        currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
         default=0.08,
@@ -567,23 +584,31 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=False,
         store_in_adapter_config=True,
     ),
-    # Raw calculation inputs — optional by default, required when levelized is active
+    # Raw calculation inputs — optional by default, required when levelized is active.
+    # Editable on reconfigure: updating these recomputes current_lcoe and a
+    # correction factor that retroactively rescales displayed levelized values.
     CONF_LIFETIME_PRODUCTION: AdapterField(
         selector=ENERGY_SELECTOR,
         required=False,
         required_fn=_levelized_production_required,
         default=vol.UNDEFINED,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_data=True,
+        description=(
+            "Updating the lifetime values applies a correction factor that "
+            "retroactively rescales this device's displayed levelized values. "
+            "Note: once a device is removed, its contribution to the combined "
+            "totals is frozen at its removal value."
+        ),
     ),
     CONF_LIFETIME_COST: AdapterField(
-        selector=MONEY_SELECTOR,
+        currency_selector_fn=make_money_selector,
         required=False,
         required_fn=_levelized_cost_required,
         default=vol.UNDEFINED,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_data=True,
     ),
     CONF_CO2_FOOTPRINT: AdapterField(
@@ -595,7 +620,9 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=False,
         store_in_data=True,
     ),
-    # Calculated fields — derived from the raw inputs above
+    # Calculated fields — derived from the raw inputs above.
+    # The initial (base) LCOE is immutable; current_lcoe and the correction
+    # factor are recomputed on reconfigure from the edited lifetime values.
     CONF_INITIAL_LCOE: CalculatedAdapterField(
         calculator=calculate_lcoe,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
@@ -607,7 +634,14 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         calculator=calculate_lcoe,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
+    CONF_CORRECTION_FACTOR: CalculatedAdapterField(
+        calculator=calculate_correction_factor,
+        depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
+        in_config_flow=True,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_INITIAL_CO2_INTENSITY: CalculatedAdapterField(
@@ -637,7 +671,7 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
     ),
     CONF_POWER_ENTITY: AdapterField(
         selector=ENTITY_SELECTOR,
-        required=False,
+        required=True,
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
@@ -669,7 +703,7 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
-        selector=COMPENSATION_SELECTOR,
+        currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
         default=0.0,
@@ -685,23 +719,31 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
-    # Raw calculation inputs — optional by default, required when levelized is active
+    # Raw calculation inputs — optional by default, required when levelized is active.
+    # Editable on reconfigure: updating these recomputes current_lcos and a
+    # correction factor that retroactively rescales displayed levelized values.
     CONF_LIFETIME_PRODUCTION: AdapterField(
         selector=ENERGY_SELECTOR,
         required=False,
         required_fn=_levelized_production_required,
         default=vol.UNDEFINED,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_data=True,
+        description=(
+            "Updating the lifetime values applies a correction factor that "
+            "retroactively rescales this device's displayed levelized values. "
+            "Note: once a device is removed, its contribution to the combined "
+            "totals is frozen at its removal value."
+        ),
     ),
     CONF_LIFETIME_COST: AdapterField(
-        selector=MONEY_SELECTOR,
+        currency_selector_fn=make_money_selector,
         required=False,
         required_fn=_levelized_cost_required,
         default=vol.UNDEFINED,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_data=True,
     ),
     CONF_CO2_FOOTPRINT: AdapterField(
@@ -713,7 +755,9 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=False,
         store_in_data=True,
     ),
-    # Calculated fields
+    # Calculated fields.
+    # The initial (base) LCOS is immutable; current_lcos and the correction
+    # factor are recomputed on reconfigure from the edited lifetime values.
     CONF_INITIAL_LCOS: CalculatedAdapterField(
         calculator=calculate_lcos,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
@@ -725,7 +769,14 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         calculator=calculate_lcos,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
+    CONF_CORRECTION_FACTOR: CalculatedAdapterField(
+        calculator=calculate_correction_factor_lcos,
+        depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
+        in_config_flow=True,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_INITIAL_CO2_INTENSITY: CalculatedAdapterField(
@@ -795,6 +846,26 @@ def _is_field_required(
     return field_def.required
 
 
+def _field_in_flow(
+    field_def: AdapterField | CalculatedAdapterField | EntryField,
+    flow_type: str,
+) -> bool:
+    """Return whether a field is shown/processed in the given flow."""
+    if isinstance(field_def, EntryField):
+        if flow_type == "config":
+            return field_def.in_config_flow
+        if flow_type == "options":
+            return field_def.in_options_flow
+        return True
+    if isinstance(field_def, AdapterField):
+        if flow_type == "config":
+            return field_def.in_config_flow
+        if flow_type == "reconfigure":
+            return field_def.in_reconfigure_flow
+        return True
+    return False  # CalculatedAdapterField is never user-visible
+
+
 def build_schema(
     fields: dict[str, AdapterField | CalculatedAdapterField | EntryField],
     flow_type: str,
@@ -802,6 +873,7 @@ def build_schema(
     options: dict | None = None,
     entry: ConfigEntry | None = None,
     exclude_subentry_id: str | None = None,
+    currency: str = "EUR",
 ) -> vol.Schema:
     """Build a voluptuous schema from field definitions.
 
@@ -811,6 +883,7 @@ def build_schema(
     exclude_subentry_id:  passed through to selector_fn (e.g. to omit the
                           subentry currently being reconfigured from its own
                           selector options).
+    currency:             ISO currency code used to label money input fields.
     """
     options = options or {}
     schema_dict: dict = {}
@@ -844,8 +917,11 @@ def build_schema(
             else vol.Optional(field_name, default=default)
         )
 
-        # Resolve the selector: prefer selector_fn (dynamic) over selector (static).
-        if isinstance(field_def, AdapterField) and field_def.selector_fn is not None:
+        # Resolve the selector: prefer the currency factory, then selector_fn
+        # (dynamic), then the static selector.
+        if isinstance(field_def, AdapterField) and field_def.currency_selector_fn is not None:
+            resolved_selector = field_def.currency_selector_fn(currency)
+        elif isinstance(field_def, AdapterField) and field_def.selector_fn is not None:
             resolved_selector = field_def.selector_fn(
                 entry, exclude_subentry_id=exclude_subentry_id
             )
@@ -862,11 +938,13 @@ def validate_fields(
     fields: dict[str, AdapterField | CalculatedAdapterField | EntryField],
     user_input: dict[str, Any],
     options: dict | None = None,
+    flow_type: str = "config",
 ) -> dict[str, str]:
     """Validate user input against field definitions.
 
     Runs registered per-field validators and checks that dynamically required
-    fields are not missing.
+    fields are not missing.  Only fields visible in *flow_type* are checked for
+    required-ness, so config-only fields are not flagged during a reconfigure.
     """
     options = options or {}
     errors: dict[str, str] = {}
@@ -884,9 +962,11 @@ def validate_fields(
                 _LOGGER.error("Validation error for %s: %s", field_name, err)
                 errors[field_name] = field_def.error_key
 
-    # Dynamic required-ness check
+    # Dynamic required-ness check (only for fields shown in this flow)
     for field_name, field_def in fields.items():
         if isinstance(field_def, CalculatedAdapterField):
+            continue
+        if not _field_in_flow(field_def, flow_type):
             continue
         if _is_field_required(field_def, options):
             val = user_input.get(field_name)
@@ -1076,11 +1156,21 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
             if not title:
                 errors[CONF_NAME] = "invalid_name"
             else:
-                # Remaining keys are the config-visible option fields.
+                # The initial form only collects the name, so seed the entry
+                # options from the options-flow field defaults (cost-savings
+                # rates + accumulated totals) and let any config-visible input
+                # override them. This guarantees fresh installs register the
+                # default sensors before the user opens the options flow.
+                option_defaults: dict[str, Any] = {
+                    fn: fd.default
+                    for fn, fd in CONFIG_ENTRY_FIELDS.items()
+                    if fd.in_options_flow and fd.default is not vol.UNDEFINED
+                }
+                option_defaults.update(user_input)
                 return self.async_create_entry(
                     title=title,
                     data={},
-                    options=user_input,
+                    options=option_defaults,
                 )
 
         # Seed defaults from the config-visible subset of CONFIG_ENTRY_FIELDS
@@ -1198,7 +1288,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
         if user_input is not None:
             validation_errors = validate_fields(
-                self.hass, self._adapter_fields, user_input, options
+                self.hass, self._adapter_fields, user_input, options, "config"
             )
             errors.update(validation_errors)
 
@@ -1251,14 +1341,16 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                                 translation_key="reconfigure_battery_adapters",
                                 translation_placeholders={"battery_name": sub.title},
                             )
-                    self.hass.async_create_task(
-                        self.hass.config_entries.async_reload(parent_entry.entry_id)
-                    )
+                    # No explicit reload here: adding the subentry fires the
+                    # config-entry update listener, which performs the reload.
+                    # Reloading here as well would double-reload (deprecated
+                    # since HA 2026.6).
 
                 return result
 
         schema = build_schema(
             self._adapter_fields, "config", user_input, options, entry=parent_entry,
+            currency=self.hass.config.currency or "EUR",
         )
 
         return self.async_show_form(
@@ -1289,23 +1381,30 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
         if user_input is not None:
             validation_errors = validate_fields(
-                self.hass, self._adapter_fields, user_input, options
+                self.hass, self._adapter_fields, user_input, options, "reconfigure"
             )
             errors.update(validation_errors)
 
             if not errors:
+                # Evaluate calculated fields (current_lcoe/lcos, correction
+                # factor) from the edited lifetime values, reading the immutable
+                # base (default_lcoe/lcos) from the existing config.
+                complete = calculate_fields(
+                    self._adapter_fields,
+                    user_input,
+                    "reconfigure",
+                    options,
+                    existing_data=adapter.get("config", {}),
+                )
+                new_adapter_config, new_top_level = split_by_storage(
+                    self._adapter_fields, complete
+                )
+
                 adapter_config = adapter.get("config", {}).copy()
-                for field_name, value in user_input.items():
-                    fd = self._adapter_fields.get(field_name)
-                    if (
-                        fd
-                        and isinstance(fd, AdapterField)
-                        and fd.store_in_adapter_config
-                        and fd.in_reconfigure_flow
-                    ):
-                        adapter_config[field_name] = value
+                adapter_config.update(new_adapter_config)
 
                 updated = subentry.data.copy()
+                updated.update(new_top_level)
                 updated["adapter"] = {
                     "adapter_type": self._adapter_type,
                     "key": adapter.get("key"),
@@ -1317,7 +1416,11 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 ir.async_delete_issue(
                     self.hass, DOMAIN, f"reconfigure_battery_{subentry.subentry_id}"
                 )
-                return self.async_update_reload_and_abort(
+                # Update without reloading here: the subentry change fires the
+                # config-entry update listener, which performs the single
+                # reload. Combining a reloading flow method with the update
+                # listener is deprecated since HA 2026.6.
+                return self.async_update_and_abort(
                     self._get_entry(), subentry, data=updated
                 )
 
@@ -1327,6 +1430,11 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             for k, v in adapter.get("config", {}).items()
             if k in self._adapter_fields
         }
+        # store_in_data fields (e.g. lifetime values) live at the subentry top
+        # level, not in adapter.config — seed them so reconfigure pre-fills them.
+        for k, v in subentry.data.items():
+            if k != "adapter" and k in self._adapter_fields:
+                seed.setdefault(k, v)
 
         # For charge_from_adapters, strip stale subentry IDs before seeding so
         # the selector is pre-populated with only currently valid selections.
@@ -1348,6 +1456,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             options,
             entry=parent_entry,
             exclude_subentry_id=subentry.subentry_id,
+            currency=self.hass.config.currency or "EUR",
         )
 
         return self.async_show_form(

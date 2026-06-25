@@ -5,11 +5,13 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.helpers import entity_registry as er
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfPower,
@@ -20,7 +22,11 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from .entity import BaseEventSensorEntity, BaseEventIntegrationSensorEntity
+from .entity import (
+    BaseEventSensorEntity,
+    BaseEventIntegrationSensorEntity,
+    IntegrationSensorExtraStoredData,
+)
 from .utils import get_value
 from .power_insight import PowerInsight, AbstractBaseAdapter
 from . import MyConfigEntry
@@ -35,6 +41,7 @@ from .const import (
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     CONF_ACCUMULATE_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_RETIRED_ADAPTERS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,6 +55,9 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     exists_fn: Callable[..., bool] = lambda _: True
     value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
     transform_fn: Callable[[float], float] = lambda value: value
+    # When True, a per-adapter sensor scales its displayed value by the
+    # adapter's correction factor (levelized quantities only).
+    apply_correction_factor: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -58,6 +68,9 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     exists_fn: Callable[..., bool] = lambda _: True
     integration_value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
     transform_fn: Callable[[float], float] = lambda value: value
+    # When True, the per-adapter integration sensor accumulates the base rate
+    # but displays the running total scaled by the adapter's correction factor.
+    apply_correction_factor: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +233,7 @@ POWER_INSIGHT_SENSORS = (
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
-        value_fn=lambda obj: obj.combined_lcoe_rate,
+        value_fn=lambda obj: obj.combined_lcoe_rate_corrected,
     ),
     PowerInsightSensorDescription(
         key="combined_operating_cost_rate",
@@ -246,7 +259,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
-        value_fn=lambda obj: obj.combined_lcoo_rate,
+        value_fn=lambda obj: obj.combined_lcoo_rate_corrected,
     ),
     PowerInsightSensorDescription(
         key="combined_cost_savings_rate",
@@ -272,7 +285,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES),
-        value_fn=lambda obj: obj.combined_levelized_saving_rate,
+        value_fn=lambda obj: obj.combined_levelized_saving_rate_corrected,
     ),
 )
 
@@ -304,19 +317,6 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.combined_coo_rate,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="combined_total_levelized_operating_costs",
-        name="Combined total levelized operating costs",
-        native_unit_of_measurement="EUR",
-        state_class=SensorStateClass.TOTAL,
-        device_class=SensorDeviceClass.MONETARY,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_RATES),
-        integration_value_fn=lambda obj: obj.combined_lcoo_rate,
-    ),
-    PowerInsightIntegrationSensorDescription(
         key="combined_total_self_consumption_cost_savings",
         name="Combined total self-consumption cost savings",
         native_unit_of_measurement="EUR",
@@ -342,7 +342,47 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_SAVING_RATES),
         integration_value_fn=lambda obj: obj.combined_saving_rate,
     ),
-    PowerInsightIntegrationSensorDescription(
+)
+
+
+# ---------------------------------------------------------------------------
+# Combined accumulated levelized sensors (derived + retired-adapter ledger)
+#
+# These do NOT integrate a pre-summed combined rate. Instead they derive their
+# value at read time as the sum of the per-adapter base accumulated totals
+# (each already scaled by that adapter's correction factor for display) plus a
+# persistent ledger of removed end-of-life adapters. This keeps the combined
+# total consistent with the per-adapter totals, makes lifetime-value
+# corrections retroactive, and prevents a removed device from dropping its
+# historical contribution.
+# ---------------------------------------------------------------------------
+
+# Maps each combined ledger sensor key to the per-adapter accumulated key it
+# sums over.
+COMBINED_LEDGER_ADAPTER_KEYS: dict[str, str] = {
+    "combined_total_levelized_operating_costs": "total_levelized_operating_costs",
+    "combined_total_levelized_cost_savings": "total_levelized_cost_savings",
+}
+
+# Per-adapter accumulated keys whose final corrected value is frozen into the
+# retired-adapter ledger when a device is removed.
+LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
+
+POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
+    PowerInsightSensorDescription(
+        key="combined_total_levelized_operating_costs",
+        name="Combined total levelized operating costs",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_RATES),
+        value_fn=lambda obj: None,
+    ),
+    PowerInsightSensorDescription(
         key="combined_total_levelized_cost_savings",
         name="Combined total levelized cost savings",
         native_unit_of_measurement="EUR",
@@ -353,7 +393,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES),
-        integration_value_fn=lambda obj: obj.combined_levelized_saving_rate,
+        value_fn=lambda obj: None,
     ),
 )
 
@@ -577,7 +617,9 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         value_fn=lambda obj: obj.prod_adapters_lcoo_rates,
+        apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
@@ -601,7 +643,9 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
+        apply_correction_factor=True,
     ),
 )
 
@@ -641,7 +685,9 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.prod_adapters_lcoo_rates,
+        apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_self_consumption_cost_savings",
@@ -677,7 +723,9 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
+        apply_correction_factor=True,
     ),
 )
 
@@ -804,7 +852,9 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+        apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
@@ -828,7 +878,9 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+        apply_correction_factor=True,
     ),
 )
 
@@ -868,7 +920,9 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+        apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_self_consumption_cost_savings",
@@ -904,7 +958,9 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
+        exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+        apply_correction_factor=True,
     ),
 )
 
@@ -968,6 +1024,34 @@ class OptionsWrapper:
         return bool(self._options.get(key, False))
 
 
+def _resolve_currency_unit(unit: str | None, hass: HomeAssistant | None) -> str | None:
+    """Replace the ``EUR`` placeholder in a unit with the configured currency.
+
+    Falls back to the literal (``EUR``) when no currency is configured, so
+    existing setups keep their units unchanged.
+    """
+    if unit and "EUR" in unit and hass is not None:
+        currency = hass.config.currency
+        if currency:
+            return unit.replace("EUR", currency)
+    return unit
+
+
+def _retired_ledger_sum(config_entry: ConfigEntry, per_adapter_key: str) -> float:
+    """Sum the frozen contributions of retired adapters for a levelized key.
+
+    A retired (removed end-of-life) adapter's final corrected accumulated total
+    is persisted in ``config_entry.data[CONF_RETIRED_ADAPTERS]`` so that the
+    combined total never drops when the device is removed.
+    """
+    total = 0.0
+    for retired in config_entry.data.get(CONF_RETIRED_ADAPTERS, []):
+        value = retired.get("totals", {}).get(per_adapter_key)
+        if value is not None:
+            total += value
+    return total
+
+
 # ---------------------------------------------------------------------------
 # Platform setup
 # ---------------------------------------------------------------------------
@@ -1000,6 +1084,18 @@ async def async_setup_entry(
         if not description.exists_fn(options_wrapped):
             continue
         entities.append(PowerInsightIntegrationSensor(
+            description=description,
+            config_entry=entry,
+            source_entities=description.entities_fn(power_insight),
+            power_insight=power_insight,
+        ))
+
+    # Combined accumulated levelized sensors are derived (summed from the
+    # per-adapter base totals + retired-adapter ledger), not integrated.
+    for description in POWER_INSIGHT_COMBINED_LEDGER_SENSORS:
+        if not description.exists_fn(options_wrapped):
+            continue
+        entities.append(PowerInsightCombinedLedgerSensor(
             description=description,
             config_entry=entry,
             source_entities=description.entities_fn(power_insight),
@@ -1189,6 +1285,13 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         self.entity_description = description
         self.config_entry = config_entry
 
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Substitute the HA-configured currency for the EUR placeholder."""
+        return _resolve_currency_unit(
+            self.entity_description.native_unit_of_measurement, self.hass
+        )
+
 
 class PowerInsightSensor(BasePowerInsightSensor):
     """Hub-level sensor reading directly from PowerInsight."""
@@ -1218,6 +1321,52 @@ class PowerInsightSensor(BasePowerInsightSensor):
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+
+class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
+    """Combined accumulated levelized sensor derived from per-adapter totals.
+
+    Recomputes on every source event as the sum of the active per-adapter base
+    accumulated totals (each already scaled by its adapter's correction factor
+    for display) plus the frozen contributions of removed end-of-life adapters.
+    It stores no running total itself, so there is no reload double-count, and
+    a lifetime-value correction is reflected retroactively and consistently in
+    both the per-adapter and the combined totals.
+    """
+
+    def __init__(
+            self,
+            description: PowerInsightSensorDescription,
+            config_entry: ConfigEntry,
+            source_entities: list[str],
+            power_insight: PowerInsight,
+    ) -> None:
+        """Initialize the combined ledger sensor."""
+        super().__init__(description, config_entry, source_entities, power_insight)
+        self._per_adapter_key = COMBINED_LEDGER_ADAPTER_KEYS[description.key]
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the summed per-adapter totals plus the retired ledger."""
+        ent_reg = er.async_get(self.hass)
+        total = 0.0
+        for uid in self.power_insight.levelized_correction_factors:
+            unique_id = (
+                f"{self.config_entry.entry_id}_{uid}_{self._per_adapter_key}"
+            )
+            entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
+            if entity_id is None:
+                continue
+            state = self.hass.states.get(entity_id)
+            if state is None or state.state in ("unknown", "unavailable"):
+                continue
+            try:
+                total += float(state.state)
+            except (ValueError, TypeError):
+                continue
+
+        total += _retired_ledger_sum(self.config_entry, self._per_adapter_key)
+        return total
 
 
 class PowerInsightAdapterSensor(BasePowerInsightSensor):
@@ -1250,6 +1399,8 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
         value = get_value(self.device_adapter.uid, value)
         if value is not None:
             value = self.entity_description.transform_fn(value)
+            if self.entity_description.apply_correction_factor:
+                value = value * self.device_adapter.correction_factor
         return value
 
 
@@ -1317,6 +1468,13 @@ class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
         self.entity_description = description
         self.config_entry = config_entry
 
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Substitute the HA-configured currency for the EUR placeholder."""
+        return _resolve_currency_unit(
+            self.entity_description.native_unit_of_measurement, self.hass
+        )
+
 
 class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
     """Hub-level integration sensor."""
@@ -1373,9 +1531,79 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
     @property
     def integration_value(self) -> float | None:
-        """Return the current rate value to integrate."""
+        """Return the current (base) rate value to integrate.
+
+        The correction factor is deliberately NOT applied here — the running
+        total accumulates the base rate so that the factor can be applied to
+        the displayed total retroactively.
+        """
         value = self.entity_description.integration_value_fn(self.power_insight)
         value = get_value(self.device_adapter.uid, value)
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+    @property
+    def native_value(self) -> Decimal | None:
+        """Return the accumulated base total, scaled for display if requested."""
+        base = self._state
+        if base is not None and self.entity_description.apply_correction_factor:
+            return base * Decimal(str(self.device_adapter.correction_factor))
+        return base
+
+    @property
+    def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:
+        """Persist the BASE running total (not the corrected display)."""
+        return IntegrationSensorExtraStoredData(
+            self._state,
+            self.native_unit_of_measurement,
+            self._last_valid_state,
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Freeze this levelized total into the ledger on device removal.
+
+        HA core never calls a component-level subentry-removal hook, and it
+        clears the removed subentry's entities synchronously before any reload
+        runs — so the only reliable place to capture a removed device's final
+        accumulated total is here, in its own teardown. We distinguish a genuine
+        device removal (the subentry is gone from the config entry) from an
+        ordinary reload (the subentry still exists), and only snapshot the former.
+        """
+        await super().async_will_remove_from_hass()
+
+        key = self.entity_description.key
+        if (
+            not self.entity_description.apply_correction_factor
+            or key not in LEVELIZED_TOTAL_KEYS
+        ):
+            return
+
+        uid = self.device_adapter.uid
+        # Subentry still present -> this is a reload/unload, not a removal.
+        if uid in self.config_entry.subentries:
+            return
+
+        value = self.native_value  # corrected (base * factor) total
+        if value is None:
+            return
+
+        ledger = list(self.config_entry.data.get(CONF_RETIRED_ADAPTERS, []))
+        # Idempotent: skip if this (device, key) was already captured.
+        if any(
+            entry.get("subentry_id") == uid and key in entry.get("totals", {})
+            for entry in ledger
+        ):
+            return
+
+        ledger.append(
+            {
+                "subentry_id": uid,
+                "title": self.device_adapter.verbose_name,
+                "totals": {key: float(value)},
+            }
+        )
+        self.hass.config_entries.async_update_entry(
+            self.config_entry,
+            data={**self.config_entry.data, CONF_RETIRED_ADAPTERS: ledger},
+        )

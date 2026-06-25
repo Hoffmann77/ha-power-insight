@@ -32,34 +32,31 @@ async def test_user_step_empty_name_returns_error(hass: HomeAssistant) -> None:
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        user_input={
-            "name": "",
-            "calculate_instantaneous_rates": [],
-            "calculate_instantaneous_saving_rates": [],
-            "calculate_accumulated_entities": [],
-        },
+        user_input={"name": ""},
     )
     assert result["type"] == FlowResultType.FORM
     assert "name" in result["errors"]
 
 
 async def test_user_step_creates_entry(hass: HomeAssistant) -> None:
-    """Submitting valid user data should create a config entry."""
+    """The initial step collects only the name and seeds the default options."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
-        user_input={
-            "name": "Test PowerInsight",
-            "calculate_instantaneous_rates": [],
-            "calculate_instantaneous_saving_rates": [],
-            "calculate_accumulated_entities": [],
-        },
+        user_input={"name": "Test PowerInsight"},
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Test PowerInsight"
+    # Fresh installs default to cost-savings rates + accumulated totals.
     assert result["options"]["calculate_instantaneous_rates"] == []
+    assert result["options"]["calculate_instantaneous_saving_rates"] == [
+        "calculate_cost_saving_rates"
+    ]
+    assert result["options"]["calculate_accumulated_entities"] == [
+        "accumulate_cost_saving_rates"
+    ]
 
 
 # ---------------------------------------------------------------------------

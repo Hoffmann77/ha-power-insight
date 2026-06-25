@@ -533,6 +533,68 @@ class PowerInsight:
 
         return result
 
+    # ----------------------------->
+    # CORRECTION-FACTOR VARIANTS --->
+    # ----------------------------->
+    #
+    # These mirror the base combined levelized rates but scale each adapter's
+    # contribution by its (time-constant) correction factor. The base variants
+    # above are left untouched so the accumulating sensors keep integrating the
+    # base rate; correction is applied only to displayed values.
+
+    @property
+    def combined_lcoe_rate_corrected(self) -> float | None:
+        """Combined levelized cost rate with per-adapter correction applied."""
+        result = 0.0
+        adapters = [self.grid_adapter] + self.prod_adapters
+        for adapter in adapters:
+            if (lcoe_rate := adapter.lcoe_rate) is None:
+                return None
+
+            result += lcoe_rate * adapter.correction_factor
+
+        return result
+
+    @property
+    def combined_lcoo_rate_corrected(self) -> float | None:
+        """Combined levelized operating cost rate with correction applied."""
+        result = 0.0
+        lcoo_rates = self.prod_adapters_lcoo_rates
+        for adapter in self.prod_adapters:
+            if (rate := lcoo_rates.get(adapter.uid)) is None:
+                return None
+
+            result += rate * adapter.correction_factor
+
+        return result
+
+    @property
+    def combined_levelized_saving_rate_corrected(self) -> float | None:
+        """Combined levelized cost savings rate with correction applied."""
+        result = 0.0
+        levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
+        for adapter in self.prod_adapters:
+            if (rate := levelized_saving_rates.get(adapter.uid)) is None:
+                return None
+
+            result += rate * adapter.correction_factor
+
+        return result
+
+    @property
+    def levelized_correction_factors(self) -> dict[str, float]:
+        """Return ``uid -> correction_factor`` for prod adapters with an LCOE.
+
+        Used by the combined accumulated levelized sensor to enumerate the
+        active contributors whose per-adapter base totals it sums.
+        """
+        factors: dict[str, float] = {}
+        for adapter in self.prod_adapters:
+            if adapter.lcoe is not None:
+                factors[adapter.uid] = adapter.correction_factor
+
+        return factors
+
     # ------------------->
     # COMBINED PRICES --->
     # ------------------->
@@ -1148,7 +1210,7 @@ class PowerInsight:
                 earnings + avoided - lcoo_rate - lcoe_rate
             )
 
-        return
+        return saving_rates
 
     # -------------------->
     # STORAGE ADAPTERS --->
@@ -1640,7 +1702,7 @@ class PowerInsight:
                 earnings + avoided - lcoo_rate - lcoe_rate
             )
 
-        return
+        return saving_rates
 
     # ----------------------->
     # CONSUMPTION ADAPTERS --->
@@ -1812,6 +1874,16 @@ class AbstractBaseAdapter(ABC):
         self.uid = unique_id
         self.verbose_name = verbose_name
         self._values = {}
+
+    @property
+    def correction_factor(self) -> float:
+        """Return the levelized-cost correction factor (1.0 unless overridden).
+
+        Adapters with an editable lifetime cost (PV/battery) override this with
+        ``current_lcoe / default_lcoe``. The factor is time-constant, so it can
+        be applied to an accumulated base total to retroactively rescale it.
+        """
+        return 1.0
 
     # @property
     # def source_entities(self) -> list[str]:
@@ -2185,10 +2257,11 @@ class PvAdapter(BaseProductionAdapter):
         verbose_name: str,
         power_entity: str,
         power_entity_inverted: bool,
-        lcoe: float,
-        lco2_intensity: float,
+        lcoe: float | None,
+        lco2_intensity: float | None,
         exports_power: bool,
         export_compensation: float,
+        correction_factor: float = 1.0,
         **kwargs,
     ) -> None:
         """Initialize instance."""
@@ -2203,11 +2276,17 @@ class PvAdapter(BaseProductionAdapter):
         )
         self._lcoe = lcoe
         self._lco2_intensity = lco2_intensity
+        self._correction_factor = correction_factor
 
     @property
     def lcoe(self) -> float | None:
-        """Return the levelized cost of electicity in Euro/kwh."""
+        """Return the (base) levelized cost of electicity in Euro/kwh."""
         return self._lcoe
+
+    @property
+    def correction_factor(self) -> float:
+        """Return the levelized-cost correction factor for this PV system."""
+        return self._correction_factor
 
 class BatteryAdapter(BaseProductionAdapter):
     """Battery adapter."""
@@ -2220,12 +2299,13 @@ class BatteryAdapter(BaseProductionAdapter):
         verbose_name: str,
         power_entity: str,
         power_entity_inverted: bool,
-        lcos: float,
-        lco2_intensity: float,
+        lcos: float | None,
+        lco2_intensity: float | None,
         exports_power: bool,
         export_compensation: float,
         charge_from_grid: bool = True,
         charge_from_adapters: list[str] | None = None,
+        correction_factor: float = 1.0,
         **kwargs,
     ) -> None:
         """Initialize instance."""
@@ -2245,11 +2325,17 @@ class BatteryAdapter(BaseProductionAdapter):
         self.charge_from_adapters: list[str] = (
             charge_from_adapters if charge_from_adapters is not None else []
         )
+        self._correction_factor = correction_factor
 
     @property
     def lcoe(self) -> float | None:
-        """Return the levelized cost of electicity in Euro/kwh."""
+        """Return the (base) levelized cost of electicity in Euro/kwh."""
         return self._lcos
+
+    @property
+    def correction_factor(self) -> float:
+        """Return the levelized-cost correction factor for this battery."""
+        return self._correction_factor
 
 class BaseConsumerAdapter(BasePowerAdapter):
     """Base adapter for consumers."""

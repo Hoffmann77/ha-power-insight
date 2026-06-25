@@ -12,9 +12,9 @@
         },
         "data_description": {
           "name": "A name for this energy mix configuration.",
-          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (\u20ac/h) or CO\u2082 intensity rate.",
-          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (\u20ac/h). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
-          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings (\u20ac) or export compensation (\u20ac)."
+          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (per hour) or CO\u2082 intensity rate.",
+          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (per hour). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
+          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings or export compensation."
         }
       }
     },
@@ -39,9 +39,9 @@
           "debug_power_entities": "Enable debug power entities"
         },
         "data_description": {
-          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (\u20ac/h) or CO\u2082 intensity rate.",
-          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (\u20ac/h). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
-          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings (\u20ac) or export compensation (\u20ac).",
+          "calculate_instantaneous_rates": "Select which instantaneous rate sensors to create, e.g. cost rate (per hour) or CO\u2082 intensity rate.",
+          "calculate_instantaneous_saving_rates": "Select which instantaneous saving rate sensors to create, e.g. cost savings rate (per hour). Requires a price or CO\u2082 entity on the grid adapter depending on your selection.",
+          "calculate_accumulated_entities": "Select which accumulated total sensors to create, e.g. cost savings or export compensation.",
           "enable_power_shares": "Create sensors for percentage shares such as export share and self-consumption share.",
           "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
         }
@@ -89,33 +89,37 @@
             "name": "A unique name for this device.",
             "power_entity": "Sensor reporting power in W, kW, or MW. For the grid: positive = import, negative = export.",
             "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
-            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price in \u20ac/kWh. Required when cost calculations are enabled.",
+            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price per kWh (in your Home Assistant currency). Required when cost calculations are enabled.",
             "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled.",
             "exports_power": "Enable if this device can export excess power to the grid.",
-            "export_compensation": "Rate received per kWh exported to the grid (\u20ac/kWh). Required when cost savings calculation is enabled.",
+            "export_compensation": "Rate received per kWh exported to the grid (in your configured currency per kWh). Required when cost savings calculation is enabled.",
             "battery_efficiency": "The round-trip efficiency of the battery in percent.",
             "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from.",
             "lifetime_production": "Total expected energy production over the device lifetime (kWh). Required when levelized calculation is enabled.",
-            "lifetime_cost": "Total investment and installation cost over the device lifetime (\u20ac). Required when levelized cost calculation is enabled.",
+            "lifetime_cost": "Total investment and installation cost over the device lifetime (in your configured currency). Required when levelized cost calculation is enabled.",
             "co2_footprint": "Total CO\u2082 emissions from manufacturing and installation (kg). Required when levelized CO\u2082 calculation is enabled."
           }
         },
         "reconfigure": {
           "title": "Reconfigure {adapter_type}",
-          "description": "Update entity IDs for this adapter. To change lifetime cost or production values, remove and re-add the device.",
+          "description": "Update this adapter. Editing the lifetime cost or production values applies a correction factor that retroactively rescales this device's displayed levelized values.",
           "data": {
             "power_entity": "Power Entity",
             "power_entity_inverted": "Invert Power Direction",
             "grid_electricity_price_entity": "Electricity Price Entity",
             "co2_intensity_entity": "CO\u2082 Intensity Entity",
-            "charge_from_adapters": "Charge From"
+            "charge_from_adapters": "Charge From",
+            "lifetime_production": "Lifetime Production",
+            "lifetime_cost": "Total Lifetime Cost"
           },
           "data_description": {
             "power_entity": "Sensor reporting power in W, kW, or MW.",
             "power_entity_inverted": "Enable if your sensor reports the power direction inverted.",
-            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price in \u20ac/kWh. Required when cost calculations are enabled.",
+            "grid_electricity_price_entity": "Sensor or input number providing the current electricity price per kWh (in your Home Assistant currency). Required when cost calculations are enabled.",
             "co2_intensity_entity": "Sensor providing the current grid CO\u2082 intensity in g/kWh. Required when CO\u2082 calculations are enabled.",
-            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from."
+            "charge_from_adapters": "Select which adapters (grid and/or PV systems) this battery is allowed to charge from.",
+            "lifetime_production": "Total expected energy production over the device lifetime (kWh). Updating this rescales the displayed levelized values.",
+            "lifetime_cost": "Total investment and installation cost over the device lifetime (in your configured currency). Updating this rescales the displayed levelized values."
           }
         }
       },
