@@ -16,7 +16,7 @@ from homeassistant.config_entries import (
     SubentryFlowResult,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.const import CONF_NAME
 from homeassistant.util import slugify
@@ -1510,138 +1510,93 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 # ============================================================================
 
 class PowerInsightOptionsFlow(OptionsFlow):
-    """Per-scope options flow.
+    """Single-form options flow.
 
-    A menu offers the whole-home (combined) scope plus one section per
-    configured device type, and a diagnostics section. Each section shows only
-    the categories its scope supports and is **saved immediately on submit** —
-    submitting persists that scope and returns to the menu (reloading the entry
-    so the change takes effect), so the flow stays open to edit more sections.
-    "Done" closes the dialog. When a submitted selection needs data a device has
-    not provided yet, a confirm step lets the user save anyway.
+    Every option is shown on one screen, grouped into collapsible sections — the
+    whole-home (combined) scope, one section per configured device type, and a
+    diagnostics section — with a single Submit button. Each section offers only
+    the categories its scope supports. Submitting validates that the selection
+    does not require data a device has not provided yet (otherwise the form is
+    re-shown with an error), then saves everything in one reload.
     """
 
-    def __init__(self) -> None:
-        """Initialise the pending-confirm buffer."""
-        self._pending: dict | None = None
-
-    def _current_options(self) -> dict:
-        """Return a fresh, mutable copy of the stored options (v2 shape)."""
-        options = self.config_entry.options
-        stored = options.get("scopes", {})
-        return {
-            "schema": 2,
-            "scopes": {scope: list(stored.get(scope, [])) for scope in SCOPES},
-            CONF_ENABLE_DEBUG_ENTITIES: bool(
-                options.get(CONF_ENABLE_DEBUG_ENTITIES, False)
-            ),
-        }
-
-    def _present_device_scopes(self) -> list[str]:
-        """Return device-type scopes that have at least one subentry."""
+    def _shown_scopes(self) -> list[str]:
+        """Combined plus the device-type scopes that have a subentry."""
         types = {
             sub.data.get("adapter", {}).get("adapter_type")
             for sub in self.config_entry.subentries.values()
         }
-        return [t for t in ("grid", "pv_system", "battery", "consumer") if t in types]
+        return [SCOPE_COMBINED] + [
+            t for t in ("grid", "pv_system", "battery", "consumer") if t in types
+        ]
+
+    def _build_schema(
+        self, scopes: dict[str, set[str]], debug: bool
+    ) -> vol.Schema:
+        """Build the one-screen schema: a section per scope + diagnostics."""
+        fields: dict = {}
+        for scope in self._shown_scopes():
+            fields[vol.Required(scope)] = section(
+                build_scope_schema(scope, scopes.get(scope, set())),
+                {"collapsed": False},
+            )
+        fields[vol.Required("diagnostics")] = section(
+            vol.Schema({
+                vol.Required(
+                    CONF_ENABLE_DEBUG_ENTITIES, default=debug
+                ): BOOLEAN_SELECTOR,
+            }),
+            {"collapsed": True},
+        )
+        return vol.Schema(fields)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Show the section menu."""
-        return self.async_show_menu(
-            step_id="init",
-            menu_options=[
-                SCOPE_COMBINED,
-                *self._present_device_scopes(),
-                "diagnostics",
-                "done",
-            ],
-        )
+        """Show all options on one sectioned form and save on submit."""
+        stored = self.config_entry.options.get("scopes", {})
 
-    async def _async_scope_step(
-        self, scope: str, user_input: dict[str, Any] | None
-    ) -> FlowResult:
-        """Render a scope's categories, saving the selection on submit."""
         if user_input is not None:
-            options = self._current_options()
-            options["scopes"][scope] = collect_scope_selection(scope, user_input)
-            return await self._save(options)
-        current = set(self.config_entry.options.get("scopes", {}).get(scope, []))
-        return self.async_show_form(
-            step_id=scope,
-            data_schema=build_scope_schema(scope, current),
-        )
-
-    async def async_step_combined(self, user_input=None) -> FlowResult:
-        """Edit the whole-home (combined) scope."""
-        return await self._async_scope_step(SCOPE_COMBINED, user_input)
-
-    async def async_step_grid(self, user_input=None) -> FlowResult:
-        """Edit the grid scope."""
-        return await self._async_scope_step("grid", user_input)
-
-    async def async_step_pv_system(self, user_input=None) -> FlowResult:
-        """Edit the PV-system scope."""
-        return await self._async_scope_step("pv_system", user_input)
-
-    async def async_step_battery(self, user_input=None) -> FlowResult:
-        """Edit the battery scope."""
-        return await self._async_scope_step("battery", user_input)
-
-    async def async_step_consumer(self, user_input=None) -> FlowResult:
-        """Edit the consumer scope."""
-        return await self._async_scope_step("consumer", user_input)
-
-    async def async_step_diagnostics(self, user_input=None) -> FlowResult:
-        """Edit the global diagnostics toggle, saving on submit."""
-        if user_input is not None:
-            options = self._current_options()
-            options[CONF_ENABLE_DEBUG_ENTITIES] = bool(
-                user_input.get(CONF_ENABLE_DEBUG_ENTITIES, False)
+            # Section fields arrive nested under their section key.
+            selected = {
+                scope: set(
+                    collect_scope_selection(scope, user_input.get(scope, {}))
+                )
+                for scope in self._shown_scopes()
+            }
+            debug = bool(
+                user_input.get("diagnostics", {}).get(
+                    CONF_ENABLE_DEBUG_ENTITIES, False
+                )
             )
-            return await self._save(options)
-        debug = bool(self.config_entry.options.get(CONF_ENABLE_DEBUG_ENTITIES, False))
-        return self.async_show_form(
-            step_id="diagnostics",
-            data_schema=vol.Schema({
-                vol.Required(CONF_ENABLE_DEBUG_ENTITIES, default=debug): BOOLEAN_SELECTOR,
-            }),
-        )
-
-    async def _save(self, options: dict) -> FlowResult:
-        """Persist *options*, or warn first if a device is under-configured."""
-        problems = check_options_feasibility(self.config_entry, options)
-        if problems:
-            # Save anyway is allowed: the user confirms on the next form.
-            self._pending = options
+            # Scopes whose device type is not present keep their stored value.
+            new_scopes = {
+                scope: sorted(selected[scope])
+                if scope in selected
+                else list(stored.get(scope, []))
+                for scope in SCOPES
+            }
+            new_options = {
+                "schema": 2,
+                "scopes": new_scopes,
+                CONF_ENABLE_DEBUG_ENTITIES: debug,
+            }
+            problems = check_options_feasibility(self.config_entry, new_options)
+            if not problems:
+                return self.async_create_entry(title="", data=new_options)
+            # Re-show the form (sticky) with a validation error.
             return self.async_show_form(
-                step_id="confirm",
-                data_schema=vol.Schema({}),
+                step_id="init",
+                data_schema=self._build_schema(selected, debug),
                 errors={"base": "reconfigure_adapters_first"},
                 description_placeholders={
                     "adapters_needing_reconfigure": ", ".join(problems),
                 },
             )
-        return await self._persist(options)
 
-    async def _persist(self, options: dict) -> FlowResult:
-        """Write the options (triggering a reload) and return to the menu.
-
-        Persisting via ``async_update_entry`` rather than ending the flow with
-        ``async_create_entry`` keeps the options dialog open, so the user can
-        edit several sections in one sitting while each submit takes effect.
-        """
-        self.hass.config_entries.async_update_entry(
-            self.config_entry, options=options
+        scopes = {scope: set(stored.get(scope, [])) for scope in self._shown_scopes()}
+        debug = bool(self.config_entry.options.get(CONF_ENABLE_DEBUG_ENTITIES, False))
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self._build_schema(scopes, debug),
         )
-        self._pending = None
-        return await self.async_step_init()
-
-    async def async_step_confirm(self, user_input=None) -> FlowResult:
-        """Apply the pending selection after the under-configured warning."""
-        return await self._persist(self._pending)
-
-    async def async_step_done(self, user_input=None) -> FlowResult:
-        """Close the options dialog (changes are already saved)."""
-        return self.async_create_entry(title="", data=self._current_options())

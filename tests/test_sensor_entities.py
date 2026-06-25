@@ -224,11 +224,10 @@ async def test_grid_owns_import_export_and_compensation_sensors(
     assert f"{entry.entry_id}_combined_total_export_compensation" not in uids
 
 
-async def test_options_submit_reloads_entry_live(
+async def test_options_form_submit_reloads_and_applies(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """Submitting a section reloads the entry so the change takes effect, and
-    the flow stays open on the menu."""
+    """Submitting the single options form reloads the entry and applies it."""
     hass.states.async_set(
         "sensor.grid_power", "0", {"unit_of_measurement": "W"}
     )
@@ -243,24 +242,24 @@ async def test_options_submit_reloads_entry_live(
         mock_config_entry.entry_id
     )
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input={"next_step_id": "combined"}
-    )
-    result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "cost_rates": [],
-            "cost_savings_rates": [],
-            "accumulated_costs": [],
-            "accumulated_cost_savings": [],
-            "distribution_power": True,
-            "distribution_ratios": False,  # drop ratios → export ratio disabled
+            "combined": {
+                "distribution_power": True,
+                "distribution_ratios": False,  # drop ratios → export ratio off
+                "cost_rates": [],
+                "cost_savings_rates": [],
+                "accumulated_costs": [],
+                "accumulated_cost_savings": [],
+            },
+            "grid": {},
+            "diagnostics": {"debug_power_entities": False},
         },
     )
-    # Flow stayed open on the menu.
-    assert result["type"] == FlowResultType.MENU
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
 
-    # The submit reloaded the entry and applied the change.
+    # The save reloaded the entry and applied the change.
     assert (
         ent_reg.async_get(entity_id).disabled_by
         is er.RegistryEntryDisabler.INTEGRATION

@@ -30,135 +30,119 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Choose a section to configure which sensors to create. Each device type shows only the options it supports, and your choices are saved when you submit a section.\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
-        "menu_options": {
-          "combined": "Whole-home (combined)",
-          "grid": "Grid",
-          "pv_system": "PV systems",
-          "battery": "Batteries",
-          "consumer": "Consumers",
-          "diagnostics": "Diagnostics",
-          "done": "Done"
+        "description": "Choose which sensors to create. Each device type shows only the options it supports.\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
+        "sections": {
+          "combined": {
+            "name": "Whole-home (combined)",
+            "data": {
+              "distribution_power": "Power distribution (W)",
+              "cost_rates": "Cost rates (per hour)",
+              "cost_savings_rates": "Cost savings rates (per hour)",
+              "accumulated_costs": "Accumulated costs",
+              "accumulated_cost_savings": "Accumulated cost savings",
+              "distribution_ratios": "Power distribution ratios"
+            },
+            "data_description": {
+              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
+              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
+              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
+              "accumulated_costs": "Running totals of operating cost.",
+              "accumulated_cost_savings": "Running totals of cost savings.",
+              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby."
+            }
+          },
+          "grid": {
+            "name": "Grid",
+            "data": {
+              "distribution_power": "Power distribution (W)",
+              "cost_rates": "Cost rates (per hour)",
+              "accumulated_costs": "Accumulated costs",
+              "export_compensation": "Export compensation",
+              "distribution_ratios": "Power distribution ratios",
+              "distribution_shares": "Power distribution shares"
+            },
+            "data_description": {
+              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
+              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
+              "accumulated_costs": "Running totals of operating cost.",
+              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
+              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
+              "distribution_shares": "A device's share of the combined export / self-consumption."
+            }
+          },
+          "pv_system": {
+            "name": "PV systems",
+            "data": {
+              "distribution_power": "Power distribution (W)",
+              "cost_rates": "Cost rates (per hour)",
+              "cost_savings_rates": "Cost savings rates (per hour)",
+              "export_compensation": "Export compensation",
+              "accumulated_costs": "Accumulated costs",
+              "accumulated_cost_savings": "Accumulated cost savings",
+              "distribution_ratios": "Power distribution ratios",
+              "distribution_shares": "Power distribution shares"
+            },
+            "data_description": {
+              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
+              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
+              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
+              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
+              "accumulated_costs": "Running totals of operating cost.",
+              "accumulated_cost_savings": "Running totals of cost savings.",
+              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
+              "distribution_shares": "A device's share of the combined export / self-consumption."
+            }
+          },
+          "battery": {
+            "name": "Batteries",
+            "data": {
+              "distribution_power": "Power distribution (W)",
+              "cost_rates": "Cost rates (per hour)",
+              "cost_savings_rates": "Cost savings rates (per hour)",
+              "export_compensation": "Export compensation",
+              "accumulated_costs": "Accumulated costs",
+              "accumulated_cost_savings": "Accumulated cost savings",
+              "distribution_ratios": "Power distribution ratios",
+              "distribution_shares": "Power distribution shares",
+              "charging_source_shares": "Charging source shares"
+            },
+            "data_description": {
+              "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
+              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
+              "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
+              "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
+              "accumulated_costs": "Running totals of operating cost.",
+              "accumulated_cost_savings": "Running totals of cost savings.",
+              "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
+              "distribution_shares": "A device's share of the combined export / self-consumption.",
+              "charging_source_shares": "For each selected charge source, its share of the battery's charging."
+            }
+          },
+          "consumer": {
+            "name": "Consumers",
+            "data": {
+              "cost_rates": "Cost rates (per hour)",
+              "power_source_shares": "Power source shares"
+            },
+            "data_description": {
+              "cost_rates": "Operating cost rate, and optionally its levelized variant.",
+              "power_source_shares": "The share of this consumer's power coming from each source."
+            }
+          },
+          "diagnostics": {
+            "name": "Diagnostics",
+            "data": {
+              "debug_power_entities": "Enable debug power entities"
+            },
+            "data_description": {
+              "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
+            }
+          }
         }
-      },
-      "combined": {
-        "title": "Whole-home sensors",
-        "description": "Sensors that aggregate your whole energy mix.",
-        "data": {
-          "distribution_power": "Power distribution (W)",
-          "cost_rates": "Cost rates (per hour)",
-          "cost_savings_rates": "Cost savings rates (per hour)",
-          "accumulated_costs": "Accumulated costs",
-          "accumulated_cost_savings": "Accumulated cost savings",
-          "distribution_ratios": "Power distribution ratios"
-        },
-        "data_description": {
-          "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-          "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-          "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-          "accumulated_costs": "Running totals of operating cost.",
-          "accumulated_cost_savings": "Running totals of cost savings.",
-          "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby."
-        }
-      },
-      "grid": {
-        "title": "Grid sensors",
-        "description": "Import/export power, cost and export compensation at your grid connection.",
-        "data": {
-          "distribution_power": "Power distribution (W)",
-          "cost_rates": "Cost rates (per hour)",
-          "accumulated_costs": "Accumulated costs",
-          "export_compensation": "Export compensation",
-          "distribution_ratios": "Power distribution ratios",
-          "distribution_shares": "Power distribution shares"
-        },
-        "data_description": {
-          "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-          "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-          "accumulated_costs": "Running totals of operating cost.",
-          "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-          "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-          "distribution_shares": "A device's share of the combined export / self-consumption."
-        }
-      },
-      "pv_system": {
-        "title": "PV system sensors",
-        "description": "Applies to all PV system devices.",
-        "data": {
-          "distribution_power": "Power distribution (W)",
-          "cost_rates": "Cost rates (per hour)",
-          "cost_savings_rates": "Cost savings rates (per hour)",
-          "export_compensation": "Export compensation",
-          "accumulated_costs": "Accumulated costs",
-          "accumulated_cost_savings": "Accumulated cost savings",
-          "distribution_ratios": "Power distribution ratios",
-          "distribution_shares": "Power distribution shares"
-        },
-        "data_description": {
-          "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-          "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-          "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-          "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-          "accumulated_costs": "Running totals of operating cost.",
-          "accumulated_cost_savings": "Running totals of cost savings.",
-          "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-          "distribution_shares": "A device's share of the combined export / self-consumption."
-        }
-      },
-      "battery": {
-        "title": "Battery sensors",
-        "description": "Applies to all battery devices.",
-        "data": {
-          "distribution_power": "Power distribution (W)",
-          "cost_rates": "Cost rates (per hour)",
-          "cost_savings_rates": "Cost savings rates (per hour)",
-          "export_compensation": "Export compensation",
-          "accumulated_costs": "Accumulated costs",
-          "accumulated_cost_savings": "Accumulated cost savings",
-          "distribution_ratios": "Power distribution ratios",
-          "distribution_shares": "Power distribution shares",
-          "charging_source_shares": "Charging source shares"
-        },
-        "data_description": {
-          "distribution_power": "Watt power-split sensors (import/export, self-consumption, charging, standby).",
-          "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-          "cost_savings_rates": "Self-consumption cost savings rate, and optionally its levelized variant.",
-          "export_compensation": "Compensation for energy fed to the grid: the rate and/or its running total.",
-          "accumulated_costs": "Running totals of operating cost.",
-          "accumulated_cost_savings": "Running totals of cost savings.",
-          "distribution_ratios": "Percentage of a device's own power that is exported, self-consumed, charging or standby.",
-          "distribution_shares": "A device's share of the combined export / self-consumption.",
-          "charging_source_shares": "For each selected charge source, its share of the battery's charging."
-        }
-      },
-      "consumer": {
-        "title": "Consumer sensors",
-        "description": "Applies to all consumer devices.",
-        "data": {
-          "cost_rates": "Cost rates (per hour)",
-          "power_source_shares": "Power source shares"
-        },
-        "data_description": {
-          "cost_rates": "Operating cost rate, and optionally its levelized variant.",
-          "power_source_shares": "The share of this consumer's power coming from each source."
-        }
-      },
-      "diagnostics": {
-        "title": "Diagnostics",
-        "data": {
-          "debug_power_entities": "Enable debug power entities"
-        },
-        "data_description": {
-          "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
-        }
-      },
-      "confirm": {
-        "title": "Some devices need configuring",
-        "description": "Your selection needs data that one or more devices have not provided yet. Submit to save anyway, then reconfigure those devices."
       }
     },
     "error": {
-      "reconfigure_adapters_first": "These devices are missing data required by your selection: {adapters_needing_reconfigure}. Save to apply anyway, then reconfigure them."
+      "reconfigure_adapters_first": "These devices are missing data required by your selection: {adapters_needing_reconfigure}. Reconfigure them, or deselect those options."
     }
   },
   "config_subentries": {
