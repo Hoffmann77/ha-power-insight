@@ -82,6 +82,10 @@ class PowerInsight:
 
     def __init__(self) -> None:
         """Initialize instance."""
+        # Exactly one grid per entry, by design: one config entry models one
+        # energy mix at a single grid connection. Multiple grid connections are
+        # modelled as multiple config entries, so this stays a singular slot
+        # (the config flow enforces it via the ``grid_already_configured`` guard).
         self.grid_adapter = None
         self.pv_system_adapters = PvSystemAdapters()
         self.storage_adapters = BatteryAdapters()
@@ -749,6 +753,15 @@ class PowerInsight:
         if (coe := self.grid_adapter.coe) is None:
             return {self.grid_adapter.uid: None}
         return {self.grid_adapter.uid: (import_power / 1000) * coe}
+
+    @property
+    def grid_adapters_export_compensation_rate(self) -> dict[str, float | None]:
+        """Return the grid export compensation rate (EUR/h) keyed by uid.
+
+        Export physically happens at the (single) grid connection, so the
+        combined export compensation is surfaced on the grid device.
+        """
+        return {self.grid_adapter.uid: self.combined_export_compensation_rate}
 
     @property
     def grid_adapters_charging_shares(self) -> dict[str, float]:

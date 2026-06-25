@@ -12,6 +12,7 @@ from .conftest import (
     PV_SUB_ID,
     BAT_SUB_ID,
     BASE_OPTIONS,
+    FULL_OPTIONS,
     make_grid_subentry_data,
     make_pv_subentry_data,
     make_battery_subentry_data,
@@ -183,6 +184,35 @@ async def test_disabling_option_disables_entity_but_keeps_it(
     await hass.async_block_till_done()
 
     assert ent_reg.async_get(entity_id).disabled_by is None
+
+
+async def test_grid_owns_import_export_and_compensation_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Import/export power and export compensation live on the grid device,
+    and the combined export-compensation sensors are gone from the hub."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=FULL_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), make_pv_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    entries = get_entry_entities(hass, entry)
+    uids = {e.unique_id for e in entries if e.unique_id}
+    grid = f"{entry.entry_id}_{GRID_SUB_ID}"
+
+    assert f"{grid}_import_power" in uids
+    assert f"{grid}_export_power" in uids
+    assert f"{grid}_export_compensation_rate" in uids
+    assert f"{grid}_total_export_compensation" in uids
+
+    # Export compensation no longer exists at the combined/hub level.
+    assert f"{entry.entry_id}_combined_export_compensation_rate" not in uids
+    assert f"{entry.entry_id}_combined_total_export_compensation" not in uids
 
 
 # ---------------------------------------------------------------------------

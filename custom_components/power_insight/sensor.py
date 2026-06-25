@@ -102,19 +102,6 @@ POWER_INSIGHT_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
-        key="combined_export_compensation_rate",
-        name="Combined export compensation rate",
-        icon="mdi:currency-eur",
-        native_unit_of_measurement="EUR/h",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
-        value_fn=lambda obj: obj.combined_export_compensation_rate,
-    ),
-    PowerInsightSensorDescription(
         key="combined_self_consumption_power",
         name="Combined self-consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
@@ -292,19 +279,6 @@ POWER_INSIGHT_SENSORS = (
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
-        key="combined_total_export_compensation",
-        name="Combined total export compensation",
-        native_unit_of_measurement="EUR",
-        state_class=SensorStateClass.TOTAL,
-        device_class=SensorDeviceClass.MONETARY,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
-        integration_value_fn=lambda obj: obj.combined_export_compensation_rate,
-    ),
-    PowerInsightIntegrationSensorDescription(
         key="combined_total_operating_costs",
         name="Combined total operating costs",
         native_unit_of_measurement="EUR",
@@ -404,6 +378,28 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
 # ---------------------------------------------------------------------------
 
 POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
+    # Import / export both physically happen at the (single) grid connection,
+    # so the grid device owns both sides of the meter.
+    PowerInsightSensorDescription(
+        key="import_power",
+        name="Import power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_import_power,
+    ),
+    PowerInsightSensorDescription(
+        key="export_power",
+        name="Export power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_export_power,
+    ),
     PowerInsightSensorDescription(
         key="cost_rate",
         name="Cost rate",
@@ -414,6 +410,16 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
         value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+    PowerInsightSensorDescription(
+        key="export_compensation_rate",
+        name="Export compensation rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
     ),
     PowerInsightSensorDescription(
         key="consumption_ratio",
@@ -495,6 +501,16 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
         exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
         integration_value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_export_compensation",
+        name="Total export compensation",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        integration_value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
     ),
 )
 
