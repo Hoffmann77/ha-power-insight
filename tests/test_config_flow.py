@@ -309,12 +309,15 @@ async def test_options_flow_shows_menu(hass: HomeAssistant) -> None:
     assert "combined" in result["menu_options"]
     assert "grid" in result["menu_options"]
     assert "diagnostics" in result["menu_options"]
+    assert "done" in result["menu_options"]
     assert "save" not in result["menu_options"]
     assert "battery" not in result["menu_options"]
 
 
-async def test_options_flow_submit_saves_immediately(hass: HomeAssistant) -> None:
-    """Submitting a section persists straight away — no separate save step."""
+async def test_options_flow_submit_saves_and_returns_to_menu(
+    hass: HomeAssistant,
+) -> None:
+    """Submitting a section persists immediately and returns to the menu."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -340,8 +343,16 @@ async def test_options_flow_submit_saves_immediately(hass: HomeAssistant) -> Non
             "distribution_ratios": False,
         },
     )
-    assert result["type"] == FlowResultType.CREATE_ENTRY
+    # Saved immediately, and the flow stays open on the menu.
+    assert result["type"] == FlowResultType.MENU
+    assert result["step_id"] == "init"
     assert entry.options["scopes"]["combined"] == ["enable_distribution_power"]
+
+    # "Done" closes the dialog.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "done"}
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 async def test_options_flow_warns_then_saves_under_configured(
@@ -379,5 +390,6 @@ async def test_options_flow_warns_then_saves_under_configured(
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
-    assert result["type"] == FlowResultType.CREATE_ENTRY
+    # Saved (anyway) and back at the menu.
+    assert result["type"] == FlowResultType.MENU
     assert entry.options["scopes"]["grid"] == ["calculate_cost_rates"]
