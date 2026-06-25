@@ -1341,9 +1341,10 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                                 translation_key="reconfigure_battery_adapters",
                                 translation_placeholders={"battery_name": sub.title},
                             )
-                    self.hass.async_create_task(
-                        self.hass.config_entries.async_reload(parent_entry.entry_id)
-                    )
+                    # No explicit reload here: adding the subentry fires the
+                    # config-entry update listener, which performs the reload.
+                    # Reloading here as well would double-reload (deprecated
+                    # since HA 2026.6).
 
                 return result
 
@@ -1415,7 +1416,11 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 ir.async_delete_issue(
                     self.hass, DOMAIN, f"reconfigure_battery_{subentry.subentry_id}"
                 )
-                return self.async_update_reload_and_abort(
+                # Update without reloading here: the subentry change fires the
+                # config-entry update listener, which performs the single
+                # reload. Combining a reloading flow method with the update
+                # listener is deprecated since HA 2026.6.
+                return self.async_update_and_abort(
                     self._get_entry(), subentry, data=updated
                 )
 
