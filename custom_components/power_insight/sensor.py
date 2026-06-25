@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -32,7 +32,15 @@ from .power_insight import PowerInsight, AbstractBaseAdapter
 from . import MyConfigEntry
 from .const import (
     DOMAIN,
+    SCOPE_COMBINED,
     CONF_ENABLE_DEBUG_ENTITIES,
+    CONF_ENABLE_DISTRIBUTION_POWER,
+    CONF_ENABLE_DISTRIBUTION_RATIOS,
+    CONF_ENABLE_DISTRIBUTION_SHARES,
+    CONF_ENABLE_CHARGING_SOURCE_SHARES,
+    CONF_ENABLE_POWER_SOURCE_SHARES,
+    CONF_ENABLE_EXPORT_COMPENSATION_RATE,
+    CONF_ACCUMULATE_EXPORT_COMPENSATION,
     CONF_CALCULATE_COST_RATES,
     CONF_CALCULATE_LEVELIZED_COST_RATES,
     CONF_CALCULATE_COST_SAVING_RATES,
@@ -86,7 +94,6 @@ POWER_INSIGHT_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        exists_fn=lambda options: options.check(CONF_ENABLE_DEBUG_ENTITIES),
         value_fn=lambda obj: obj.gross_power,
     ),
     PowerInsightSensorDescription(
@@ -99,19 +106,6 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.gross_power_export_ratio,
         transform_fn=lambda val: val * 100,
-    ),
-    PowerInsightSensorDescription(
-        key="combined_export_compensation_rate",
-        name="Combined export compensation rate",
-        icon="mdi:currency-eur",
-        native_unit_of_measurement="EUR/h",
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
-        value_fn=lambda obj: obj.combined_export_compensation_rate,
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_power",
@@ -144,7 +138,6 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_SAVING_RATES),
         value_fn=lambda obj: obj.combined_avoided_cost_rate,
     ),
     PowerInsightSensorDescription(
@@ -221,7 +214,6 @@ POWER_INSIGHT_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
         value_fn=lambda obj: obj.combined_coe_rate,
     ),
     PowerInsightSensorDescription(
@@ -232,7 +224,6 @@ POWER_INSIGHT_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
-        exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
         value_fn=lambda obj: obj.combined_lcoe_rate_corrected,
     ),
     PowerInsightSensorDescription(
@@ -245,7 +236,6 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
         value_fn=lambda obj: obj.combined_coo_rate,
     ),
     PowerInsightSensorDescription(
@@ -258,7 +248,6 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_RATES),
         value_fn=lambda obj: obj.combined_lcoo_rate_corrected,
     ),
     PowerInsightSensorDescription(
@@ -271,7 +260,6 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_SAVING_RATES),
         value_fn=lambda obj: obj.combined_saving_rate,
     ),
     PowerInsightSensorDescription(
@@ -284,25 +272,11 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES),
         value_fn=lambda obj: obj.combined_levelized_saving_rate_corrected,
     ),
 )
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
-    PowerInsightIntegrationSensorDescription(
-        key="combined_total_export_compensation",
-        name="Combined total export compensation",
-        native_unit_of_measurement="EUR",
-        state_class=SensorStateClass.TOTAL,
-        device_class=SensorDeviceClass.MONETARY,
-        suggested_display_precision=2,
-        entities_fn=lambda obj: (
-            obj.source_entities_price + obj.source_entities_power
-        ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
-        integration_value_fn=lambda obj: obj.combined_export_compensation_rate,
-    ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_operating_costs",
         name="Combined total operating costs",
@@ -313,7 +287,6 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
         integration_value_fn=lambda obj: obj.combined_coo_rate,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -326,7 +299,6 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_SAVING_RATES),
         integration_value_fn=lambda obj: obj.combined_avoided_cost_rate,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -339,7 +311,6 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_SAVING_RATES),
         integration_value_fn=lambda obj: obj.combined_saving_rate,
     ),
 )
@@ -379,7 +350,6 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_RATES),
         value_fn=lambda obj: None,
     ),
     PowerInsightSensorDescription(
@@ -392,7 +362,6 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES),
         value_fn=lambda obj: None,
     ),
 )
@@ -403,6 +372,28 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
 # ---------------------------------------------------------------------------
 
 POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
+    # Import / export both physically happen at the (single) grid connection,
+    # so the grid device owns both sides of the meter.
+    PowerInsightSensorDescription(
+        key="import_power",
+        name="Import power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_import_power,
+    ),
+    PowerInsightSensorDescription(
+        key="export_power",
+        name="Export power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_export_power,
+    ),
     PowerInsightSensorDescription(
         key="cost_rate",
         name="Cost rate",
@@ -411,8 +402,17 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        exists_fn=lambda options: options.check(CONF_CALCULATE_COST_RATES),
         value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+    PowerInsightSensorDescription(
+        key="export_compensation_rate",
+        name="Export compensation rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
     ),
     PowerInsightSensorDescription(
         key="consumption_ratio",
@@ -492,8 +492,17 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        exists_fn=lambda options: options.check(CONF_ACCUMULATE_COST_RATES),
         integration_value_fn=lambda obj: obj.grid_adapters_coe_rate,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_export_compensation",
+        name="Total export compensation",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
+        integration_value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
     ),
 )
 
@@ -1007,21 +1016,130 @@ POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS: tuple[
 
 
 class OptionsWrapper:
-    """Wrapper around the raw options dict providing a unified check interface."""
+    """Scope-aware view over the per-scope options dict.
+
+    Options are stored as ``entry.options["scopes"][scope] = [enabled leaf
+    keys]`` plus the global ``debug_power_entities`` flag. ``check(key, scope)``
+    resolves whether a leaf option is enabled for a given scope.
+    """
 
     def __init__(self, options: dict) -> None:
         """Initialise from the raw options dict."""
         self._options = options
-        self._selected: set[str] = set()
-        for key, value in options.items():
-            if isinstance(value, list):
-                self._selected.update(value)
+        scopes = options.get("scopes", {})
+        self._by_scope: dict[str, set[str]] = {
+            scope: set(leaves) for scope, leaves in scopes.items()
+        }
 
-    def check(self, key: str) -> bool:
-        """Return True if the key is enabled, either as a boolean or a selected list item."""
-        if key in self._selected:
-            return True
-        return bool(self._options.get(key, False))
+    def check(self, key: str, scope: str = SCOPE_COMBINED) -> bool:
+        """Return True if *key* is enabled for *scope*."""
+        if key == CONF_ENABLE_DEBUG_ENTITIES:
+            return bool(self._options.get(key, False))
+        return key in self._by_scope.get(scope, set())
+
+
+# ---------------------------------------------------------------------------
+# Option gating
+# ---------------------------------------------------------------------------
+#
+# Maps a sensor description ``key`` to the integration option that controls
+# whether it is created. A sensor whose key is absent here is not option-gated
+# (it is still subject to its adapter-capability ``exists_fn``). This is the
+# single source of truth for which option enables which sensor; each setup loop
+# evaluates it against the scope it is building (combined / grid / pv_system /
+# battery / consumer). Dynamic per-source sensors (charging shares, consumer
+# source ratios) are gated inline in ``async_setup_entry``, since their keys are
+# built at runtime.
+_SENSOR_OPTION_GATE: dict[str, str] = {
+    # --- Diagnostics ---
+    "available_power": CONF_ENABLE_DEBUG_ENTITIES,
+    # --- Power distribution (W) ---
+    "import_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid
+    "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
+    "self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,      # pv / storage
+    "combined_self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,
+    "combined_charging_power": CONF_ENABLE_DISTRIBUTION_POWER,
+    "combined_standby_power": CONF_ENABLE_DISTRIBUTION_POWER,
+    # --- Power distribution ratios ---
+    "combined_export_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    "combined_self_consumption_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    "combined_charging_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    "combined_standby_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    "consumption_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,          # grid
+    "export_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,              # pv / storage
+    "self_consumption_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    # --- Power distribution shares ---
+    "consumption_share": CONF_ENABLE_DISTRIBUTION_SHARES,         # grid
+    "export_share": CONF_ENABLE_DISTRIBUTION_SHARES,             # pv / storage
+    "self_consumption_share": CONF_ENABLE_DISTRIBUTION_SHARES,
+    # --- Export compensation ---
+    "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE,
+    "total_export_compensation": CONF_ACCUMULATE_EXPORT_COMPENSATION,
+    # --- Cost rates ---
+    "cost_rate": CONF_CALCULATE_COST_RATES,                       # grid
+    "operating_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_operating_cost_rate": CONF_CALCULATE_COST_RATES,
+    # --- Levelized cost rates ---
+    "levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    # --- Cost savings rates ---
+    "self_consumption_cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    "cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    "combined_self_consumption_cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    "combined_cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
+    # --- Levelized cost savings rates ---
+    "levelized_cost_savings_rate": CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    "combined_levelized_cost_savings_rate": CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    # --- Accumulated costs ---
+    "total_cost": CONF_ACCUMULATE_COST_RATES,                     # grid
+    "total_operating_costs": CONF_ACCUMULATE_COST_RATES,
+    "combined_total_operating_costs": CONF_ACCUMULATE_COST_RATES,
+    "total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "combined_total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    # --- Accumulated cost savings ---
+    "total_self_consumption_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "combined_total_self_consumption_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
+    "total_levelized_cost_savings": CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    "combined_total_levelized_cost_savings": CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+}
+
+
+def _option_gated_out(description, options: OptionsWrapper, scope: str) -> bool:
+    """Return True if *description* is gated off for *scope* by the options."""
+    gate = _SENSOR_OPTION_GATE.get(description.key)
+    return gate is not None and not options.check(gate, scope)
+
+
+@callback
+def _sync_entity_enabled_state(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    wanted_unique_ids: set[str],
+) -> None:
+    """Disable entities whose option is off; re-enable them when it is back on.
+
+    Rather than deleting the entities of a disabled sensor group (which would
+    drop their recorded history), we mark them disabled in the entity registry.
+    They are hidden and stop updating, but keep their history and are restored
+    the moment the option is re-enabled. Entities the user disabled themselves
+    (``disabled_by == USER``) are never touched.
+    """
+    ent_reg = er.async_get(hass)
+    for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if ent.platform != DOMAIN or ent.domain != "sensor":
+            continue
+        if ent.unique_id in wanted_unique_ids:
+            if ent.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+                ent_reg.async_update_entity(ent.entity_id, disabled_by=None)
+        elif ent.disabled_by is None:
+            ent_reg.async_update_entity(
+                ent.entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
 
 
 def _resolve_currency_unit(unit: str | None, hass: HomeAssistant | None) -> str | None:
@@ -1067,11 +1185,21 @@ async def async_setup_entry(
     if power_insight.grid_adapter is None:
         return
     options_wrapped = OptionsWrapper(entry.options)
+    # Unique IDs of every sensor we create this run, used afterwards to disable
+    # (and later re-enable) entities whose controlling option has been toggled.
+    created_unique_ids: set[str] = set()
+
+    def _add(entities: list, **kwargs) -> None:
+        """Register a batch of entities and record their unique IDs."""
+        created_unique_ids.update(ent.unique_id for ent in entities)
+        async_add_entities(entities, **kwargs)
 
     # --- Hub-level sensors ---
     entities: list = []
     for description in POWER_INSIGHT_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
             continue
         entities.append(PowerInsightSensor(
             description=description,
@@ -1082,6 +1210,8 @@ async def async_setup_entry(
 
     for description in POWER_INSIGHT_INTEGRATION_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
             continue
         entities.append(PowerInsightIntegrationSensor(
             description=description,
@@ -1095,6 +1225,8 @@ async def async_setup_entry(
     for description in POWER_INSIGHT_COMBINED_LEDGER_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
+        if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
+            continue
         entities.append(PowerInsightCombinedLedgerSensor(
             description=description,
             config_entry=entry,
@@ -1102,13 +1234,15 @@ async def async_setup_entry(
             power_insight=power_insight,
         ))
 
-    async_add_entities(entities)
+    _add(entities)
 
     # --- Grid adapter sensors ---
     grid_adapter = power_insight.grid_adapter
     entities = []
     for description in POWER_INSIGHT_GRID_ADAPTER_SENSORS:
         if not description.exists_fn(options_wrapped):
+            continue
+        if _option_gated_out(description, options_wrapped, "grid"):
             continue
         entities.append(PowerInsightAdapterSensor(
             description=description,
@@ -1121,6 +1255,8 @@ async def async_setup_entry(
     for description in POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
+        if _option_gated_out(description, options_wrapped, "grid"):
+            continue
         entities.append(PowerInsightAdapterIntegrationSensor(
             description=description,
             config_entry=entry,
@@ -1129,13 +1265,15 @@ async def async_setup_entry(
             device_adapter=grid_adapter,
         ))
 
-    async_add_entities(entities, config_subentry_id=grid_adapter.uid)
+    _add(entities, config_subentry_id=grid_adapter.uid)
 
     # --- PV adapter sensors ---
     for adapter in power_insight.pv_system_adapters:
         entities = []
         for description in POWER_INSIGHT_PV_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped, "pv_system"):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1148,6 +1286,8 @@ async def async_setup_entry(
         for description in POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
+            if _option_gated_out(description, options_wrapped, "pv_system"):
+                continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
@@ -1156,7 +1296,7 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
 
     # --- Battery adapter sensors ---
     for adapter in power_insight.storage_adapters:
@@ -1164,6 +1304,8 @@ async def async_setup_entry(
 
         for description in POWER_INSIGHT_STORAGE_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped, "battery"):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1176,6 +1318,8 @@ async def async_setup_entry(
         for description in POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
+            if _option_gated_out(description, options_wrapped, "battery"):
+                continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
@@ -1184,30 +1328,37 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        # Dynamic charging source share sensors — one per power-providing adapter
-        for source_adapter in power_insight.gross_power_adapters:
-            name = source_adapter.verbose_name
-            dynamic_description = PowerInsightSensorDescription(
-                key=f"charging_share_from_{name}",
-                name=f"Charging share from {name}",
-                icon="mdi:percent",
-                native_unit_of_measurement=PERCENTAGE,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                entities_fn=lambda obj: obj.source_entities_power,
-                value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
-                transform_fn=lambda val: val * 100,
-            )
-            entities.append(PowerInsightDynamicAdapterSensor(
-                description=dynamic_description,
-                config_entry=entry,
-                source_entities=dynamic_description.entities_fn(power_insight),
-                power_insight=power_insight,
-                device_adapter=adapter,
-                dynamic_adapter=source_adapter,
-            ))
+        # Dynamic charging source share sensors — one per power-providing
+        # adapter the battery is actually configured to charge from. A source
+        # the user did not select under "Charge From" gets no sensor (e.g. no
+        # "Charging share from Grid" when the battery cannot charge from grid).
+        # These are power-share sensors, so gate them on that option too.
+        if options_wrapped.check(CONF_ENABLE_CHARGING_SOURCE_SHARES, "battery"):
+            for source_adapter in power_insight.gross_power_adapters:
+                if source_adapter.uid not in adapter.charge_from_adapters:
+                    continue
+                name = source_adapter.verbose_name
+                dynamic_description = PowerInsightSensorDescription(
+                    key=f"charging_share_from_{name}",
+                    name=f"Charging share from {name}",
+                    icon="mdi:percent",
+                    native_unit_of_measurement=PERCENTAGE,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=0,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
+                    transform_fn=lambda val: val * 100,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=dynamic_description,
+                    config_entry=entry,
+                    source_entities=dynamic_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
 
     # --- Consumer adapter sensors ---
     for adapter in power_insight.consumer_adapters:
@@ -1215,6 +1366,8 @@ async def async_setup_entry(
 
         for description in POWER_INSIGHT_CONS_ADAPTER_SENSORS:
             if not description.exists_fn(adapter):
+                continue
+            if _option_gated_out(description, options_wrapped, "consumer"):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1227,6 +1380,8 @@ async def async_setup_entry(
         for description in POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS:
             if not description.exists_fn(adapter):
                 continue
+            if _option_gated_out(description, options_wrapped, "consumer"):
+                continue
             entities.append(PowerInsightAdapterIntegrationSensor(
                 description=description,
                 config_entry=entry,
@@ -1235,30 +1390,36 @@ async def async_setup_entry(
                 device_adapter=adapter,
             ))
 
-        # Dynamic consumption source share sensors — one per power-providing adapter
-        for source_adapter in power_insight.gross_power_adapters:
-            name = source_adapter.verbose_name
-            dynamic_description = PowerInsightSensorDescription(
-                key=f"{name}_ratio",
-                name=f"{name} ratio",
-                icon="mdi:percent",
-                native_unit_of_measurement=PERCENTAGE,
-                state_class=SensorStateClass.MEASUREMENT,
-                suggested_display_precision=0,
-                entities_fn=lambda obj: obj.source_entities_power,
-                value_fn=lambda obj: obj.cons_adapters_source_shares,
-                transform_fn=lambda val: val * 100,
-            )
-            entities.append(PowerInsightDynamicAdapterSensor(
-                description=dynamic_description,
-                config_entry=entry,
-                source_entities=dynamic_description.entities_fn(power_insight),
-                power_insight=power_insight,
-                device_adapter=adapter,
-                dynamic_adapter=source_adapter,
-            ))
+        # Dynamic consumption source share sensors — one per power-providing
+        # adapter. These are power-share sensors, so gate them on that option.
+        if options_wrapped.check(CONF_ENABLE_POWER_SOURCE_SHARES, "consumer"):
+            for source_adapter in power_insight.gross_power_adapters:
+                name = source_adapter.verbose_name
+                dynamic_description = PowerInsightSensorDescription(
+                    key=f"{name}_ratio",
+                    name=f"{name} ratio",
+                    icon="mdi:percent",
+                    native_unit_of_measurement=PERCENTAGE,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=0,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    value_fn=lambda obj: obj.cons_adapters_source_shares,
+                    transform_fn=lambda val: val * 100,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=dynamic_description,
+                    config_entry=entry,
+                    source_entities=dynamic_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
 
-        async_add_entities(entities, config_subentry_id=adapter.uid)
+        _add(entities, config_subentry_id=adapter.uid)
+
+    # Disable entities whose controlling option is now off (keeping their
+    # history), and re-enable any we previously disabled that are wanted again.
+    _sync_entity_enabled_state(hass, entry, created_unique_ids)
 
 
 # ---------------------------------------------------------------------------

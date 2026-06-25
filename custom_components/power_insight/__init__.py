@@ -154,8 +154,60 @@ async def async_unload_entry(
 async def async_migrate_entry(
     hass: HomeAssistant, entry: MyConfigEntry,
 ) -> bool:
-    """Migrate the old config entry to a newer version."""
-    if entry.version > 1:
-        pass
+    """Migrate the config entry to a newer version."""
+    if entry.version == 1 and entry.minor_version < 2:
+        _migrate_options_to_scopes(hass, entry)
 
     return True
+
+
+def _migrate_options_to_scopes(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Convert the old flat options to the v2 per-scope schema.
+
+    Pre-release, so history is not preserved — only behaviour is roughly kept:
+    the old global selection is distributed into each scope, intersected with
+    what that scope supports. See docs/options-flow-redesign.md.
+    """
+    # Imported here to avoid a circular import at module load.
+    from .const import SCOPES, SCOPE_SUPPORTED_OPTIONS
+
+    old = entry.options or {}
+
+    # Already in the v2 per-scope shape (e.g. created by the current flow): just
+    # stamp the version, never rewrite the user's selection.
+    if "scopes" in old:
+        if entry.minor_version != 2:
+            hass.config_entries.async_update_entry(entry, minor_version=2)
+        return
+
+    leaves = set(
+        old.get("calculate_instantaneous_rates", [])
+        + old.get("calculate_instantaneous_saving_rates", [])
+        + old.get("calculate_accumulated_entities", [])
+    )
+    if old.get("enable_power_shares"):
+        leaves |= {
+            "enable_distribution_ratios",
+            "enable_distribution_shares",
+            "enable_charging_source_shares",
+            "enable_power_source_shares",
+        }
+    # Watt sensors were always-on before the redesign — keep them.
+    leaves.add("enable_distribution_power")
+    # Export compensation used to ride on the cost-rate keys.
+    if "calculate_cost_rates" in leaves:
+        leaves.add("enable_export_compensation_rate")
+    if "accumulate_cost_rates" in leaves:
+        leaves.add("accumulate_export_compensation")
+
+    new_options = {
+        "schema": 2,
+        "scopes": {
+            scope: sorted(leaves & SCOPE_SUPPORTED_OPTIONS[scope])
+            for scope in SCOPES
+        },
+        "debug_power_entities": bool(old.get("debug_power_entities", False)),
+    }
+    hass.config_entries.async_update_entry(
+        entry, options=new_options, minor_version=2
+    )

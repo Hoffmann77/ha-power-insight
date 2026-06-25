@@ -25,10 +25,76 @@ GRID_SUB_ID = "01GRID00000000000000000001"
 PV_SUB_ID = "01PV0000000000000000000001"
 BAT_SUB_ID = "01BAT00000000000000000001A"
 
+# Per-scope options schema (v2). Each scope lists the enabled leaf option keys.
+
+# Base: only the always-visible power-distribution sensors enabled.
 BASE_OPTIONS = {
-    "calculate_instantaneous_rates": [],
-    "calculate_instantaneous_saving_rates": [],
-    "calculate_accumulated_entities": [],
+    "schema": 2,
+    "scopes": {
+        "combined": ["enable_distribution_power", "enable_distribution_ratios"],
+        "grid": [
+            "enable_distribution_power",
+            "enable_distribution_ratios",
+            "enable_distribution_shares",
+        ],
+        "pv_system": [
+            "enable_distribution_power",
+            "enable_distribution_ratios",
+            "enable_distribution_shares",
+        ],
+        "battery": [
+            "enable_distribution_power",
+            "enable_distribution_ratios",
+            "enable_distribution_shares",
+            "enable_charging_source_shares",
+        ],
+        "consumer": ["enable_power_source_shares"],
+    },
+    "debug_power_entities": False,
+}
+
+# Every supported category enabled per scope — used by tests asserting a
+# specific rate / total / levelized sensor exists.
+FULL_OPTIONS = {
+    "schema": 2,
+    "scopes": {
+        "combined": [
+            "calculate_cost_rates", "calculate_levelized_cost_rates",
+            "calculate_cost_saving_rates", "calculate_levelized_cost_saving_rates",
+            "accumulate_cost_rates", "accumulate_levelized_cost_rates",
+            "accumulate_cost_saving_rates", "accumulate_levelized_cost_saving_rates",
+            "enable_distribution_power", "enable_distribution_ratios",
+        ],
+        "grid": [
+            "calculate_cost_rates", "accumulate_cost_rates",
+            "enable_export_compensation_rate", "accumulate_export_compensation",
+            "enable_distribution_power", "enable_distribution_ratios",
+            "enable_distribution_shares",
+        ],
+        "pv_system": [
+            "calculate_cost_rates", "calculate_levelized_cost_rates",
+            "calculate_cost_saving_rates", "calculate_levelized_cost_saving_rates",
+            "enable_export_compensation_rate", "accumulate_export_compensation",
+            "accumulate_cost_rates", "accumulate_levelized_cost_rates",
+            "accumulate_cost_saving_rates", "accumulate_levelized_cost_saving_rates",
+            "enable_distribution_power", "enable_distribution_ratios",
+            "enable_distribution_shares",
+        ],
+        "battery": [
+            "calculate_cost_rates", "calculate_levelized_cost_rates",
+            "calculate_cost_saving_rates", "calculate_levelized_cost_saving_rates",
+            "enable_export_compensation_rate", "accumulate_export_compensation",
+            "accumulate_cost_rates", "accumulate_levelized_cost_rates",
+            "accumulate_cost_saving_rates", "accumulate_levelized_cost_saving_rates",
+            "enable_distribution_power", "enable_distribution_ratios",
+            "enable_distribution_shares", "enable_charging_source_shares",
+        ],
+        "consumer": [
+            "calculate_cost_rates", "calculate_levelized_cost_rates",
+            "enable_power_source_shares",
+        ],
+    },
+    "debug_power_entities": False,
 }
 
 

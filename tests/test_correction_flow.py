@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from .conftest import (
     DOMAIN,
     BASE_OPTIONS,
+    FULL_OPTIONS,
     PV_SUB_ID,
     GRID_SUB_ID,
     make_grid_subentry_data,
@@ -111,7 +112,7 @@ async def test_levelized_sensors_present_with_lcoe(hass: HomeAssistant) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
-        options=BASE_OPTIONS,
+        options=FULL_OPTIONS,
         subentries_data=[make_grid_subentry_data(), make_pv_subentry_data()],
     )
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
@@ -141,7 +142,7 @@ async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> No
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
-        options=BASE_OPTIONS,
+        options=FULL_OPTIONS,
         subentries_data=[grid_data, pv_data],
     )
     hass.states.async_set(
@@ -176,19 +177,14 @@ async def test_combined_ledger_sensor_includes_retired_totals(
     hass: HomeAssistant,
 ) -> None:
     """The combined derived sensor adds the frozen retired-adapter totals."""
-    from custom_components.power_insight.const import (
-        CONF_CALCULATE_ACCUMULATED_ENTITIES,
-        CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-        CONF_RETIRED_ADAPTERS,
-    )
+    from custom_components.power_insight.const import CONF_RETIRED_ADAPTERS
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
         options={
-            CONF_CALCULATE_ACCUMULATED_ENTITIES: [
-                CONF_ACCUMULATE_LEVELIZED_COST_RATES
-            ],
+            "schema": 2,
+            "scopes": {"combined": ["accumulate_levelized_cost_rates"]},
         },
         data={
             CONF_RETIRED_ADAPTERS: [

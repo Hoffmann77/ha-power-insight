@@ -8,6 +8,14 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
+    GRID_SUB_ID,
+    PV_SUB_ID,
+    BAT_SUB_ID,
+    BASE_OPTIONS,
+    FULL_OPTIONS,
+    make_grid_subentry_data,
+    make_pv_subentry_data,
+    make_battery_subentry_data,
     setup_integration,
 )
 
@@ -100,6 +108,119 @@ async def test_pv_adapter_sensors_created(
     pv_prefix = f"{mock_config_entry_with_pv.entry_id}_{PV_SUB_ID}"
     pv_sensors = [uid for uid in unique_ids if uid and uid.startswith(pv_prefix)]
     assert len(pv_sensors) > 0, "Expected at least one PV adapter sensor"
+
+
+async def test_battery_charging_share_sensors_only_for_selected_sources(
+    hass: HomeAssistant,
+) -> None:
+    """A battery should only get a "charging share from X" sensor for each
+    source it is actually configured to charge from.
+
+    Here the battery may charge from the grid but NOT from the PV system, so
+    only the grid charging-share sensor should exist.
+    """
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    for ent in ("grid_power", "pv_power", "battery_power"):
+        hass.states.async_set(f"sensor.{ent}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    entries = get_entry_entities(hass, entry)
+    keys = {e.unique_id for e in entries if e.unique_id}
+
+    bat_prefix = f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_"
+    charging_share_keys = {k for k in keys if k.startswith(bat_prefix)}
+
+    # Exactly one charging-share sensor (Grid), none for the unselected PV.
+    assert charging_share_keys == {f"{bat_prefix}Grid"}
+
+
+async def test_disabling_option_disables_entity_but_keeps_it(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """Turning an option off should disable (not delete) the matching sensors,
+    and turning it back on should re-enable them.
+
+    Power-share sensors are gated on ``enable_power_shares``; toggling it must
+    therefore take effect on the registered entities.
+    """
+    hass.states.async_set(
+        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
+    )
+    await setup_integration(hass, mock_config_entry)
+    ent_reg = er.async_get(hass)
+
+    uid = f"{mock_config_entry.entry_id}_combined_export_ratio"
+    entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
+    assert entity_id is not None
+    assert ent_reg.async_get(entity_id).disabled_by is None
+
+    def _with_combined(leaves: list[str]) -> dict:
+        opts = {**mock_config_entry.options}
+        opts["scopes"] = {**opts["scopes"], "combined": leaves}
+        return opts
+
+    # Drop distribution ratios from the combined scope → the entity is kept
+    # but disabled by the integration.
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        options=_with_combined(["enable_distribution_power"]),
+    )
+    await hass.async_block_till_done()
+
+    reg_entry = ent_reg.async_get(entity_id)
+    assert reg_entry is not None, "entity should be kept, not deleted"
+    assert reg_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+    # Re-enable → the integration re-enables the entity.
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        options=_with_combined(
+            ["enable_distribution_power", "enable_distribution_ratios"]
+        ),
+    )
+    await hass.async_block_till_done()
+
+    assert ent_reg.async_get(entity_id).disabled_by is None
+
+
+async def test_grid_owns_import_export_and_compensation_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """Import/export power and export compensation live on the grid device,
+    and the combined export-compensation sensors are gone from the hub."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=FULL_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), make_pv_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    entries = get_entry_entities(hass, entry)
+    uids = {e.unique_id for e in entries if e.unique_id}
+    grid = f"{entry.entry_id}_{GRID_SUB_ID}"
+
+    assert f"{grid}_import_power" in uids
+    assert f"{grid}_export_power" in uids
+    assert f"{grid}_export_compensation_rate" in uids
+    assert f"{grid}_total_export_compensation" in uids
+
+    # Export compensation no longer exists at the combined/hub level.
+    assert f"{entry.entry_id}_combined_export_compensation_rate" not in uids
+    assert f"{entry.entry_id}_combined_total_export_compensation" not in uids
 
 
 # ---------------------------------------------------------------------------

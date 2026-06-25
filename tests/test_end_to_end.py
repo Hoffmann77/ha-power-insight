@@ -84,12 +84,16 @@ async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         title="My PowerInsight",
         options={
-            "calculate_instantaneous_rates": [
-                "calculate_cost_rates",
-                "calculate_levelized_cost_rates",
-            ],
-            "calculate_instantaneous_saving_rates": [],
-            "calculate_accumulated_entities": [],
+            "schema": 2,
+            "scopes": {
+                "combined": [
+                    "calculate_cost_rates", "calculate_levelized_cost_rates",
+                ],
+                "grid": ["calculate_cost_rates"],
+                "pv_system": [
+                    "calculate_cost_rates", "calculate_levelized_cost_rates",
+                ],
+            },
         },
         subentries_data=[_grid_with_price(), pv],
     )
@@ -129,9 +133,10 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         title="My PowerInsight",
         options={
-            "calculate_instantaneous_rates": ["calculate_cost_rates"],
-            "calculate_instantaneous_saving_rates": [],
-            "calculate_accumulated_entities": ["accumulate_cost_rates"],
+            "schema": 2,
+            "scopes": {
+                "grid": ["calculate_cost_rates", "accumulate_cost_rates"],
+            },
         },
         subentries_data=[_grid_with_price(), make_pv_subentry_data()],
     )
@@ -168,9 +173,11 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
         domain=DOMAIN,
         title="My PowerInsight",
         options={
-            "calculate_instantaneous_rates": [],
-            "calculate_instantaneous_saving_rates": [],
-            "calculate_accumulated_entities": ["accumulate_levelized_cost_rates"],
+            "schema": 2,
+            "scopes": {
+                "combined": ["accumulate_levelized_cost_rates"],
+                "pv_system": ["accumulate_levelized_cost_rates"],
+            },
         },
         subentries_data=[_grid_with_price(), make_pv_subentry_data()],
     )
