@@ -426,26 +426,42 @@ OPTION_CATEGORIES: tuple[OptionCategory, ...] = (
     OptionCategory(
         "distribution_power", ((CONF_ENABLE_DISTRIBUTION_POWER, ""),), toggle=True
     ),
-    OptionCategory("cost_rates", (
-        (CONF_CALCULATE_COST_RATES, "Cost"),
-        (CONF_CALCULATE_LEVELIZED_COST_RATES, "Levelized cost"),
-    )),
-    OptionCategory("cost_savings_rates", (
-        (CONF_CALCULATE_COST_SAVING_RATES, "Cost savings"),
-        (CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES, "Levelized cost savings"),
-    )),
-    OptionCategory("export_compensation", (
-        (CONF_ENABLE_EXPORT_COMPENSATION_RATE, "Rate"),
-        (CONF_ACCUMULATE_EXPORT_COMPENSATION, "Accumulated total"),
-    )),
-    OptionCategory("accumulated_costs", (
-        (CONF_ACCUMULATE_COST_RATES, "Cost"),
-        (CONF_ACCUMULATE_LEVELIZED_COST_RATES, "Levelized cost"),
-    )),
-    OptionCategory("accumulated_cost_savings", (
-        (CONF_ACCUMULATE_COST_SAVING_RATES, "Cost savings"),
-        (CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES, "Levelized cost savings"),
-    )),
+    OptionCategory(
+        "cost_rate", ((CONF_CALCULATE_COST_RATES, ""),), toggle=True
+    ),
+    OptionCategory(
+        "levelized_cost_rate", ((CONF_CALCULATE_LEVELIZED_COST_RATES, ""),), toggle=True
+    ),
+    OptionCategory(
+        "cost_savings_rate", ((CONF_CALCULATE_COST_SAVING_RATES, ""),), toggle=True
+    ),
+    OptionCategory(
+        "levelized_cost_savings_rate",
+        ((CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES, ""),), toggle=True,
+    ),
+    OptionCategory(
+        "export_compensation_rate",
+        ((CONF_ENABLE_EXPORT_COMPENSATION_RATE, ""),), toggle=True,
+    ),
+    OptionCategory(
+        "export_compensation_total",
+        ((CONF_ACCUMULATE_EXPORT_COMPENSATION, ""),), toggle=True,
+    ),
+    OptionCategory(
+        "accumulated_cost", ((CONF_ACCUMULATE_COST_RATES, ""),), toggle=True
+    ),
+    OptionCategory(
+        "accumulated_levelized_cost",
+        ((CONF_ACCUMULATE_LEVELIZED_COST_RATES, ""),), toggle=True,
+    ),
+    OptionCategory(
+        "accumulated_cost_savings",
+        ((CONF_ACCUMULATE_COST_SAVING_RATES, ""),), toggle=True,
+    ),
+    OptionCategory(
+        "accumulated_levelized_cost_savings",
+        ((CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES, ""),), toggle=True,
+    ),
     OptionCategory(
         "distribution_ratios", ((CONF_ENABLE_DISTRIBUTION_RATIOS, ""),), toggle=True
     ),
@@ -1512,12 +1528,12 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 class PowerInsightOptionsFlow(OptionsFlow):
     """Single-form options flow.
 
-    Every option is shown on one screen, grouped into collapsible sections — the
-    whole-home (combined) scope, one section per configured device type, and a
-    diagnostics section — with a single Submit button. Each section offers only
-    the categories its scope supports. Submitting validates that the selection
-    does not require data a device has not provided yet (otherwise the form is
-    re-shown with an error), then saves everything in one reload.
+    Every option is shown on one screen. The combined scope's toggles sit at the
+    top level of the form; each configured device type gets its own collapsible
+    section, followed by a diagnostics section, with a single Submit button. Each
+    scope offers only the categories it supports. Submitting validates that the
+    selection does not require data a device has not provided yet (otherwise the
+    form is re-shown with an error), then saves everything in one reload.
     """
 
     def _shown_scopes(self) -> list[str]:
@@ -1533,9 +1549,20 @@ class PowerInsightOptionsFlow(OptionsFlow):
     def _build_schema(
         self, scopes: dict[str, set[str]], debug: bool
     ) -> vol.Schema:
-        """Build the one-screen schema: a section per scope + diagnostics."""
+        """Build the one-screen schema.
+
+        The combined scope's toggles are placed at the top level (no section);
+        every device-type scope gets its own section, plus diagnostics.
+        """
         fields: dict = {}
+        # Combined options at the top level, not nested in a section.
+        combined_schema = build_scope_schema(
+            SCOPE_COMBINED, scopes.get(SCOPE_COMBINED, set())
+        )
+        fields.update(combined_schema.schema)
         for scope in self._shown_scopes():
+            if scope == SCOPE_COMBINED:
+                continue
             fields[vol.Required(scope)] = section(
                 build_scope_schema(scope, scopes.get(scope, set())),
                 {"collapsed": False},
@@ -1557,10 +1584,16 @@ class PowerInsightOptionsFlow(OptionsFlow):
         stored = self.config_entry.options.get("scopes", {})
 
         if user_input is not None:
-            # Section fields arrive nested under their section key.
+            # Combined toggles arrive at the top level; device-type sections
+            # arrive nested under their section key.
             selected = {
                 scope: set(
-                    collect_scope_selection(scope, user_input.get(scope, {}))
+                    collect_scope_selection(
+                        scope,
+                        user_input
+                        if scope == SCOPE_COMBINED
+                        else user_input.get(scope, {}),
+                    )
                 )
                 for scope in self._shown_scopes()
             }

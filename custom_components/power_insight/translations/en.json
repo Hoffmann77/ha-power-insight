@@ -24,112 +24,80 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Choose which sensors Power Insight should create. Each section covers one device type and offers only the sensors that type supports.\n\nTwo terms are used below:\n• **Ratio** — how a single device's own power splits up (e.g. how much of this PV system's output is exported vs. used at home).\n• **Share** — a device's slice of a whole-home total (e.g. how much of all exported power comes from this device).\n\n'Levelized' sensors add the device's purchase and installation cost (spread over its lifetime) on top of its running cost.\n\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
+        "data": {
+          "distribution_power": "Power distribution (W)",
+          "cost_rate": "Cost rate (per hour)",
+          "levelized_cost_rate": "Levelized cost rate (per hour)",
+          "cost_savings_rate": "Cost savings rate (per hour)",
+          "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
+          "accumulated_cost": "Accumulated cost",
+          "accumulated_levelized_cost": "Accumulated levelized cost",
+          "accumulated_cost_savings": "Accumulated cost savings",
+          "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
+          "distribution_ratios": "Power distribution ratios"
+        },
         "sections": {
-          "combined": {
-            "name": "Whole-home (combined)",
-            "data": {
-              "distribution_power": "Power distribution (W)",
-              "cost_rates": "Cost rates (per hour)",
-              "cost_savings_rates": "Cost savings rates (per hour)",
-              "accumulated_costs": "Accumulated costs",
-              "accumulated_cost_savings": "Accumulated cost savings",
-              "distribution_ratios": "Power distribution ratios"
-            },
-            "data_description": {
-              "distribution_power": "Power in watts for each part of your home's energy flow: self-consumption, battery charging and standby.",
-              "cost_rates": "Current operating cost of your whole energy mix (per hour). The levelized version also spreads in your devices' lifetime purchase and installation cost.",
-              "cost_savings_rates": "Current savings (per hour) from using your own generation instead of importing from the grid. The levelized version also accounts for your devices' lifetime cost.",
-              "accumulated_costs": "Running total of operating cost over time. The levelized version also includes lifetime device cost.",
-              "accumulated_cost_savings": "Running total of savings over time. The levelized version also accounts for lifetime device cost.",
-              "distribution_ratios": "How your home's total power splits across export, self-consumption, charging and standby, as percentages."
-            }
-          },
           "grid": {
             "name": "Grid",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rates": "Cost rates (per hour)",
-              "accumulated_costs": "Accumulated costs",
-              "export_compensation": "Export compensation",
+              "cost_rate": "Cost rate (per hour)",
+              "accumulated_cost": "Accumulated cost",
+              "export_compensation_rate": "Export compensation rate (per hour)",
+              "export_compensation_total": "Accumulated export compensation",
               "distribution_ratios": "Power distribution ratios",
               "distribution_shares": "Power distribution shares"
-            },
-            "data_description": {
-              "distribution_power": "Power in watts currently imported from and exported to the grid.",
-              "cost_rates": "Current cost of the electricity you import from the grid (per hour).",
-              "accumulated_costs": "Running total of your grid import cost over time.",
-              "export_compensation": "Money you earn for power fed into the grid: the current rate (per hour) and/or the running total.",
-              "distribution_ratios": "What percentage of your home's consumption is currently covered by the grid.",
-              "distribution_shares": "The grid's share of your home's total consumption."
             }
           },
           "pv_system": {
             "name": "PV systems",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rates": "Cost rates (per hour)",
-              "cost_savings_rates": "Cost savings rates (per hour)",
-              "export_compensation": "Export compensation",
-              "accumulated_costs": "Accumulated costs",
+              "cost_rate": "Cost rate (per hour)",
+              "levelized_cost_rate": "Levelized cost rate (per hour)",
+              "cost_savings_rate": "Cost savings rate (per hour)",
+              "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
+              "export_compensation_rate": "Export compensation rate (per hour)",
+              "export_compensation_total": "Accumulated export compensation",
+              "accumulated_cost": "Accumulated cost",
+              "accumulated_levelized_cost": "Accumulated levelized cost",
               "accumulated_cost_savings": "Accumulated cost savings",
+              "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
               "distribution_ratios": "Power distribution ratios",
               "distribution_shares": "Power distribution shares"
-            },
-            "data_description": {
-              "distribution_power": "Power in watts this PV system exports to the grid and supplies to your home (self-consumption).",
-              "cost_rates": "Operating cost of running this PV system (per hour), e.g. its night-time standby draw. The levelized version also includes the system's lifetime purchase and installation cost.",
-              "cost_savings_rates": "Savings (per hour) from using this PV system's power instead of importing from the grid. The levelized version also accounts for the system's lifetime cost.",
-              "export_compensation": "Money you earn for this system's power fed into the grid: the current rate (per hour) and/or the running total.",
-              "accumulated_costs": "Running total of this system's operating cost over time. The levelized version also includes its lifetime cost.",
-              "accumulated_cost_savings": "Running total of this system's savings over time. The levelized version also accounts for its lifetime cost.",
-              "distribution_ratios": "How this system's own output splits between export and self-consumption, as percentages.",
-              "distribution_shares": "This system's share of the whole-home totals — e.g. how much of all exported and self-consumed power comes from it."
             }
           },
           "battery": {
             "name": "Batteries",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rates": "Cost rates (per hour)",
-              "cost_savings_rates": "Cost savings rates (per hour)",
-              "export_compensation": "Export compensation",
-              "accumulated_costs": "Accumulated costs",
+              "cost_rate": "Cost rate (per hour)",
+              "levelized_cost_rate": "Levelized cost rate (per hour)",
+              "cost_savings_rate": "Cost savings rate (per hour)",
+              "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
+              "export_compensation_rate": "Export compensation rate (per hour)",
+              "export_compensation_total": "Accumulated export compensation",
+              "accumulated_cost": "Accumulated cost",
+              "accumulated_levelized_cost": "Accumulated levelized cost",
               "accumulated_cost_savings": "Accumulated cost savings",
+              "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
               "distribution_ratios": "Power distribution ratios",
               "distribution_shares": "Power distribution shares",
               "charging_source_shares": "Charging source shares"
-            },
-            "data_description": {
-              "distribution_power": "Power in watts this battery exports to the grid and supplies to your home (self-consumption).",
-              "cost_rates": "Operating cost of running this battery (per hour), mainly the energy used while charging. The levelized version also includes the battery's lifetime purchase and installation cost.",
-              "cost_savings_rates": "Savings (per hour) from using this battery's power instead of importing from the grid. The levelized version also accounts for the battery's lifetime cost.",
-              "export_compensation": "Money you earn for this battery's power fed into the grid: the current rate (per hour) and/or the running total.",
-              "accumulated_costs": "Running total of this battery's operating cost over time. The levelized version also includes its lifetime cost.",
-              "accumulated_cost_savings": "Running total of this battery's savings over time. The levelized version also accounts for its lifetime cost.",
-              "distribution_ratios": "How this battery's own output splits between export and self-consumption, as percentages.",
-              "distribution_shares": "This battery's share of the whole-home totals — e.g. how much of all exported and self-consumed power comes from it.",
-              "charging_source_shares": "For each charging source you selected, the percentage of this battery's charging that came from it (e.g. grid vs. PV)."
             }
           },
           "consumer": {
             "name": "Consumers",
             "data": {
-              "cost_rates": "Cost rates (per hour)",
+              "cost_rate": "Cost rate (per hour)",
+              "levelized_cost_rate": "Levelized cost rate (per hour)",
               "power_source_shares": "Power source shares"
-            },
-            "data_description": {
-              "cost_rates": "Cost of the electricity this consumer uses (per hour). The levelized version values self-generated power at its production cost instead of the grid price.",
-              "power_source_shares": "The percentage of this consumer's power coming from each source (grid, PV, battery)."
             }
           },
           "diagnostics": {
             "name": "Diagnostics",
             "data": {
               "debug_power_entities": "Enable debug power entities"
-            },
-            "data_description": {
-              "debug_power_entities": "Expose the raw power values used by the internal calculations as extra sensors. Useful for troubleshooting."
             }
           }
         }

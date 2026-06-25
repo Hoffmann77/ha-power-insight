@@ -244,14 +244,17 @@ async def test_options_form_submit_reloads_and_applies(
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "combined": {
-                "distribution_power": True,
-                "distribution_ratios": False,  # drop ratios → export ratio off
-                "cost_rates": [],
-                "cost_savings_rates": [],
-                "accumulated_costs": [],
-                "accumulated_cost_savings": [],
-            },
+            # Combined toggles live at the top level.
+            "distribution_power": True,
+            "distribution_ratios": False,  # drop ratios → export ratio off
+            "cost_rate": False,
+            "levelized_cost_rate": False,
+            "cost_savings_rate": False,
+            "levelized_cost_savings_rate": False,
+            "accumulated_cost": False,
+            "accumulated_levelized_cost": False,
+            "accumulated_cost_savings": False,
+            "accumulated_levelized_cost_savings": False,
             "grid": {},
             "diagnostics": {"debug_power_entities": False},
         },
