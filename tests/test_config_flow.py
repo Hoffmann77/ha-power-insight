@@ -305,17 +305,16 @@ async def test_options_flow_shows_menu(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] == FlowResultType.MENU
     assert result["step_id"] == "init"
-    # Combined + grid (present) + diagnostics + save; no pv/battery/consumer.
+    # Combined + grid (present) + diagnostics; no pv/battery/consumer, no save.
     assert "combined" in result["menu_options"]
     assert "grid" in result["menu_options"]
-    assert "save" in result["menu_options"]
+    assert "diagnostics" in result["menu_options"]
+    assert "save" not in result["menu_options"]
     assert "battery" not in result["menu_options"]
 
 
-async def test_options_flow_edits_grid_scope_and_saves(
-    hass: HomeAssistant,
-) -> None:
-    """Editing the grid scope then saving persists the per-scope selection."""
+async def test_options_flow_submit_saves_immediately(hass: HomeAssistant) -> None:
+    """Submitting a section persists straight away — no separate save step."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -325,14 +324,43 @@ async def test_options_flow_edits_grid_scope_and_saves(
     entry.add_to_hass(hass)
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    # Open the grid section from the menu.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"next_step_id": "combined"}
+    )
+    assert result["step_id"] == "combined"
+    # Only distribution sensors → no data requirements → saves directly.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            "cost_rates": [],
+            "cost_savings_rates": [],
+            "accumulated_costs": [],
+            "accumulated_cost_savings": [],
+            "distribution_power": True,
+            "distribution_ratios": False,
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert entry.options["scopes"]["combined"] == ["enable_distribution_power"]
+
+
+async def test_options_flow_warns_then_saves_under_configured(
+    hass: HomeAssistant,
+) -> None:
+    """Enabling a cost rate with no price entity warns, then saves on confirm."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={"next_step_id": "grid"}
     )
-    assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "grid"
-
-    # Enable the grid cost rate; turn distribution off.
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
@@ -344,19 +372,12 @@ async def test_options_flow_edits_grid_scope_and_saves(
             "distribution_shares": False,
         },
     )
-    # Back at the menu; now save.
-    assert result["type"] == FlowResultType.MENU
-    result = await hass.config_entries.options.async_configure(
-        result["flow_id"], user_input={"next_step_id": "save"}
-    )
-    # Grid has no price entity, so enabling a cost rate warns; confirm to apply.
+    # Grid has no price entity → confirm step (save anyway).
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "save"
+    assert result["step_id"] == "confirm"
     assert result["errors"]["base"] == "reconfigure_adapters_first"
     result = await hass.config_entries.options.async_configure(
         result["flow_id"], user_input={}
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
-
     assert entry.options["scopes"]["grid"] == ["calculate_cost_rates"]
-    assert entry.options["schema"] == 2
