@@ -312,24 +312,28 @@ disables/re‑enables based on the resolved "wanted" set.
 
 ## 8. Options flow (`config_flow.py`)
 
-Menu‑driven; accumulate into `self._data`; finish on an explicit Save.
+**Single form**, with one collapsible **section** per shown scope plus a
+diagnostics section, and one Submit button (HA `data_entry_flow.section`).
 
 ```
-async_step_init → async_show_menu:
-   • combined        (always)
-   • grid            (if grid subentry exists)
-   • pv_system       (if ≥1 PV)
-   • battery         (if ≥1 battery)
-   • consumer        (if ≥1 consumer)
-   • diagnostics     (always)
-   • save            → feasibility check → async_create_entry(data=self._data)
+async_step_init → async_show_form(step_id="init", schema = {
+   section("combined")     (always)
+   section("grid")         (if grid subentry exists)
+   section("pv_system")    (if ≥1 PV)
+   section("battery")      (if ≥1 battery)
+   section("consumer")     (if ≥1 consumer)
+   section("diagnostics")  (always; debug toggle)
+})
+on submit → feasibility check
+            → ok:       async_create_entry(data=new_options)   # one reload
+            → problems: re-show the form with errors["base"] = reconfigure_adapters_first
 ```
 
-Each `async_step_<scope>` renders the categories from
-`SCOPE_SUPPORTED_OPTIONS[scope]`, pre‑filled from the scope's stored list, and on
-submit writes that scope's list, then returns to the menu
-(`return await self.async_step_init()`). The three multi‑select selectors gain a
-small factory that filters their option list to a scope's supported leaves.
+Each section's schema is `build_scope_schema(scope, current)` (categories from
+`SCOPE_SUPPORTED_OPTIONS[scope]`, pre‑filled). Section fields arrive nested under
+the section key; `collect_scope_selection` turns each back into a leaf list.
+Scopes whose device type is absent keep their stored value. The under‑configured
+case **blocks** (re‑shows the form with an error) rather than saving.
 
 No "use default selection" toggle; each scope is edited directly and
 independently.
