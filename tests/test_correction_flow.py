@@ -177,19 +177,14 @@ async def test_combined_ledger_sensor_includes_retired_totals(
     hass: HomeAssistant,
 ) -> None:
     """The combined derived sensor adds the frozen retired-adapter totals."""
-    from custom_components.power_insight.const import (
-        CONF_CALCULATE_ACCUMULATED_ENTITIES,
-        CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-        CONF_RETIRED_ADAPTERS,
-    )
+    from custom_components.power_insight.const import CONF_RETIRED_ADAPTERS
 
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
         options={
-            CONF_CALCULATE_ACCUMULATED_ENTITIES: [
-                CONF_ACCUMULATE_LEVELIZED_COST_RATES
-            ],
+            "schema": 2,
+            "scopes": {"combined": ["accumulate_levelized_cost_rates"]},
         },
         data={
             CONF_RETIRED_ADAPTERS: [

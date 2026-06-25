@@ -165,10 +165,16 @@ async def test_disabling_option_disables_entity_but_keeps_it(
     assert entity_id is not None
     assert ent_reg.async_get(entity_id).disabled_by is None
 
-    # Turn power shares off → the entity is kept but disabled by the integration.
+    def _with_combined(leaves: list[str]) -> dict:
+        opts = {**mock_config_entry.options}
+        opts["scopes"] = {**opts["scopes"], "combined": leaves}
+        return opts
+
+    # Drop distribution ratios from the combined scope → the entity is kept
+    # but disabled by the integration.
     hass.config_entries.async_update_entry(
         mock_config_entry,
-        options={**mock_config_entry.options, "enable_power_shares": False},
+        options=_with_combined(["enable_distribution_power"]),
     )
     await hass.async_block_till_done()
 
@@ -176,10 +182,12 @@ async def test_disabling_option_disables_entity_but_keeps_it(
     assert reg_entry is not None, "entity should be kept, not deleted"
     assert reg_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
-    # Turn it back on → the integration re-enables the entity.
+    # Re-enable → the integration re-enables the entity.
     hass.config_entries.async_update_entry(
         mock_config_entry,
-        options={**mock_config_entry.options, "enable_power_shares": True},
+        options=_with_combined(
+            ["enable_distribution_power", "enable_distribution_ratios"]
+        ),
     )
     await hass.async_block_till_done()
 

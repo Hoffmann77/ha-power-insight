@@ -1,6 +1,21 @@
 # Options flow redesign — final spec
 
-Status: **approved design, not yet implemented**
+Status: **implemented** (step 1: grid import/export sensors; step 2: per-scope
+options flow, gating, migration).
+
+Refinements made during implementation (the code is the source of truth):
+- The single `enable_power_shares` toggle was split into the categories
+  **Power distribution (W)** (`enable_distribution_power`), **Power
+  distribution ratios** (`enable_distribution_ratios`), **Power distribution
+  shares** (`enable_distribution_shares`), **Charging source shares**
+  (`enable_charging_source_shares`, battery) and **Power source shares**
+  (`enable_power_source_shares`, consumer).
+- **Export compensation** became its own category
+  (`enable_export_compensation_rate`, `accumulate_export_compensation`), and the
+  accumulated category was split into **Accumulated costs** and **Accumulated
+  cost savings**.
+- The grid gained **Import power** alongside Export power.
+- The options flow is a **menu** with one step per scope (no defaults/inherit).
 
 This spec reorganises the integration's options so that *which sensors are
 created* is configured **per device type**, in human‑readable categories, from a
