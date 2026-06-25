@@ -1513,24 +1513,28 @@ class PowerInsightOptionsFlow(OptionsFlow):
     """Per-scope options flow.
 
     A menu offers the whole-home (combined) scope plus one section per
-    configured device type, then a diagnostics section and a save action. Each
-    section edits only the categories that scope supports. The working
-    selection is accumulated across steps and written on save.
+    configured device type, and a diagnostics section. Each section shows only
+    the categories its scope supports and is **saved immediately on submit** —
+    there is no separate save step, so "Submit" always persists. When the
+    submitted selection needs data a device has not provided yet, a confirm
+    step lets the user save anyway and reconfigure the device afterwards.
     """
 
     def __init__(self) -> None:
-        """Initialise the working selection lazily."""
-        self._scopes: dict[str, set[str]] | None = None
-        self._debug: bool = False
+        """Initialise the pending-confirm buffer."""
+        self._pending: dict | None = None
 
-    def _load(self) -> None:
-        """Load the working selection from the stored options once."""
-        if self._scopes is not None:
-            return
+    def _current_options(self) -> dict:
+        """Return a fresh, mutable copy of the stored options (v2 shape)."""
         options = self.config_entry.options
         stored = options.get("scopes", {})
-        self._scopes = {scope: set(stored.get(scope, [])) for scope in SCOPES}
-        self._debug = bool(options.get(CONF_ENABLE_DEBUG_ENTITIES, False))
+        return {
+            "schema": 2,
+            "scopes": {scope: list(stored.get(scope, [])) for scope in SCOPES},
+            CONF_ENABLE_DEBUG_ENTITIES: bool(
+                options.get(CONF_ENABLE_DEBUG_ENTITIES, False)
+            ),
+        }
 
     def _present_device_scopes(self) -> list[str]:
         """Return device-type scopes that have at least one subentry."""
@@ -1544,28 +1548,27 @@ class PowerInsightOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Show the section menu."""
-        self._load()
         return self.async_show_menu(
             step_id="init",
             menu_options=[
                 SCOPE_COMBINED,
                 *self._present_device_scopes(),
                 "diagnostics",
-                "save",
             ],
         )
 
     async def _async_scope_step(
         self, scope: str, user_input: dict[str, Any] | None
     ) -> FlowResult:
-        """Render / collect one scope's category selection."""
-        self._load()
+        """Render a scope's categories, saving the selection on submit."""
         if user_input is not None:
-            self._scopes[scope] = set(collect_scope_selection(scope, user_input))
-            return await self.async_step_init()
+            options = self._current_options()
+            options["scopes"][scope] = collect_scope_selection(scope, user_input)
+            return await self._save(options)
+        current = set(self.config_entry.options.get("scopes", {}).get(scope, []))
         return self.async_show_form(
             step_id=scope,
-            data_schema=build_scope_schema(scope, self._scopes[scope]),
+            data_schema=build_scope_schema(scope, current),
         )
 
     async def async_step_combined(self, user_input=None) -> FlowResult:
@@ -1589,42 +1592,37 @@ class PowerInsightOptionsFlow(OptionsFlow):
         return await self._async_scope_step("consumer", user_input)
 
     async def async_step_diagnostics(self, user_input=None) -> FlowResult:
-        """Edit the global diagnostics toggle."""
-        self._load()
+        """Edit the global diagnostics toggle, saving on submit."""
         if user_input is not None:
-            self._debug = bool(user_input.get(CONF_ENABLE_DEBUG_ENTITIES, False))
-            return await self.async_step_init()
+            options = self._current_options()
+            options[CONF_ENABLE_DEBUG_ENTITIES] = bool(
+                user_input.get(CONF_ENABLE_DEBUG_ENTITIES, False)
+            )
+            return await self._save(options)
+        debug = bool(self.config_entry.options.get(CONF_ENABLE_DEBUG_ENTITIES, False))
         return self.async_show_form(
             step_id="diagnostics",
             data_schema=vol.Schema({
-                vol.Required(
-                    CONF_ENABLE_DEBUG_ENTITIES, default=self._debug
-                ): BOOLEAN_SELECTOR,
+                vol.Required(CONF_ENABLE_DEBUG_ENTITIES, default=debug): BOOLEAN_SELECTOR,
             }),
         )
 
-    def _compose(self) -> dict:
-        """Build the options dict from the working selection."""
-        return {
-            "schema": 2,
-            "scopes": {scope: sorted(self._scopes[scope]) for scope in SCOPES},
-            CONF_ENABLE_DEBUG_ENTITIES: self._debug,
-        }
-
-    async def async_step_save(self, user_input=None) -> FlowResult:
-        """Validate against existing adapters and persist the options."""
-        self._load()
-        new_options = self._compose()
-        problems = check_options_feasibility(self.config_entry, new_options)
-        if problems and user_input is None:
-            # Some devices lack data the new options need. Warn, but let the
-            # user confirm (submit) to apply anyway, then reconfigure them.
+    async def _save(self, options: dict) -> FlowResult:
+        """Persist *options*, or warn first if a device is under-configured."""
+        problems = check_options_feasibility(self.config_entry, options)
+        if problems:
+            # Save anyway is allowed: the user confirms on the next form.
+            self._pending = options
             return self.async_show_form(
-                step_id="save",
+                step_id="confirm",
                 data_schema=vol.Schema({}),
                 errors={"base": "reconfigure_adapters_first"},
                 description_placeholders={
                     "adapters_needing_reconfigure": ", ".join(problems),
                 },
             )
-        return self.async_create_entry(title="", data=new_options)
+        return self.async_create_entry(title="", data=options)
+
+    async def async_step_confirm(self, user_input=None) -> FlowResult:
+        """Apply the pending selection after the under-configured warning."""
+        return self.async_create_entry(title="", data=self._pending)

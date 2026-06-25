@@ -16,6 +16,8 @@ Refinements made during implementation (the code is the source of truth):
   cost savings**.
 - The grid gained **Import power** alongside Export power.
 - The options flow is a **menu** with one step per scope (no defaults/inherit).
+- Each section is **saved immediately on submit** (no separate "save" step);
+  an under-configured selection routes through a confirm step ("save anyway").
 
 This spec reorganises the integration's options so that *which sensors are
 created* is configured **per device type**, in human‑readable categories, from a

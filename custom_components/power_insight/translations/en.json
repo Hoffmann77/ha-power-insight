@@ -30,15 +30,14 @@
     "step": {
       "init": {
         "title": "Options",
-        "description": "Choose a section to configure which sensors to create. Each device type shows only the options it supports.\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
+        "description": "Choose a section to configure which sensors to create. Each device type shows only the options it supports, and your choices are saved when you submit a section.\nChanges apply automatically — the integration reloads itself, so no Home Assistant restart is needed. Disabled sensors are hidden but keep their history and reappear when re-enabled.",
         "menu_options": {
           "combined": "Whole-home (combined)",
           "grid": "Grid",
           "pv_system": "PV systems",
           "battery": "Batteries",
           "consumer": "Consumers",
-          "diagnostics": "Diagnostics",
-          "save": "Save and apply"
+          "diagnostics": "Diagnostics"
         }
       },
       "combined": {
@@ -152,9 +151,9 @@
           "debug_power_entities": "Expose power values used by the internal calculations as additional sensors. Useful for troubleshooting."
         }
       },
-      "save": {
-        "title": "Save and apply",
-        "description": "Some devices are missing data required by your selection. You can save anyway and reconfigure them afterwards, or go back to adjust your choices."
+      "confirm": {
+        "title": "Some devices need configuring",
+        "description": "Your selection needs data that one or more devices have not provided yet. Submit to save anyway, then reconfigure those devices."
       }
     },
     "error": {
