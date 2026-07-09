@@ -227,7 +227,7 @@ async def test_grid_owns_import_export_and_compensation_sensors(
 async def test_options_form_submit_reloads_and_applies(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
-    """Submitting the single options form reloads the entry and applies it."""
+    """Completing the options flow reloads the entry and applies the changes."""
     hass.states.async_set(
         "sensor.grid_power", "0", {"unit_of_measurement": "W"}
     )
@@ -238,31 +238,47 @@ async def test_options_form_submit_reloads_and_applies(
     assert entity_id is not None
     assert ent_reg.async_get(entity_id).disabled_by is None
 
+    # Open options and pick custom to configure per-scope.
     result = await hass.config_entries.options.async_init(
         mock_config_entry.entry_id
     )
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
+        user_input={"preset": "custom", "debug_power_entities": False},
+    )
+    assert result["step_id"] == "combined"
+
+    # Combined: keep distribution_power but drop distribution_ratios.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
         user_input={
-            # Combined toggles live at the top level.
-            "distribution_power": True,
-            "distribution_ratios": False,  # drop ratios → export ratio off
-            "cost_rate": False,
-            "levelized_cost_rate": False,
-            "cost_savings_rate": False,
-            "levelized_cost_savings_rate": False,
-            "accumulated_cost": False,
-            "accumulated_levelized_cost": False,
-            "accumulated_cost_savings": False,
-            "accumulated_levelized_cost_savings": False,
-            "grid": {},
-            "diagnostics": {"debug_power_entities": False},
+            "power_sensors": {"distribution_power": True, "distribution_ratios": False},
+            "costs": {"cost_method": "none", "accumulate_costs": False},
+            "savings": {"savings_method": "none", "accumulate_savings": False},
+        },
+    )
+    assert result["step_id"] == "grid"
+
+    # Grid: nothing enabled.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_sensors": {
+                "distribution_power": False,
+                "distribution_ratios": False,
+                "distribution_shares": False,
+            },
+            "export_compensation": {
+                "export_compensation_rate": False,
+                "export_compensation_total": False,
+            },
+            "costs": {"cost_method": "none", "accumulate_costs": False},
         },
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
 
-    # The save reloaded the entry and applied the change.
+    # The save reloaded the entry; dropping distribution_ratios disabled the sensor.
     assert (
         ent_reg.async_get(entity_id).disabled_by
         is er.RegistryEntryDisabler.INTEGRATION

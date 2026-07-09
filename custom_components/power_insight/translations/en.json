@@ -10,6 +10,16 @@
         "data_description": {
           "name": "A name for this energy-mix configuration, for example \"Home\"."
         }
+      },
+      "preset": {
+        "title": "Choose sensors",
+        "description": "Pick a starting point for which sensors Power Insight creates. You can change this at any time in the integration's options.",
+        "data": {
+          "preset": "Sensor preset"
+        },
+        "data_description": {
+          "preset": "**Minimal** — power distribution and cost savings only.\n**Recommended** — adds distribution ratios, export compensation, and charging/power-source tracking.\n**Extended** — also adds real-time electricity cost rate sensors.\n**All** — also adds levelized cost sensors (requires lifetime values configured per device)."
+        }
       }
     },
     "error": {
@@ -24,80 +34,221 @@
     "step": {
       "init": {
         "title": "Options",
+        "description": "Choose a preset to apply the same sensor selection to all your devices, or choose **Custom** to configure each device type individually.",
         "data": {
-          "distribution_power": "Power distribution (W)",
-          "cost_rate": "Cost rate (per hour)",
-          "levelized_cost_rate": "Levelized cost rate (per hour)",
-          "cost_savings_rate": "Cost savings rate (per hour)",
-          "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
-          "accumulated_cost": "Accumulated cost",
-          "accumulated_levelized_cost": "Accumulated levelized cost",
-          "accumulated_cost_savings": "Accumulated cost savings",
-          "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
-          "distribution_ratios": "Power distribution ratios"
+          "preset": "Sensor preset",
+          "debug_power_entities": "Enable debug power entities"
         },
+        "data_description": {
+          "preset": "**Minimal** — power distribution and cost savings only.\n**Recommended** — adds distribution ratios, export compensation, and charging/power-source tracking.\n**Extended** — also adds real-time electricity cost rate sensors.\n**All** — also adds levelized cost sensors (requires lifetime values configured per device).\n**Custom** — configure each device type individually on the following pages."
+        }
+      },
+      "combined": {
+        "title": "Combined sensors",
+        "description": "Sensors that aggregate power and costs across your whole energy mix.",
         "sections": {
-          "grid": {
-            "name": "Grid",
+          "power_sensors": {
+            "name": "Power sensors",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rate": "Cost rate (per hour)",
-              "accumulated_cost": "Accumulated cost",
-              "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation",
-              "distribution_ratios": "Power distribution ratios",
-              "distribution_shares": "Power distribution shares"
+              "distribution_ratios": "Power distribution ratios (%)"
+            },
+            "data_description": {
+              "distribution_power": "Real-time power flow in Watts for each device in your energy mix.",
+              "distribution_ratios": "Each device's share of total power flow as a percentage."
             }
           },
-          "pv_system": {
-            "name": "PV systems",
+          "costs": {
+            "name": "Electricity costs",
+            "data": {
+              "cost_method": "Cost calculation method",
+              "accumulate_costs": "Accumulate costs"
+            },
+            "data_description": {
+              "cost_method": "**None** — no cost sensors. **Standard** — uses the live grid price per kWh. **Levelized** — uses each device's lifetime cost per kWh (LCOE). **Both** — creates sensors for each method.",
+              "accumulate_costs": "Also create sensors that track a running cost total (persists across restarts)."
+            }
+          },
+          "savings": {
+            "name": "Cost savings",
+            "data": {
+              "savings_method": "Savings calculation method",
+              "accumulate_savings": "Accumulate savings"
+            },
+            "data_description": {
+              "savings_method": "**None** — no savings sensors. **Standard** — compares against the live grid price. **Levelized** — compares against each device's LCOE. **Both** — creates sensors for each method.",
+              "accumulate_savings": "Also create sensors that track a running savings total (persists across restarts)."
+            }
+          }
+        }
+      },
+      "grid": {
+        "title": "Grid sensors",
+        "description": "Sensors for your grid connection.",
+        "sections": {
+          "power_sensors": {
+            "name": "Power sensors",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rate": "Cost rate (per hour)",
-              "levelized_cost_rate": "Levelized cost rate (per hour)",
-              "cost_savings_rate": "Cost savings rate (per hour)",
-              "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
-              "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation",
-              "accumulated_cost": "Accumulated cost",
-              "accumulated_levelized_cost": "Accumulated levelized cost",
-              "accumulated_cost_savings": "Accumulated cost savings",
-              "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
-              "distribution_ratios": "Power distribution ratios",
-              "distribution_shares": "Power distribution shares"
+              "distribution_ratios": "Power distribution ratios (%)",
+              "distribution_shares": "Power distribution shares (%)"
+            },
+            "data_description": {
+              "distribution_power": "Real-time grid import and export power in Watts.",
+              "distribution_ratios": "Grid import/export as a share of total home power flow.",
+              "distribution_shares": "Import and export each as a share of total grid throughput."
             }
           },
-          "battery": {
-            "name": "Batteries",
+          "export_compensation": {
+            "name": "Export compensation",
+            "data": {
+              "export_compensation_rate": "Export compensation rate (per hour)",
+              "export_compensation_total": "Accumulated export compensation"
+            },
+            "data_description": {
+              "export_compensation_rate": "Monetary value earned from power exported to the grid, calculated in real time.",
+              "export_compensation_total": "Running total of compensation earned from grid exports (persists across restarts)."
+            }
+          },
+          "costs": {
+            "name": "Electricity costs",
+            "data": {
+              "cost_method": "Cost calculation method",
+              "accumulate_costs": "Accumulate costs"
+            },
+            "data_description": {
+              "cost_method": "**None** — no cost sensors. **Standard** — uses the live grid import price per kWh. Grid cost is always standard (no levelized option for the grid).",
+              "accumulate_costs": "Also create a sensor that tracks a running import cost total (persists across restarts)."
+            }
+          }
+        }
+      },
+      "pv_system": {
+        "title": "PV system sensors",
+        "description": "Sensors for your PV systems.",
+        "sections": {
+          "power_sensors": {
+            "name": "Power sensors",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "cost_rate": "Cost rate (per hour)",
-              "levelized_cost_rate": "Levelized cost rate (per hour)",
-              "cost_savings_rate": "Cost savings rate (per hour)",
-              "levelized_cost_savings_rate": "Levelized cost savings rate (per hour)",
+              "distribution_ratios": "Power distribution ratios (%)",
+              "distribution_shares": "Power distribution shares (%)"
+            },
+            "data_description": {
+              "distribution_power": "Real-time production and self-consumption power in Watts.",
+              "distribution_ratios": "PV output as a share of total home power flow.",
+              "distribution_shares": "Self-consumed and exported power each as a share of total PV production."
+            }
+          },
+          "export_compensation": {
+            "name": "Export compensation",
+            "data": {
               "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation",
-              "accumulated_cost": "Accumulated cost",
-              "accumulated_levelized_cost": "Accumulated levelized cost",
-              "accumulated_cost_savings": "Accumulated cost savings",
-              "accumulated_levelized_cost_savings": "Accumulated levelized cost savings",
-              "distribution_ratios": "Power distribution ratios",
-              "distribution_shares": "Power distribution shares",
-              "charging_source_shares": "Charging source shares"
+              "export_compensation_total": "Accumulated export compensation"
+            },
+            "data_description": {
+              "export_compensation_rate": "Monetary value earned from PV power exported to the grid, calculated in real time.",
+              "export_compensation_total": "Running total of compensation earned from PV exports (persists across restarts)."
             }
           },
-          "consumer": {
-            "name": "Consumers",
+          "costs": {
+            "name": "Electricity costs",
             "data": {
-              "cost_rate": "Cost rate (per hour)",
-              "levelized_cost_rate": "Levelized cost rate (per hour)",
-              "power_source_shares": "Power source shares"
+              "cost_method": "Cost calculation method",
+              "accumulate_costs": "Accumulate costs"
+            },
+            "data_description": {
+              "cost_method": "**None** — no cost sensors. **Standard** — uses the live grid price. **Levelized** — uses the system's lifetime cost per kWh (LCOE). **Both** — creates sensors for each method.",
+              "accumulate_costs": "Also create sensors that track a running cost total (persists across restarts)."
             }
           },
-          "diagnostics": {
-            "name": "Diagnostics",
+          "savings": {
+            "name": "Cost savings",
             "data": {
-              "debug_power_entities": "Enable debug power entities"
+              "savings_method": "Savings calculation method",
+              "accumulate_savings": "Accumulate savings"
+            },
+            "data_description": {
+              "savings_method": "**None** — no savings sensors. **Standard** — compares against the live grid price. **Levelized** — compares against the system's LCOE. **Both** — creates sensors for each method.",
+              "accumulate_savings": "Also create sensors that track a running savings total (persists across restarts)."
+            }
+          }
+        }
+      },
+      "battery": {
+        "title": "Battery sensors",
+        "description": "Sensors for your batteries.",
+        "sections": {
+          "power_sensors": {
+            "name": "Power sensors",
+            "data": {
+              "distribution_power": "Power distribution (W)",
+              "distribution_ratios": "Power distribution ratios (%)",
+              "distribution_shares": "Power distribution shares (%)",
+              "charging_source_shares": "Charging source shares (%)"
+            },
+            "data_description": {
+              "distribution_power": "Real-time charge and discharge power in Watts.",
+              "distribution_ratios": "Battery charge/discharge as a share of total home power flow.",
+              "distribution_shares": "Charge and discharge each as a share of total battery throughput.",
+              "charging_source_shares": "How much each source (grid, PV) contributed to charging the battery."
+            }
+          },
+          "export_compensation": {
+            "name": "Export compensation",
+            "data": {
+              "export_compensation_rate": "Export compensation rate (per hour)",
+              "export_compensation_total": "Accumulated export compensation"
+            },
+            "data_description": {
+              "export_compensation_rate": "Monetary value earned from battery power exported to the grid, calculated in real time.",
+              "export_compensation_total": "Running total of compensation earned from battery exports (persists across restarts)."
+            }
+          },
+          "costs": {
+            "name": "Electricity costs",
+            "data": {
+              "cost_method": "Cost calculation method",
+              "accumulate_costs": "Accumulate costs"
+            },
+            "data_description": {
+              "cost_method": "**None** — no cost sensors. **Standard** — uses the live grid price. **Levelized** — uses the battery's lifetime cost per kWh (LCOS). **Both** — creates sensors for each method.",
+              "accumulate_costs": "Also create sensors that track a running cost total (persists across restarts)."
+            }
+          },
+          "savings": {
+            "name": "Cost savings",
+            "data": {
+              "savings_method": "Savings calculation method",
+              "accumulate_savings": "Accumulate savings"
+            },
+            "data_description": {
+              "savings_method": "**None** — no savings sensors. **Standard** — compares against the live grid price. **Levelized** — compares against the battery's LCOS. **Both** — creates sensors for each method.",
+              "accumulate_savings": "Also create sensors that track a running savings total (persists across restarts)."
+            }
+          }
+        }
+      },
+      "consumer": {
+        "title": "Consumer sensors",
+        "description": "Sensors for your electrical consumers.",
+        "sections": {
+          "power_sensors": {
+            "name": "Power source tracking",
+            "data": {
+              "power_source_shares": "Power source shares (%)"
+            },
+            "data_description": {
+              "power_source_shares": "How much of this consumer's power came from each source (grid, PV, battery)."
+            }
+          },
+          "costs": {
+            "name": "Electricity costs",
+            "data": {
+              "cost_method": "Cost calculation method"
+            },
+            "data_description": {
+              "cost_method": "**None** — no cost sensors. **Standard** — uses the live grid price. **Levelized** — uses the device's lifetime cost per kWh (LCOE). **Both** — creates sensors for each method."
             }
           }
         }

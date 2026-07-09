@@ -39,7 +39,7 @@ async def test_user_step_empty_name_returns_error(hass: HomeAssistant) -> None:
 
 
 async def test_user_step_creates_entry(hass: HomeAssistant) -> None:
-    """The initial step collects only the name and seeds the default options."""
+    """Name step advances to preset step; completing both creates the entry."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": "user"}
     )
@@ -47,15 +47,23 @@ async def test_user_step_creates_entry(hass: HomeAssistant) -> None:
         result["flow_id"],
         user_input={"name": "Test PowerInsight"},
     )
+    # Name step should advance to the preset step, not create the entry yet.
+    assert result["type"] == FlowResultType.FORM
+    assert result["step_id"] == "preset"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input={"preset": "recommended"},
+    )
     assert result["type"] == FlowResultType.CREATE_ENTRY
     assert result["title"] == "Test PowerInsight"
-    # Fresh installs seed the per-scope schema with sensible defaults.
+    # Recommended preset seeds sensible per-scope defaults.
     options = result["options"]
     assert options["schema"] == 2
     combined = options["scopes"]["combined"]
     assert "calculate_cost_saving_rates" in combined
     assert "enable_distribution_power" in combined
-    # Grid has no savings sensors, so it only gets its supported defaults.
+    # Grid has no savings sensors, so they are absent from its scope.
     assert "calculate_cost_saving_rates" not in options["scopes"]["grid"]
 
 
@@ -293,7 +301,7 @@ async def test_subentry_pv_creates_subentry(hass: HomeAssistant) -> None:
 
 
 async def test_options_flow_shows_single_form(hass: HomeAssistant) -> None:
-    """The options flow is one form (sections), not a menu."""
+    """The options flow init shows a preset selector and debug toggle."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -305,17 +313,17 @@ async def test_options_flow_shows_single_form(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
-    # Combined toggles sit at the top level (no section); device-type scopes and
-    # diagnostics are sections.
     keys = {str(getattr(k, "schema", k)) for k in result["data_schema"].schema}
-    assert {"grid", "diagnostics"} <= keys
-    assert "distribution_power" in keys  # a combined toggle at the top level
-    assert "combined" not in keys  # combined is no longer a section
-    assert "battery" not in keys  # no battery subentry
+    assert "preset" in keys
+    assert "debug_power_entities" in keys
+    # Old section keys must not appear in the simplified init form.
+    assert "grid" not in keys
+    assert "diagnostics" not in keys
+    assert "distribution_power" not in keys
 
 
 async def test_options_flow_submit_saves_everything(hass: HomeAssistant) -> None:
-    """A single submit persists all sections at once."""
+    """Choosing a non-custom preset on the init step saves immediately."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -327,29 +335,18 @@ async def test_options_flow_submit_saves_everything(hass: HomeAssistant) -> None
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        user_input={
-            # Combined toggles live at the top level.
-            "distribution_power": True,
-            "distribution_ratios": False,
-            "cost_rate": False,
-            "levelized_cost_rate": False,
-            "cost_savings_rate": False,
-            "levelized_cost_savings_rate": False,
-            "accumulated_cost": False,
-            "accumulated_levelized_cost": False,
-            "accumulated_cost_savings": False,
-            "accumulated_levelized_cost_savings": False,
-            "grid": {},  # keep current grid defaults
-            "diagnostics": {"debug_power_entities": True},
-        },
+        user_input={"preset": "minimal", "debug_power_entities": True},
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    assert entry.options["scopes"]["combined"] == ["enable_distribution_power"]
+    # Minimal preset: distribution_power + cost_saving_rates + accumulate_cost_saving_rates.
+    combined = entry.options["scopes"]["combined"]
+    assert "enable_distribution_power" in combined
+    assert "calculate_cost_saving_rates" in combined
     assert entry.options["debug_power_entities"] is True
 
 
 async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None:
-    """Enabling a cost rate with no price entity re-shows the form with an error."""
+    """Enabling a cost rate when no price entity is set re-shows the last scope with an error."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -358,23 +355,42 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
     )
     entry.add_to_hass(hass)
 
+    # Start custom flow.
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
+        user_input={"preset": "custom", "debug_power_entities": False},
+    )
+    assert result["step_id"] == "combined"
+
+    # Combined: nothing enabled.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
         user_input={
-            "grid": {
-                "cost_rate": True,
+            "power_sensors": {"distribution_power": False, "distribution_ratios": False},
+            "costs": {"cost_method": "none", "accumulate_costs": False},
+            "savings": {"savings_method": "none", "accumulate_savings": False},
+        },
+    )
+    assert result["step_id"] == "grid"
+
+    # Grid: enable cost — but the grid adapter has no price entity.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_sensors": {
                 "distribution_power": False,
                 "distribution_ratios": False,
                 "distribution_shares": False,
-                "accumulated_cost": False,
+            },
+            "export_compensation": {
                 "export_compensation_rate": False,
                 "export_compensation_total": False,
             },
-            "diagnostics": {"debug_power_entities": False},
+            "costs": {"cost_method": "standard", "accumulate_costs": False},
         },
     )
-    # Grid has no price entity → blocked, form re-shown with an error.
+    # Grid has no price entity → blocked; last scope form re-shown with an error.
     assert result["type"] == FlowResultType.FORM
-    assert result["step_id"] == "init"
+    assert result["step_id"] == "grid"
     assert result["errors"]["base"] == "reconfigure_adapters_first"
