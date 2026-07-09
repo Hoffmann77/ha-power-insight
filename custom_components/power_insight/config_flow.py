@@ -55,6 +55,12 @@ from .const import (
     SCOPES,
     SCOPE_COMBINED,
     SCOPE_SUPPORTED_OPTIONS,
+    CONF_PRESET,
+    PRESET_MINIMAL,
+    PRESET_RECOMMENDED,
+    PRESET_EXTENDED,
+    PRESET_ALL,
+    PRESET_CUSTOM,
 
     CONF_CALCULATE_COST_RATES,
     CONF_CALCULATE_LEVELIZED_COST_RATES,
@@ -405,156 +411,329 @@ def make_compensation_selector(currency: str) -> selector.NumberSelector:
     )
 
 # ============================================================================
-# OPTION CATEGORIES  (per-scope options flow)
-#
-# Sensor selection is grouped into human-readable categories, each mapping to
-# one or more leaf option keys. A category is shown in a scope only when that
-# scope supports at least one of its leaves (SCOPE_SUPPORTED_OPTIONS). See
-# docs/options-flow-redesign.md.
+# PRESET DEFINITIONS
 # ============================================================================
 
-@dataclass(frozen=True)
-class OptionCategory:
-    """A user-facing options category mapped to one or more leaf option keys."""
-
-    field: str
-    leaves: tuple[tuple[str, str], ...]   # (leaf_key, choice_label)
-    toggle: bool = False                  # True → single boolean leaf
-
-
-OPTION_CATEGORIES: tuple[OptionCategory, ...] = (
-    OptionCategory(
-        "distribution_power", ((CONF_ENABLE_DISTRIBUTION_POWER, ""),), toggle=True
-    ),
-    OptionCategory(
-        "cost_rate", ((CONF_CALCULATE_COST_RATES, ""),), toggle=True
-    ),
-    OptionCategory(
-        "levelized_cost_rate", ((CONF_CALCULATE_LEVELIZED_COST_RATES, ""),), toggle=True
-    ),
-    OptionCategory(
-        "cost_savings_rate", ((CONF_CALCULATE_COST_SAVING_RATES, ""),), toggle=True
-    ),
-    OptionCategory(
-        "levelized_cost_savings_rate",
-        ((CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "export_compensation_rate",
-        ((CONF_ENABLE_EXPORT_COMPENSATION_RATE, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "export_compensation_total",
-        ((CONF_ACCUMULATE_EXPORT_COMPENSATION, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "accumulated_cost", ((CONF_ACCUMULATE_COST_RATES, ""),), toggle=True
-    ),
-    OptionCategory(
-        "accumulated_levelized_cost",
-        ((CONF_ACCUMULATE_LEVELIZED_COST_RATES, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "accumulated_cost_savings",
-        ((CONF_ACCUMULATE_COST_SAVING_RATES, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "accumulated_levelized_cost_savings",
-        ((CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "distribution_ratios", ((CONF_ENABLE_DISTRIBUTION_RATIOS, ""),), toggle=True
-    ),
-    OptionCategory(
-        "distribution_shares", ((CONF_ENABLE_DISTRIBUTION_SHARES, ""),), toggle=True
-    ),
-    OptionCategory(
-        "charging_source_shares",
-        ((CONF_ENABLE_CHARGING_SOURCE_SHARES, ""),), toggle=True,
-    ),
-    OptionCategory(
-        "power_source_shares",
-        ((CONF_ENABLE_POWER_SOURCE_SHARES, ""),), toggle=True,
-    ),
-)
-
-# Fresh-install default selection (intersected per scope with its support).
-DEFAULT_SELECTION: set[str] = {
-    CONF_CALCULATE_COST_SAVING_RATES,
-    CONF_ACCUMULATE_COST_SAVING_RATES,
-    CONF_ENABLE_EXPORT_COMPENSATION_RATE,
-    CONF_ACCUMULATE_EXPORT_COMPENSATION,
-    CONF_ENABLE_DISTRIBUTION_POWER,
-    CONF_ENABLE_DISTRIBUTION_RATIOS,
-    CONF_ENABLE_DISTRIBUTION_SHARES,
-    CONF_ENABLE_CHARGING_SOURCE_SHARES,
-    CONF_ENABLE_POWER_SOURCE_SHARES,
+PRESET_SELECTIONS: dict[str, frozenset[str]] = {
+    PRESET_MINIMAL: frozenset({
+        CONF_ENABLE_DISTRIBUTION_POWER,
+        CONF_CALCULATE_COST_SAVING_RATES,
+        CONF_ACCUMULATE_COST_SAVING_RATES,
+    }),
+    PRESET_RECOMMENDED: frozenset({
+        CONF_ENABLE_DISTRIBUTION_POWER,
+        CONF_ENABLE_DISTRIBUTION_RATIOS,
+        CONF_ENABLE_DISTRIBUTION_SHARES,
+        CONF_ENABLE_CHARGING_SOURCE_SHARES,
+        CONF_ENABLE_POWER_SOURCE_SHARES,
+        CONF_CALCULATE_COST_SAVING_RATES,
+        CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_ENABLE_EXPORT_COMPENSATION_RATE,
+        CONF_ACCUMULATE_EXPORT_COMPENSATION,
+    }),
+    PRESET_EXTENDED: frozenset({
+        CONF_ENABLE_DISTRIBUTION_POWER,
+        CONF_ENABLE_DISTRIBUTION_RATIOS,
+        CONF_ENABLE_DISTRIBUTION_SHARES,
+        CONF_ENABLE_CHARGING_SOURCE_SHARES,
+        CONF_ENABLE_POWER_SOURCE_SHARES,
+        CONF_CALCULATE_COST_SAVING_RATES,
+        CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_ENABLE_EXPORT_COMPENSATION_RATE,
+        CONF_ACCUMULATE_EXPORT_COMPENSATION,
+        CONF_CALCULATE_COST_RATES,
+        CONF_ACCUMULATE_COST_RATES,
+    }),
+    PRESET_ALL: frozenset({
+        CONF_ENABLE_DISTRIBUTION_POWER,
+        CONF_ENABLE_DISTRIBUTION_RATIOS,
+        CONF_ENABLE_DISTRIBUTION_SHARES,
+        CONF_ENABLE_CHARGING_SOURCE_SHARES,
+        CONF_ENABLE_POWER_SOURCE_SHARES,
+        CONF_CALCULATE_COST_SAVING_RATES,
+        CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_ENABLE_EXPORT_COMPENSATION_RATE,
+        CONF_ACCUMULATE_EXPORT_COMPENSATION,
+        CONF_CALCULATE_COST_RATES,
+        CONF_ACCUMULATE_COST_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    }),
 }
 
 
-def default_scopes() -> dict[str, list[str]]:
-    """Return the per-scope default selection, intersected with scope support."""
+def default_scopes(preset: str = PRESET_RECOMMENDED) -> dict[str, list[str]]:
+    """Return the per-scope selection for *preset*, intersected with scope support."""
+    selection = PRESET_SELECTIONS.get(preset, PRESET_SELECTIONS[PRESET_RECOMMENDED])
     return {
-        scope: sorted(DEFAULT_SELECTION & SCOPE_SUPPORTED_OPTIONS[scope])
+        scope: sorted(selection & SCOPE_SUPPORTED_OPTIONS[scope])
         for scope in SCOPES
     }
 
 
-def _scope_category(category: OptionCategory, scope: str):
-    """Return (supported leaves, selector) for *category* in *scope*, or None."""
-    supported = [
-        (leaf, label) for leaf, label in category.leaves
-        if leaf in SCOPE_SUPPORTED_OPTIONS[scope]
+# ============================================================================
+# OPTIONS FLOW HELPERS  (new-style per-scope pages)
+# ============================================================================
+
+def _preset_selector(include_custom: bool = True) -> selector.SelectSelector:
+    """Build a list-mode select selector for the preset options."""
+    options = [
+        selector.SelectOptionDict(value=PRESET_MINIMAL, label="Minimal"),
+        selector.SelectOptionDict(value=PRESET_RECOMMENDED, label="Recommended"),
+        selector.SelectOptionDict(value=PRESET_EXTENDED, label="Extended"),
+        selector.SelectOptionDict(value=PRESET_ALL, label="All"),
     ]
-    if not supported:
-        return None
-    if category.toggle:
-        return supported, BOOLEAN_SELECTOR
-    return supported, selector.SelectSelector(
+    if include_custom:
+        options.append(selector.SelectOptionDict(value=PRESET_CUSTOM, label="Custom"))
+    return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=[
-                selector.SelectOptionDict(value=leaf, label=label)
-                for leaf, label in supported
-            ],
+            options=options,
             mode=selector.SelectSelectorMode.LIST,
-            multiple=True,
         )
     )
 
 
-def build_scope_schema(scope: str, current: set[str]) -> vol.Schema:
-    """Build the options form schema for one scope."""
+def _cost_method_options(scope: str) -> list[selector.SelectOptionDict]:
+    """Return available cost-method selector options for *scope*."""
+    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
+    opts = [selector.SelectOptionDict(value="none", label="None")]
+    has_std = CONF_CALCULATE_COST_RATES in supported
+    has_lvl = CONF_CALCULATE_LEVELIZED_COST_RATES in supported
+    if has_std:
+        opts.append(selector.SelectOptionDict(value="standard", label="Standard"))
+    if has_lvl:
+        opts.append(selector.SelectOptionDict(value="levelized", label="Levelized"))
+    if has_std and has_lvl:
+        opts.append(selector.SelectOptionDict(value="both", label="Both"))
+    return opts
+
+
+def _savings_method_options(scope: str) -> list[selector.SelectOptionDict]:
+    """Return available savings-method selector options for *scope*."""
+    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
+    opts = [selector.SelectOptionDict(value="none", label="None")]
+    has_std = CONF_CALCULATE_COST_SAVING_RATES in supported
+    has_lvl = CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in supported
+    if has_std:
+        opts.append(selector.SelectOptionDict(value="standard", label="Standard"))
+    if has_lvl:
+        opts.append(selector.SelectOptionDict(value="levelized", label="Levelized"))
+    if has_std and has_lvl:
+        opts.append(selector.SelectOptionDict(value="both", label="Both"))
+    return opts
+
+
+def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
+    """Build the new-style options schema for one device scope."""
+    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
     fields: dict = {}
-    for category in OPTION_CATEGORIES:
-        resolved = _scope_category(category, scope)
-        if resolved is None:
-            continue
-        supported, sel = resolved
-        if category.toggle:
-            leaf = supported[0][0]
-            fields[vol.Required(category.field, default=leaf in current)] = sel
-        else:
-            default = [leaf for leaf, _ in supported if leaf in current]
-            fields[vol.Optional(category.field, default=default)] = sel
+
+    # --- Power sensors section ---
+    power_fields: dict = {}
+    if CONF_ENABLE_DISTRIBUTION_POWER in supported:
+        power_fields[vol.Required(
+            "distribution_power", default=defaults.get("distribution_power", False)
+        )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_DISTRIBUTION_RATIOS in supported:
+        power_fields[vol.Required(
+            "distribution_ratios", default=defaults.get("distribution_ratios", False)
+        )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_DISTRIBUTION_SHARES in supported:
+        power_fields[vol.Required(
+            "distribution_shares", default=defaults.get("distribution_shares", False)
+        )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_CHARGING_SOURCE_SHARES in supported:
+        power_fields[vol.Required(
+            "charging_source_shares", default=defaults.get("charging_source_shares", False)
+        )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_POWER_SOURCE_SHARES in supported:
+        power_fields[vol.Required(
+            "power_source_shares", default=defaults.get("power_source_shares", False)
+        )] = BOOLEAN_SELECTOR
+    if power_fields:
+        fields[vol.Required("power_sensors")] = section(
+            vol.Schema(power_fields), {"collapsed": False}
+        )
+
+    # --- Export compensation section ---
+    exp_fields: dict = {}
+    if CONF_ENABLE_EXPORT_COMPENSATION_RATE in supported:
+        exp_fields[vol.Required(
+            "export_compensation_rate",
+            default=defaults.get("export_compensation_rate", False),
+        )] = BOOLEAN_SELECTOR
+    if CONF_ACCUMULATE_EXPORT_COMPENSATION in supported:
+        exp_fields[vol.Required(
+            "export_compensation_total",
+            default=defaults.get("export_compensation_total", False),
+        )] = BOOLEAN_SELECTOR
+    if exp_fields:
+        fields[vol.Required("export_compensation")] = section(
+            vol.Schema(exp_fields), {"collapsed": False}
+        )
+
+    # --- Cost calculation section ---
+    cost_opts = _cost_method_options(scope)
+    if len(cost_opts) > 1:
+        cost_fields: dict = {
+            vol.Required(
+                "cost_method", default=defaults.get("cost_method", "none")
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=cost_opts, mode=selector.SelectSelectorMode.LIST
+                )
+            ),
+        }
+        has_acc = bool(
+            {CONF_ACCUMULATE_COST_RATES, CONF_ACCUMULATE_LEVELIZED_COST_RATES} & supported
+        )
+        if has_acc:
+            cost_fields[vol.Required(
+                "accumulate_costs", default=defaults.get("accumulate_costs", False)
+            )] = BOOLEAN_SELECTOR
+        fields[vol.Required("costs")] = section(
+            vol.Schema(cost_fields), {"collapsed": False}
+        )
+
+    # --- Savings section ---
+    sav_opts = _savings_method_options(scope)
+    if len(sav_opts) > 1:
+        sav_fields: dict = {
+            vol.Required(
+                "savings_method", default=defaults.get("savings_method", "none")
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=sav_opts, mode=selector.SelectSelectorMode.LIST
+                )
+            ),
+        }
+        has_acc_sav = bool(
+            {CONF_ACCUMULATE_COST_SAVING_RATES, CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES}
+            & supported
+        )
+        if has_acc_sav:
+            sav_fields[vol.Required(
+                "accumulate_savings", default=defaults.get("accumulate_savings", False)
+            )] = BOOLEAN_SELECTOR
+        fields[vol.Required("savings")] = section(
+            vol.Schema(sav_fields), {"collapsed": False}
+        )
+
     return vol.Schema(fields)
 
 
-def collect_scope_selection(scope: str, user_input: dict) -> list[str]:
-    """Turn a scope form submission into a sorted list of enabled leaf keys."""
-    selected: set[str] = set()
-    for category in OPTION_CATEGORIES:
-        resolved = _scope_category(category, scope)
-        if resolved is None:
-            continue
-        supported, _ = resolved
-        if category.field not in user_input:
-            continue
-        if category.toggle:
-            if user_input[category.field]:
-                selected.add(supported[0][0])
+def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
+    """Map new-style UI form values to a sorted list of enabled leaf keys."""
+    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
+    enabled: set[str] = set()
+
+    if user_input.get("distribution_power"):
+        enabled.add(CONF_ENABLE_DISTRIBUTION_POWER)
+    if user_input.get("distribution_ratios"):
+        enabled.add(CONF_ENABLE_DISTRIBUTION_RATIOS)
+    if user_input.get("distribution_shares"):
+        enabled.add(CONF_ENABLE_DISTRIBUTION_SHARES)
+    if user_input.get("charging_source_shares"):
+        enabled.add(CONF_ENABLE_CHARGING_SOURCE_SHARES)
+    if user_input.get("power_source_shares"):
+        enabled.add(CONF_ENABLE_POWER_SOURCE_SHARES)
+    if user_input.get("export_compensation_rate"):
+        enabled.add(CONF_ENABLE_EXPORT_COMPENSATION_RATE)
+    if user_input.get("export_compensation_total"):
+        enabled.add(CONF_ACCUMULATE_EXPORT_COMPENSATION)
+
+    cost_method = user_input.get("cost_method", "none")
+    if cost_method in ("standard", "both"):
+        enabled.add(CONF_CALCULATE_COST_RATES)
+    if cost_method in ("levelized", "both"):
+        enabled.add(CONF_CALCULATE_LEVELIZED_COST_RATES)
+    if user_input.get("accumulate_costs") and cost_method != "none":
+        if cost_method in ("standard", "both"):
+            enabled.add(CONF_ACCUMULATE_COST_RATES)
+        if cost_method in ("levelized", "both"):
+            enabled.add(CONF_ACCUMULATE_LEVELIZED_COST_RATES)
+
+    savings_method = user_input.get("savings_method", "none")
+    if savings_method in ("standard", "both"):
+        enabled.add(CONF_CALCULATE_COST_SAVING_RATES)
+    if savings_method in ("levelized", "both"):
+        enabled.add(CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES)
+    if user_input.get("accumulate_savings") and savings_method != "none":
+        if savings_method in ("standard", "both"):
+            enabled.add(CONF_ACCUMULATE_COST_SAVING_RATES)
+        if savings_method in ("levelized", "both"):
+            enabled.add(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES)
+
+    return sorted(enabled & supported)
+
+
+def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
+    """Reconstruct UI form defaults from stored leaf keys for *scope*."""
+    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
+    result: dict = {
+        "distribution_power": CONF_ENABLE_DISTRIBUTION_POWER in leaves,
+        "distribution_ratios": CONF_ENABLE_DISTRIBUTION_RATIOS in leaves,
+        "distribution_shares": CONF_ENABLE_DISTRIBUTION_SHARES in leaves,
+        "charging_source_shares": CONF_ENABLE_CHARGING_SOURCE_SHARES in leaves,
+        "power_source_shares": CONF_ENABLE_POWER_SOURCE_SHARES in leaves,
+        "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,
+        "export_compensation_total": CONF_ACCUMULATE_EXPORT_COMPENSATION in leaves,
+    }
+
+    has_cost = CONF_CALCULATE_COST_RATES in leaves and CONF_CALCULATE_COST_RATES in supported
+    has_lcost = (
+        CONF_CALCULATE_LEVELIZED_COST_RATES in leaves
+        and CONF_CALCULATE_LEVELIZED_COST_RATES in supported
+    )
+    if has_cost and has_lcost:
+        result["cost_method"] = "both"
+    elif has_lcost:
+        result["cost_method"] = "levelized"
+    elif has_cost:
+        result["cost_method"] = "standard"
+    else:
+        result["cost_method"] = "none"
+
+    result["accumulate_costs"] = bool(
+        {CONF_ACCUMULATE_COST_RATES, CONF_ACCUMULATE_LEVELIZED_COST_RATES} & leaves
+    )
+
+    has_sav = (
+        CONF_CALCULATE_COST_SAVING_RATES in leaves
+        and CONF_CALCULATE_COST_SAVING_RATES in supported
+    )
+    has_lsav = (
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in leaves
+        and CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in supported
+    )
+    if has_sav and has_lsav:
+        result["savings_method"] = "both"
+    elif has_lsav:
+        result["savings_method"] = "levelized"
+    elif has_sav:
+        result["savings_method"] = "standard"
+    else:
+        result["savings_method"] = "none"
+
+    result["accumulate_savings"] = bool(
+        {CONF_ACCUMULATE_COST_SAVING_RATES, CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES}
+        & leaves
+    )
+
+    return result
+
+
+def _flatten_scope_sections(user_input: dict) -> dict:
+    """Flatten section-nested form values into a single-level dict."""
+    flat: dict = {}
+    for key, value in user_input.items():
+        if isinstance(value, dict):
+            flat.update(value)
         else:
-            selected.update(user_input[category.field])
-    return sorted(selected)
+            flat[key] = value
+    return flat
 
 
 # ============================================================================
@@ -1203,19 +1382,22 @@ def check_options_feasibility(
 class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle the config flow for Power Insight.
 
-    The initial step collects the integration name and the options that are
-    relevant at setup time (calculate_cost_savings, calculate_co2_savings,
-    calculation_method).  Grid and device adapters are added afterwards as
-    subentries via the "Add device" button.
+    Step 1 (user): collects the integration name.
+    Step 2 (preset): picks a sensor preset for the initial options.
+    Grid and device adapters are added afterwards as subentries via the
+    "Add device" button.
     """
 
     VERSION = 1
     MINOR_VERSION = 2
 
+    def __init__(self) -> None:
+        self._title: str = ""
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Collect the integration title and seed the default per-scope options."""
+        """Collect the integration title."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -1223,18 +1405,8 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
             if not title:
                 errors[CONF_NAME] = "invalid_name"
             else:
-                # The initial form only collects the name; seed the per-scope
-                # default selection so fresh installs register sensible sensors
-                # before the user opens the options flow.
-                return self.async_create_entry(
-                    title=title,
-                    data={},
-                    options={
-                        "schema": 2,
-                        "scopes": default_scopes(),
-                        CONF_ENABLE_DEBUG_ENTITIES: False,
-                    },
-                )
+                self._title = title
+                return await self.async_step_preset()
 
         return self.async_show_form(
             step_id="user",
@@ -1242,6 +1414,32 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
                 {vol.Required(CONF_NAME, default=""): TEXT_SELECTOR}
             ),
             errors=errors,
+        )
+
+    async def async_step_preset(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Choose a sensor preset for this installation."""
+        if user_input is not None:
+            preset = user_input.get(CONF_PRESET, PRESET_RECOMMENDED)
+            return self.async_create_entry(
+                title=self._title,
+                data={},
+                options={
+                    "schema": 2,
+                    "scopes": default_scopes(preset),
+                    CONF_ENABLE_DEBUG_ENTITIES: False,
+                    CONF_PRESET: preset,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="preset",
+            data_schema=vol.Schema({
+                vol.Required(CONF_PRESET, default=PRESET_RECOMMENDED): _preset_selector(
+                    include_custom=False
+                ),
+            }),
         )
 
     @classmethod
@@ -1526,110 +1724,208 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 # ============================================================================
 
 class PowerInsightOptionsFlow(OptionsFlow):
-    """Single-form options flow.
+    """Multi-step options flow with preset selection and per-scope pages.
 
-    Every option is shown on one screen. The combined scope's toggles sit at the
-    top level of the form; each configured device type gets its own collapsible
-    section, followed by a diagnostics section, with a single Submit button. Each
-    scope offers only the categories it supports. Submitting validates that the
-    selection does not require data a device has not provided yet (otherwise the
-    form is re-shown with an error), then saves everything in one reload.
+    Step init:   Pick a preset (applies immediately) or choose Custom.
+    Custom path: One page per device class present in the installation
+                 (combined → grid → pv_system → battery → consumer).
     """
 
-    def _shown_scopes(self) -> list[str]:
-        """Combined plus the device-type scopes that have a subentry."""
-        types = {
+    def __init__(self) -> None:
+        self._scopes: dict[str, list[str]] = {}
+        self._debug: bool = False
+        self._device_types: set[str] = set()
+
+    def _init_device_types(self) -> None:
+        """Populate _device_types from the current subentries."""
+        self._device_types = {
             sub.data.get("adapter", {}).get("adapter_type")
             for sub in self.config_entry.subentries.values()
+        } - {None}
+
+    def _next_scope_step(self, after: str) -> str | None:
+        """Return the next step id in the chain after *after*, or None if done."""
+        order = ["combined", "grid", "pv_system", "battery", "consumer"]
+        for scope in order[order.index(after) + 1:]:
+            if scope in self._device_types:
+                return scope
+        return None
+
+    def _last_scope(self) -> str:
+        """Return the final scope step in the navigation chain."""
+        for scope in reversed(["combined", "grid", "pv_system", "battery", "consumer"]):
+            if scope == "combined" or scope in self._device_types:
+                return scope
+        return "combined"
+
+    async def _finish(self) -> FlowResult:
+        """Run feasibility check and save, or re-show the last scope form."""
+        stored = self.config_entry.options.get("scopes", {})
+        new_scopes = {
+            scope: self._scopes.get(scope, sorted(stored.get(scope, [])))
+            for scope in SCOPES
         }
-        return [SCOPE_COMBINED] + [
-            t for t in ("grid", "pv_system", "battery", "consumer") if t in types
-        ]
+        new_options = {
+            "schema": 2,
+            "scopes": new_scopes,
+            CONF_ENABLE_DEBUG_ENTITIES: self._debug,
+            CONF_PRESET: PRESET_CUSTOM,
+        }
+        problems = check_options_feasibility(self.config_entry, new_options)
+        if not problems:
+            return self.async_create_entry(title="", data=new_options)
 
-    def _build_schema(
-        self, scopes: dict[str, set[str]], debug: bool
-    ) -> vol.Schema:
-        """Build the one-screen schema.
-
-        The combined scope's toggles are placed at the top level (no section);
-        every device-type scope gets its own section, plus diagnostics.
-        """
-        fields: dict = {}
-        # Combined options at the top level, not nested in a section.
-        combined_schema = build_scope_schema(
-            SCOPE_COMBINED, scopes.get(SCOPE_COMBINED, set())
+        last = self._last_scope()
+        defaults = scope_leaves_to_ui_defaults(last, set(self._scopes.get(last, [])))
+        return self.async_show_form(
+            step_id=last,
+            data_schema=build_scope_form(last, defaults),
+            errors={"base": "reconfigure_adapters_first"},
+            description_placeholders={
+                "adapters_needing_reconfigure": ", ".join(problems),
+            },
         )
-        fields.update(combined_schema.schema)
-        for scope in self._shown_scopes():
-            if scope == SCOPE_COMBINED:
-                continue
-            fields[vol.Required(scope)] = section(
-                build_scope_schema(scope, scopes.get(scope, set())),
-                {"collapsed": False},
-            )
-        fields[vol.Required("diagnostics")] = section(
-            vol.Schema({
-                vol.Required(
-                    CONF_ENABLE_DEBUG_ENTITIES, default=debug
-                ): BOOLEAN_SELECTOR,
-            }),
-            {"collapsed": True},
-        )
-        return vol.Schema(fields)
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Show all options on one sectioned form and save on submit."""
-        stored = self.config_entry.options.get("scopes", {})
+        """Show preset selector; non-custom presets save immediately."""
+        self._init_device_types()
 
         if user_input is not None:
-            # Combined toggles arrive at the top level; device-type sections
-            # arrive nested under their section key.
-            selected = {
-                scope: set(
-                    collect_scope_selection(
-                        scope,
-                        user_input
-                        if scope == SCOPE_COMBINED
-                        else user_input.get(scope, {}),
-                    )
-                )
-                for scope in self._shown_scopes()
-            }
-            debug = bool(
-                user_input.get("diagnostics", {}).get(
-                    CONF_ENABLE_DEBUG_ENTITIES, False
-                )
-            )
-            # Scopes whose device type is not present keep their stored value.
-            new_scopes = {
-                scope: sorted(selected[scope])
-                if scope in selected
-                else list(stored.get(scope, []))
-                for scope in SCOPES
-            }
-            new_options = {
-                "schema": 2,
-                "scopes": new_scopes,
-                CONF_ENABLE_DEBUG_ENTITIES: debug,
-            }
-            problems = check_options_feasibility(self.config_entry, new_options)
-            if not problems:
-                return self.async_create_entry(title="", data=new_options)
-            # Re-show the form (sticky) with a validation error.
-            return self.async_show_form(
-                step_id="init",
-                data_schema=self._build_schema(selected, debug),
-                errors={"base": "reconfigure_adapters_first"},
-                description_placeholders={
-                    "adapters_needing_reconfigure": ", ".join(problems),
-                },
-            )
+            preset = user_input.get(CONF_PRESET, PRESET_CUSTOM)
+            self._debug = bool(user_input.get(CONF_ENABLE_DEBUG_ENTITIES, False))
 
-        scopes = {scope: set(stored.get(scope, [])) for scope in self._shown_scopes()}
-        debug = bool(self.config_entry.options.get(CONF_ENABLE_DEBUG_ENTITIES, False))
+            if preset != PRESET_CUSTOM:
+                stored = self.config_entry.options.get("scopes", {})
+                new_scopes = {
+                    scope: sorted(
+                        PRESET_SELECTIONS[preset] & SCOPE_SUPPORTED_OPTIONS[scope]
+                    ) if (scope == SCOPE_COMBINED or scope in self._device_types)
+                    else sorted(stored.get(scope, []))
+                    for scope in SCOPES
+                }
+                return self.async_create_entry(
+                    title="",
+                    data={
+                        "schema": 2,
+                        "scopes": new_scopes,
+                        CONF_ENABLE_DEBUG_ENTITIES: self._debug,
+                        CONF_PRESET: preset,
+                    },
+                )
+
+            return await self.async_step_combined()
+
+        current_preset = self.config_entry.options.get(CONF_PRESET, PRESET_CUSTOM)
+        current_debug = bool(
+            self.config_entry.options.get(CONF_ENABLE_DEBUG_ENTITIES, False)
+        )
         return self.async_show_form(
             step_id="init",
-            data_schema=self._build_schema(scopes, debug),
+            data_schema=vol.Schema({
+                vol.Required(CONF_PRESET, default=current_preset): _preset_selector(),
+                vol.Required(
+                    CONF_ENABLE_DEBUG_ENTITIES, default=current_debug
+                ): BOOLEAN_SELECTOR,
+            }),
+        )
+
+    async def async_step_combined(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure combined (whole-home aggregate) sensors."""
+        if user_input is not None:
+            flat = _flatten_scope_sections(user_input)
+            self._scopes[SCOPE_COMBINED] = scope_ui_to_leaves(SCOPE_COMBINED, flat)
+            next_step = self._next_scope_step("combined")
+            if next_step is None:
+                return await self._finish()
+            return await getattr(self, f"async_step_{next_step}")()
+
+        stored = set(
+            self.config_entry.options.get("scopes", {}).get(SCOPE_COMBINED, [])
+        )
+        return self.async_show_form(
+            step_id="combined",
+            data_schema=build_scope_form(
+                SCOPE_COMBINED, scope_leaves_to_ui_defaults(SCOPE_COMBINED, stored)
+            ),
+        )
+
+    async def async_step_grid(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure grid adapter sensors."""
+        if user_input is not None:
+            flat = _flatten_scope_sections(user_input)
+            self._scopes["grid"] = scope_ui_to_leaves("grid", flat)
+            next_step = self._next_scope_step("grid")
+            if next_step is None:
+                return await self._finish()
+            return await getattr(self, f"async_step_{next_step}")()
+
+        stored = set(self.config_entry.options.get("scopes", {}).get("grid", []))
+        return self.async_show_form(
+            step_id="grid",
+            data_schema=build_scope_form(
+                "grid", scope_leaves_to_ui_defaults("grid", stored)
+            ),
+        )
+
+    async def async_step_pv_system(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure PV system adapter sensors."""
+        if user_input is not None:
+            flat = _flatten_scope_sections(user_input)
+            self._scopes["pv_system"] = scope_ui_to_leaves("pv_system", flat)
+            next_step = self._next_scope_step("pv_system")
+            if next_step is None:
+                return await self._finish()
+            return await getattr(self, f"async_step_{next_step}")()
+
+        stored = set(self.config_entry.options.get("scopes", {}).get("pv_system", []))
+        return self.async_show_form(
+            step_id="pv_system",
+            data_schema=build_scope_form(
+                "pv_system", scope_leaves_to_ui_defaults("pv_system", stored)
+            ),
+        )
+
+    async def async_step_battery(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure battery adapter sensors."""
+        if user_input is not None:
+            flat = _flatten_scope_sections(user_input)
+            self._scopes["battery"] = scope_ui_to_leaves("battery", flat)
+            next_step = self._next_scope_step("battery")
+            if next_step is None:
+                return await self._finish()
+            return await getattr(self, f"async_step_{next_step}")()
+
+        stored = set(self.config_entry.options.get("scopes", {}).get("battery", []))
+        return self.async_show_form(
+            step_id="battery",
+            data_schema=build_scope_form(
+                "battery", scope_leaves_to_ui_defaults("battery", stored)
+            ),
+        )
+
+    async def async_step_consumer(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Configure consumer adapter sensors."""
+        if user_input is not None:
+            flat = _flatten_scope_sections(user_input)
+            self._scopes["consumer"] = scope_ui_to_leaves("consumer", flat)
+            return await self._finish()
+
+        stored = set(self.config_entry.options.get("scopes", {}).get("consumer", []))
+        return self.async_show_form(
+            step_id="consumer",
+            data_schema=build_scope_form(
+                "consumer", scope_leaves_to_ui_defaults("consumer", stored)
+            ),
         )
