@@ -1784,6 +1784,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
             description_placeholders={
                 "adapters_needing_reconfigure": ", ".join(problems),
             },
+            last_step=True,
         )
 
     async def async_step_init(
@@ -1851,6 +1852,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
             data_schema=build_scope_form(
                 SCOPE_COMBINED, scope_leaves_to_ui_defaults(SCOPE_COMBINED, stored)
             ),
+            last_step=self._next_scope_step("combined") is None,
         )
 
     async def async_step_grid(
@@ -1871,6 +1873,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
             data_schema=build_scope_form(
                 "grid", scope_leaves_to_ui_defaults("grid", stored)
             ),
+            last_step=self._next_scope_step("grid") is None,
         )
 
     async def async_step_pv_system(
@@ -1891,6 +1894,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
             data_schema=build_scope_form(
                 "pv_system", scope_leaves_to_ui_defaults("pv_system", stored)
             ),
+            last_step=self._next_scope_step("pv_system") is None,
         )
 
     async def async_step_battery(
@@ -1911,6 +1915,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
             data_schema=build_scope_form(
                 "battery", scope_leaves_to_ui_defaults("battery", stored)
             ),
+            last_step=self._next_scope_step("battery") is None,
         )
 
     async def async_step_consumer(
@@ -1928,4 +1933,5 @@ class PowerInsightOptionsFlow(OptionsFlow):
             data_schema=build_scope_form(
                 "consumer", scope_leaves_to_ui_defaults("consumer", stored)
             ),
+            last_step=True,
         )
