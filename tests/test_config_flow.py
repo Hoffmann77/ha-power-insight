@@ -305,9 +305,12 @@ async def test_options_flow_shows_single_form(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "init"
-    # The schema carries a section per shown scope + diagnostics.
+    # Combined toggles sit at the top level (no section); device-type scopes and
+    # diagnostics are sections.
     keys = {str(getattr(k, "schema", k)) for k in result["data_schema"].schema}
-    assert {"combined", "grid", "diagnostics"} <= keys
+    assert {"grid", "diagnostics"} <= keys
+    assert "distribution_power" in keys  # a combined toggle at the top level
+    assert "combined" not in keys  # combined is no longer a section
     assert "battery" not in keys  # no battery subentry
 
 
@@ -325,14 +328,17 @@ async def test_options_flow_submit_saves_everything(hass: HomeAssistant) -> None
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "combined": {
-                "distribution_power": True,
-                "distribution_ratios": False,
-                "cost_rates": [],
-                "cost_savings_rates": [],
-                "accumulated_costs": [],
-                "accumulated_cost_savings": [],
-            },
+            # Combined toggles live at the top level.
+            "distribution_power": True,
+            "distribution_ratios": False,
+            "cost_rate": False,
+            "levelized_cost_rate": False,
+            "cost_savings_rate": False,
+            "levelized_cost_savings_rate": False,
+            "accumulated_cost": False,
+            "accumulated_levelized_cost": False,
+            "accumulated_cost_savings": False,
+            "accumulated_levelized_cost_savings": False,
             "grid": {},  # keep current grid defaults
             "diagnostics": {"debug_power_entities": True},
         },
@@ -356,14 +362,14 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "combined": {},
             "grid": {
-                "cost_rates": ["calculate_cost_rates"],
+                "cost_rate": True,
                 "distribution_power": False,
                 "distribution_ratios": False,
                 "distribution_shares": False,
-                "accumulated_costs": [],
-                "export_compensation": [],
+                "accumulated_cost": False,
+                "export_compensation_rate": False,
+                "export_compensation_total": False,
             },
             "diagnostics": {"debug_power_entities": False},
         },
