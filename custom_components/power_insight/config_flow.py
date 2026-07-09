@@ -147,9 +147,16 @@ def _export_compensation_required(options: dict) -> bool:
     return bool(_all_enabled_leaves(options) & _COST_SAVING_OPTIONS)
 
 def _levelized_cost_required(options: dict) -> bool:
+    # Presets keep lifetime inputs optional (sensors degrade gracefully); only
+    # Custom options make them required when a levelized option is enabled.
+    if options.get(CONF_PRESET) != PRESET_CUSTOM:
+        return False
     return bool(_all_enabled_leaves(options) & _LEVELIZED_COST_OPTIONS)
 
 def _levelized_co2_required(options: dict) -> bool:
+    # See _levelized_cost_required: optional under presets, required under Custom.
+    if options.get(CONF_PRESET) != PRESET_CUSTOM:
+        return False
     return bool(_all_enabled_leaves(options) & _LEVELIZED_CO2_OPTIONS)
 
 def _levelized_production_required(options: dict) -> bool:
@@ -419,6 +426,8 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ENABLE_DISTRIBUTION_POWER,
         CONF_CALCULATE_COST_SAVING_RATES,
         CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
     }),
     PRESET_RECOMMENDED: frozenset({
         CONF_ENABLE_DISTRIBUTION_POWER,
@@ -428,6 +437,8 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ENABLE_POWER_SOURCE_SHARES,
         CONF_CALCULATE_COST_SAVING_RATES,
         CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ENABLE_EXPORT_COMPENSATION_RATE,
         CONF_ACCUMULATE_EXPORT_COMPENSATION,
     }),
@@ -439,6 +450,8 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ENABLE_POWER_SOURCE_SHARES,
         CONF_CALCULATE_COST_SAVING_RATES,
         CONF_ACCUMULATE_COST_SAVING_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ENABLE_EXPORT_COMPENSATION_RATE,
         CONF_ACCUMULATE_EXPORT_COMPENSATION,
         CONF_CALCULATE_COST_RATES,

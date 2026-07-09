@@ -1243,11 +1243,15 @@ class PowerInsight:
             blended = 0.0
 
             for source_uid, share in sources.items():
-                if (adapter := self.get_adapter_by_uid(source_uid)) is None:
+                adapter = self.get_adapter_by_uid(source_uid)
+                if adapter is None or adapter.coe is None:
                     dynamic_coe[storage.uid] = None
                     break
 
                 blended += adapter.coe * share
+            else:
+                # No break: every source resolved to a value.
+                dynamic_coe[storage.uid] = blended
 
         return dynamic_coe
 
@@ -1265,11 +1269,15 @@ class PowerInsight:
             blended = 0.0
 
             for source_uid, share in sources.items():
-                if (adapter := self.get_adapter_by_uid(source_uid)) is None:
+                adapter = self.get_adapter_by_uid(source_uid)
+                if adapter is None or adapter.lcoe is None:
                     dynamic_lcoe[storage.uid] = None
                     break
 
                 blended += adapter.lcoe * share
+            else:
+                # No break: every source resolved to a value.
+                dynamic_lcoe[storage.uid] = blended
 
         return dynamic_lcoe
 
