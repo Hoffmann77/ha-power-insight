@@ -12,10 +12,33 @@ from .const import (
     CONF_CORRECTION_FACTOR,
     CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION, CONF_CO2_FOOTPRINT,
 )
 from .power_insight import (
     GridAdapter, PvAdapter, BatteryAdapter, ConsumerAdapter,
 )
+
+
+def _lcoe_from_lifetime(data: dict) -> float | None:
+    """Derive a base LCOE/LCOS (EUR/kWh) from stored lifetime values.
+
+    Used to backfill the immutable base intensity when it was never computed at
+    create time (e.g. lifetime data was added later via reconfigure, which does
+    not recompute the base). Mirrors ``calculate_lcoe`` in config_flow.py.
+    """
+    cost = data.get(CONF_LIFETIME_COST)
+    production = data.get(CONF_LIFETIME_PRODUCTION)
+    return (cost / production) if (cost and production) else None
+
+
+def _co2_intensity_from_lifetime(data: dict) -> float | None:
+    """Derive a base CO2 intensity (g/kWh) from stored lifetime values.
+
+    Mirrors ``calculate_co2_intensity`` in config_flow.py.
+    """
+    footprint = data.get(CONF_CO2_FOOTPRINT)
+    production = data.get(CONF_LIFETIME_PRODUCTION)
+    return (footprint / production * 1000) if (footprint and production) else None
 
 
 ADAPTER_MODELS: dict[str, type] = {}
@@ -85,13 +108,22 @@ class PvAdapterModel:
     def from_subentry(cls, subentry) -> PvAdapterModel:
         """Create model from a config subentry."""
         config = subentry.data["adapter"]["config"]
+        # Backfill the base intensity from stored lifetime values when it was
+        # never computed at create time (e.g. lifetime data added later via
+        # reconfigure). No-op when the base is already set.
+        lcoe = config.get(CONF_INITIAL_LCOE)
+        if lcoe is None:
+            lcoe = _lcoe_from_lifetime(subentry.data)
+        lco2_intensity = config.get(CONF_INITIAL_CO2_INTENSITY)
+        if lco2_intensity is None:
+            lco2_intensity = _co2_intensity_from_lifetime(subentry.data)
         return cls(
             unique_id=subentry.subentry_id,
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
             power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
-            lcoe=config.get(CONF_INITIAL_LCOE),
-            lco2_intensity=config.get(CONF_INITIAL_CO2_INTENSITY),
+            lcoe=lcoe,
+            lco2_intensity=lco2_intensity,
             exports_power=config.get(CONF_EXPORTS_POWER, False),
             export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
             correction_factor=config.get(CONF_CORRECTION_FACTOR) or 1.0,
@@ -132,13 +164,22 @@ class BatteryAdapterModel:
     def from_subentry(cls, subentry) -> BatteryAdapterModel:
         """Create model from a config subentry."""
         config = subentry.data["adapter"]["config"]
+        # Backfill the base intensity from stored lifetime values when it was
+        # never computed at create time (e.g. lifetime data added later via
+        # reconfigure). No-op when the base is already set.
+        lcos = config.get(CONF_INITIAL_LCOS)
+        if lcos is None:
+            lcos = _lcoe_from_lifetime(subentry.data)
+        lco2_intensity = config.get(CONF_INITIAL_CO2_INTENSITY)
+        if lco2_intensity is None:
+            lco2_intensity = _co2_intensity_from_lifetime(subentry.data)
         return cls(
             unique_id=subentry.subentry_id,
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
             power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
-            lcos=config.get(CONF_INITIAL_LCOS),
-            lco2_intensity=config.get(CONF_INITIAL_CO2_INTENSITY),
+            lcos=lcos,
+            lco2_intensity=lco2_intensity,
             exports_power=config.get(CONF_EXPORTS_POWER, False),
             export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
             charge_from_adapters=config.get(CONF_CHARGE_FROM_ADAPTERS, []),
