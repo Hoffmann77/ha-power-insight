@@ -11,7 +11,7 @@ from .const import (
     CONF_INITIAL_LCOS,
     CONF_CORRECTION_FACTOR,
     CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
-    CONF_CHARGE_FROM_GRID, CONF_CHARGE_FROM_ADAPTERS,
+    CONF_CHARGE_FROM_ADAPTERS,
 )
 from .power_insight import (
     GridAdapter, PvAdapter, BatteryAdapter, ConsumerAdapter,
@@ -125,7 +125,6 @@ class BatteryAdapterModel:
     lco2_intensity: float | None
     exports_power: bool
     export_compensation: float
-    charge_from_grid: bool = True
     charge_from_adapters: list[str] = field(default_factory=list)
     correction_factor: float = 1.0
 
@@ -142,7 +141,6 @@ class BatteryAdapterModel:
             lco2_intensity=config.get(CONF_INITIAL_CO2_INTENSITY),
             exports_power=config.get(CONF_EXPORTS_POWER, False),
             export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
-            charge_from_grid=config.get(CONF_CHARGE_FROM_GRID, True),
             charge_from_adapters=config.get(CONF_CHARGE_FROM_ADAPTERS, []),
             correction_factor=config.get(CONF_CORRECTION_FACTOR) or 1.0,
         )
@@ -158,7 +156,6 @@ class BatteryAdapterModel:
             lco2_intensity=self.lco2_intensity,
             exports_power=self.exports_power,
             export_compensation=self.export_compensation,
-            charge_from_grid=self.charge_from_grid,
             charge_from_adapters=self.charge_from_adapters,
             correction_factor=self.correction_factor,
         )

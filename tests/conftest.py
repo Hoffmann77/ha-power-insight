@@ -177,7 +177,6 @@ def make_battery_subentry_data(
                     "current_co2_intensity": 100.0,
                     "exports_power": False,
                     "export_compensation": 0.0,
-                    "charge_from_grid": True,
                     "charge_from_adapters": charge_from_adapters or [],
                 },
             },

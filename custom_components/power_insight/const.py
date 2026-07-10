@@ -56,7 +56,6 @@ CONF_EXPORT_COMPENSATION = "export_compensation"
 
 # Battery specific (stored in adapter.config)
 CONF_BAT_EFFICIENCY = "battery_efficiency"
-CONF_CHARGE_FROM_GRID = "charge_from_grid"
 CONF_CHARGE_FROM_ADAPTERS = "charge_from_adapters"
 
 

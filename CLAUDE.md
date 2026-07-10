@@ -53,7 +53,7 @@ AbstractBaseAdapter
     │   ├── GridAdapter             (import/export split; holds price & co2 entities)
     │   └── BaseProductionAdapter   (production/consumption split; lcoe, export_compensation)
     │       ├── PvAdapter           (adds _lcoe)
-    │       └── BatteryAdapter      (adds _lcos, charge_from_grid, charge_from_adapters)
+    │       └── BatteryAdapter      (adds _lcos, charge_from_adapters)
     └── BaseConsumerAdapter
         └── ConsumerAdapter
 ```

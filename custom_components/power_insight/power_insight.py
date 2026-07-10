@@ -977,11 +977,13 @@ class PowerInsight:
             if not (charge_from := battery.charge_from_adapters):
                 continue
 
-            if battery.charge_from_grid:
-                grid_share = self.grid_adapters_gross_power_shares.get(
+            # The grid contributes to the denominator when it is one of the
+            # battery's configured sources. It has no own gross-power entry
+            # here, so its share is seeded from the grid gross-power shares.
+            if self.grid_adapter.uid in charge_from:
+                total_share = self.grid_adapters_gross_power_shares.get(
                     self.grid_adapter.uid, 0.0
                 )
-                total_share = grid_share
             else:
                 total_share = 0.0
 
@@ -1463,11 +1465,13 @@ class PowerInsight:
             if not (charge_from := battery.charge_from_adapters):
                 continue
 
-            if battery.charge_from_grid:
-                grid_share = self.grid_adapters_gross_power_shares.get(
+            # The grid contributes to the denominator when it is one of the
+            # battery's configured sources. It has no own gross-power entry
+            # here, so its share is seeded from the grid gross-power shares.
+            if self.grid_adapter.uid in charge_from:
+                total_share = self.grid_adapters_gross_power_shares.get(
                     self.grid_adapter.uid, 0.0
                 )
-                total_share = grid_share
             else:
                 total_share = 0.0
 
@@ -2311,7 +2315,6 @@ class BatteryAdapter(BaseProductionAdapter):
         lco2_intensity: float | None,
         exports_power: bool,
         export_compensation: float,
-        charge_from_grid: bool = True,
         charge_from_adapters: list[str] | None = None,
         correction_factor: float = 1.0,
         **kwargs,
@@ -2328,7 +2331,6 @@ class BatteryAdapter(BaseProductionAdapter):
         )
         self._lcos = lcos
         self._lco2_intensity = lco2_intensity
-        self.charge_from_grid = charge_from_grid
         # Normalise: None (field not yet configured) becomes an empty list.
         self.charge_from_adapters: list[str] = (
             charge_from_adapters if charge_from_adapters is not None else []

@@ -77,7 +77,6 @@ def _build() -> PowerInsight:
             lco2_intensity=50.0,
             exports_power=False,
             export_compensation=0.0,
-            charge_from_grid=False,
             charge_from_adapters=["pv1", "pv2"],
         )
     )
@@ -166,7 +165,6 @@ def _build_real(charge_from_adapters) -> PowerInsight:
             unique_id="bat1", verbose_name="Battery-1",
             power_entity="sensor.bat1_power", power_entity_inverted=False,
             lcos=0.25, lco2_intensity=50.0, exports_power=False, export_compensation=0.0,
-            charge_from_grid=False,
             charge_from_adapters=charge_from_adapters,
         )
     )
