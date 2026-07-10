@@ -1,0 +1,78 @@
+site_name: Power Insight
+site_description: >-
+  Real-time electricity cost, savings, and power-distribution insights for
+  Home Assistant — grid, solar, batteries, and consumers in one place.
+site_author: Hoffmann77
+site_url: https://hoffmann77.github.io/ha-power-insight/
+
+repo_name: Hoffmann77/ha-power-insight
+repo_url: https://github.com/Hoffmann77/ha-power-insight
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; Hoffmann77 — MIT License
+
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Getting started: getting-started.md
+  - Configuration:
+      - Overview: configuration/index.md
+      - Grid connection: configuration/grid.md
+      - PV system: configuration/pv.md
+      - Battery: configuration/battery.md
+      - Consumer: configuration/consumer.md
+      - Sensors, presets & options: configuration/options-and-presets.md
+  - Entity reference: entities.md
+  - Core concepts: concepts.md
+  - Services: services.md
+  - FAQ: faq.md
+  - Development:
+      - Options-flow spec: dev/options-flow-redesign.md
