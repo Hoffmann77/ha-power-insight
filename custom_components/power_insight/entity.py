@@ -43,13 +43,10 @@ from .event import (
     async_track_power_insight_state_change_event,
     async_track_power_insight_state_report_event,
 )
-from .power_insight import PowerInsight
+from .power_insight import PowerInsight, UNIT_PREFIXES
 
 
 _LOGGER = logging.getLogger(__name__)
-
-# Scaling factors for SI unit prefixes used on power/energy entities.
-UNIT_PREFIXES = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
 
 # Seconds per time unit — used to convert the integration area to the target
 # time unit (default: hours, giving Wh or EUR from W or EUR/h respectively).
@@ -649,6 +646,17 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     def native_value(self) -> Decimal | None:
         """Return the accumulated total."""
         return self._state
+
+    async def async_set_value(self, value: float) -> None:
+        """Seed the running total to *value* (backs the ``set_value`` service).
+
+        Lets the user set an accumulated sensor to a known starting figure —
+        e.g. to carry over historical totals when adopting the integration.
+        The new total persists across restarts via the existing restore path.
+        """
+        self._state = Decimal(str(value))
+        self._last_valid_state = self._state
+        self.async_write_ha_state()
 
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:

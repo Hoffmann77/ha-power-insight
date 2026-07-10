@@ -220,7 +220,7 @@ class ConsumerAdapterModel:
             unique_id=subentry.subentry_id,
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
-            power_entity_inverted=config[CONF_POWER_ENTITY_INVERTED],
+            power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
         )
 
     def create_adapter(self) -> ConsumerAdapter:

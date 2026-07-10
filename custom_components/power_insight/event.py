@@ -1,8 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 18 16:20:33 2025
+"""Per-config-entry state-change/report event tracking.
 
-@author: Bobby
+Forked from ``homeassistant.helpers.event`` so that PowerInsight's scoped
+custom events (prefixed per config entry) can be tracked with the same
+fast entity-id routing HA uses internally. Changes from the upstream helper
+are marked ``# MODIFIED``.
 """
 
 from typing import Iterable, Callable
@@ -86,14 +87,6 @@ class _KeyedEventTracker(Generic[_TypedDictT]):
         ],
         bool,
     ]
-
-
-@dataclass(slots=True, frozen=True)
-class _KeyedEventData(Generic[_TypedDictT]):
-    """Class to track data for events by key."""
-
-    listener: CALLBACK_TYPE
-    callbacks: defaultdict[str, list[HassJob[[Event[_TypedDictT]], Any]]]
 
 
 @callback

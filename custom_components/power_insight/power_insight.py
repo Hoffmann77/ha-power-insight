@@ -640,7 +640,7 @@ class PowerInsight:
     # ----------------->
 
     @property
-    def grid_adapters_gross_power_shares(self) -> float | None:
+    def grid_adapters_gross_power_shares(self) -> dict:
         """Return the grid adapter's share of total power.
 
         The fraction of total power that is imported by the adapter.
@@ -659,7 +659,7 @@ class PowerInsight:
         return shares
 
     @property
-    def grid_adapters_consumption_ratios(self) -> float | None:
+    def grid_adapters_consumption_ratios(self) -> dict:
         """Return the relative self consumption rate."""
         rates = {}
         # ???: use applicable share or not?
@@ -687,7 +687,7 @@ class PowerInsight:
     #     return rates
 
     @property
-    def grid_adapters_consumption_shares(self) -> float | None:
+    def grid_adapters_consumption_shares(self) -> dict:
         """Return the relative self consumption shares."""
         shares = {}
         if (self_cons_share := self.gross_power_consumption_ratio) is None:
@@ -1279,7 +1279,7 @@ class PowerInsight:
                 lcoo_rates[adapter.uid] = None
                 continue
 
-            if (lcoo_rate := adapter.get_coo_rate(lcoe_rate)) is None:
+            if (lcoo_rate := adapter.get_lcoo_rate(lcoe_rate)) is None:
                 lcoo_rates[adapter.uid] = None
                 continue
 
@@ -1721,7 +1721,7 @@ class PowerInsight:
     # ----------------------->
 
     @property
-    def cons_adapter_total_power_shares(self) -> float | None:
+    def cons_adapter_total_power_shares(self) -> dict:
         """Return the grid adapter's share of total power.
 
         The fraction of total power that is imported by the adapter.
@@ -1855,7 +1855,7 @@ class PowerInsight:
             _LOGGER.debug(f"Registered consumption adapter: {adapter}.")
 
         else:
-            raise ValueError("Error registrating adapter `{adapter}`.")
+            raise ValueError(f"Error registering adapter `{adapter}`.")
 
     def _to_kilo(self, power: float) -> float:
         """Convert the value into the kilo prefix."""
@@ -1865,11 +1865,14 @@ class PowerInsight:
         return power / 1000
 
     def _divide(self, to_divide: float, divide_by: float) -> float:
-        """Divide value_1 by value_2."""
-        # if to_divide is None or divide_by is None:
-        #    raise ValueError("Cannot divide value {to_divide} by {divide_by}.")
+        """Divide ``to_divide`` by ``divide_by``, guarding both operands.
 
-        if to_divide == 0.0:
+        Returns ``0.0`` when the numerator is zero or the denominator is zero
+        (or falsy). Guarding the denominator prevents ``ZeroDivisionError`` in
+        the ratio properties for degenerate states — e.g. a pure grid-export
+        reading where ``gross_power`` is ``0.0`` while ``grid_export > 0``.
+        """
+        if to_divide == 0.0 or not divide_by:
             return 0.0
 
         return to_divide / divide_by
@@ -1963,12 +1966,32 @@ class BasePowerAdapter(AbstractBaseAdapter):
 
     @property
     def power(self) -> float | None:
-        """Return the power in Watts."""
-        power = self._values.get(self._power_entity)
-        if power is not None:
-            return power  # * -1
+        """Return the power in Watts.
 
-        return None
+        Applies the ``power_entity_inverted`` flag so a source sensor using the
+        opposite sign convention is normalised to this integration's convention
+        (grid: + import / - export; pv/battery: + producing / - consuming).
+        """
+        power = self._values.get(self._power_entity)
+        if power is None:
+            return None
+
+        return -power if self._invert_power else power
+
+    def _multiply_cons(self, value: float) -> float | None:
+        """Return ``value`` scaled by this adapter's consumption (in kW).
+
+        Only meaningful on adapters that expose a ``consumption`` property
+        (production and consumer adapters); it is defined here so both share a
+        single implementation.
+        """
+        if (cons := self.consumption) is None:
+            return None
+
+        if cons == 0.0:
+            return 0.0
+
+        return (cons / 1000) * value
 
 
 class BasePowerProvidingAdapter(BasePowerAdapter):
@@ -2247,16 +2270,6 @@ class BaseProductionAdapter(BasePowerProvidingAdapter):
 
         return (prod / 1000) * value
 
-    def _multiply_cons(self, value: float) -> float | None:
-        """Return the rate for the given value."""
-        if (cons := self.consumption) is None:
-            return None
-
-        if cons == 0.0:
-            return 0.0
-
-        return (cons / 1000) * value
-
 
 class PvAdapter(BaseProductionAdapter):
     """Photovoltaic system adapter."""
@@ -2378,16 +2391,6 @@ class BaseConsumerAdapter(BasePowerAdapter):
     def get_lcoo_rate(self, lcoe: float) -> float | None:
         """Return the cost of operations rate."""
         return self._multiply_cons(lcoe)
-
-    def _multiply_cons(self, value: float) -> float | None:
-        """Return the rate for the given value."""
-        if (cons := self.consumption) is None:
-            return None
-
-        if cons == 0.0:
-            return 0.0
-
-        return (cons / 1000) * value
 
 
 class ConsumerAdapter(BaseConsumerAdapter):
