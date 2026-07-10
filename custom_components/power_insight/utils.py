@@ -1,19 +1,15 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Aug 24 17:13:43 2024
+"""Utility helpers for the PowerInsight integration."""
 
-@author: Bobby
-"""
 import logging
 
 from homeassistant.core import (
     State,
 )
 
+from .power_insight import UNIT_PREFIXES
+
 
 _LOGGER = logging.getLogger(__name__)
-
-UNIT_PREFIXES = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
 
 
 def get_value(key: str, d: dict, multiply=None, divide=None):
@@ -30,12 +26,6 @@ def get_value(key: str, d: dict, multiply=None, divide=None):
             value = value / divide
 
     return value
-
-
-def division_zero(a, b):
-    result = b and a / b or 0
-
-    return result
 
 
 def state_to_value(state_obj: State) -> float | None:

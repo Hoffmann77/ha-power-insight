@@ -7,8 +7,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
 
+import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -1080,8 +1082,10 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_operating_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_price_of_electricity": CONF_CALCULATE_COST_RATES,
     # --- Levelized cost rates ---
     "levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_price_of_electricity": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     # --- Cost savings rates ---
@@ -1420,6 +1424,16 @@ async def async_setup_entry(
     # Disable entities whose controlling option is now off (keeping their
     # history), and re-enable any we previously disabled that are wanted again.
     _sync_entity_enabled_state(hass, entry, created_unique_ids)
+
+    # Register the ``set_value`` service as a platform entity service. HA
+    # resolves the target entity itself; only integration (accumulation)
+    # sensors implement ``async_set_value``, so seeding a running total is
+    # scoped to those entities automatically.
+    entity_platform.async_get_current_platform().async_register_entity_service(
+        "set_value",
+        {vol.Required("value"): vol.Coerce(float)},
+        "async_set_value",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -24,7 +24,6 @@ from homeassistant.util import slugify
 from .const import (
     DOMAIN,
     CONF_KEY,
-    CONF_ADAPTER_TYPE,
     CONF_POWER_ENTITY,
     CONF_POWER_ENTITY_INVERTED,
     CONF_ELECTRICITY_PRICE_ENTITY,
@@ -73,19 +72,14 @@ from .const import (
 
     CONF_ACCUMULATE_COST_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-    CONF_ACCUMULATE_CO2_INTENSITY_RATES,
     CONF_ACCUMULATE_LEVELIZED_CO2_INTENSITY_RATES,
 
     CONF_ACCUMULATE_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
-    CONF_ACCUMULATE_CO2_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_CO2_SAVING_RATES,
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-# Toggle for entity validation - set to False to disable during development
-ENABLE_ENTITY_VALIDATION = True
 
 
 # ============================================================================
@@ -211,8 +205,6 @@ def _build_charge_from_selector(
 
 def validate_entity_exists(hass, entity_id: str | None) -> bool:
     """Validate that an entity exists in Home Assistant."""
-    if not ENABLE_ENTITY_VALIDATION:
-        return True
     if entity_id is None:
         return True
     state = hass.states.get(entity_id)
@@ -221,8 +213,6 @@ def validate_entity_exists(hass, entity_id: str | None) -> bool:
 
 def validate_power_entity(hass, entity_id: str | None) -> bool:
     """Validate power entity exists and reports a power unit."""
-    if not ENABLE_ENTITY_VALIDATION:
-        return True
     if entity_id is None:
         return True
     state = hass.states.get(entity_id)
@@ -252,7 +242,14 @@ def calculate_lcoe(
 def calculate_lcos(
     fields: dict[str, Any], existing_data: dict[str, Any] | None = None
 ) -> float | None:
-    """Calculate Levelized Cost of Storage (EUR/kWh)."""
+    """Calculate Levelized Cost of Storage (EUR/kWh).
+
+    NOTE: LCOS is currently computed identically to LCOE (lifetime cost /
+    lifetime throughput). A storage-specific formula (accounting for
+    round-trip efficiency and charge/discharge losses) is a planned
+    refinement; the two are kept as separate functions so that change can be
+    made without touching the LCOE path.
+    """
     costs = fields.get(CONF_LIFETIME_COST)
     production = fields.get(CONF_LIFETIME_PRODUCTION)
     if not costs or not production:
@@ -507,12 +504,18 @@ def _preset_selector(include_custom: bool = True) -> selector.SelectSelector:
     )
 
 
-def _cost_method_options(scope: str) -> list[selector.SelectOptionDict]:
-    """Return available cost-method selector options for *scope*."""
+def _method_options(
+    scope: str, standard_key: str, levelized_key: str
+) -> list[selector.SelectOptionDict]:
+    """Return None/Standard/Levelized/Both selector options for *scope*.
+
+    Shared by the cost-method and savings-method selectors, which differ only
+    in which pair of option keys gate the Standard/Levelized choices.
+    """
     supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
     opts = [selector.SelectOptionDict(value="none", label="None")]
-    has_std = CONF_CALCULATE_COST_RATES in supported
-    has_lvl = CONF_CALCULATE_LEVELIZED_COST_RATES in supported
+    has_std = standard_key in supported
+    has_lvl = levelized_key in supported
     if has_std:
         opts.append(selector.SelectOptionDict(value="standard", label="Standard"))
     if has_lvl:
@@ -520,21 +523,22 @@ def _cost_method_options(scope: str) -> list[selector.SelectOptionDict]:
     if has_std and has_lvl:
         opts.append(selector.SelectOptionDict(value="both", label="Both"))
     return opts
+
+
+def _cost_method_options(scope: str) -> list[selector.SelectOptionDict]:
+    """Return available cost-method selector options for *scope*."""
+    return _method_options(
+        scope, CONF_CALCULATE_COST_RATES, CONF_CALCULATE_LEVELIZED_COST_RATES
+    )
 
 
 def _savings_method_options(scope: str) -> list[selector.SelectOptionDict]:
     """Return available savings-method selector options for *scope*."""
-    supported = SCOPE_SUPPORTED_OPTIONS.get(scope, set())
-    opts = [selector.SelectOptionDict(value="none", label="None")]
-    has_std = CONF_CALCULATE_COST_SAVING_RATES in supported
-    has_lvl = CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in supported
-    if has_std:
-        opts.append(selector.SelectOptionDict(value="standard", label="Standard"))
-    if has_lvl:
-        opts.append(selector.SelectOptionDict(value="levelized", label="Levelized"))
-    if has_std and has_lvl:
-        opts.append(selector.SelectOptionDict(value="both", label="Both"))
-    return opts
+    return _method_options(
+        scope,
+        CONF_CALCULATE_COST_SAVING_RATES,
+        CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    )
 
 
 def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
@@ -1757,7 +1761,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
 
     def _next_scope_step(self, after: str) -> str | None:
         """Return the next step id in the chain after *after*, or None if done."""
-        order = ["combined", "grid", "pv_system", "battery", "consumer"]
+        order = list(SCOPES)
         for scope in order[order.index(after) + 1:]:
             if scope in self._device_types:
                 return scope
@@ -1765,10 +1769,10 @@ class PowerInsightOptionsFlow(OptionsFlow):
 
     def _last_scope(self) -> str:
         """Return the final scope step in the navigation chain."""
-        for scope in reversed(["combined", "grid", "pv_system", "battery", "consumer"]):
-            if scope == "combined" or scope in self._device_types:
+        for scope in reversed(SCOPES):
+            if scope == SCOPE_COMBINED or scope in self._device_types:
                 return scope
-        return "combined"
+        return SCOPE_COMBINED
 
     async def _finish(self) -> FlowResult:
         """Run feasibility check and save, or re-show the last scope form."""

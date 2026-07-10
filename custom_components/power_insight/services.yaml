@@ -1,13 +1,20 @@
 set_value:
   name: Set value
-  description: Set the state/value of an entity
+  description: >-
+    Set the accumulated total of a Power Insight total/accumulation sensor.
+    Use this to seed a sensor with a known starting value, for example to
+    carry over historical totals when adopting the integration.
   target:
     entity:
-      domain: "power_insight"
+      domain: sensor
+      integration: power_insight
   fields:
     value:
+      name: Value
       required: true
-      description: "The new value to set"
+      description: The new accumulated total to set.
       example: 42
       selector:
         number:
+          mode: box
+          step: 0.01

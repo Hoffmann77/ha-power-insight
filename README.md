@@ -1,14 +1,19 @@
 # Power Insight for Home Assistant
 
-**A Custom component that provides you useful insights about the electrical Power in your home.**
+**A custom component that provides useful insights about the electrical power in your home.**
 
-Get useful insights about the carbon intensity, cost of electricity, savings and power distribution in your home.
+Get useful insights about the cost of electricity, savings and power distribution in your home.
 
-Add your PV-Systems and Energy storages to see how much they impact the power in your home. In addition you can add electrical consumers to get detailed insights about the current and total costs and the distribution of used energy sources.
+Add your PV systems and energy storages to see how much they impact the power in your home. In addition you can add electrical consumers to get detailed insights about the current and total costs and the distribution of used energy sources.
 
-Get an insight of the eletrical power you use in your home. Track the power, price, and carbon impact of your energy mix.
+Track the power, price, and cost of your energy mix in real time.
 
 By using instantaneous values for calculation this component works great with dynamic electricity prices.
+
+> [!NOTE]
+> Carbon-intensity / CO₂ tracking is planned but not yet available in this
+> release. The configuration flow may ask for a CO₂ intensity entity, but no
+> CO₂ sensors are created yet.
 
 See below for a full list of entities provided by this component.
 
@@ -54,7 +59,11 @@ After installation, please restart Home Assistant. To add Power Insight to your 
 
 
 ## Limitations
-TBD
+- **Instantaneous power sensors required.** Calculations are driven by live power (W/kW) readings, not energy meters. Each PV system, battery, consumer and the grid connection must expose a power sensor.
+- **One grid connection per entry.** A config entry models a single grid connection / energy mix. Multiple grid connections are modelled as multiple config entries.
+- **CO₂ / carbon intensity is not yet implemented.** See the note at the top of this README.
+- **Consumer entities are still under development.** See below.
+- **Entity names may change** until the 1.0 release.
 
 ## Entities
 
@@ -65,20 +74,26 @@ TBD
 
 | Entitiy | Description |
 | ---- | ---- |
-| `Available power`| TBD |
-| `Cost of electricity`| TBD |
-| `Electricity price`| TBD |
-| `Export compensation rate`| TBD |
-| `Export share`| TBD |
-| `Levelized cost of electricity`| TBD |
-| `Levelized electricity price`| TBD |
-| `Savings rate`| TBD |
-| `Levelized savings rate`| TBD |
-| `Operating costs rate`| TBD |
-| `Levelized operating costs rate`| TBD |
-| `Self consumption power`| Amount of power generated or imported that is self consumed by the home. |
-| `Self consumption share`| TBD |
-| `Self consumption savings rate`| TBD |
+| `Available power`| Diagnostic sensor: the amount of generated/imported power not currently consumed in the home (W). Disabled by default. |
+| `Cost of electricity`| Current blended cost of one kWh across your whole energy mix — grid plus your own devices (EUR/kWh). |
+| `Electricity price`| Current price you pay for one kWh imported from the grid (EUR/kWh). |
+| `Export compensation rate`| Money earned per hour from exporting surplus power to the grid (EUR/h). |
+| `Export share`| Share of the total power exported to the grid that this energy mix contributes (%). |
+| `Levelized cost of electricity`| Like *Cost of electricity*, but each device's cost is its levelized lifetime cost rather than only its running cost (EUR/kWh). |
+| `Levelized electricity price`| Price of one kWh of your mix computed with levelized device costs (EUR/kWh). |
+| `Savings rate`| Money saved per hour by self-consuming and exporting your own generation instead of importing (EUR/h). |
+| `Levelized savings rate`| *Savings rate* computed with levelized device costs (EUR/h). |
+| `Operating costs rate`| Running cost per hour of your current energy mix (EUR/h). |
+| `Levelized operating costs rate`| *Operating costs rate* computed with levelized device costs (EUR/h). |
+| `Self consumption power`| Amount of power generated or imported that is self consumed by the home (W). |
+| `Self consumption share`| Share of the power consumed in your home that is supplied by your own generation/storage (%). |
+| `Self consumption savings rate`| Money saved per hour by consuming your own generation instead of importing it (EUR/h). |
+
+> [!NOTE]
+> Which of these entities are created depends on the options you enable per
+> scope (combined / grid / PV / battery / consumer). Accumulated (total) sensors
+> integrate the matching rate over time; you can seed their starting value with
+> the `power_insight.set_value` service.
 
 
 

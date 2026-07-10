@@ -9,10 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uv run pytest
 
 # Run a single test file
-uv run pytest tests/test_power_calculations.py
+uv run pytest tests/test_power_insight_calculations.py
 
 # Run a single test method
-uv run pytest tests/test_power_calculations.py::TestSinglePVwithExport::test_grid_import
+uv run pytest tests/test_power_insight_calculations.py::TestFullScenario::test_combined_grid_import
 
 # Run a specific parametrized case by keyword
 uv run pytest -k "import"

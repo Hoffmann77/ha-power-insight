@@ -24,7 +24,7 @@ from homeassistant.helpers.event import (
 )
 
 from .const import DOMAIN
-from .power_insight import UNIT_PREFIXES
+from .utils import state_to_value
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class EventHandler:
                 value = (
                     None
                     if state.state in _INVALID_STATES
-                    else self._state_to_value(state)
+                    else state_to_value(state)
                 )
                 self.power_insight.set_value(entity_id, value)
 
@@ -170,7 +170,7 @@ class EventHandler:
         elif new_state.state in _INVALID_STATES:
             value = None
         else:
-            value = self._state_to_value(new_state)
+            value = state_to_value(new_state)
 
         value_changed = self.power_insight.set_value(entity_id, value)
 
@@ -188,22 +188,3 @@ class EventHandler:
         # there is nothing for sensors to recalculate.
         if is_report or value_changed:
             self.hass.bus.async_fire(event_type, event_data)
-
-    def _state_to_value(self, state_obj: State) -> float | None:
-        """Convert a HA state object to a numeric Watts value.
-
-        Reads the ``unit_of_measurement`` attribute to apply SI prefix scaling
-        so that kW, MW, etc. are all stored as Watts internally.  An unknown
-        prefix is treated as ×1 (no scaling).
-        """
-        try:
-            value = float(state_obj.state)
-        except ValueError:
-            return None
-
-        # Apply SI prefix (k=10³, M=10⁶, …) based on the first character of
-        # the unit string.  None key matches plain "W" or any unrecognised unit.
-        if unit := state_obj.attributes.get("unit_of_measurement"):
-            unit = unit[0]
-
-        return value * UNIT_PREFIXES.get(unit, 1.0)
