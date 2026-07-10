@@ -126,3 +126,84 @@ def test_lcoo_rates_propagate_after_fix(monkeypatch) -> None:
     lcoo = pi.storage_adapters_lcoo_rates
     blended = 0.10 * 0.25 + 0.20 * 0.75
     assert lcoo["bat1"] == pytest.approx((800.0 / 1000.0) * blended)
+
+
+# ---------------------------------------------------------------------------
+# Real charging-source-share computation (no monkeypatch).
+#
+# Scenario power readings (gross power = grid_import + pv_prod + bat_discharge):
+#   grid import 1000 W @ 0.30 EUR/kWh, PV-1 3000 W (lcoe 0.10), PV-2 1000 W
+#   (lcoe 0.20), Battery charging (-500 W, so discharge 0). gross = 5000 W.
+#   Gross-power shares: grid 0.2, pv1 0.6, pv2 0.2.
+# ---------------------------------------------------------------------------
+
+def _build_real(charge_from_adapters) -> PowerInsight:
+    pi = PowerInsight()
+    pi.register_adapter(
+        GridAdapter(
+            unique_id="grid",
+            verbose_name="Grid",
+            power_entity="sensor.grid_power",
+            price_entity="sensor.grid_price",
+        )
+    )
+    pi.register_adapter(
+        PvAdapter(
+            unique_id="pv1", verbose_name="PV-1",
+            power_entity="sensor.pv1_power", power_entity_inverted=False,
+            lcoe=0.10, lco2_intensity=35.0, exports_power=True, export_compensation=0.08,
+        )
+    )
+    pi.register_adapter(
+        PvAdapter(
+            unique_id="pv2", verbose_name="PV-2",
+            power_entity="sensor.pv2_power", power_entity_inverted=False,
+            lcoe=0.20, lco2_intensity=40.0, exports_power=True, export_compensation=0.08,
+        )
+    )
+    pi.register_adapter(
+        BatteryAdapter(
+            unique_id="bat1", verbose_name="Battery-1",
+            power_entity="sensor.bat1_power", power_entity_inverted=False,
+            lcos=0.25, lco2_intensity=50.0, exports_power=False, export_compensation=0.0,
+            charge_from_grid=False,
+            charge_from_adapters=charge_from_adapters,
+        )
+    )
+    pi.set_value("sensor.grid_power", 1000.0)   # importing
+    pi.set_value("sensor.grid_price", 0.30)
+    pi.set_value("sensor.pv1_power", 3000.0)
+    pi.set_value("sensor.pv2_power", 1000.0)
+    pi.set_value("sensor.bat1_power", -500.0)   # charging
+    return pi
+
+
+def test_real_source_shares_grid_and_pv() -> None:
+    """Grid + PV sources are weighted by gross-power share and renormalized."""
+    pi = _build_real(["grid", "pv1"])
+    shares = pi.storage_adapters_charging_source_shares
+    # grid 0.2 / pv1 0.6 -> renormalized over 0.8 -> 0.25 / 0.75.
+    assert shares["bat1"] == {
+        "grid": pytest.approx(0.25),
+        "pv1": pytest.approx(0.75),
+    }
+    # Blended lcoe: grid coe (= price 0.30) * 0.25 + pv1 lcoe 0.10 * 0.75.
+    assert pi.storage_adapters_dynamic_lcoe["bat1"] == pytest.approx(
+        0.30 * 0.25 + 0.10 * 0.75
+    )
+
+
+def test_real_source_shares_pv_only() -> None:
+    """A single PV source takes the full (renormalized) share."""
+    pi = _build_real(["pv1"])
+    assert pi.storage_adapters_charging_source_shares["bat1"] == {
+        "pv1": pytest.approx(1.0)
+    }
+    assert pi.storage_adapters_dynamic_lcoe["bat1"] == pytest.approx(0.10)
+
+
+def test_real_source_shares_empty_is_untracked() -> None:
+    """A battery with no configured sources is omitted (charging mix unknown)."""
+    pi = _build_real([])
+    assert "bat1" not in pi.storage_adapters_charging_source_shares
+    assert "bat1" not in pi.storage_adapters_dynamic_lcoe
