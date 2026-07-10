@@ -193,7 +193,6 @@ class TestFullScenario:
             lco2_intensity=50.0,
             exports_power=False,
             export_compensation=0.0,
-            charge_from_grid=False,
             charge_from_adapters=[],
         ),
         BatteryAdapter(
@@ -205,7 +204,6 @@ class TestFullScenario:
             lco2_intensity=50.0,
             exports_power=False,
             export_compensation=0.0,
-            charge_from_grid=False,
             charge_from_adapters=[],
         ),
         BatteryAdapter(
@@ -217,7 +215,6 @@ class TestFullScenario:
             lco2_intensity=50.0,
             exports_power=False,
             export_compensation=0.0,
-            charge_from_grid=False,
             charge_from_adapters=[],
         ),
         ConsumerAdapter(
