@@ -1,32 +1,52 @@
 name: Docs
 
+# Versioned documentation, published with `mike` to the gh-pages branch.
+#
+#   - push to main        -> updates the `dev` (in-development) docs
+#   - push a release tag  -> deploys that release as MAJOR.MINOR, moves the
+#                            `latest` alias, and makes `latest` the default
+#   - manual dispatch     -> deploy any version/alias by hand
+#
+# NOTE: GitHub Pages must be configured to serve from the `gh-pages` branch
+# (Settings -> Pages -> Build and deployment -> Source: "Deploy from a branch",
+# Branch: gh-pages / root), because `mike` manages that branch.
 on:
   push:
     branches:
       - main
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - ".github/workflows/docs.yaml"
+    tags:
+      - "*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label to deploy (e.g. 0.2). Blank = derive from the ref."
+        required: false
+        default: ""
+      alias:
+        description: "Alias to move to this version (e.g. latest). Blank = none."
+        required: false
+        default: ""
+      set_default:
+        description: "Make this alias/version the site default"
+        type: boolean
+        default: false
 
-# Allow the workflow to publish to GitHub Pages.
+# `mike` pushes the built site to the gh-pages branch.
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run
-# in-progress and latest queued. Do not cancel in-progress runs.
+# Serialise deployments so concurrent runs never race on the gh-pages branch.
 concurrency:
-  group: pages
+  group: docs-deploy
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -36,21 +56,63 @@ jobs:
       - name: Install dependencies
         run: pip install -r docs/requirements.txt
 
-      - name: Build site (strict)
-        run: mkdocs build --strict
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
+      - name: Fetch existing docs versions
+        run: git fetch origin gh-pages --depth=1 || echo "gh-pages does not exist yet"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Determine version and alias
+        id: cfg
+        run: |
+          set -euo pipefail
+          VERSION="${{ github.event.inputs.version }}"
+          ALIAS="${{ github.event.inputs.alias }}"
+          SET_DEFAULT="${{ github.event.inputs.set_default }}"
+
+          if [ -z "$VERSION" ]; then
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              # Release tag -> group by MAJOR.MINOR (e.g. 0.1.0-beta.3 -> 0.1),
+              # publish under `latest`, and make it the default.
+              raw="${{ github.ref_name }}"
+              raw="${raw#v}"
+              VERSION="$(printf '%s' "$raw" | cut -d. -f1-2)"
+              ALIAS="latest"
+              SET_DEFAULT="true"
+            else
+              # Push to main -> the in-development docs.
+              VERSION="dev"
+              ALIAS=""
+            fi
+          fi
+
+          echo "version=$VERSION"        >> "$GITHUB_OUTPUT"
+          echo "alias=$ALIAS"            >> "$GITHUB_OUTPUT"
+          echo "set_default=$SET_DEFAULT" >> "$GITHUB_OUTPUT"
+          echo "Deploying version='$VERSION' alias='$ALIAS' set_default='$SET_DEFAULT'"
+
+      - name: Deploy with mike
+        env:
+          VERSION: ${{ steps.cfg.outputs.version }}
+          ALIAS: ${{ steps.cfg.outputs.alias }}
+          SET_DEFAULT: ${{ steps.cfg.outputs.set_default }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$ALIAS" ]; then
+            mike deploy --push --update-aliases "$VERSION" "$ALIAS"
+          else
+            mike deploy --push "$VERSION"
+          fi
+
+          # Keep the site root resolvable: prefer `latest` once a release
+          # exists, otherwise fall back to whatever we just deployed (dev).
+          if [ "$SET_DEFAULT" = "true" ] && [ -n "$ALIAS" ]; then
+            mike set-default --push "$ALIAS"
+          elif mike list 2>/dev/null | grep -q "\[latest\]"; then
+            mike set-default --push latest
+          else
+            mike set-default --push "$VERSION"
+          fi
