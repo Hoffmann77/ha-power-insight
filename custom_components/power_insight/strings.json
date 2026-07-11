@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Power Insight",
-        "description": "Power Insight tracks the real-time power flow, electricity costs, savings, and CO₂ impact of your home's energy mix — grid, solar, batteries, and individual consumers in one place.\n\nGive this configuration a name to get started. After setup, use the **Add device** button to connect your grid meter, PV inverter, battery system, and any consumers you want to track. Then open the integration's options to choose which sensors to create.\n\n**See https://github.com/Hoffmann77/ha-power-insight for full documentation.**",
+        "description": "Power Insight tracks the real-time power flow, electricity costs, savings, and CO₂ impact of your home's energy mix — grid, solar, batteries, and individual consumers in one place.\n\nGive this configuration a name to get started. After setup, use the **Add device** button to connect your grid meter, PV inverter, battery system, and any consumers you want to track. Then open the integration's options to choose which sensors to create.",
         "data": {
           "name": "Name"
         },
