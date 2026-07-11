@@ -72,6 +72,15 @@ per instance.
 Categories are the user‑facing groupings; each maps to one or more leaf option
 keys (the values actually stored and checked).
 
+!!! note "Post-implementation addition"
+    Four financial-return option keys were added to `combined`, `pv_system`, and
+    `battery` scopes after this spec was written:
+    `calculate_financial_return_rate`, `calculate_levelized_financial_return_rate`,
+    `accumulate_financial_return`, `accumulate_levelized_financial_return`.
+    The `self_consumption_cost_savings_*` sensor family was removed (cost savings
+    now means avoided import only; financial return = cost savings + export
+    compensation). The sensor-key tables in section 5 reflect the current state.
+
 ### Money categories
 
 | Category (label) | Leaf option key(s) | Choice labels |
@@ -187,14 +196,16 @@ to the option gate.
 | combined_operating_cost_rate | calculate_cost_rates |
 | combined_levelized_cost_rate | calculate_levelized_cost_rates |
 | combined_levelized_operating_cost_rate | calculate_levelized_cost_rates |
-| combined_self_consumption_cost_savings_rate | calculate_cost_saving_rates |
 | combined_cost_savings_rate | calculate_cost_saving_rates |
 | combined_levelized_cost_savings_rate | calculate_levelized_cost_saving_rates |
+| combined_financial_return_rate | calculate_financial_return_rate |
+| combined_levelized_financial_return_rate | calculate_levelized_financial_return_rate |
 | combined_total_operating_costs | accumulate_cost_rates |
 | combined_total_levelized_operating_costs | accumulate_levelized_cost_rates |
-| combined_total_self_consumption_cost_savings | accumulate_cost_saving_rates |
 | combined_total_cost_savings | accumulate_cost_saving_rates |
 | combined_total_levelized_cost_savings | accumulate_levelized_cost_saving_rates |
+| combined_total_financial_return | accumulate_financial_return |
+| combined_total_levelized_financial_return | accumulate_levelized_financial_return |
 | combined_price_of_electricity | *(always on)* |
 | combined_levelized_price_of_electricity | *(always on)* |
 
@@ -223,14 +234,16 @@ to the option gate.
 | total_export_compensation | accumulate_export_compensation | exports_power |
 | operating_cost_rate | calculate_cost_rates | — |
 | levelized_operating_cost_rate | calculate_levelized_cost_rates | lcoe |
-| self_consumption_cost_savings_rate | calculate_cost_saving_rates | — |
 | cost_savings_rate | calculate_cost_saving_rates | — |
 | levelized_cost_savings_rate | calculate_levelized_cost_saving_rates | lcoe |
+| financial_return_rate | calculate_financial_return_rate | exports_power |
+| levelized_financial_return_rate | calculate_levelized_financial_return_rate | lcoe · exports_power |
 | total_operating_costs | accumulate_cost_rates | — |
 | total_levelized_operating_costs | accumulate_levelized_cost_rates | lcoe |
-| total_self_consumption_cost_savings | accumulate_cost_saving_rates | — |
 | total_cost_savings | accumulate_cost_saving_rates | — |
 | total_levelized_cost_savings | accumulate_levelized_cost_saving_rates | lcoe |
+| total_financial_return | accumulate_financial_return | exports_power |
+| total_levelized_financial_return | accumulate_levelized_financial_return | lcoe · exports_power |
 | export_ratio | enable_distribution_ratios | exports_power |
 | self_consumption_ratio | enable_distribution_ratios | — |
 | export_share | enable_distribution_shares | exports_power |

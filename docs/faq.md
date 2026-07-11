@@ -2,29 +2,33 @@
 
 ## How are savings calculated?
 
-Power Insight recognises two ways your devices generate savings:
+Power Insight separates three financial concepts:
 
-1. **Selling surplus energy to the grid** (export compensation).
-2. **Replacing energy you would otherwise import** with energy from your own
-   devices (self-consumption savings), valued at the grid price you avoided.
-
-Total savings add both and subtract the costs your devices accumulate:
-
-```
-savings = export_compensation + self_consumption_savings − operating_costs
-```
+- **Cost savings** — money saved by replacing grid imports with your own
+  generation, minus the device's operating costs:
+  ```
+  cost_savings = avoided_import_cost − operating_costs
+  ```
+- **Export compensation** — feed-in revenue for power exported to the grid
+  (its own dedicated sensors).
+- **Financial return** — the combined picture:
+  ```
+  financial_return = cost_savings + export_compensation
+  ```
 
 For PV systems the operating cost is mainly standby consumption at night; for
-batteries it's the cost of the energy used to charge them. See
-[How savings are calculated](concepts.md#how-savings-are-calculated).
+batteries it's the cost of the energy used to charge them, adjusted for
+round-trip losses. See
+[How savings and financial return are calculated](concepts.md#how-savings-and-financial-return-are-calculated).
 
-## Why does my battery have negative savings?
+## Why does my battery have negative cost savings?
 
-Any device can show negative savings if it doesn't earn enough to cover its
-costs — and a battery **always** shows negative savings while charging, because
-Power Insight tracks the cost of the energy going into it. That cost turns into
-positive savings when the battery later discharges and offsets a grid import.
-See [the concepts page](concepts.md#why-does-my-battery-have-negative-savings).
+Any device can show negative cost savings if it doesn't earn enough to cover its
+costs — and a battery **always** shows negative cost savings while charging,
+because Power Insight tracks the cost of the energy going into it. That cost
+turns into positive savings when the battery later discharges and offsets a grid
+import. See
+[the concepts page](concepts.md#why-does-my-battery-have-negative-cost-savings).
 
 ## Does Power Insight work with dynamic electricity prices?
 
