@@ -11,7 +11,7 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/Hoffmann77/ha-power-insight/tests.yaml?branch=main&label=tests&style=flat-square)](https://github.com/Hoffmann77/ha-power-insight/actions/workflows/tests.yaml)
 [![License](https://img.shields.io/github/license/Hoffmann77/ha-power-insight?style=flat-square)](LICENSE)
 
-[**📖 Documentation**](https://hoffmann77.github.io/ha-power-insight/) ·
+[**📖 Docs**](https://hoffmann77.github.io/ha-power-insight/) ·
 [Installation](https://hoffmann77.github.io/ha-power-insight/installation/) ·
 [Getting started](https://hoffmann77.github.io/ha-power-insight/getting-started/) ·
 [Entities](https://hoffmann77.github.io/ha-power-insight/entities/) ·
@@ -38,9 +38,9 @@ always reflect the price you are paying right now.
 > configuration flow may ask for a CO₂ intensity entity, but no CO₂ sensors are
 > created yet.
 
-> [!WARNING]
-> Power Insight is in **beta** (`0.1.0b1`). Entity names and options may change
-> until the 1.0 release.
+> [!IMPORTANT]
+> Power Insight is in an early development phase. Entity names and options may change
+> until the 1.0 release. 
 
 ## ✨ Features
 
