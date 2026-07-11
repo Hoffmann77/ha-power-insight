@@ -11,6 +11,15 @@ edit_uri: edit/main/docs/
 
 copyright: Copyright &copy; Hoffmann77 — MIT License
 
+# Documentation is versioned with `mike` (deployed to the gh-pages branch).
+# This enables the version selector in the header and the "you're viewing an
+# older/dev version" banner.
+extra:
+  version:
+    provider: mike
+    default: latest
+    alias: true
+
 theme:
   name: material
   logo: assets/logo.png
@@ -75,4 +84,5 @@ nav:
   - Services: services.md
   - FAQ: faq.md
   - Development:
+      - Docs versioning & releases: dev/releasing.md
       - Options-flow spec: dev/options-flow-redesign.md

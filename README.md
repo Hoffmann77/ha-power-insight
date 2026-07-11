@@ -138,6 +138,11 @@ pip install -r docs/requirements.txt
 mkdocs serve
 ```
 
+The docs are **versioned** with [`mike`](https://github.com/jimporter/mike) and
+published to the `gh-pages` branch: pushes to `main` update the `dev` docs, and
+release tags publish a `MAJOR.MINOR` version behind the `latest` alias. See
+[the docs release process](https://hoffmann77.github.io/ha-power-insight/dev/releasing/).
+
 ## 📄 License
 
 Released under the [MIT License](LICENSE).
