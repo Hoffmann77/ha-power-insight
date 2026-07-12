@@ -1832,6 +1832,7 @@ class PowerInsight:
     # └────────────────────────────────────────────────────────────────┘
     # ----------------------------------------------------------------->
 
+    # CLAUDE-GENERATED — review
     @property
     def _provider_charging_powers(self) -> dict[str, float] | None:
         """Return ``{provider_uid: watts contributed to battery charging}``.
@@ -1856,6 +1857,7 @@ class PowerInsight:
 
         return dict(powers)
 
+    # CLAUDE-GENERATED — review
     @property
     def _provider_standby_powers(self) -> dict[str, float | None] | None:
         """Return ``{provider_uid: watts contributed to device standby}``.
@@ -1884,6 +1886,7 @@ class PowerInsight:
 
     # --- Grid ---
 
+    # CLAUDE-GENERATED — review
     @property
     def grid_adapters_charging_ratios(self) -> dict[str, float | None]:
         """Fraction of grid import that goes to battery charging."""
@@ -1895,6 +1898,7 @@ class PowerInsight:
         uid = self.grid_adapter.uid
         return {uid: self._divide(powers.get(uid, 0.0), grid_import)}
 
+    # CLAUDE-GENERATED — review
     @property
     def grid_adapters_charging_shares(self) -> dict[str, float | None]:
         """Grid's share of the total battery-charging power."""
@@ -1906,6 +1910,7 @@ class PowerInsight:
         uid = self.grid_adapter.uid
         return {uid: self._divide(powers.get(uid, 0.0), combined)}
 
+    # CLAUDE-GENERATED — review
     @property
     def grid_adapters_standby_ratios(self) -> dict[str, float | None]:
         """Fraction of grid import that goes to device standby."""
@@ -1921,6 +1926,7 @@ class PowerInsight:
 
         return {uid: self._divide(standby, grid_import)}
 
+    # CLAUDE-GENERATED — review
     @property
     def grid_adapters_standby_shares(self) -> dict[str, float | None]:
         """Grid's share of the total standby power."""
@@ -1938,6 +1944,7 @@ class PowerInsight:
 
     # --- Production (PV) ---
 
+    # CLAUDE-GENERATED — review
     @property
     def prod_adapters_charging_channel_ratios(self) -> dict[str, float | None]:
         """Fraction of each PV system's production that goes to charging."""
@@ -1953,6 +1960,7 @@ class PowerInsight:
 
         return ratios
 
+    # CLAUDE-GENERATED — review
     @property
     def prod_adapters_charging_channel_shares(self) -> dict[str, float | None]:
         """Each PV system's share of the total battery-charging power."""
@@ -1967,6 +1975,7 @@ class PowerInsight:
 
         return shares
 
+    # CLAUDE-GENERATED — review
     @property
     def prod_adapters_standby_ratios(self) -> dict[str, float | None]:
         """Fraction of each PV system's production that goes to standby."""
@@ -1985,6 +1994,7 @@ class PowerInsight:
 
         return ratios
 
+    # CLAUDE-GENERATED — review
     @property
     def prod_adapters_standby_shares(self) -> dict[str, float | None]:
         """Each PV system's share of the total standby power."""
@@ -2007,6 +2017,7 @@ class PowerInsight:
     # Same as the production variants above, iterating the storage adapters so
     # the battery device reads from ``storage_adapters_*`` like its other sensors.
 
+    # CLAUDE-GENERATED — review
     @property
     def storage_adapters_charging_channel_ratios(self) -> dict[str, float | None]:
         """Fraction of each battery's discharge that goes to charging."""
@@ -2022,6 +2033,7 @@ class PowerInsight:
 
         return ratios
 
+    # CLAUDE-GENERATED — review
     @property
     def storage_adapters_charging_channel_shares(self) -> dict[str, float | None]:
         """Each battery's share of the total battery-charging power."""
@@ -2036,6 +2048,7 @@ class PowerInsight:
 
         return shares
 
+    # CLAUDE-GENERATED — review
     @property
     def storage_adapters_standby_ratios(self) -> dict[str, float | None]:
         """Fraction of each battery's discharge that goes to standby."""
@@ -2054,6 +2067,7 @@ class PowerInsight:
 
         return ratios
 
+    # CLAUDE-GENERATED — review
     @property
     def storage_adapters_standby_shares(self) -> dict[str, float | None]:
         """Each battery's share of the total standby power."""
