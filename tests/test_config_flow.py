@@ -370,6 +370,10 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
             "power_sensors": {"distribution_power": False, "distribution_ratios": False},
             "costs": {"cost_method": "none", "accumulate_costs": False},
             "savings": {"savings_method": "none", "accumulate_savings": False},
+            "financial_return": {
+                "financial_return_method": "none",
+                "accumulate_financial_return": False,
+            },
         },
     )
     assert result["step_id"] == "grid"

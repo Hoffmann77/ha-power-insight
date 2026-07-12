@@ -17,6 +17,7 @@ the device capability) that must be on for the sensor to exist:
 - *Distribution (W/ratios/shares)* → the matching **Power sensors** category.
 - *Cost — Standard / Levelized* → the **Cost calculation method**.
 - *Savings — Standard / Levelized* → the **Savings calculation method**.
+- *Financial return — Standard / Levelized* → the **Financial return method**.
 - *Accumulate …* → the matching accumulate toggle.
 
 ---
@@ -44,9 +45,10 @@ devices into a single number per metric.
 | Combined levelized cost rate | EUR/h | Cost rate computed with levelized device costs. | Cost — Levelized |
 | Combined operating cost rate | EUR/h | Running operating cost per hour of your mix. | Cost — Standard |
 | Combined levelized operating cost rate | EUR/h | Operating cost rate with levelized device costs. | Cost — Levelized |
-| Combined cost savings rate | EUR/h | Money saved per hour by self-consuming and exporting your own generation instead of importing. | Savings — Standard |
-| Combined levelized cost savings rate | EUR/h | Savings rate computed with levelized device costs. | Savings — Levelized |
-| Combined self-consumption cost savings rate | EUR/h | Money saved per hour purely by self-consuming (avoided grid import). | Savings — Standard |
+| Combined cost savings rate | EUR/h | Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
+| Combined levelized cost savings rate | EUR/h | Cost savings rate computed with levelized device costs. | Savings — Levelized |
+| Combined financial return rate | EUR/h | Total financial benefit per hour — cost savings plus export compensation. | Financial return — Standard |
+| Combined levelized financial return rate | EUR/h | Financial return computed with levelized device costs. | Financial return — Levelized |
 
 ### Accumulated totals
 
@@ -54,12 +56,13 @@ devices into a single number per metric.
 |---|---|---|---|
 | Combined total operating costs | EUR | Operating cost rate integrated over time. | Accumulate costs |
 | Combined total levelized operating costs | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
-| Combined total self-consumption cost savings | EUR | Self-consumption savings integrated over time. | Accumulate savings |
-| Combined total cost savings | EUR | Total savings integrated over time. | Accumulate savings |
-| Combined total levelized cost savings | EUR | Levelized savings totalled across all devices (retro-corrected). | Accumulate levelized savings |
+| Combined total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
+| Combined total levelized cost savings | EUR | Levelized cost savings totalled across all devices (retro-corrected). | Accumulate levelized savings |
+| Combined total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return |
+| Combined total levelized financial return | EUR | Levelized financial return totalled across all devices (retro-corrected). | Accumulate levelized financial return |
 
 !!! note "Combined levelized totals are derived, not integrated"
-    The two *levelized* totals are computed as the sum of each device's own
+    The *levelized* totals are computed as the sum of each device's own
     levelized total (scaled by its [correction factor](concepts.md#the-correction-factor))
     plus a ledger of removed devices — so editing lifetime values is retroactive
     and removing a device never drops its historical contribution.
@@ -109,11 +112,12 @@ levelized sensors require lifetime values (an LCOE). See
 | Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
 | Standby share | % | This system's share of all standby power in the home. | Distribution shares |
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
-| Self-consumption cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power. | Savings — Standard |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |
-| Cost savings rate | EUR/h | Total money saved per hour by this system (self-consumption + export − costs). | Savings — Standard |
-| Levelized cost savings rate | EUR/h | Savings rate computed with this system's LCOE. | Savings — Levelized · has lifetime values |
+| Cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
+| Levelized cost savings rate | EUR/h | Cost savings rate computed with this system's LCOE. | Savings — Levelized · has lifetime values |
+| Financial return rate | EUR/h | Cost savings plus export compensation for this system. | Financial return — Standard · exports |
+| Levelized financial return rate | EUR/h | Financial return computed with this system's LCOE. | Financial return — Levelized · has lifetime values · exports |
 
 ### Accumulated totals
 
@@ -122,19 +126,21 @@ levelized sensors require lifetime values (an LCOE). See
 | Total export compensation | EUR | Export compensation integrated over time. | Accumulated export compensation · exports |
 | Total operating costs | EUR | Operating cost rate integrated over time. | Accumulate costs |
 | Total levelized operating costs | EUR | Levelized operating cost integrated (retro-corrected). | Accumulate levelized costs · has lifetime values |
-| Total self-consumption cost savings | EUR | Self-consumption savings integrated over time. | Accumulate savings |
-| Total cost savings | EUR | Total savings integrated over time. | Accumulate savings |
-| Total levelized cost savings | EUR | Levelized savings integrated (retro-corrected). | Accumulate levelized savings · has lifetime values |
+| Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
+| Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Accumulate levelized savings · has lifetime values |
+| Total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return · exports |
+| Total levelized financial return | EUR | Levelized financial return integrated (retro-corrected). | Accumulate levelized financial return · has lifetime values · exports |
 
 ---
 
 ## Battery
 
 Per battery device. The battery has the **same sensor set as a PV system**
-(above), reading the battery's own values, **plus** dynamic charging-source
-sensors. (Its own *Charging ratio/share* sensors only appear when another
-battery is configured to charge *from* this one — battery-to-battery charging —
-so in most setups they are absent.)
+(above) — including cost savings, financial return, and their levelized variants
+— reading the battery's own values, **plus** dynamic charging-source sensors.
+(Its own *Charging ratio/share* sensors only appear when another battery is
+configured to charge *from* this one — battery-to-battery charging — so in most
+setups they are absent.)
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
