@@ -1736,6 +1736,16 @@ per instance.</p>
 <h2 id="3-category-taxonomy-option-keys">3. Category taxonomy &amp; option keys<a class="headerlink" href="#3-category-taxonomy-option-keys" title="Permanent link">&para;</a></h2>
 <p>Categories are the user‑facing groupings; each maps to one or more leaf option
 keys (the values actually stored and checked).</p>
+<div class="admonition note">
+<p class="admonition-title">Post-implementation addition</p>
+<p>Four financial-return option keys were added to <code>combined</code>, <code>pv_system</code>, and
+<code>battery</code> scopes after this spec was written:
+<code>calculate_financial_return_rate</code>, <code>calculate_levelized_financial_return_rate</code>,
+<code>accumulate_financial_return</code>, <code>accumulate_levelized_financial_return</code>.
+The <code>self_consumption_cost_savings_*</code> sensor family was removed (cost savings
+now means avoided import only; financial return = cost savings + export
+compensation). The sensor-key tables in section 5 reflect the current state.</p>
+</div>
 <h3 id="money-categories">Money categories<a class="headerlink" href="#money-categories" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1979,16 +1989,20 @@ to the option gate.</p>
 <td>calculate_levelized_cost_rates</td>
 </tr>
 <tr>
-<td>combined_self_consumption_cost_savings_rate</td>
-<td>calculate_cost_saving_rates</td>
-</tr>
-<tr>
 <td>combined_cost_savings_rate</td>
 <td>calculate_cost_saving_rates</td>
 </tr>
 <tr>
 <td>combined_levelized_cost_savings_rate</td>
 <td>calculate_levelized_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_financial_return_rate</td>
+<td>calculate_financial_return_rate</td>
+</tr>
+<tr>
+<td>combined_levelized_financial_return_rate</td>
+<td>calculate_levelized_financial_return_rate</td>
 </tr>
 <tr>
 <td>combined_total_operating_costs</td>
@@ -1999,16 +2013,20 @@ to the option gate.</p>
 <td>accumulate_levelized_cost_rates</td>
 </tr>
 <tr>
-<td>combined_total_self_consumption_cost_savings</td>
-<td>accumulate_cost_saving_rates</td>
-</tr>
-<tr>
 <td>combined_total_cost_savings</td>
 <td>accumulate_cost_saving_rates</td>
 </tr>
 <tr>
 <td>combined_total_levelized_cost_savings</td>
 <td>accumulate_levelized_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_total_financial_return</td>
+<td>accumulate_financial_return</td>
+</tr>
+<tr>
+<td>combined_total_levelized_financial_return</td>
+<td>accumulate_levelized_financial_return</td>
 </tr>
 <tr>
 <td>combined_price_of_electricity</td>
@@ -2116,11 +2134,6 @@ to the option gate.</p>
 <td>lcoe</td>
 </tr>
 <tr>
-<td>self_consumption_cost_savings_rate</td>
-<td>calculate_cost_saving_rates</td>
-<td>—</td>
-</tr>
-<tr>
 <td>cost_savings_rate</td>
 <td>calculate_cost_saving_rates</td>
 <td>—</td>
@@ -2129,6 +2142,16 @@ to the option gate.</p>
 <td>levelized_cost_savings_rate</td>
 <td>calculate_levelized_cost_saving_rates</td>
 <td>lcoe</td>
+</tr>
+<tr>
+<td>financial_return_rate</td>
+<td>calculate_financial_return_rate</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>levelized_financial_return_rate</td>
+<td>calculate_levelized_financial_return_rate</td>
+<td>lcoe · exports_power</td>
 </tr>
 <tr>
 <td>total_operating_costs</td>
@@ -2141,11 +2164,6 @@ to the option gate.</p>
 <td>lcoe</td>
 </tr>
 <tr>
-<td>total_self_consumption_cost_savings</td>
-<td>accumulate_cost_saving_rates</td>
-<td>—</td>
-</tr>
-<tr>
 <td>total_cost_savings</td>
 <td>accumulate_cost_saving_rates</td>
 <td>—</td>
@@ -2154,6 +2172,16 @@ to the option gate.</p>
 <td>total_levelized_cost_savings</td>
 <td>accumulate_levelized_cost_saving_rates</td>
 <td>lcoe</td>
+</tr>
+<tr>
+<td>total_financial_return</td>
+<td>accumulate_financial_return</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>total_levelized_financial_return</td>
+<td>accumulate_levelized_financial_return</td>
+<td>lcoe · exports_power</td>
 </tr>
 <tr>
 <td>export_ratio</td>

@@ -1129,6 +1129,7 @@ the device capability) that must be on for the sensor to exist:</p>
 <li><em>Distribution (W/ratios/shares)</em> → the matching <strong>Power sensors</strong> category.</li>
 <li><em>Cost — Standard / Levelized</em> → the <strong>Cost calculation method</strong>.</li>
 <li><em>Savings — Standard / Levelized</em> → the <strong>Savings calculation method</strong>.</li>
+<li><em>Financial return — Standard / Levelized</em> → the <strong>Financial return method</strong>.</li>
 <li><em>Accumulate …</em> → the matching accumulate toggle.</li>
 </ul>
 <hr />
@@ -1233,20 +1234,26 @@ devices into a single number per metric.</p>
 <tr>
 <td>Combined cost savings rate</td>
 <td>EUR/h</td>
-<td>Money saved per hour by self-consuming and exporting your own generation instead of importing.</td>
+<td>Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue.</td>
 <td>Savings — Standard</td>
 </tr>
 <tr>
 <td>Combined levelized cost savings rate</td>
 <td>EUR/h</td>
-<td>Savings rate computed with levelized device costs.</td>
+<td>Cost savings rate computed with levelized device costs.</td>
 <td>Savings — Levelized</td>
 </tr>
 <tr>
-<td>Combined self-consumption cost savings rate</td>
+<td>Combined financial return rate</td>
 <td>EUR/h</td>
-<td>Money saved per hour purely by self-consuming (avoided grid import).</td>
-<td>Savings — Standard</td>
+<td>Total financial benefit per hour — cost savings plus export compensation.</td>
+<td>Financial return — Standard</td>
+</tr>
+<tr>
+<td>Combined levelized financial return rate</td>
+<td>EUR/h</td>
+<td>Financial return computed with levelized device costs.</td>
+<td>Financial return — Levelized</td>
 </tr>
 </tbody>
 </table>
@@ -1274,28 +1281,34 @@ devices into a single number per metric.</p>
 <td>Accumulate levelized costs</td>
 </tr>
 <tr>
-<td>Combined total self-consumption cost savings</td>
-<td>EUR</td>
-<td>Self-consumption savings integrated over time.</td>
-<td>Accumulate savings</td>
-</tr>
-<tr>
 <td>Combined total cost savings</td>
 <td>EUR</td>
-<td>Total savings integrated over time.</td>
+<td>Avoided import cost integrated over time (does not include export revenue).</td>
 <td>Accumulate savings</td>
 </tr>
 <tr>
 <td>Combined total levelized cost savings</td>
 <td>EUR</td>
-<td>Levelized savings totalled across all devices (retro-corrected).</td>
+<td>Levelized cost savings totalled across all devices (retro-corrected).</td>
 <td>Accumulate levelized savings</td>
+</tr>
+<tr>
+<td>Combined total financial return</td>
+<td>EUR</td>
+<td>Financial return rate integrated over time.</td>
+<td>Accumulate financial return</td>
+</tr>
+<tr>
+<td>Combined total levelized financial return</td>
+<td>EUR</td>
+<td>Levelized financial return totalled across all devices (retro-corrected).</td>
+<td>Accumulate levelized financial return</td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Combined levelized totals are derived, not integrated</p>
-<p>The two <em>levelized</em> totals are computed as the sum of each device's own
+<p>The <em>levelized</em> totals are computed as the sum of each device's own
 levelized total (scaled by its <a href="../concepts/#the-correction-factor">correction factor</a>)
 plus a ledger of removed devices — so editing lifetime values is retroactive
 and removing a device never drops its historical contribution.</p>
@@ -1423,12 +1436,6 @@ levelized sensors require lifetime values (an LCOE). See
 <td>Export compensation rate · exports</td>
 </tr>
 <tr>
-<td>Self-consumption cost savings rate</td>
-<td>EUR/h</td>
-<td>Money saved per hour by self-consuming this system's power.</td>
-<td>Savings — Standard</td>
-</tr>
-<tr>
 <td>Operating cost rate</td>
 <td>EUR/h</td>
 <td>Running operating cost per hour of this system.</td>
@@ -1443,14 +1450,26 @@ levelized sensors require lifetime values (an LCOE). See
 <tr>
 <td>Cost savings rate</td>
 <td>EUR/h</td>
-<td>Total money saved per hour by this system (self-consumption + export − costs).</td>
+<td>Money saved per hour by self-consuming this system's power — avoided grid import minus operating costs. Does not include export revenue.</td>
 <td>Savings — Standard</td>
 </tr>
 <tr>
 <td>Levelized cost savings rate</td>
 <td>EUR/h</td>
-<td>Savings rate computed with this system's LCOE.</td>
+<td>Cost savings rate computed with this system's LCOE.</td>
 <td>Savings — Levelized · has lifetime values</td>
+</tr>
+<tr>
+<td>Financial return rate</td>
+<td>EUR/h</td>
+<td>Cost savings plus export compensation for this system.</td>
+<td>Financial return — Standard · exports</td>
+</tr>
+<tr>
+<td>Levelized financial return rate</td>
+<td>EUR/h</td>
+<td>Financial return computed with this system's LCOE.</td>
+<td>Financial return — Levelized · has lifetime values · exports</td>
 </tr>
 </tbody>
 </table>
@@ -1484,30 +1503,36 @@ levelized sensors require lifetime values (an LCOE). See
 <td>Accumulate levelized costs · has lifetime values</td>
 </tr>
 <tr>
-<td>Total self-consumption cost savings</td>
-<td>EUR</td>
-<td>Self-consumption savings integrated over time.</td>
-<td>Accumulate savings</td>
-</tr>
-<tr>
 <td>Total cost savings</td>
 <td>EUR</td>
-<td>Total savings integrated over time.</td>
+<td>Avoided import cost integrated over time (does not include export revenue).</td>
 <td>Accumulate savings</td>
 </tr>
 <tr>
 <td>Total levelized cost savings</td>
 <td>EUR</td>
-<td>Levelized savings integrated (retro-corrected).</td>
+<td>Levelized cost savings integrated (retro-corrected).</td>
 <td>Accumulate levelized savings · has lifetime values</td>
+</tr>
+<tr>
+<td>Total financial return</td>
+<td>EUR</td>
+<td>Financial return rate integrated over time.</td>
+<td>Accumulate financial return · exports</td>
+</tr>
+<tr>
+<td>Total levelized financial return</td>
+<td>EUR</td>
+<td>Levelized financial return integrated (retro-corrected).</td>
+<td>Accumulate levelized financial return · has lifetime values · exports</td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h2 id="battery">Battery<a class="headerlink" href="#battery" title="Permanent link">&para;</a></h2>
 <p>Per battery device. The battery has the <strong>same sensor set as a PV system</strong>
-(above), reading the battery's own values, <strong>plus</strong> dynamic charging-source
-sensors.</p>
+(above) — including cost savings, financial return, and their levelized variants
+— reading the battery's own values, <strong>plus</strong> dynamic charging-source sensors.</p>
 <table>
 <thead>
 <tr>

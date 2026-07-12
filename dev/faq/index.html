@@ -726,10 +726,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-does-my-battery-have-negative-savings" class="md-nav__link">
+  <a href="#why-does-my-battery-have-negative-cost-savings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why does my battery have negative savings?
+        Why does my battery have negative cost savings?
       
     </span>
   </a>
@@ -974,10 +974,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why-does-my-battery-have-negative-savings" class="md-nav__link">
+  <a href="#why-does-my-battery-have-negative-cost-savings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why does my battery have negative savings?
+        Why does my battery have negative cost savings?
       
     </span>
   </a>
@@ -1088,24 +1088,29 @@
 
 <h1 id="faq">FAQ<a class="headerlink" href="#faq" title="Permanent link">&para;</a></h1>
 <h2 id="how-are-savings-calculated">How are savings calculated?<a class="headerlink" href="#how-are-savings-calculated" title="Permanent link">&para;</a></h2>
-<p>Power Insight recognises two ways your devices generate savings:</p>
-<ol>
-<li><strong>Selling surplus energy to the grid</strong> (export compensation).</li>
-<li><strong>Replacing energy you would otherwise import</strong> with energy from your own
-   devices (self-consumption savings), valued at the grid price you avoided.</li>
-</ol>
-<p>Total savings add both and subtract the costs your devices accumulate:</p>
-<div class="highlight"><pre><span></span><code>savings = export_compensation + self_consumption_savings − operating_costs
-</code></pre></div>
+<p>Power Insight separates three financial concepts:</p>
+<ul>
+<li><strong>Cost savings</strong> — money saved by replacing grid imports with your own
+  generation, minus the device's operating costs:
+  <div class="highlight"><pre><span></span><code>cost_savings = avoided_import_cost − operating_costs
+</code></pre></div></li>
+<li><strong>Export compensation</strong> — feed-in revenue for power exported to the grid
+  (its own dedicated sensors).</li>
+<li><strong>Financial return</strong> — the combined picture:
+  <div class="highlight"><pre><span></span><code>financial_return = cost_savings + export_compensation
+</code></pre></div></li>
+</ul>
 <p>For PV systems the operating cost is mainly standby consumption at night; for
-batteries it's the cost of the energy used to charge them. See
-<a href="../concepts/#how-savings-are-calculated">How savings are calculated</a>.</p>
-<h2 id="why-does-my-battery-have-negative-savings">Why does my battery have negative savings?<a class="headerlink" href="#why-does-my-battery-have-negative-savings" title="Permanent link">&para;</a></h2>
-<p>Any device can show negative savings if it doesn't earn enough to cover its
-costs — and a battery <strong>always</strong> shows negative savings while charging, because
-Power Insight tracks the cost of the energy going into it. That cost turns into
-positive savings when the battery later discharges and offsets a grid import.
-See <a href="../concepts/#why-does-my-battery-have-negative-savings">the concepts page</a>.</p>
+batteries it's the cost of the energy used to charge them, adjusted for
+round-trip losses. See
+<a href="../concepts/#how-savings-and-financial-return-are-calculated">How savings and financial return are calculated</a>.</p>
+<h2 id="why-does-my-battery-have-negative-cost-savings">Why does my battery have negative cost savings?<a class="headerlink" href="#why-does-my-battery-have-negative-cost-savings" title="Permanent link">&para;</a></h2>
+<p>Any device can show negative cost savings if it doesn't earn enough to cover its
+costs — and a battery <strong>always</strong> shows negative cost savings while charging,
+because Power Insight tracks the cost of the energy going into it. That cost
+turns into positive savings when the battery later discharges and offsets a grid
+import. See
+<a href="../concepts/#why-does-my-battery-have-negative-cost-savings">the concepts page</a>.</p>
 <h2 id="does-power-insight-work-with-dynamic-electricity-prices">Does Power Insight work with dynamic electricity prices?<a class="headerlink" href="#does-power-insight-work-with-dynamic-electricity-prices" title="Permanent link">&para;</a></h2>
 <p>Yes — this is a core design goal. Every calculation uses the <strong>current</strong> value of
 your grid price entity, so a live/dynamic tariff sensor works out of the box. No

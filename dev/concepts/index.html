@@ -738,22 +738,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-savings-are-calculated" class="md-nav__link">
+  <a href="#how-savings-and-financial-return-are-calculated" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How savings are calculated
+        How savings and financial return are calculated
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How savings are calculated">
+    <nav class="md-nav" aria-label="How savings and financial return are calculated">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-does-my-battery-have-negative-savings" class="md-nav__link">
+  <a href="#why-does-my-battery-have-negative-cost-savings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why does my battery have negative savings?
+        Why does my battery have negative cost savings?
       
     </span>
   </a>
@@ -1079,22 +1079,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-savings-are-calculated" class="md-nav__link">
+  <a href="#how-savings-and-financial-return-are-calculated" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How savings are calculated
+        How savings and financial return are calculated
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How savings are calculated">
+    <nav class="md-nav" aria-label="How savings and financial return are calculated">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#why-does-my-battery-have-negative-savings" class="md-nav__link">
+  <a href="#why-does-my-battery-have-negative-cost-savings" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Why does my battery have negative savings?
+        Why does my battery have negative cost savings?
       
     </span>
   </a>
@@ -1265,26 +1265,31 @@ feed-in tariff). It drives:</p>
 <li><strong>Export compensation rate</strong> (currency/h) = current export power × the rate.</li>
 <li><strong>Accumulated export compensation</strong> = that rate integrated over time.</li>
 </ul>
-<h2 id="how-savings-are-calculated">How savings are calculated<a class="headerlink" href="#how-savings-are-calculated" title="Permanent link">&para;</a></h2>
-<p>Power Insight recognises <strong>two ways</strong> your devices save you money:</p>
-<ol>
-<li><strong>Export compensation</strong> — selling surplus energy back to the grid.</li>
-<li><strong>Self-consumption savings</strong> — replacing energy you would otherwise have
-   imported with energy from your own devices (valued at the grid price you
-   avoided paying).</li>
-</ol>
-<p>Total savings combine both and then <strong>subtract the device's operating costs</strong>:</p>
-<div class="highlight"><pre><span></span><code>savings = export_compensation + self_consumption_savings − operating_costs
+<h2 id="how-savings-and-financial-return-are-calculated">How savings and financial return are calculated<a class="headerlink" href="#how-savings-and-financial-return-are-calculated" title="Permanent link">&para;</a></h2>
+<p>Power Insight tracks three related but distinct financial quantities:</p>
+<p><strong>Cost savings</strong> — the money you save by <em>not importing</em> power you would
+otherwise have bought. Your own generation (PV, battery discharge) covers some
+of your load; the savings are the grid price of that avoided import, minus the
+operating cost of the device that provided it:</p>
+<div class="highlight"><pre><span></span><code>cost_savings = avoided_import_cost − operating_costs
 </code></pre></div>
-<p>For PV systems the main operating cost is standby consumption at night. For
-batteries it's the cost of the energy used to charge them.</p>
-<h3 id="why-does-my-battery-have-negative-savings">Why does my battery have negative savings?<a class="headerlink" href="#why-does-my-battery-have-negative-savings" title="Permanent link">&para;</a></h3>
-<p>Any device can show negative savings if it doesn't earn enough to cover its
-costs. Batteries specifically <strong>always</strong> show negative savings <em>while charging</em>,
-because Power Insight tracks the cost of the energy going into the battery. That
-cost is "paid back" as positive savings when the battery later discharges and
-offsets a grid import. Over a full charge/discharge cycle the battery's net
-contribution is what matters.</p>
+<p>For PV the main operating cost is standby consumption at night. For batteries it
+is the cost of the energy used to charge them, adjusted for round-trip losses.</p>
+<p><strong>Export compensation</strong> — the feed-in revenue you earn from power sold back to
+the grid. This has its own dedicated sensors (see <a href="#export-compensation">Export compensation</a>).</p>
+<p><strong>Financial return</strong> — the combined picture: savings plus feed-in revenue.</p>
+<div class="highlight"><pre><span></span><code>financial_return = cost_savings + export_compensation
+</code></pre></div>
+<p>Use <strong>cost savings</strong> when you want to know how much you avoided spending. Use
+<strong>financial return</strong> when you want one number that includes everything your
+devices are earning for you.</p>
+<h3 id="why-does-my-battery-have-negative-cost-savings">Why does my battery have negative cost savings?<a class="headerlink" href="#why-does-my-battery-have-negative-cost-savings" title="Permanent link">&para;</a></h3>
+<p>Any device can show negative cost savings if it doesn't earn enough to cover its
+costs. Batteries specifically <strong>always</strong> show negative cost savings <em>while
+charging</em>, because Power Insight tracks the cost of the energy going into the
+battery. That cost is "paid back" as positive savings when the battery later
+discharges and offsets a grid import. Over a full charge/discharge cycle the
+battery's net contribution is what matters.</p>
 <h2 id="charging-source-attribution">Charging-source attribution<a class="headerlink" href="#charging-source-attribution" title="Permanent link">&para;</a></h2>
 <p>When a battery charges, its stored energy comes from some mix of the grid and
 your PV systems — configured in the battery's <strong>Charges from</strong> list. Power
