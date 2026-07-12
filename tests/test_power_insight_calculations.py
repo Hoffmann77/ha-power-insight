@@ -704,12 +704,12 @@ class TestChannelAttribution:
         exp = self._expected(entity_values)
         if exp is None:
             assert power_insight.grid_adapters_charging_ratios == {}
-            assert power_insight.prod_adapters_charging_channel_ratios == {}
+            assert power_insight.prod_adapters_charging_ratios == {}
             return
         assert power_insight.grid_adapters_charging_ratios["grid"] == pytest.approx(
             exp["grid_charging_ratio"]
         )
-        assert power_insight.prod_adapters_charging_channel_ratios["pv1"] == pytest.approx(
+        assert power_insight.prod_adapters_charging_ratios["pv1"] == pytest.approx(
             exp["pv1_charging_ratio"]
         )
 
@@ -717,18 +717,18 @@ class TestChannelAttribution:
         exp = self._expected(entity_values)
         if exp is None:
             assert power_insight.grid_adapters_charging_shares == {}
-            assert power_insight.prod_adapters_charging_channel_shares == {}
+            assert power_insight.prod_adapters_charging_shares == {}
             return
         assert power_insight.grid_adapters_charging_shares["grid"] == pytest.approx(
             exp["grid_charging_share"]
         )
-        assert power_insight.prod_adapters_charging_channel_shares["pv1"] == pytest.approx(
+        assert power_insight.prod_adapters_charging_shares["pv1"] == pytest.approx(
             exp["pv1_charging_share"]
         )
         # Charging shares over all providers sum to 1 whenever charging is active.
         if power_insight.combined_charging_power:
             grid_s = power_insight.grid_adapters_charging_shares["grid"]
-            prod_s = power_insight.prod_adapters_charging_channel_shares
+            prod_s = power_insight.prod_adapters_charging_shares
             assert grid_s + sum(prod_s.values()) == pytest.approx(1.0)
 
     def test_standby_ratios_and_shares(self, power_insight, entity_values):
