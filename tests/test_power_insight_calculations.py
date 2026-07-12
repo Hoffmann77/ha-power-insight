@@ -552,3 +552,209 @@ class TestFullScenario:
         avoided = power_insight.prod_adapters_avoided_cost_rates
         expected = sum(avoided.values())
         assert power_insight.combined_avoided_cost_rate == pytest.approx(expected)
+
+
+def _sdiv(a, b):
+    """Divide guarding both operands, matching PowerInsight._divide."""
+    if a == 0.0 or not b:
+        return 0.0
+    return a / b
+
+
+# ---------------------------------------------------------------------------
+# Scenario: Grid + PV-1 + Battery-1 (charges from grid + PV-1) + Consumer-1
+#
+# Exercises the provider-side charging (CHG) and standby (STB) channel
+# attribution, plus the consumer consumption share. Battery-1 lists real
+# ``charge_from_adapters`` so charging routing is non-trivial. Consumer power is
+# negative here because ConsumerAdapter treats a negative reading as load.
+# ---------------------------------------------------------------------------
+
+class TestChannelAttribution:
+    """Provider-side CHG/STB channel ratio/share + consumer share."""
+
+    GRID_POWER  = "sensor.grid_power"
+    GRID_PRICE  = "sensor.grid_price"
+    PV1_POWER   = "sensor.pv1_power"
+    BAT1_POWER  = "sensor.bat1_power"
+    CONS1_POWER = "sensor.cons1_power"
+
+    ENTITY_VALUES = {
+        # Battery charging from grid + PV, no standby.
+        "charging": {
+            GRID_POWER:  1000.0,   # import
+            GRID_PRICE:     0.30,
+            PV1_POWER:   2000.0,   # producing
+            BAT1_POWER:  -900.0,   # charging
+            CONS1_POWER: -800.0,   # consuming
+        },
+        # Grid exporting while the battery charges: grid's gross-power share is
+        # 0, so it must contribute nothing to charging (all attributed to PV).
+        "export_and_charge": {
+            GRID_POWER: -500.0,    # export
+            GRID_PRICE:    0.30,
+            PV1_POWER:  2000.0,
+            BAT1_POWER: -900.0,    # charging
+            CONS1_POWER: -400.0,
+        },
+        # Night: PV in standby, no charging.
+        "standby": {
+            GRID_POWER:  500.0,    # import
+            GRID_PRICE:    0.25,
+            PV1_POWER:   -20.0,    # standby draw
+            BAT1_POWER:    0.0,
+            CONS1_POWER: -300.0,
+        },
+        # Unavailable grid → every channel property collapses to {}.
+        "none": {
+            GRID_POWER:  None,
+            GRID_PRICE:    0.30,
+            PV1_POWER:  1000.0,
+            BAT1_POWER: -100.0,
+            CONS1_POWER: -200.0,
+        },
+    }
+
+    ADAPTERS = (
+        GridAdapter(
+            unique_id="grid",
+            verbose_name="Grid",
+            power_entity=GRID_POWER,
+            price_entity=GRID_PRICE,
+        ),
+        PvAdapter(
+            unique_id="pv1",
+            verbose_name="PV-1",
+            power_entity=PV1_POWER,
+            power_entity_inverted=False,
+            lcoe=0.10,
+            lco2_intensity=35.0,
+            exports_power=True,
+            export_compensation=0.08,
+        ),
+        BatteryAdapter(
+            unique_id="bat1",
+            verbose_name="Battery-1",
+            power_entity=BAT1_POWER,
+            power_entity_inverted=False,
+            lcos=0.15,
+            lco2_intensity=50.0,
+            exports_power=False,
+            export_compensation=0.0,
+            charge_from_adapters=["grid", "pv1"],
+        ),
+        ConsumerAdapter(
+            unique_id="cons1",
+            verbose_name="Consumer-1",
+            power_entity=CONS1_POWER,
+        ),
+    )
+
+    @pytest.fixture(params=list(ENTITY_VALUES))
+    def entity_values(self, request):
+        return self.ENTITY_VALUES[request.param]
+
+    @pytest.fixture()
+    def power_insight(self, entity_values):
+        return build_power_insight(self.ADAPTERS, entity_values)
+
+    def _expected(self, ev):
+        """Derive the expected channel quantities directly from the readings."""
+        grid = ev[self.GRID_POWER]
+        if grid is None:
+            return None
+
+        grid_import   = max(grid, 0.0)
+        pv1_prod      = max(ev[self.PV1_POWER], 0.0)
+        pv1_standby   = max(-ev[self.PV1_POWER], 0.0)
+        bat1_charging = max(-ev[self.BAT1_POWER], 0.0)
+        bat1_discharge = max(ev[self.BAT1_POWER], 0.0)
+        cons1         = max(-ev[self.CONS1_POWER], 0.0)
+
+        gross = grid_import + pv1_prod + bat1_discharge
+        combined_charging = bat1_charging
+        combined_standby = pv1_standby
+        grid_export = max(-grid, 0.0)
+        consumption = gross - grid_export - combined_charging - combined_standby
+
+        # CHG: battery source shares weight each source by its gross-power share.
+        w_grid = _sdiv(grid_import, gross)
+        w_pv1 = _sdiv(pv1_prod, gross)
+        total = w_grid + w_pv1
+        chg_grid = bat1_charging * _sdiv(w_grid, total)
+        chg_pv1 = bat1_charging * _sdiv(w_pv1, total)
+
+        # STB: proportional to each provider's gross-power share.
+        stb_grid = combined_standby * _sdiv(grid_import, gross)
+        stb_pv1 = combined_standby * _sdiv(pv1_prod, gross)
+
+        return {
+            "grid_charging_ratio": _sdiv(chg_grid, grid_import),
+            "grid_charging_share": _sdiv(chg_grid, combined_charging),
+            "pv1_charging_ratio": _sdiv(chg_pv1, pv1_prod),
+            "pv1_charging_share": _sdiv(chg_pv1, combined_charging),
+            "grid_standby_ratio": _sdiv(stb_grid, grid_import),
+            "grid_standby_share": _sdiv(stb_grid, combined_standby),
+            "pv1_standby_ratio": _sdiv(stb_pv1, pv1_prod),
+            "pv1_standby_share": _sdiv(stb_pv1, combined_standby),
+            "cons1_consumption_share": _sdiv(cons1, consumption),
+        }
+
+    def test_charging_ratios(self, power_insight, entity_values):
+        exp = self._expected(entity_values)
+        if exp is None:
+            assert power_insight.grid_adapters_charging_ratios == {}
+            assert power_insight.prod_adapters_charging_ratios == {}
+            return
+        assert power_insight.grid_adapters_charging_ratios["grid"] == pytest.approx(
+            exp["grid_charging_ratio"]
+        )
+        assert power_insight.prod_adapters_charging_ratios["pv1"] == pytest.approx(
+            exp["pv1_charging_ratio"]
+        )
+
+    def test_charging_shares(self, power_insight, entity_values):
+        exp = self._expected(entity_values)
+        if exp is None:
+            assert power_insight.grid_adapters_charging_shares == {}
+            assert power_insight.prod_adapters_charging_shares == {}
+            return
+        assert power_insight.grid_adapters_charging_shares["grid"] == pytest.approx(
+            exp["grid_charging_share"]
+        )
+        assert power_insight.prod_adapters_charging_shares["pv1"] == pytest.approx(
+            exp["pv1_charging_share"]
+        )
+        # Charging shares over all providers sum to 1 whenever charging is active.
+        if power_insight.combined_charging_power:
+            grid_s = power_insight.grid_adapters_charging_shares["grid"]
+            prod_s = power_insight.prod_adapters_charging_shares
+            assert grid_s + sum(prod_s.values()) == pytest.approx(1.0)
+
+    def test_standby_ratios_and_shares(self, power_insight, entity_values):
+        exp = self._expected(entity_values)
+        if exp is None:
+            assert power_insight.grid_adapters_standby_ratios == {}
+            assert power_insight.prod_adapters_standby_shares == {}
+            return
+        assert power_insight.grid_adapters_standby_ratios["grid"] == pytest.approx(
+            exp["grid_standby_ratio"]
+        )
+        assert power_insight.grid_adapters_standby_shares["grid"] == pytest.approx(
+            exp["grid_standby_share"]
+        )
+        assert power_insight.prod_adapters_standby_ratios["pv1"] == pytest.approx(
+            exp["pv1_standby_ratio"]
+        )
+        assert power_insight.prod_adapters_standby_shares["pv1"] == pytest.approx(
+            exp["pv1_standby_share"]
+        )
+
+    def test_consumer_consumption_share(self, power_insight, entity_values):
+        exp = self._expected(entity_values)
+        if exp is None:
+            assert power_insight.cons_adapters_consumption_share == {}
+            return
+        assert power_insight.cons_adapters_consumption_share["cons1"] == pytest.approx(
+            exp["cons1_consumption_share"]
+        )

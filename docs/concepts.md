@@ -35,6 +35,50 @@ Every derived quantity is computed lazily from live values, and any sensor
 whose inputs are unavailable simply reports *unavailable* rather than a wrong
 number.
 
+### The four channels
+
+Gross power leaves the system through exactly four **channels**. Each channel
+has a natural **sink** — the device type that receives that power:
+
+| Abbrev | Channel | Sink device |
+|---|---|---|
+| **EXP** | Export | Grid |
+| **CON** | Self-consumption | Consumers (loads) |
+| **CHG** | Charging | Batteries |
+| **STB** | Standby | PV systems (their own night draw) |
+
+Every **provider** — the devices that *feed* gross power (grid import, PV
+production, battery discharge) — expresses its relationship to a channel two
+ways:
+
+- **ratio** — of *this provider's own* output, the fraction going to the
+  channel (`channel_power ÷ provider_output`).
+- **share** — of *the whole channel's* power, the fraction *this provider*
+  supplied (`provider_contribution ÷ channel_total`).
+
+Not every provider feeds every channel. The grid cannot export to itself, so it
+has no EXP sensors; otherwise each provider carries a `_ratio` and a `_share`
+for each channel it can feed:
+
+| Provider | EXP | CON | CHG | STB |
+|---|:--:|:--:|:--:|:--:|
+| **Grid** | — | ✓ | ✓ | ✓ |
+| **PV** | ✓ | ✓ | ✓ | ✓ |
+| **Battery** | ✓ | ✓ | ✓ | ✓ |
+
+CHG is the only channel with explicit routing (a battery's **Charges from**
+list), so it has **two complementary sensor families** — don't confuse them:
+
+- the provider-side aggregate **Charging share** ("X % of *all* charging in the
+  home is supplied by the grid"), on the grid/PV/battery device; and
+- the sink-side per-source breakdown **Charging share from &lt;source&gt;**
+  ("X % of *this battery's* charging comes from the grid"), on the battery — see
+  [Charging-source attribution](#charging-source-attribution).
+
+CHG sensors on a provider only appear when that provider is actually a
+configured charge source for some battery; STB, having no routing, is
+attributed to providers in proportion to their share of gross power.
+
 ## Cost of electricity (COE)
 
 The **cost of electricity** is a blended per-kWh price across your whole energy

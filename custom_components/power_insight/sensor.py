@@ -72,6 +72,11 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     # When True, a per-adapter sensor scales its displayed value by the
     # adapter's correction factor (levelized quantities only).
     apply_correction_factor: bool = False
+    # When True, the sensor is only created when its provider device is a
+    # configured charge source for at least one battery (charging channel).
+    # exists_fn cannot express this — it has no reference to the battery set —
+    # so it is checked inline in async_setup_entry.
+    charge_gated: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -467,51 +472,52 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.grid_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
-    # --- Requires new power_insight.py dict-properties; uncomment when ready ---
-    # PowerInsightSensorDescription(
-    #     key="charging_ratio",
-    #     name="Charging ratio",
-    #     icon="mdi:percent",
-    #     native_unit_of_measurement=PERCENTAGE,
-    #     state_class=SensorStateClass.MEASUREMENT,
-    #     suggested_display_precision=0,
-    #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.grid_adapters_charging_ratio,
-    #     transform_fn=lambda val: val * 100,
-    # ),
-    # PowerInsightSensorDescription(
-    #     key="charging_share",
-    #     name="Charging share",
-    #     icon="mdi:percent",
-    #     native_unit_of_measurement=PERCENTAGE,
-    #     state_class=SensorStateClass.MEASUREMENT,
-    #     suggested_display_precision=0,
-    #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.grid_adapters_combined_charging_share,
-    #     transform_fn=lambda val: val * 100,
-    # ),
-    # PowerInsightSensorDescription(
-    #     key="standby_ratio",
-    #     name="Standby ratio",
-    #     icon="mdi:percent",
-    #     native_unit_of_measurement=PERCENTAGE,
-    #     state_class=SensorStateClass.MEASUREMENT,
-    #     suggested_display_precision=0,
-    #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.grid_adapters_standby_ratio,
-    #     transform_fn=lambda val: val * 100,
-    # ),
-    # PowerInsightSensorDescription(
-    #     key="standby_share",
-    #     name="Standby share",
-    #     icon="mdi:percent",
-    #     native_unit_of_measurement=PERCENTAGE,
-    #     state_class=SensorStateClass.MEASUREMENT,
-    #     suggested_display_precision=0,
-    #     entities_fn=lambda obj: obj.source_entities_power,
-    #     value_fn=lambda obj: obj.grid_adapters_standby_share,
-    #     transform_fn=lambda val: val * 100,
-    # ),
+    PowerInsightSensorDescription(
+        key="charging_ratio",
+        name="Charging ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_charging_ratios,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="charging_share",
+        name="Charging share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_charging_shares,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_ratio",
+        name="Standby ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_standby_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_share",
+        name="Standby share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.grid_adapters_standby_shares,
+        transform_fn=lambda val: val * 100,
+    ),
 )
 
 POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
@@ -621,6 +627,52 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.prod_adapters_consumption_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="charging_ratio",
+        name="Charging ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.prod_adapters_charging_ratios,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="charging_share",
+        name="Charging share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.prod_adapters_charging_shares,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_ratio",
+        name="Standby ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.prod_adapters_standby_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_share",
+        name="Standby share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.prod_adapters_standby_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -887,6 +939,52 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
+        key="charging_ratio",
+        name="Charging ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_charging_ratios,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="charging_share",
+        name="Charging share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_charging_shares,
+        transform_fn=lambda val: val * 100,
+        charge_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_ratio",
+        name="Standby ratio",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_standby_ratios,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_share",
+        name="Standby share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.storage_adapters_standby_shares,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
         key="financial_return_rate",
         name="Financial return rate",
         icon="mdi:currency-eur",
@@ -1067,6 +1165,17 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
 
 POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
+        key="consumption_share",
+        name="Consumption share",
+        icon="mdi:percent",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.cons_adapters_consumption_share,
+        transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
         key="operating_cost_rate",
         name="Operating cost rate",
         icon="mdi:currency-eur",
@@ -1155,10 +1264,14 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "consumption_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,          # grid
     "export_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,              # pv / storage
     "self_consumption_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,
+    "charging_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,           # grid / pv / storage
+    "standby_ratio": CONF_ENABLE_DISTRIBUTION_RATIOS,           # grid / pv / storage
     # --- Power distribution shares ---
-    "consumption_share": CONF_ENABLE_DISTRIBUTION_SHARES,         # grid
+    "consumption_share": CONF_ENABLE_DISTRIBUTION_SHARES,         # grid / consumer
     "export_share": CONF_ENABLE_DISTRIBUTION_SHARES,             # pv / storage
     "self_consumption_share": CONF_ENABLE_DISTRIBUTION_SHARES,
+    "charging_share": CONF_ENABLE_DISTRIBUTION_SHARES,          # grid / pv / storage
+    "standby_share": CONF_ENABLE_DISTRIBUTION_SHARES,          # grid / pv / storage
     # --- Export compensation ---
     "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     "total_export_compensation": CONF_ACCUMULATE_EXPORT_COMPENSATION,
@@ -1208,6 +1321,21 @@ def _option_gated_out(description, options: OptionsWrapper, scope: str) -> bool:
     """Return True if *description* is gated off for *scope* by the options."""
     gate = _SENSOR_OPTION_GATE.get(description.key)
     return gate is not None and not options.check(gate, scope)
+
+
+def _provider_is_charge_source(power_insight: PowerInsight, uid: str) -> bool:
+    """Return True if any battery is configured to charge from this provider.
+
+    Charging-channel sensors (``charge_gated``) are only meaningful for a
+    provider that actually feeds a battery; otherwise they would always read
+    0 %. This is checked in ``async_setup_entry`` rather than via ``exists_fn``
+    because ``exists_fn`` receives only the OptionsWrapper (grid) or a single
+    adapter (pv/battery) — neither can see the battery set.
+    """
+    return any(
+        uid in battery.charge_from_adapters
+        for battery in power_insight.storage_adapters
+    )
 
 
 @callback
@@ -1340,6 +1468,10 @@ async def async_setup_entry(
             continue
         if _option_gated_out(description, options_wrapped, "grid"):
             continue
+        if description.charge_gated and not _provider_is_charge_source(
+            power_insight, grid_adapter.uid
+        ):
+            continue
         entities.append(PowerInsightAdapterSensor(
             description=description,
             config_entry=entry,
@@ -1370,6 +1502,10 @@ async def async_setup_entry(
             if not description.exists_fn(adapter):
                 continue
             if _option_gated_out(description, options_wrapped, "pv_system"):
+                continue
+            if description.charge_gated and not _provider_is_charge_source(
+                power_insight, adapter.uid
+            ):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
@@ -1402,6 +1538,10 @@ async def async_setup_entry(
             if not description.exists_fn(adapter):
                 continue
             if _option_gated_out(description, options_wrapped, "battery"):
+                continue
+            if description.charge_gated and not _provider_is_charge_source(
+                power_insight, adapter.uid
+            ):
                 continue
             entities.append(PowerInsightAdapterSensor(
                 description=description,
