@@ -942,6 +942,26 @@ class PowerInsight:
 
         return charging_ratios
 
+    # BUG (multi-battery): this over-counts a provider's charging ratio.
+    #
+    # It sums the per-battery ratios from prod_adapters_charging_ratios, each of
+    # which is  charging_share[P][B] * combined_charging_power / production[P].
+    # Because every term uses the *total* charging power (combined_charging_power)
+    # rather than battery B's own charging power, a provider with N batteries
+    # sourcing from it is credited with N times the charging it actually feeds.
+    #
+    # Correct only with a single battery. With two batteries charging from one
+    # 1000 W PV (100 W + 300 W = 400 W total) it returns 0.8 instead of the true
+    # 0.4, and with enough batteries it can exceed 1.0 (>100% of production).
+    #
+    # This feeds prod_adapters_consumption_ratios via
+    # (1 - export_ratio - charging_ratio) * applicable_ratio, so it also
+    # understates self-consumption (and the avoided-cost savings) for
+    # multi-battery homes. A power-weighted attribution
+    # (Sum_B battery.consumption * charging_share[P][B]) fixes it — see the
+    # CLAUDE-GENERATED _provider_charging_powers helper below. Left untouched
+    # here because correcting it changes the self-consumption/savings outputs
+    # and warrants its own review.
     @property
     def prod_adapters_combined_charging_ratios(self) -> dict[str, float]:
 
@@ -1430,6 +1450,14 @@ class PowerInsight:
 
         return charging_ratios
 
+    # BUG (multi-battery): same over-counting as
+    # prod_adapters_combined_charging_ratios (see that property for the full
+    # explanation). It sums per-battery ratios that each use the *total*
+    # charging power instead of the battery's own, so a provider feeding N
+    # batteries is credited N times its real charging contribution; correct only
+    # with a single battery, and can exceed 1.0. The power-weighted
+    # CLAUDE-GENERATED _provider_charging_powers helper is the fix; left
+    # untouched here as it would change self-consumption/savings outputs.
     @property
     def storage_adapters_combined_charging_ratios(self) -> dict[str, float]:
 
