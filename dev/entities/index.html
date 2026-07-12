@@ -1352,6 +1352,30 @@ physically happen). See <a href="../configuration/grid/">Grid connection configu
 <td>Distribution shares</td>
 </tr>
 <tr>
+<td>Charging ratio</td>
+<td>%</td>
+<td>Share of grid import currently going to battery charging. Only exists when a battery charges from the grid.</td>
+<td>Distribution ratios · charge source</td>
+</tr>
+<tr>
+<td>Charging share</td>
+<td>%</td>
+<td>Grid's share of all battery-charging power in the home. Only exists when a battery charges from the grid.</td>
+<td>Distribution shares · charge source</td>
+</tr>
+<tr>
+<td>Standby ratio</td>
+<td>%</td>
+<td>Share of grid import currently going to device standby.</td>
+<td>Distribution ratios</td>
+</tr>
+<tr>
+<td>Standby share</td>
+<td>%</td>
+<td>Grid's share of all standby power in the home.</td>
+<td>Distribution shares</td>
+</tr>
+<tr>
 <td>Cost rate</td>
 <td>EUR/h</td>
 <td>Current cost per hour of grid imports (live price × import power).</td>
@@ -1427,6 +1451,30 @@ levelized sensors require lifetime values (an LCOE). See
 <td>Self-consumption share</td>
 <td>%</td>
 <td>Share of this system's production consumed in the home.</td>
+<td>Distribution shares</td>
+</tr>
+<tr>
+<td>Charging ratio</td>
+<td>%</td>
+<td>Share of this system's production currently going to battery charging. Only exists when a battery charges from this system.</td>
+<td>Distribution ratios · charge source</td>
+</tr>
+<tr>
+<td>Charging share</td>
+<td>%</td>
+<td>This system's share of all battery-charging power in the home. Only exists when a battery charges from this system.</td>
+<td>Distribution shares · charge source</td>
+</tr>
+<tr>
+<td>Standby ratio</td>
+<td>%</td>
+<td>Share of this system's production currently going to device standby.</td>
+<td>Distribution ratios</td>
+</tr>
+<tr>
+<td>Standby share</td>
+<td>%</td>
+<td>This system's share of all standby power in the home.</td>
 <td>Distribution shares</td>
 </tr>
 <tr>
@@ -1532,7 +1580,10 @@ levelized sensors require lifetime values (an LCOE). See
 <h2 id="battery">Battery<a class="headerlink" href="#battery" title="Permanent link">&para;</a></h2>
 <p>Per battery device. The battery has the <strong>same sensor set as a PV system</strong>
 (above) — including cost savings, financial return, and their levelized variants
-— reading the battery's own values, <strong>plus</strong> dynamic charging-source sensors.</p>
+— reading the battery's own values, <strong>plus</strong> dynamic charging-source sensors.
+(Its own <em>Charging ratio/share</em> sensors only appear when another battery is
+configured to charge <em>from</em> this one — battery-to-battery charging — so in most
+setups they are absent.)</p>
 <table>
 <thead>
 <tr>
@@ -1568,6 +1619,12 @@ levelized sensors require lifetime values (an LCOE). See
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>Consumption share</td>
+<td>%</td>
+<td>This consumer's share of all self-consumption in the home.</td>
+<td>Distribution shares</td>
+</tr>
 <tr>
 <td>Power source shares (one per source)</td>
 <td>%</td>

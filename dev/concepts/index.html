@@ -680,6 +680,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Gross power and the power split">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-four-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1021,6 +1038,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Gross power and the power split">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-four-channels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The four channels
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1210,6 +1244,98 @@ throughput).</p>
 <p>Every derived quantity is computed lazily from live values, and any sensor
 whose inputs are unavailable simply reports <em>unavailable</em> rather than a wrong
 number.</p>
+<h3 id="the-four-channels">The four channels<a class="headerlink" href="#the-four-channels" title="Permanent link">&para;</a></h3>
+<p>Gross power leaves the system through exactly four <strong>channels</strong>. Each channel
+has a natural <strong>sink</strong> — the device type that receives that power:</p>
+<table>
+<thead>
+<tr>
+<th>Abbrev</th>
+<th>Channel</th>
+<th>Sink device</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EXP</strong></td>
+<td>Export</td>
+<td>Grid</td>
+</tr>
+<tr>
+<td><strong>CON</strong></td>
+<td>Self-consumption</td>
+<td>Consumers (loads)</td>
+</tr>
+<tr>
+<td><strong>CHG</strong></td>
+<td>Charging</td>
+<td>Batteries</td>
+</tr>
+<tr>
+<td><strong>STB</strong></td>
+<td>Standby</td>
+<td>PV systems (their own night draw)</td>
+</tr>
+</tbody>
+</table>
+<p>Every <strong>provider</strong> — the devices that <em>feed</em> gross power (grid import, PV
+production, battery discharge) — expresses its relationship to a channel two
+ways:</p>
+<ul>
+<li><strong>ratio</strong> — of <em>this provider's own</em> output, the fraction going to the
+  channel (<code>channel_power ÷ provider_output</code>).</li>
+<li><strong>share</strong> — of <em>the whole channel's</em> power, the fraction <em>this provider</em>
+  supplied (<code>provider_contribution ÷ channel_total</code>).</li>
+</ul>
+<p>Not every provider feeds every channel. The grid cannot export to itself, so it
+has no EXP sensors; otherwise each provider carries a <code>_ratio</code> and a <code>_share</code>
+for each channel it can feed:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th style="text-align: center;">EXP</th>
+<th style="text-align: center;">CON</th>
+<th style="text-align: center;">CHG</th>
+<th style="text-align: center;">STB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Grid</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><strong>PV</strong></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><strong>Battery</strong></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+</tbody>
+</table>
+<p>CHG is the only channel with explicit routing (a battery's <strong>Charges from</strong>
+list), so it has <strong>two complementary sensor families</strong> — don't confuse them:</p>
+<ul>
+<li>the provider-side aggregate <strong>Charging share</strong> ("X % of <em>all</em> charging in the
+  home is supplied by the grid"), on the grid/PV/battery device; and</li>
+<li>the sink-side per-source breakdown <strong>Charging share from &lt;source&gt;</strong>
+  ("X % of <em>this battery's</em> charging comes from the grid"), on the battery — see
+  <a href="#charging-source-attribution">Charging-source attribution</a>.</li>
+</ul>
+<p>CHG sensors on a provider only appear when that provider is actually a
+configured charge source for some battery; STB, having no routing, is
+attributed to providers in proportion to their share of gross power.</p>
 <h2 id="cost-of-electricity-coe">Cost of electricity (COE)<a class="headerlink" href="#cost-of-electricity-coe" title="Permanent link">&para;</a></h2>
 <p>The <strong>cost of electricity</strong> is a blended per-kWh price across your whole energy
 mix — what one kWh actually costs you right now, given how much is coming from
