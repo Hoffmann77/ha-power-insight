@@ -69,6 +69,8 @@ from .const import (
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
     CONF_CALCULATE_CO2_SAVING_RATES,
     CONF_CALCULATE_LEVELIZED_CO2_SAVING_RATES,
+    CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+    CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
 
     CONF_ACCUMULATE_COST_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
@@ -77,6 +79,8 @@ from .const import (
     CONF_ACCUMULATE_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_CO2_SAVING_RATES,
+    CONF_ACCUMULATE_FINANCIAL_RETURN,
+    CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -91,10 +95,14 @@ _COST_OPTIONS = {
     CONF_CALCULATE_LEVELIZED_COST_RATES,
     CONF_CALCULATE_COST_SAVING_RATES,
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+    CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     CONF_ACCUMULATE_COST_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     CONF_ACCUMULATE_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_ACCUMULATE_FINANCIAL_RETURN,
+    CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
 }
 _CO2_OPTIONS = {
     CONF_CALCULATE_CO2_INTENSITY_RATES,
@@ -105,8 +113,10 @@ _CO2_OPTIONS = {
 _LEVELIZED_COST_OPTIONS = {
     CONF_CALCULATE_LEVELIZED_COST_RATES,
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
 }
 _LEVELIZED_CO2_OPTIONS = {
     CONF_CALCULATE_LEVELIZED_CO2_INTENSITY_RATES,
@@ -115,8 +125,12 @@ _LEVELIZED_CO2_OPTIONS = {
 _COST_SAVING_OPTIONS = {
     CONF_CALCULATE_COST_SAVING_RATES,
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+    CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     CONF_ACCUMULATE_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+    CONF_ACCUMULATE_FINANCIAL_RETURN,
+    CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
 }
@@ -424,6 +438,10 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ACCUMULATE_COST_SAVING_RATES,
         CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_FINANCIAL_RETURN,
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     }),
     PRESET_RECOMMENDED: frozenset({
         CONF_ENABLE_DISTRIBUTION_POWER,
@@ -437,6 +455,10 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ENABLE_EXPORT_COMPENSATION_RATE,
         CONF_ACCUMULATE_EXPORT_COMPENSATION,
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_FINANCIAL_RETURN,
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     }),
     PRESET_EXTENDED: frozenset({
         CONF_ENABLE_DISTRIBUTION_POWER,
@@ -452,6 +474,10 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ACCUMULATE_EXPORT_COMPENSATION,
         CONF_CALCULATE_COST_RATES,
         CONF_ACCUMULATE_COST_RATES,
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_FINANCIAL_RETURN,
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     }),
     PRESET_ALL: frozenset({
         CONF_ENABLE_DISTRIBUTION_POWER,
@@ -469,6 +495,10 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ACCUMULATE_LEVELIZED_COST_RATES,
         CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_FINANCIAL_RETURN,
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
+        CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     }),
 }
 
@@ -529,6 +559,15 @@ def _cost_method_options(scope: str) -> list[selector.SelectOptionDict]:
     """Return available cost-method selector options for *scope*."""
     return _method_options(
         scope, CONF_CALCULATE_COST_RATES, CONF_CALCULATE_LEVELIZED_COST_RATES
+    )
+
+
+def _financial_return_method_options(scope: str) -> list[selector.SelectOptionDict]:
+    """Return available financial-return-method selector options for *scope*."""
+    return _method_options(
+        scope,
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE,
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     )
 
 
@@ -637,6 +676,32 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
             vol.Schema(sav_fields), {"collapsed": False}
         )
 
+    # --- Financial return section ---
+    fr_opts = _financial_return_method_options(scope)
+    if len(fr_opts) > 1:
+        fr_fields: dict = {
+            vol.Required(
+                "financial_return_method",
+                default=defaults.get("financial_return_method", "none"),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=fr_opts, mode=selector.SelectSelectorMode.LIST
+                )
+            ),
+        }
+        has_acc_fr = bool(
+            {CONF_ACCUMULATE_FINANCIAL_RETURN, CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN}
+            & supported
+        )
+        if has_acc_fr:
+            fr_fields[vol.Required(
+                "accumulate_financial_return",
+                default=defaults.get("accumulate_financial_return", False),
+            )] = BOOLEAN_SELECTOR
+        fields[vol.Required("financial_return")] = section(
+            vol.Schema(fr_fields), {"collapsed": False}
+        )
+
     return vol.Schema(fields)
 
 
@@ -681,6 +746,17 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
             enabled.add(CONF_ACCUMULATE_COST_SAVING_RATES)
         if savings_method in ("levelized", "both"):
             enabled.add(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES)
+
+    financial_return_method = user_input.get("financial_return_method", "none")
+    if financial_return_method in ("standard", "both"):
+        enabled.add(CONF_CALCULATE_FINANCIAL_RETURN_RATE)
+    if financial_return_method in ("levelized", "both"):
+        enabled.add(CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE)
+    if user_input.get("accumulate_financial_return") and financial_return_method != "none":
+        if financial_return_method in ("standard", "both"):
+            enabled.add(CONF_ACCUMULATE_FINANCIAL_RETURN)
+        if financial_return_method in ("levelized", "both"):
+            enabled.add(CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN)
 
     return sorted(enabled & supported)
 
@@ -736,6 +812,27 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
     result["accumulate_savings"] = bool(
         {CONF_ACCUMULATE_COST_SAVING_RATES, CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES}
         & leaves
+    )
+
+    has_fr = (
+        CONF_CALCULATE_FINANCIAL_RETURN_RATE in leaves
+        and CONF_CALCULATE_FINANCIAL_RETURN_RATE in supported
+    )
+    has_lfr = (
+        CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE in leaves
+        and CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE in supported
+    )
+    if has_fr and has_lfr:
+        result["financial_return_method"] = "both"
+    elif has_lfr:
+        result["financial_return_method"] = "levelized"
+    elif has_fr:
+        result["financial_return_method"] = "standard"
+    else:
+        result["financial_return_method"] = "none"
+
+    result["accumulate_financial_return"] = bool(
+        {CONF_ACCUMULATE_FINANCIAL_RETURN, CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN} & leaves
     )
 
     return result

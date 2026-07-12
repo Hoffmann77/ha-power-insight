@@ -105,32 +105,43 @@ feed-in tariff). It drives:
 - **Export compensation rate** (currency/h) = current export power × the rate.
 - **Accumulated export compensation** = that rate integrated over time.
 
-## How savings are calculated
+## How savings and financial return are calculated
 
-Power Insight recognises **two ways** your devices save you money:
+Power Insight tracks three related but distinct financial quantities:
 
-1. **Export compensation** — selling surplus energy back to the grid.
-2. **Self-consumption savings** — replacing energy you would otherwise have
-   imported with energy from your own devices (valued at the grid price you
-   avoided paying).
-
-Total savings combine both and then **subtract the device's operating costs**:
+**Cost savings** — the money you save by *not importing* power you would
+otherwise have bought. Your own generation (PV, battery discharge) covers some
+of your load; the savings are the grid price of that avoided import, minus the
+operating cost of the device that provided it:
 
 ```
-savings = export_compensation + self_consumption_savings − operating_costs
+cost_savings = avoided_import_cost − operating_costs
 ```
 
-For PV systems the main operating cost is standby consumption at night. For
-batteries it's the cost of the energy used to charge them.
+For PV the main operating cost is standby consumption at night. For batteries it
+is the cost of the energy used to charge them, adjusted for round-trip losses.
 
-### Why does my battery have negative savings?
+**Export compensation** — the feed-in revenue you earn from power sold back to
+the grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
 
-Any device can show negative savings if it doesn't earn enough to cover its
-costs. Batteries specifically **always** show negative savings *while charging*,
-because Power Insight tracks the cost of the energy going into the battery. That
-cost is "paid back" as positive savings when the battery later discharges and
-offsets a grid import. Over a full charge/discharge cycle the battery's net
-contribution is what matters.
+**Financial return** — the combined picture: savings plus feed-in revenue.
+
+```
+financial_return = cost_savings + export_compensation
+```
+
+Use **cost savings** when you want to know how much you avoided spending. Use
+**financial return** when you want one number that includes everything your
+devices are earning for you.
+
+### Why does my battery have negative cost savings?
+
+Any device can show negative cost savings if it doesn't earn enough to cover its
+costs. Batteries specifically **always** show negative cost savings *while
+charging*, because Power Insight tracks the cost of the energy going into the
+battery. That cost is "paid back" as positive savings when the battery later
+discharges and offsets a grid import. Over a full charge/discharge cycle the
+battery's net contribution is what matters.
 
 ## Charging-source attribution
 

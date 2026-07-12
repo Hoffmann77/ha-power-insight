@@ -586,6 +586,41 @@ class PowerInsight:
         return result
 
     @property
+    def combined_financial_return_rate(self) -> float | None:
+        """Combined financial return rate (cost savings + export compensation)."""
+        saving = self.combined_saving_rate
+        comp = self.combined_export_compensation_rate
+        if saving is None or comp is None:
+            return None
+        return saving + comp
+
+    @property
+    def combined_levelized_financial_return_rate(self) -> float | None:
+        """Combined levelized financial return rate (base, for accumulation)."""
+        result = 0.0
+        levelized_return_rates = self.prod_adapters_levelized_financial_return_rates
+        for adapter in self.prod_adapters:
+            if (rate := levelized_return_rates.get(adapter.uid)) is None:
+                return None
+
+            result += rate
+
+        return result
+
+    @property
+    def combined_levelized_financial_return_rate_corrected(self) -> float | None:
+        """Combined levelized financial return rate with correction applied."""
+        result = 0.0
+        levelized_return_rates = self.prod_adapters_levelized_financial_return_rates
+        for adapter in self.prod_adapters:
+            if (rate := levelized_return_rates.get(adapter.uid)) is None:
+                return None
+
+            result += rate * adapter.correction_factor
+
+        return result
+
+    @property
     def levelized_correction_factors(self) -> dict[str, float]:
         """Return ``uid -> correction_factor`` for prod adapters with an LCOE.
 
@@ -1137,18 +1172,14 @@ class PowerInsight:
 
     @property
     def prod_adapters_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total saving rates."""
+        """Return the production adapter's cost saving rates (avoided import cost only)."""
         saving_rates = {}
 
-        export_compensations = self.prod_adapters_export_compensation_rates
         avoided_costs = self.prod_adapters_avoided_cost_rates
         coo_rates = self.prod_adapters_coo_rates
 
         for adapter in self.prod_adapters:
             if (coe_rate := adapter.coe_rate) is None:
-                return {}
-
-            if (earnings := export_compensations.get(adapter.uid)) is None:
                 return {}
 
             if (avoided := avoided_costs.get(adapter.uid)) is None:
@@ -1157,18 +1188,15 @@ class PowerInsight:
             if (coo_rate := coo_rates.get(adapter.uid)) is None:
                 return {}
 
-            saving_rates[adapter.uid] = (
-                earnings + avoided - coo_rate - coe_rate
-            )
+            saving_rates[adapter.uid] = avoided - coo_rate - coe_rate
 
         return saving_rates
 
     @property
     def prod_adapters_levelized_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total levelized saving rates."""
+        """Return the production adapter's levelized cost saving rates (avoided import cost only)."""
         saving_rates = {}
 
-        export_compensations = self.prod_adapters_export_compensation_rates
         # Disabled see: adapters_levelized_self_cons_saving_rates
         # self_cons_savings = self.prod_adapters_levelized_self_cons_saving_rates
         avoided_costs = self.prod_adapters_avoided_cost_rates
@@ -1178,20 +1206,53 @@ class PowerInsight:
             if (lcoe_rate := adapter.lcoe_rate) is None:
                 return {}
 
-            if (earnings := export_compensations.get(adapter.uid)) is None:
-                return {}
-
             if (avoided := avoided_costs.get(adapter.uid)) is None:
                 return {}
 
             if (lcoo_rate := lcoo_rates.get(adapter.uid)) is None:
                 return {}
 
-            saving_rates[adapter.uid] = (
-                earnings + avoided - lcoo_rate - lcoe_rate
-            )
+            saving_rates[adapter.uid] = avoided - lcoo_rate - lcoe_rate
 
         return saving_rates
+
+    @property
+    def prod_adapters_financial_return_rates(self) -> dict[str, float]:
+        """Return the production adapter's financial return rates (savings + export compensation)."""
+        financial_return_rates = {}
+
+        export_compensations = self.prod_adapters_export_compensation_rates
+        saving_rates = self.prod_adapters_cost_saving_rates
+
+        for adapter in self.prod_adapters:
+            if (earnings := export_compensations.get(adapter.uid)) is None:
+                return {}
+
+            if (saving := saving_rates.get(adapter.uid)) is None:
+                return {}
+
+            financial_return_rates[adapter.uid] = earnings + saving
+
+        return financial_return_rates
+
+    @property
+    def prod_adapters_levelized_financial_return_rates(self) -> dict[str, float]:
+        """Return the production adapter's levelized financial return rates."""
+        financial_return_rates = {}
+
+        export_compensations = self.prod_adapters_export_compensation_rates
+        levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
+
+        for adapter in self.prod_adapters:
+            if (earnings := export_compensations.get(adapter.uid)) is None:
+                return {}
+
+            if (saving := levelized_saving_rates.get(adapter.uid)) is None:
+                return {}
+
+            financial_return_rates[adapter.uid] = earnings + saving
+
+        return financial_return_rates
 
     # -------------------->
     # STORAGE ADAPTERS --->
@@ -1660,18 +1721,14 @@ class PowerInsight:
 
     @property
     def storage_adapters_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total saving rates."""
+        """Return the storage adapter's cost saving rates (avoided import cost only)."""
         saving_rates = {}
 
-        export_compensations = self.storage_adapters_export_compensation_rates
         avoided_costs = self.storage_adapters_avoided_cost_rates
         coo_rates = self.storage_adapters_coo_rates
 
         for adapter in self.storage_adapters:
             if (coe_rate := adapter.coe_rate) is None:
-                return {}
-
-            if (earnings := export_compensations.get(adapter.uid)) is None:
                 return {}
 
             if (avoided := avoided_costs.get(adapter.uid)) is None:
@@ -1680,18 +1737,15 @@ class PowerInsight:
             if (coo_rate := coo_rates.get(adapter.uid)) is None:
                 return {}
 
-            saving_rates[adapter.uid] = (
-                earnings + avoided - coo_rate - coe_rate
-            )
+            saving_rates[adapter.uid] = avoided - coo_rate - coe_rate
 
         return saving_rates
 
     @property
     def storage_adapters_levelized_cost_saving_rates(self) -> dict[str, float]:
-        """Return the production adapter's total levelized saving rates."""
+        """Return the storage adapter's levelized cost saving rates (avoided import cost only)."""
         saving_rates = {}
 
-        export_compensations = self.storage_adapters_export_compensation_rates
         # Disabled see: adapters_levelized_self_cons_saving_rates
         # self_cons_savings = self.storage_adapters_levelized_self_cons_saving_rates
         avoided_costs = self.storage_adapters_avoided_cost_rates
@@ -1701,20 +1755,53 @@ class PowerInsight:
             if (lcoe_rate := adapter.lcoe_rate) is None:
                 return {}
 
-            if (earnings := export_compensations.get(adapter.uid)) is None:
-                return {}
-
             if (avoided := avoided_costs.get(adapter.uid)) is None:
                 return {}
 
             if (lcoo_rate := lcoo_rates.get(adapter.uid)) is None:
                 return {}
 
-            saving_rates[adapter.uid] = (
-                earnings + avoided - lcoo_rate - lcoe_rate
-            )
+            saving_rates[adapter.uid] = avoided - lcoo_rate - lcoe_rate
 
         return saving_rates
+
+    @property
+    def storage_adapters_financial_return_rates(self) -> dict[str, float]:
+        """Return the storage adapter's financial return rates (savings + export compensation)."""
+        financial_return_rates = {}
+
+        export_compensations = self.storage_adapters_export_compensation_rates
+        saving_rates = self.storage_adapters_cost_saving_rates
+
+        for adapter in self.storage_adapters:
+            if (earnings := export_compensations.get(adapter.uid)) is None:
+                return {}
+
+            if (saving := saving_rates.get(adapter.uid)) is None:
+                return {}
+
+            financial_return_rates[adapter.uid] = earnings + saving
+
+        return financial_return_rates
+
+    @property
+    def storage_adapters_levelized_financial_return_rates(self) -> dict[str, float]:
+        """Return the storage adapter's levelized financial return rates."""
+        financial_return_rates = {}
+
+        export_compensations = self.storage_adapters_export_compensation_rates
+        levelized_saving_rates = self.storage_adapters_levelized_cost_saving_rates
+
+        for adapter in self.storage_adapters:
+            if (earnings := export_compensations.get(adapter.uid)) is None:
+                return {}
+
+            if (saving := levelized_saving_rates.get(adapter.uid)) is None:
+                return {}
+
+            financial_return_rates[adapter.uid] = earnings + saving
+
+        return financial_return_rates
 
     # ----------------------->
     # CONSUMPTION ADAPTERS --->
