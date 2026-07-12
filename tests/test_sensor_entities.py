@@ -12,11 +12,13 @@ from .conftest import (
     GRID_SUB_ID,
     PV_SUB_ID,
     BAT_SUB_ID,
+    CONS_SUB_ID,
     BASE_OPTIONS,
     FULL_OPTIONS,
     make_grid_subentry_data,
     make_pv_subentry_data,
     make_battery_subentry_data,
+    make_consumer_subentry_data,
     setup_integration,
 )
 
@@ -144,6 +146,105 @@ async def test_battery_charging_share_sensors_only_for_selected_sources(
 
     # Exactly one charging-share sensor (Grid), none for the unselected PV.
     assert charging_share_keys == {f"{bat_prefix}Grid"}
+
+
+async def test_grid_charging_sensors_gated_on_charge_source(
+    hass: HomeAssistant,
+) -> None:
+    """Grid CHG sensors appear only when a battery charges from the grid.
+
+    Standby sensors are not charge-gated, so they always appear.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    for ent in ("grid_power", "pv_power", "battery_power"):
+        hass.states.async_set(f"sensor.{ent}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    uids = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    grid = f"{entry.entry_id}_{GRID_SUB_ID}"
+
+    # Grid charges the battery → grid CHG sensors exist.
+    assert f"{grid}_charging_ratio" in uids
+    assert f"{grid}_charging_share" in uids
+    # Standby is never charge-gated.
+    assert f"{grid}_standby_ratio" in uids
+    assert f"{grid}_standby_share" in uids
+
+
+async def test_grid_charging_sensors_absent_without_battery(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """With no battery, grid CHG sensors are gated out but STB sensors remain."""
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, mock_config_entry)
+
+    uids = {e.unique_id for e in get_entry_entities(hass, mock_config_entry) if e.unique_id}
+    grid = f"{mock_config_entry.entry_id}_{GRID_SUB_ID}"
+
+    assert f"{grid}_charging_ratio" not in uids
+    assert f"{grid}_charging_share" not in uids
+    assert f"{grid}_standby_ratio" in uids
+    assert f"{grid}_standby_share" in uids
+
+
+async def test_charging_sensors_follow_the_configured_source(
+    hass: HomeAssistant,
+) -> None:
+    """A battery charging from PV only → PV CHG sensors exist, grid CHG do not."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[PV_SUB_ID]),
+        ],
+    )
+    for ent in ("grid_power", "pv_power", "battery_power"):
+        hass.states.async_set(f"sensor.{ent}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    uids = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    grid = f"{entry.entry_id}_{GRID_SUB_ID}"
+    pv = f"{entry.entry_id}_{PV_SUB_ID}"
+
+    assert f"{pv}_charging_ratio" in uids
+    assert f"{pv}_charging_share" in uids
+    assert f"{grid}_charging_ratio" not in uids
+    assert f"{grid}_charging_share" not in uids
+
+
+async def test_consumer_consumption_share_registered(hass: HomeAssistant) -> None:
+    """The consumer gains a consumption_share sensor when shares are enabled."""
+    options = {
+        **BASE_OPTIONS,
+        "scopes": {
+            **BASE_OPTIONS["scopes"],
+            "consumer": ["enable_distribution_shares", "enable_power_source_shares"],
+        },
+    }
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=options,
+        subentries_data=[make_grid_subentry_data(), make_consumer_subentry_data()],
+    )
+    for ent in ("grid_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{ent}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    uids = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    assert f"{entry.entry_id}_{CONS_SUB_ID}_consumption_share" in uids
 
 
 async def test_disabling_option_disables_entity_but_keeps_it(

@@ -77,6 +77,10 @@ physically happen). See [Grid connection configuration](configuration/grid.md).
 | Export power | W | Surplus power currently sent back to the grid. | Distribution (W) |
 | Consumption ratio | % | Grid import as a share of total home power flow. | Distribution ratios |
 | Consumption share | % | Share of all grid throughput that is import vs. export. | Distribution shares |
+| Charging ratio | % | Share of grid import currently going to battery charging. Only exists when a battery charges from the grid. | Distribution ratios · charge source |
+| Charging share | % | Grid's share of all battery-charging power in the home. Only exists when a battery charges from the grid. | Distribution shares · charge source |
+| Standby ratio | % | Share of grid import currently going to device standby. | Distribution ratios |
+| Standby share | % | Grid's share of all standby power in the home. | Distribution shares |
 | Cost rate | EUR/h | Current cost per hour of grid imports (live price × import power). | Cost — Standard |
 | Total cost | EUR | Import cost integrated over time. | Accumulate costs |
 | Export compensation rate | EUR/h | Money earned per hour from exports (export power × compensation rate). | Export compensation rate |
@@ -100,6 +104,10 @@ levelized sensors require lifetime values (an LCOE). See
 | Self-consumption power | W | Power from this system currently consumed in the home. | Distribution (W) |
 | Self-consumption ratio | % | Share of total home power flow supplied by this system. | Distribution ratios |
 | Self-consumption share | % | Share of this system's production consumed in the home. | Distribution shares |
+| Charging ratio | % | Share of this system's production currently going to battery charging. Only exists when a battery charges from this system. | Distribution ratios · charge source |
+| Charging share | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Distribution shares · charge source |
+| Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
+| Standby share | % | This system's share of all standby power in the home. | Distribution shares |
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Self-consumption cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power. | Savings — Standard |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
@@ -124,7 +132,9 @@ levelized sensors require lifetime values (an LCOE). See
 
 Per battery device. The battery has the **same sensor set as a PV system**
 (above), reading the battery's own values, **plus** dynamic charging-source
-sensors.
+sensors. (Its own *Charging ratio/share* sensors only appear when another
+battery is configured to charge *from* this one — battery-to-battery charging —
+so in most setups they are absent.)
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
@@ -143,6 +153,7 @@ Per consumer device. Consumer support is still under development. See
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
+| Consumption share | % | This consumer's share of all self-consumption in the home. | Distribution shares |
 | Power source shares (one per source) | % | Share of this consumer's current power coming from each source (grid / solar / battery). | Power source shares |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |

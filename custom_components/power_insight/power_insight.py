@@ -1811,6 +1811,267 @@ class PowerInsight:
 
         return lcoo_rates
 
+    # ----------------------------------------------------------------->
+    # CHANNEL ATTRIBUTION — CHARGING (CHG) & STANDBY (STB)
+    #
+    # ┌────────────────────────────────────────────────────────────────┐
+    # │ CLAUDE-GENERATED — please review the attribution model.         │
+    # │                                                                 │
+    # │ Provider-side ratio/share for the charging and standby          │
+    # │ channels, mirroring the existing consumption/export properties: │
+    # │                                                                 │
+    # │   ratio[p] = provider_channel_power[p] / provider_output[p]     │
+    # │   share[p] = provider_channel_power[p] / combined_channel_power  │
+    # │                                                                 │
+    # │ provider_output is grid import for the grid, production for      │
+    # │ PV/battery. CHG uses real source routing (charge_from_adapters); │
+    # │ STB has no routing and is modelled as drawn proportionally from  │
+    # │ the gross-power pool (so every provider's STB ratio equals the   │
+    # │ global gross_power_standby_ratio and its STB share equals its    │
+    # │ gross-power share).                                             │
+    # └────────────────────────────────────────────────────────────────┘
+    # ----------------------------------------------------------------->
+
+    @property
+    def _provider_charging_powers(self) -> dict[str, float] | None:
+        """Return ``{provider_uid: watts contributed to battery charging}``.
+
+        Each battery's charging power (``battery.consumption``) is split across
+        its configured sources using ``storage_adapters_charging_source_shares``.
+        Providers that are not a charge source for any battery are absent, so a
+        ``.get(uid, 0.0)`` yields 0.0 for them. Returns ``None`` when any
+        battery's charging power is unavailable or gross power is unknown (the
+        source split is undefined without it).
+        """
+        if self.gross_power is None:
+            return None
+
+        source_shares = self.storage_adapters_charging_source_shares
+        powers: dict[str, float] = defaultdict(float)
+        for battery in self.storage_adapters:
+            if (charging := battery.consumption) is None:
+                return None
+            for source_uid, share in source_shares.get(battery.uid, {}).items():
+                powers[source_uid] += charging * share
+
+        return dict(powers)
+
+    @property
+    def _provider_standby_powers(self) -> dict[str, float | None] | None:
+        """Return ``{provider_uid: watts contributed to device standby}``.
+
+        Standby has no routing configuration, so the combined standby power is
+        attributed to providers in proportion to their share of gross power.
+        Returns ``None`` when the combined standby power or gross power is
+        unavailable; a provider maps to ``None`` when its own gross-power share
+        is unavailable.
+        """
+        if self.gross_power is None:
+            return None
+        if (standby := self.combined_standby_power) is None:
+            return None
+
+        gross_shares = (
+            self.grid_adapters_gross_power_shares
+            | self.prod_adapters_gross_power_shares
+            | self.storage_adapters_gross_power_shares
+        )
+        powers: dict[str, float | None] = {}
+        for uid, share in gross_shares.items():
+            powers[uid] = None if share is None else standby * share
+
+        return powers
+
+    # --- Grid ---
+
+    @property
+    def grid_adapters_charging_ratios(self) -> dict[str, float | None]:
+        """Fraction of grid import that goes to battery charging."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        if (grid_import := self.combined_grid_import) is None:
+            return {}
+
+        uid = self.grid_adapter.uid
+        return {uid: self._divide(powers.get(uid, 0.0), grid_import)}
+
+    @property
+    def grid_adapters_charging_shares(self) -> dict[str, float | None]:
+        """Grid's share of the total battery-charging power."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        if (combined := self.combined_charging_power) is None:
+            return {}
+
+        uid = self.grid_adapter.uid
+        return {uid: self._divide(powers.get(uid, 0.0), combined)}
+
+    @property
+    def grid_adapters_standby_ratios(self) -> dict[str, float | None]:
+        """Fraction of grid import that goes to device standby."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+
+        uid = self.grid_adapter.uid
+        if (standby := powers.get(uid)) is None:
+            return {}
+        if (grid_import := self.combined_grid_import) is None:
+            return {}
+
+        return {uid: self._divide(standby, grid_import)}
+
+    @property
+    def grid_adapters_standby_shares(self) -> dict[str, float | None]:
+        """Grid's share of the total standby power."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+        if (combined := self.combined_standby_power) is None:
+            return {}
+
+        uid = self.grid_adapter.uid
+        if (standby := powers.get(uid)) is None:
+            return {}
+
+        return {uid: self._divide(standby, combined)}
+
+    # --- Production (PV) ---
+
+    @property
+    def prod_adapters_charging_channel_ratios(self) -> dict[str, float | None]:
+        """Fraction of each PV system's production that goes to charging."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+
+        ratios: dict[str, float | None] = {}
+        for adapter in self.prod_adapters:
+            if (prod := adapter.production) is None:
+                ratios[adapter.uid] = None
+                continue
+            ratios[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), prod)
+
+        return ratios
+
+    @property
+    def prod_adapters_charging_channel_shares(self) -> dict[str, float | None]:
+        """Each PV system's share of the total battery-charging power."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        if (combined := self.combined_charging_power) is None:
+            return {}
+
+        shares: dict[str, float | None] = {}
+        for adapter in self.prod_adapters:
+            shares[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), combined)
+
+        return shares
+
+    @property
+    def prod_adapters_standby_ratios(self) -> dict[str, float | None]:
+        """Fraction of each PV system's production that goes to standby."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+
+        ratios: dict[str, float | None] = {}
+        for adapter in self.prod_adapters:
+            standby = powers.get(adapter.uid)
+            prod = adapter.production
+            if standby is None or prod is None:
+                ratios[adapter.uid] = None
+                continue
+            ratios[adapter.uid] = self._divide(standby, prod)
+
+        return ratios
+
+    @property
+    def prod_adapters_standby_shares(self) -> dict[str, float | None]:
+        """Each PV system's share of the total standby power."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+        if (combined := self.combined_standby_power) is None:
+            return {}
+
+        shares: dict[str, float | None] = {}
+        for adapter in self.prod_adapters:
+            standby = powers.get(adapter.uid)
+            shares[adapter.uid] = (
+                None if standby is None else self._divide(standby, combined)
+            )
+
+        return shares
+
+    # --- Storage (battery) ---
+    # Same as the production variants above, iterating the storage adapters so
+    # the battery device reads from ``storage_adapters_*`` like its other sensors.
+
+    @property
+    def storage_adapters_charging_channel_ratios(self) -> dict[str, float | None]:
+        """Fraction of each battery's discharge that goes to charging."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+
+        ratios: dict[str, float | None] = {}
+        for adapter in self.storage_adapters:
+            if (prod := adapter.production) is None:
+                ratios[adapter.uid] = None
+                continue
+            ratios[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), prod)
+
+        return ratios
+
+    @property
+    def storage_adapters_charging_channel_shares(self) -> dict[str, float | None]:
+        """Each battery's share of the total battery-charging power."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        if (combined := self.combined_charging_power) is None:
+            return {}
+
+        shares: dict[str, float | None] = {}
+        for adapter in self.storage_adapters:
+            shares[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), combined)
+
+        return shares
+
+    @property
+    def storage_adapters_standby_ratios(self) -> dict[str, float | None]:
+        """Fraction of each battery's discharge that goes to standby."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+
+        ratios: dict[str, float | None] = {}
+        for adapter in self.storage_adapters:
+            standby = powers.get(adapter.uid)
+            prod = adapter.production
+            if standby is None or prod is None:
+                ratios[adapter.uid] = None
+                continue
+            ratios[adapter.uid] = self._divide(standby, prod)
+
+        return ratios
+
+    @property
+    def storage_adapters_standby_shares(self) -> dict[str, float | None]:
+        """Each battery's share of the total standby power."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+        if (combined := self.combined_standby_power) is None:
+            return {}
+
+        shares: dict[str, float | None] = {}
+        for adapter in self.storage_adapters:
+            standby = powers.get(adapter.uid)
+            shares[adapter.uid] = (
+                None if standby is None else self._divide(standby, combined)
+            )
+
+        return shares
+
     #
     # Utility methods
     #

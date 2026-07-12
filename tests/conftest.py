@@ -24,6 +24,7 @@ DOMAIN = "power_insight"
 GRID_SUB_ID = "01GRID00000000000000000001"
 PV_SUB_ID = "01PV0000000000000000000001"
 BAT_SUB_ID = "01BAT00000000000000000001A"
+CONS_SUB_ID = "01CONS0000000000000000001A"
 
 # Per-scope options schema (v2). Each scope lists the enabled leaf option keys.
 
@@ -183,6 +184,29 @@ def make_battery_subentry_data(
             "lifetime_production": 5000.0,
             "lifetime_cost": 2000.0,
             "co2_footprint": 500.0,
+        },
+    }
+
+
+def make_consumer_subentry_data(
+    subentry_id: str = CONS_SUB_ID,
+    power_entity: str = "sensor.consumer_power",
+) -> dict:
+    """Return subentry data for a consumer adapter."""
+    return {
+        "subentry_id": subentry_id,
+        "subentry_type": "adapter",
+        "title": "Consumer",
+        "unique_id": None,
+        "data": {
+            "adapter": {
+                "adapter_type": "consumer",
+                "key": "consumer",
+                "config": {
+                    "power_entity": power_entity,
+                    "power_entity_inverted": False,
+                },
+            },
         },
     }
 
