@@ -780,6 +780,17 @@ class PowerInsight:
         """Return the grid adapter's export power keyed by uid."""
         return {self.grid_adapter.uid: self.combined_grid_export}
 
+    # CLAUDE-GENERATED — review
+    @property
+    def grid_adapters_self_consumption_power(self) -> dict[str, float | None]:
+        """Watts of grid import used for direct self-consumption."""
+        if (consumption := self.combined_consumption) is None:
+            return {}
+        uid = self.grid_adapter.uid
+        if (share := self.grid_adapters_consumption_shares.get(uid)) is None:
+            return {}
+        return {uid: consumption * share}
+
     @property
     def grid_adapters_coe_rate(self) -> dict[str, float | None]:
         """Return the grid import cost rate (EUR/h) keyed by uid."""
@@ -1056,26 +1067,13 @@ class PowerInsight:
 
         return charging_shares
 
-    # @property
-    # def prod_adapters_charging_power(self) -> dict[str, float]:
-    #     pass
-    #     # TODO
-
-    # @property
-    # def prod_adapters_combined_charging_power(self) -> dict[str, float]:
-
-    #     charging_power = {}
-    #     if (combined_charging_power := self.combined_charging_power) is None:
-    #         return {}
-
-    #     export_shares = self.prod_adapters_export_shares
-    #     for adapter in self.prod_adapters:
-    #         if (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_power[adapter.uid] = None
-    #         else:
-    #             export_power[adapter.uid] = grid_export * export_share
-
-    #     return export_power
+    # CLAUDE-GENERATED — review
+    @property
+    def prod_adapters_charging_power(self) -> dict[str, float | None]:
+        """Watts of each PV adapter's output that go to battery charging."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        return {adapter.uid: powers.get(adapter.uid, 0.0) for adapter in self.prod_adapters}
 
     @property
     def prod_adapters_consumption_ratios(self) -> dict[str, float]:
@@ -1613,26 +1611,13 @@ class PowerInsight:
 
         return source_shares
 
-    # @property
-    # def storage_adapters_charging_power(self) -> dict[str, float]:
-    #     pass
-    #     # TODO
-
-    # @property
-    # def storage_adapters_combined_charging_power(self) -> dict[str, float]:
-
-    #     charging_power = {}
-    #     if (combined_charging_power := self.combined_charging_power) is None:
-    #         return {}
-
-    #     export_shares = self.storage_adapters_export_shares
-    #     for adapter in self.storage_adapters:
-    #         if (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_power[adapter.uid] = None
-    #         else:
-    #             export_power[adapter.uid] = grid_export * export_share
-
-    #     return export_power
+    # CLAUDE-GENERATED — review
+    @property
+    def storage_adapters_charging_power(self) -> dict[str, float | None]:
+        """Watts of each battery's discharge that go to charging other batteries."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        return {adapter.uid: powers.get(adapter.uid, 0.0) for adapter in self.storage_adapters}
 
     @property
     def storage_adapters_consumption_ratios(self) -> dict[str, float]:
@@ -2027,6 +2012,15 @@ class PowerInsight:
 
     # CLAUDE-GENERATED — review
     @property
+    def grid_adapters_charging_power(self) -> dict[str, float | None]:
+        """Watts of grid import used for battery charging."""
+        if (powers := self._provider_charging_powers) is None:
+            return {}
+        uid = self.grid_adapter.uid
+        return {uid: powers.get(uid, 0.0)}
+
+    # CLAUDE-GENERATED — review
+    @property
     def grid_adapters_standby_ratios(self) -> dict[str, float | None]:
         """Fraction of grid import that goes to device standby."""
         powers = self._provider_standby_powers
@@ -2056,6 +2050,18 @@ class PowerInsight:
             return {}
 
         return {uid: self._divide(standby, combined)}
+
+    # CLAUDE-GENERATED — review
+    @property
+    def grid_adapters_standby_power(self) -> dict[str, float | None]:
+        """Watts of grid import used for device standby."""
+        powers = self._provider_standby_powers
+        if powers is None:
+            return {}
+        uid = self.grid_adapter.uid
+        if (standby := powers.get(uid)) is None:
+            return {}
+        return {uid: standby}
 
     # --- Production (PV) ---
 
