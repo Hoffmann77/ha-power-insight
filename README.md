@@ -145,4 +145,4 @@ release tags publish a `MAJOR.MINOR` version behind the `latest` alias. See
 
 ## 📄 License
 
-Released under the [MIT License](LICENSE).
+Released under the [Apache License 2.0](LICENSE).
