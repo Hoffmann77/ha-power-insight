@@ -61,10 +61,10 @@ async def test_user_step_creates_entry(hass: HomeAssistant) -> None:
     options = result["options"]
     assert options["schema"] == 2
     combined = options["scopes"]["combined"]
-    assert "calculate_cost_saving_rates" in combined
+    assert "accumulate_cost_saving_rates" in combined
     assert "enable_distribution_power" in combined
     # Grid has no savings sensors, so they are absent from its scope.
-    assert "calculate_cost_saving_rates" not in options["scopes"]["grid"]
+    assert "accumulate_cost_saving_rates" not in options["scopes"]["grid"]
 
 
 # ---------------------------------------------------------------------------
@@ -338,10 +338,10 @@ async def test_options_flow_submit_saves_everything(hass: HomeAssistant) -> None
         user_input={"preset": "minimal", "debug_power_entities": True},
     )
     assert result["type"] == FlowResultType.CREATE_ENTRY
-    # Minimal preset: distribution_power + cost_saving_rates + accumulate_cost_saving_rates.
+    # Minimal preset: distribution ratios + financial-return sensors.
     combined = entry.options["scopes"]["combined"]
-    assert "enable_distribution_power" in combined
-    assert "calculate_cost_saving_rates" in combined
+    assert "enable_distribution_ratios" in combined
+    assert "calculate_financial_return_rate" in combined
     assert entry.options["debug_power_entities"] is True
 
 

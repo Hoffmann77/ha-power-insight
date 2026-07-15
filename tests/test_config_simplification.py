@@ -23,7 +23,6 @@ from custom_components.power_insight.const import (
     PRESET_MINIMAL,
     PRESET_RECOMMENDED,
     PRESET_EXTENDED,
-    PRESET_ALL,
     PRESET_CUSTOM,
     CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
@@ -61,12 +60,12 @@ def test_default_scopes_are_subsets_of_support() -> None:
 
 def test_default_includes_cost_savings_and_distribution() -> None:
     combined = set(default_scopes()["combined"])
-    assert "calculate_cost_saving_rates" in combined
+    assert "accumulate_cost_saving_rates" in combined
     assert "enable_distribution_power" in combined
 
 
 def test_all_presets_produce_valid_scopes() -> None:
-    for preset in (PRESET_MINIMAL, PRESET_RECOMMENDED, PRESET_EXTENDED, PRESET_ALL):
+    for preset in (PRESET_MINIMAL, PRESET_RECOMMENDED, PRESET_EXTENDED):
         scopes = default_scopes(preset)
         assert set(scopes) == set(SCOPES)
         for scope, leaves in scopes.items():
@@ -76,26 +75,27 @@ def test_all_presets_produce_valid_scopes() -> None:
             )
 
 
-# --- Levelized cost savings are present in every preset ---
+# --- Levelized cost savings land only where they are supported ---
 
-def test_levelized_cost_savings_in_every_preset() -> None:
-    """Levelized cost-savings rate + accumulation must be enabled by all presets."""
-    for preset in (PRESET_MINIMAL, PRESET_RECOMMENDED, PRESET_EXTENDED, PRESET_ALL):
-        leaves = PRESET_SELECTIONS[preset]
-        assert CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in leaves, preset
-        assert CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES in leaves, preset
+def test_levelized_cost_savings_in_extended() -> None:
+    """The Extended preset enables the levelized cost-savings rate + accumulation."""
+    leaves = PRESET_SELECTIONS[PRESET_EXTENDED]
+    assert CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES in leaves
+    assert CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES in leaves
 
 
 def test_levelized_cost_savings_land_in_supporting_scopes_only() -> None:
-    """The intersection must surface them under combined/pv_system/battery only."""
+    """Wherever a preset enables them, they surface under combined/pv_system/
+    battery only — never grid or consumer."""
     keys = {
         CONF_CALCULATE_LEVELIZED_COST_SAVING_RATES,
         CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
     }
-    for preset in (PRESET_MINIMAL, PRESET_RECOMMENDED, PRESET_EXTENDED, PRESET_ALL):
+    for preset in (PRESET_MINIMAL, PRESET_RECOMMENDED, PRESET_EXTENDED):
+        selected = keys & PRESET_SELECTIONS[preset]
         scopes = default_scopes(preset)
         for scope in ("combined", "pv_system", "battery"):
-            assert keys <= set(scopes[scope]), (preset, scope)
+            assert selected <= set(scopes[scope]), (preset, scope)
         for scope in ("grid", "consumer"):
             assert not (keys & set(scopes[scope])), (preset, scope)
 

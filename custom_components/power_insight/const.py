@@ -130,7 +130,6 @@ CONF_PRESET = "preset"
 PRESET_MINIMAL = "minimal"
 PRESET_RECOMMENDED = "recommended"
 PRESET_EXTENDED = "extended"
-PRESET_ALL = "all"
 PRESET_CUSTOM = "custom"
 
 SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
