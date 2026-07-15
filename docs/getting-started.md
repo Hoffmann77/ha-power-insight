@@ -25,10 +25,9 @@ on the previous one — you can always change this later in the integration's
 
 | Preset | What it adds |
 |---|---|
-| **Minimal** | Power distribution in Watts and cost-savings sensors only. Good for a quick overview of your energy mix. |
-| **Recommended** | Adds distribution ratios (%), export compensation tracking, and charging / power-source attribution. The sweet spot for most installations. |
-| **Extended** | Also adds real-time electricity cost-rate sensors (€/h or $/h). Requires a live electricity price entity on your grid adapter. |
-| **All** | Also adds levelized cost sensors that spread each device's total lifetime cost across all the kWh it produces. Requires lifetime production and cost values to be configured per device. |
+| **Minimal** | Distribution ratios (%), power-source attribution, and financial-return sensors. A lightweight overview of your energy mix. |
+| **Recommended** | Adds distribution power (W), charging-source attribution, and running totals for export compensation, costs and savings. The sweet spot for most installations. |
+| **Extended** | Also adds real-time cost, savings and export-compensation rate sensors (€/h or $/h) plus levelized cost sensors. Cost sensors need a live price entity on your grid adapter; levelized sensors need lifetime production and cost values per device. |
 
 !!! note
     Not sure which to pick? **Recommended** is a great starting point for most

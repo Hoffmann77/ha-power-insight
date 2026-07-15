@@ -18,7 +18,7 @@
           "preset": "Sensor preset"
         },
         "data_description": {
-          "preset": "**Minimal** — Power distribution in Watts and cost-savings sensors only. Good for a quick overview of your energy mix.\n\n**Recommended** — Adds distribution ratios (%), export compensation tracking, and charging/power-source attribution. The sweet spot for most installations.\n\n**Extended** — Also adds real-time electricity cost rate sensors (€/h or $/h). Requires a live electricity price entity on your grid adapter.\n\n**All** — Also adds levelized cost sensors that spread each device's total lifetime cost across all the kWh it produces. Requires lifetime production and cost values to be configured per device.\n\nYou can fine-tune individual sensors at any time in the integration's Options."
+          "preset": "**Minimal** — Distribution ratios (%), power-source attribution, and financial-return sensors. A lightweight overview of your energy mix.\n\n**Recommended** — Adds distribution power (W), charging-source attribution, and running totals for export compensation, costs and savings. The sweet spot for most installations.\n\n**Extended** — Also adds real-time cost, savings and export-compensation rate sensors (€/h or $/h) plus levelized cost sensors. Cost sensors need a live price entity on your grid adapter; levelized sensors need lifetime production and cost values per device.\n\nYou can fine-tune individual sensors at any time in the integration's Options."
         }
       }
     },
@@ -40,7 +40,7 @@
           "debug_power_entities": "Enable debug power entities"
         },
         "data_description": {
-          "preset": "**Minimal** — Power distribution and cost-savings sensors only.\n**Recommended** — Adds ratios, export compensation, and source-attribution sensors.\n**Extended** — Also adds real-time electricity cost rate sensors.\n**All** — Also adds levelized cost sensors (requires lifetime values per device).\n**Custom** — Configure each device type individually on the following pages.",
+          "preset": "**Minimal** — Distribution ratios and financial-return sensors only.\n**Recommended** — Adds distribution power, source attribution, and running totals for costs, savings and export compensation.\n**Extended** — Also adds real-time cost/savings rate sensors and levelized cost sensors (levelized needs lifetime values per device).\n**Custom** — Configure each device type individually on the following pages.",
           "debug_power_entities": "Expose the raw internal power values used for calculations as additional sensors. Useful for diagnosing unexpected readings. Leave off unless you are troubleshooting."
         }
       },

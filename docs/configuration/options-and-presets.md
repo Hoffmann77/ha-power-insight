@@ -16,10 +16,9 @@ selection to all your devices instantly:
 
 | Preset | What it adds |
 |---|---|
-| **Minimal** | Power distribution and cost-savings sensors only. |
-| **Recommended** | Adds ratios, export compensation, and source-attribution sensors. |
-| **Extended** | Also adds real-time electricity cost-rate sensors. |
-| **All** | Also adds levelized cost sensors (requires lifetime values per device). |
+| **Minimal** | Distribution ratios and financial-return sensors only. |
+| **Recommended** | Adds distribution power, source-attribution, and running totals for costs, savings and export compensation. |
+| **Extended** | Also adds real-time cost/savings rate sensors and levelized cost sensors (requires lifetime values per device). |
 | **Custom** | Configure each device type individually on the following pages. |
 
 Each preset builds on the previous one. **Recommended** is the sweet spot for
