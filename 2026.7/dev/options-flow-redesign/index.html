@@ -1,0 +1,2592 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Real-time electricity cost, savings, and power-distribution insights for Home Assistant — grid, solar, batteries, and consumers in one place.">
+      
+      
+        <meta name="author" content="Hoffmann77">
+      
+      
+        <link rel="canonical" href="https://hoffmann77.github.io/ha-power-insight/2026.7/dev/options-flow-redesign/">
+      
+      
+        <link rel="prev" href="../releasing/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Options-flow spec - Power Insight</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#options-flow-redesign-final-spec" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Power Insight" class="md-header__button md-logo" aria-label="Power Insight" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Power Insight
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Options-flow spec
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Hoffmann77/ha-power-insight" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Hoffmann77/ha-power-insight
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Power Insight" class="md-nav__button md-logo" aria-label="Power Insight" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Power Insight
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Hoffmann77/ha-power-insight" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Hoffmann77/ha-power-insight
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/grid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Grid connection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/pv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    PV system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/battery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Battery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/consumer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consumer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/options-and-presets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sensors, presets & options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../entities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entity reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Services
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../entity-naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entity naming scheme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releasing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docs versioning & releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Options-flow spec
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Options-flow spec
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-scope-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Scope model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-category-taxonomy-option-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Category taxonomy &amp; option keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Category taxonomy &amp; option keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#money-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Money categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#power-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-changes-vs-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key changes vs today
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-categories-each-scope-offers-scope_supported_options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which categories each scope offers (SCOPE_SUPPORTED_OPTIONS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-perscope-sections-exact-fields-shown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Per‑scope sections (exact fields shown)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Per‑scope sections (exact fields shown)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wholehome-combined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Whole‑home (combined)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pv-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PV systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batteries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batteries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consumers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-sensor-scope-category-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Sensor → scope → category map
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Sensor → scope → category map">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combined-hub-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined (hub device)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid device
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pv-system-battery-device-per-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PV system / Battery device (per instance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumer-device-per-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consumer device (per instance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-option-storage-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Option storage schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-read-side-scopeaware-gating-sensorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Read side — scope‑aware gating (sensor.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-options-flow-config_flowpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Options flow (config_flow.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-initial-config-flow-seeding-async_step_user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Initial config flow seeding (async_step_user)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-migration-minor_version-1-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Migration (MINOR_VERSION 1 → 2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-engine-additions-power_insightpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Engine additions (power_insight.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-sensor-platform-changes-sensorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Sensor platform changes (sensor.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-feasibility-check-per-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Feasibility check (per scope)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-translations-enjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Translations (en.json)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-testing-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Testing plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-out-of-scope-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. Out of scope / future
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-implementation-checklist-file-by-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. Implementation checklist (file by file)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-goals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Goals
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-scope-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Scope model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-category-taxonomy-option-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Category taxonomy &amp; option keys
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Category taxonomy &amp; option keys">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#money-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Money categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#power-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Power categories
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#key-changes-vs-today" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key changes vs today
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#which-categories-each-scope-offers-scope_supported_options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which categories each scope offers (SCOPE_SUPPORTED_OPTIONS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-perscope-sections-exact-fields-shown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Per‑scope sections (exact fields shown)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Per‑scope sections (exact fields shown)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wholehome-combined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Whole‑home (combined)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pv-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PV systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batteries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batteries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consumers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-sensor-scope-category-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Sensor → scope → category map
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Sensor → scope → category map">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combined-hub-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined (hub device)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid-device" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid device
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pv-system-battery-device-per-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PV system / Battery device (per instance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#consumer-device-per-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consumer device (per instance)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diagnostics_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-option-storage-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Option storage schema
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-read-side-scopeaware-gating-sensorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Read side — scope‑aware gating (sensor.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-options-flow-config_flowpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Options flow (config_flow.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-initial-config-flow-seeding-async_step_user" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Initial config flow seeding (async_step_user)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-migration-minor_version-1-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Migration (MINOR_VERSION 1 → 2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-engine-additions-power_insightpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Engine additions (power_insight.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-sensor-platform-changes-sensorpy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Sensor platform changes (sensor.py)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-feasibility-check-per-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Feasibility check (per scope)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-translations-enjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Translations (en.json)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-testing-plan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Testing plan
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-out-of-scope-future" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. Out of scope / future
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-implementation-checklist-file-by-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. Implementation checklist (file by file)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/Hoffmann77/ha-power-insight/edit/main/docs/dev/options-flow-redesign.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="options-flow-redesign-final-spec">Options flow redesign — final spec<a class="headerlink" href="#options-flow-redesign-final-spec" title="Permanent link">&para;</a></h1>
+<p>Status: <strong>implemented</strong> (step 1: grid import/export sensors; step 2: per-scope
+options flow, gating, migration).</p>
+<p>Refinements made during implementation (the code is the source of truth):
+- The single <code>enable_power_shares</code> toggle was split into the categories
+  <strong>Power distribution (W)</strong> (<code>enable_distribution_power</code>), <strong>Power
+  distribution ratios</strong> (<code>enable_distribution_ratios</code>), <strong>Power distribution
+  shares</strong> (<code>enable_distribution_shares</code>), <strong>Charging source shares</strong>
+  (<code>enable_charging_source_shares</code>, battery) and <strong>Power source shares</strong>
+  (<code>enable_power_source_shares</code>, consumer).
+- <strong>Export compensation</strong> became its own category
+  (<code>enable_export_compensation_rate</code>, <code>accumulate_export_compensation</code>), and the
+  accumulated category was split into <strong>Accumulated costs</strong> and <strong>Accumulated
+  cost savings</strong>.
+- The grid gained <strong>Import power</strong> alongside Export power.
+- The options flow is a <strong>menu</strong> with one step per scope (no defaults/inherit).
+- Each section is <strong>saved immediately on submit</strong> (no separate "save" step);
+  an under-configured selection routes through a confirm step ("save anyway").</p>
+<p>This spec reorganises the integration's options so that <em>which sensors are
+created</em> is configured <strong>per device type</strong>, in human‑readable categories, from a
+single central options flow. It folds in the related decisions to move the grid
+import/export sensors onto the grid device and to keep one grid per config
+entry.</p>
+<p>It builds on the gating work already merged (<code>_SENSOR_OPTION_GATE</code> +
+<code>_sync_entity_enabled_state</code> in <code>sensor.py</code>): every sensor is gated by an option
+and toggling an option disables (keeps history) / re‑enables its entities. This
+redesign only changes <em>how options are grouped and stored</em> and <em>which option
+gates which sensor</em> — the gating/enable machinery is reused unchanged.</p>
+<hr />
+<h2 id="1-goals">1. Goals<a class="headerlink" href="#1-goals" title="Permanent link">&para;</a></h2>
+<ul>
+<li>One central options flow, <strong>sectioned by device type</strong> (no per‑subentry flows,
+  no global "defaults/inherit" bucket).</li>
+<li>Each section shows <strong>only the categories that device type supports</strong>, with
+  friendly names.</li>
+<li>The grid device owns <strong>both sides of the meter</strong>: import (cost) and export
+  (compensation + power).</li>
+<li><strong>One grid per config entry</strong> — the correct domain model, not a limitation
+  (two grid connections → two config entries).</li>
+<li>Pre‑release: <strong>no history‑preserving migration</strong> required; entities may be
+  recreated.</li>
+</ul>
+<hr />
+<h2 id="2-scope-model">2. Scope model<a class="headerlink" href="#2-scope-model" title="Permanent link">&para;</a></h2>
+<p>Six configurable scopes. A scope is shown in the flow only if it applies (the
+device type has at least one subentry; <code>combined</code>/<code>diagnostics</code> always shown).</p>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>combined</code></td>
+<td>Whole‑home aggregate (hub) sensors</td>
+</tr>
+<tr>
+<td><code>grid</code></td>
+<td>The single grid connection (import + export)</td>
+</tr>
+<tr>
+<td><code>pv_system</code></td>
+<td>Applies to all PV system devices</td>
+</tr>
+<tr>
+<td><code>battery</code></td>
+<td>Applies to all battery devices</td>
+</tr>
+<tr>
+<td><code>consumer</code></td>
+<td>Applies to all consumer devices</td>
+</tr>
+<tr>
+<td><code>diagnostics</code></td>
+<td>Global troubleshooting toggles</td>
+</tr>
+</tbody>
+</table>
+<p>"Per device type" means a choice applies to <strong>all</strong> instances of that type, not
+per instance.</p>
+<hr />
+<h2 id="3-category-taxonomy-option-keys">3. Category taxonomy &amp; option keys<a class="headerlink" href="#3-category-taxonomy-option-keys" title="Permanent link">&para;</a></h2>
+<p>Categories are the user‑facing groupings; each maps to one or more leaf option
+keys (the values actually stored and checked).</p>
+<div class="admonition note">
+<p class="admonition-title">Post-implementation addition</p>
+<p>Four financial-return option keys were added to <code>combined</code>, <code>pv_system</code>, and
+<code>battery</code> scopes after this spec was written:
+<code>calculate_financial_return_rate</code>, <code>calculate_levelized_financial_return_rate</code>,
+<code>accumulate_financial_return</code>, <code>accumulate_levelized_financial_return</code>.
+The <code>self_consumption_cost_savings_*</code> sensor family was removed (cost savings
+now means avoided import only; financial return = cost savings + export
+compensation). The sensor-key tables in section 5 reflect the current state.</p>
+</div>
+<h3 id="money-categories">Money categories<a class="headerlink" href="#money-categories" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category (label)</th>
+<th>Leaf option key(s)</th>
+<th>Choice labels</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cost rates (€/h)</td>
+<td><code>calculate_cost_rates</code>, <code>calculate_levelized_cost_rates</code></td>
+<td>Cost, Levelized cost</td>
+</tr>
+<tr>
+<td>Cost savings rates (€/h)</td>
+<td><code>calculate_cost_saving_rates</code>, <code>calculate_levelized_cost_saving_rates</code></td>
+<td>Cost savings, Levelized cost savings</td>
+</tr>
+<tr>
+<td>Export compensation</td>
+<td><code>enable_export_compensation_rate</code>, <code>accumulate_export_compensation</code></td>
+<td>Rate (€/h), Accumulated total (€)</td>
+</tr>
+<tr>
+<td>Accumulated costs (€)</td>
+<td><code>accumulate_cost_rates</code>, <code>accumulate_levelized_cost_rates</code></td>
+<td>Cost, Levelized cost</td>
+</tr>
+<tr>
+<td>Accumulated cost savings (€)</td>
+<td><code>accumulate_cost_saving_rates</code>, <code>accumulate_levelized_cost_saving_rates</code></td>
+<td>Cost savings, Levelized cost savings</td>
+</tr>
+</tbody>
+</table>
+<h3 id="power-categories">Power categories<a class="headerlink" href="#power-categories" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category (label)</th>
+<th>Leaf option key</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Power distribution (W)</td>
+<td><code>enable_distribution_power</code></td>
+<td>absolute watt split</td>
+</tr>
+<tr>
+<td>Power distribution ratios</td>
+<td><code>enable_distribution_ratios</code></td>
+<td><code>*_ratio</code> % (own power split)</td>
+</tr>
+<tr>
+<td>Power distribution shares</td>
+<td><code>enable_distribution_shares</code></td>
+<td><code>*_share</code> % (share of combined)</td>
+</tr>
+<tr>
+<td>Charging source shares</td>
+<td><code>enable_charging_source_shares</code></td>
+<td>battery only</td>
+</tr>
+<tr>
+<td>Power source shares</td>
+<td><code>enable_power_source_shares</code></td>
+<td>consumer only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="diagnostics">Diagnostics<a class="headerlink" href="#diagnostics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category (label)</th>
+<th>Leaf option key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable debug power entities</td>
+<td><code>debug_power_entities</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="key-changes-vs-today">Key changes vs today<a class="headerlink" href="#key-changes-vs-today" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Added:</strong> <code>enable_export_compensation_rate</code>, <code>accumulate_export_compensation</code>,
+  <code>enable_distribution_power</code>, <code>enable_distribution_ratios</code>,
+  <code>enable_distribution_shares</code>, <code>enable_charging_source_shares</code>,
+  <code>enable_power_source_shares</code>.</li>
+<li><strong>Removed:</strong> <code>enable_power_shares</code> (split into the four power categories), and
+  the three <em>container</em> keys <code>calculate_instantaneous_rates</code>,
+  <code>calculate_instantaneous_saving_rates</code>, <code>calculate_accumulated_entities</code>
+  (the flow now groups leaf keys by category directly).</li>
+<li><strong>Repurposed:</strong> export compensation is pulled <strong>out</strong> of <code>calculate_cost_rates</code>
+  / <code>accumulate_cost_rates</code> into its own two keys, so "Cost rates" and
+  "Accumulated costs" now mean strictly operating cost.</li>
+</ul>
+<h3 id="which-categories-each-scope-offers-scope_supported_options">Which categories each scope offers (<code>SCOPE_SUPPORTED_OPTIONS</code>)<a class="headerlink" href="#which-categories-each-scope-offers-scope_supported_options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scope</th>
+<th>Categories</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>combined</td>
+<td>Cost rates · Cost savings rates · Accumulated costs · Accumulated cost savings · Power distribution (W) · Power distribution ratios</td>
+</tr>
+<tr>
+<td>grid</td>
+<td>Cost rates (Cost only) · Accumulated costs (Cost only) · Export compensation · Power distribution (W) · Power distribution ratios · Power distribution shares</td>
+</tr>
+<tr>
+<td>pv_system</td>
+<td>Cost rates · Cost savings rates · Export compensation · Accumulated costs · Accumulated cost savings · Power distribution (W) · Power distribution ratios · Power distribution shares</td>
+</tr>
+<tr>
+<td>battery</td>
+<td>same as pv_system <strong>+ Charging source shares</strong></td>
+</tr>
+<tr>
+<td>consumer</td>
+<td>Cost rates · Power source shares</td>
+</tr>
+<tr>
+<td>diagnostics</td>
+<td>Enable debug power entities</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-perscope-sections-exact-fields-shown">4. Per‑scope sections (exact fields shown)<a class="headerlink" href="#4-perscope-sections-exact-fields-shown" title="Permanent link">&para;</a></h2>
+<h3 id="wholehome-combined">Whole‑home (combined)<a class="headerlink" href="#wholehome-combined" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cost rates (€/h): <code>Cost</code>, <code>Levelized cost</code></li>
+<li>Cost savings rates (€/h): <code>Cost savings</code>, <code>Levelized cost savings</code></li>
+<li>Accumulated costs (€): <code>Cost</code>, <code>Levelized cost</code></li>
+<li>Accumulated cost savings (€): <code>Cost savings</code>, <code>Levelized cost savings</code></li>
+<li>Power distribution (W) <em>(toggle)</em> — self‑consumption / charging / standby power</li>
+<li>Power distribution ratios <em>(toggle)</em> — export / self‑consumption / charging / standby ratio</li>
+<li><em>(electricity‑price sensors stay always‑on — core readings)</em></li>
+</ul>
+<h3 id="grid">Grid<a class="headerlink" href="#grid" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Power distribution (W) <em>(toggle)</em> — <strong>import power, export power</strong></li>
+<li>Cost rates (€/h): <code>Cost</code></li>
+<li>Accumulated costs (€): <code>Cost</code></li>
+<li>Export compensation: <code>Rate (€/h)</code>, <code>Accumulated total (€)</code></li>
+<li>Power distribution ratios <em>(toggle)</em> — consumption ratio</li>
+<li>Power distribution shares <em>(toggle)</em> — consumption share</li>
+</ul>
+<h3 id="pv-systems">PV systems<a class="headerlink" href="#pv-systems" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Power distribution (W) <em>(toggle)</em> — export power, self‑consumption power</li>
+<li>Cost rates (€/h): <code>Cost</code>, <code>Levelized cost</code></li>
+<li>Cost savings rates (€/h): <code>Cost savings</code>, <code>Levelized cost savings</code></li>
+<li>Export compensation: <code>Rate (€/h)</code>, <code>Accumulated total (€)</code></li>
+<li>Accumulated costs (€): <code>Cost</code>, <code>Levelized cost</code></li>
+<li>Accumulated cost savings (€): <code>Cost savings</code>, <code>Levelized cost savings</code></li>
+<li>Power distribution ratios <em>(toggle)</em> — export ratio, self‑consumption ratio</li>
+<li>Power distribution shares <em>(toggle)</em> — export share, self‑consumption share</li>
+</ul>
+<h3 id="batteries">Batteries<a class="headerlink" href="#batteries" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Same as PV systems, plus:</li>
+<li>Charging source shares <em>(toggle)</em> — charging share from each selected source</li>
+<li><em>(Export compensation shown only when the battery exports)</em></li>
+</ul>
+<h3 id="consumers">Consumers<a class="headerlink" href="#consumers" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cost rates (€/h): <code>Cost</code>, <code>Levelized cost</code></li>
+<li>Power source shares <em>(toggle)</em> — per‑source <code>Power share from &lt;source&gt;</code></li>
+</ul>
+<h3 id="diagnostics_1">Diagnostics<a class="headerlink" href="#diagnostics_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Enable debug power entities <em>(toggle)</em> — global</li>
+</ul>
+<hr />
+<h2 id="5-sensor-scope-category-map">5. Sensor → scope → category map<a class="headerlink" href="#5-sensor-scope-category-map" title="Permanent link">&para;</a></h2>
+<p>Capability gates (<code>exports_power</code>, <code>lcoe is not None</code>) still apply <strong>in addition</strong>
+to the option gate.</p>
+<h3 id="combined-hub-device">Combined (hub device)<a class="headerlink" href="#combined-hub-device" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor key</th>
+<th>Option key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>combined_self_consumption_power</td>
+<td>enable_distribution_power</td>
+</tr>
+<tr>
+<td>combined_charging_power</td>
+<td>enable_distribution_power</td>
+</tr>
+<tr>
+<td>combined_standby_power</td>
+<td>enable_distribution_power</td>
+</tr>
+<tr>
+<td>combined_export_ratio</td>
+<td>enable_distribution_ratios</td>
+</tr>
+<tr>
+<td>combined_self_consumption_ratio</td>
+<td>enable_distribution_ratios</td>
+</tr>
+<tr>
+<td>combined_charging_ratio</td>
+<td>enable_distribution_ratios</td>
+</tr>
+<tr>
+<td>combined_standby_ratio</td>
+<td>enable_distribution_ratios</td>
+</tr>
+<tr>
+<td>combined_cost_rate</td>
+<td>calculate_cost_rates</td>
+</tr>
+<tr>
+<td>combined_operating_cost_rate</td>
+<td>calculate_cost_rates</td>
+</tr>
+<tr>
+<td>combined_levelized_cost_rate</td>
+<td>calculate_levelized_cost_rates</td>
+</tr>
+<tr>
+<td>combined_levelized_operating_cost_rate</td>
+<td>calculate_levelized_cost_rates</td>
+</tr>
+<tr>
+<td>combined_cost_savings_rate</td>
+<td>calculate_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_levelized_cost_savings_rate</td>
+<td>calculate_levelized_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_financial_return_rate</td>
+<td>calculate_financial_return_rate</td>
+</tr>
+<tr>
+<td>combined_levelized_financial_return_rate</td>
+<td>calculate_levelized_financial_return_rate</td>
+</tr>
+<tr>
+<td>combined_total_operating_cost</td>
+<td>accumulate_cost_rates</td>
+</tr>
+<tr>
+<td>combined_total_levelized_operating_cost</td>
+<td>accumulate_levelized_cost_rates</td>
+</tr>
+<tr>
+<td>combined_total_cost_savings</td>
+<td>accumulate_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_total_levelized_cost_savings</td>
+<td>accumulate_levelized_cost_saving_rates</td>
+</tr>
+<tr>
+<td>combined_total_financial_return</td>
+<td>accumulate_financial_return</td>
+</tr>
+<tr>
+<td>combined_total_levelized_financial_return</td>
+<td>accumulate_levelized_financial_return</td>
+</tr>
+<tr>
+<td>combined_price_of_electricity</td>
+<td><em>(always on)</em></td>
+</tr>
+<tr>
+<td>combined_levelized_price_of_electricity</td>
+<td><em>(always on)</em></td>
+</tr>
+</tbody>
+</table>
+<p><code>combined_export_compensation_rate</code> and <code>combined_total_export_compensation</code>
+<strong>move to the grid device</strong> (see below) and are removed from the combined scope.
+<code>combined_export_ratio</code> stays at combined.</p>
+<h3 id="grid-device">Grid device<a class="headerlink" href="#grid-device" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor key</th>
+<th>Option key</th>
+<th>Source property</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>import_power <em>(new)</em></td>
+<td>enable_distribution_power</td>
+<td><code>grid_adapters_import_power</code></td>
+</tr>
+<tr>
+<td>export_power <em>(new)</em></td>
+<td>enable_distribution_power</td>
+<td><code>grid_adapters_export_power</code></td>
+</tr>
+<tr>
+<td>import_cost_rate</td>
+<td>calculate_cost_rates</td>
+<td><code>grid_adapters_coe_rate</code></td>
+</tr>
+<tr>
+<td>total_import_cost</td>
+<td>accumulate_cost_rates</td>
+<td>(integration of import_cost_rate)</td>
+</tr>
+<tr>
+<td>export_compensation_rate <em>(moved)</em></td>
+<td>enable_export_compensation_rate</td>
+<td><code>grid_adapters_export_compensation_rate</code> <em>(new wrapper)</em></td>
+</tr>
+<tr>
+<td>total_export_compensation <em>(moved)</em></td>
+<td>accumulate_export_compensation</td>
+<td>(integration of export_compensation_rate)</td>
+</tr>
+<tr>
+<td>consumption_ratio</td>
+<td>enable_distribution_ratios</td>
+<td><code>grid_adapters_consumption_ratios</code></td>
+</tr>
+<tr>
+<td>consumption_share</td>
+<td>enable_distribution_shares</td>
+<td><code>grid_adapters_consumption_shares</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="pv-system-battery-device-per-instance">PV system / Battery device (per instance)<a class="headerlink" href="#pv-system-battery-device-per-instance" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor key</th>
+<th>Option key</th>
+<th>Capability</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>export_power</td>
+<td>enable_distribution_power</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>self_consumption_power</td>
+<td>enable_distribution_power</td>
+<td>—</td>
+</tr>
+<tr>
+<td>export_compensation_rate</td>
+<td>enable_export_compensation_rate</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>total_export_compensation</td>
+<td>accumulate_export_compensation</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>operating_cost_rate</td>
+<td>calculate_cost_rates</td>
+<td>—</td>
+</tr>
+<tr>
+<td>levelized_operating_cost_rate</td>
+<td>calculate_levelized_cost_rates</td>
+<td>lcoe</td>
+</tr>
+<tr>
+<td>cost_savings_rate</td>
+<td>calculate_cost_saving_rates</td>
+<td>—</td>
+</tr>
+<tr>
+<td>levelized_cost_savings_rate</td>
+<td>calculate_levelized_cost_saving_rates</td>
+<td>lcoe</td>
+</tr>
+<tr>
+<td>financial_return_rate</td>
+<td>calculate_financial_return_rate</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>levelized_financial_return_rate</td>
+<td>calculate_levelized_financial_return_rate</td>
+<td>lcoe · exports_power</td>
+</tr>
+<tr>
+<td>total_operating_cost</td>
+<td>accumulate_cost_rates</td>
+<td>—</td>
+</tr>
+<tr>
+<td>total_levelized_operating_cost</td>
+<td>accumulate_levelized_cost_rates</td>
+<td>lcoe</td>
+</tr>
+<tr>
+<td>total_cost_savings</td>
+<td>accumulate_cost_saving_rates</td>
+<td>—</td>
+</tr>
+<tr>
+<td>total_levelized_cost_savings</td>
+<td>accumulate_levelized_cost_saving_rates</td>
+<td>lcoe</td>
+</tr>
+<tr>
+<td>total_financial_return</td>
+<td>accumulate_financial_return</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>total_levelized_financial_return</td>
+<td>accumulate_levelized_financial_return</td>
+<td>lcoe · exports_power</td>
+</tr>
+<tr>
+<td>export_ratio</td>
+<td>enable_distribution_ratios</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>self_consumption_ratio</td>
+<td>enable_distribution_ratios</td>
+<td>—</td>
+</tr>
+<tr>
+<td>export_share</td>
+<td>enable_distribution_shares</td>
+<td>exports_power</td>
+</tr>
+<tr>
+<td>self_consumption_share</td>
+<td>enable_distribution_shares</td>
+<td>—</td>
+</tr>
+<tr>
+<td>charging_share_from_&lt;source&gt; <em>(battery)</em></td>
+<td>enable_charging_source_shares</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="consumer-device-per-instance">Consumer device (per instance)<a class="headerlink" href="#consumer-device-per-instance" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor key</th>
+<th>Option key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>operating_cost_rate</td>
+<td>calculate_cost_rates</td>
+</tr>
+<tr>
+<td>levelized_operating_cost_rate</td>
+<td>calculate_levelized_cost_rates</td>
+</tr>
+<tr>
+<td>power_share_from_&lt;source&gt;</td>
+<td>enable_power_source_shares</td>
+</tr>
+</tbody>
+</table>
+<h3 id="diagnostics_2">Diagnostics<a class="headerlink" href="#diagnostics_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Sensor key</th>
+<th>Option key</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>available_power</td>
+<td>debug_power_entities</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-option-storage-schema">6. Option storage schema<a class="headerlink" href="#6-option-storage-schema" title="Permanent link">&para;</a></h2>
+<p>Flat per‑scope leaf‑key lists; independent, no inheritance.</p>
+<div class="highlight"><pre><span></span><code><span class="n">entry</span><span class="o">.</span><span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;combined&quot;</span><span class="p">:</span>  <span class="p">[</span><span class="o">...</span><span class="n">leaf</span> <span class="n">keys</span><span class="o">...</span><span class="p">],</span>
+        <span class="s2">&quot;grid&quot;</span><span class="p">:</span>      <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+        <span class="s2">&quot;pv_system&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+        <span class="s2">&quot;battery&quot;</span><span class="p">:</span>   <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+        <span class="s2">&quot;consumer&quot;</span><span class="p">:</span>  <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;debug_power_entities&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>   <span class="c1"># global</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Resolution (single source of truth):</p>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">resolve_scope</span><span class="p">(</span><span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;scopes&quot;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">scope</span><span class="p">,</span> <span class="p">[]))</span>
+</code></pre></div>
+<hr />
+<h2 id="7-read-side-scopeaware-gating-sensorpy">7. Read side — scope‑aware gating (<code>sensor.py</code>)<a class="headerlink" href="#7-read-side-scopeaware-gating-sensorpy" title="Permanent link">&para;</a></h2>
+<p><code>OptionsWrapper</code> becomes scope‑aware; <code>_SENSOR_OPTION_GATE</code> keeps its shape but
+points at the new keys; <code>_option_gated_out</code> takes a scope.</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">OptionsWrapper</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_by_scope</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">s</span><span class="p">:</span> <span class="n">resolve_scope</span><span class="p">(</span><span class="n">options</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;combined&quot;</span><span class="p">,</span> <span class="s2">&quot;grid&quot;</span><span class="p">,</span> <span class="s2">&quot;pv_system&quot;</span><span class="p">,</span> <span class="s2">&quot;battery&quot;</span><span class="p">,</span> <span class="s2">&quot;consumer&quot;</span><span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;combined&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="n">CONF_ENABLE_DEBUG_ENTITIES</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_by_scope</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">scope</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_option_gated_out</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">options</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="n">gate</span> <span class="o">=</span> <span class="n">_SENSOR_OPTION_GATE</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">description</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">options</span><span class="o">.</span><span class="n">check</span><span class="p">(</span><span class="n">gate</span><span class="p">,</span> <span class="n">scope</span><span class="p">)</span>
+</code></pre></div>
+<p>Each setup loop passes its scope: hub → <code>"combined"</code>, grid → <code>"grid"</code>, PV →
+<code>"pv_system"</code>, battery → <code>"battery"</code>, consumer → <code>"consumer"</code>. Dynamic sensors
+pass their owner's scope. <code>_sync_entity_enabled_state</code> is unchanged — it already
+disables/re‑enables based on the resolved "wanted" set.</p>
+<hr />
+<h2 id="8-options-flow-config_flowpy">8. Options flow (<code>config_flow.py</code>)<a class="headerlink" href="#8-options-flow-config_flowpy" title="Permanent link">&para;</a></h2>
+<p><strong>Single form</strong>, with one collapsible <strong>section</strong> per shown scope plus a
+diagnostics section, and one Submit button (HA <code>data_entry_flow.section</code>).</p>
+<div class="highlight"><pre><span></span><code>async_step_init → async_show_form(step_id=&quot;init&quot;, schema = {
+   section(&quot;combined&quot;)     (always)
+   section(&quot;grid&quot;)         (if grid subentry exists)
+   section(&quot;pv_system&quot;)    (if ≥1 PV)
+   section(&quot;battery&quot;)      (if ≥1 battery)
+   section(&quot;consumer&quot;)     (if ≥1 consumer)
+   section(&quot;diagnostics&quot;)  (always; debug toggle)
+})
+on submit → feasibility check
+            → ok:       async_create_entry(data=new_options)   # one reload
+            → problems: re-show the form with errors[&quot;base&quot;] = reconfigure_adapters_first
+</code></pre></div>
+<p>Each section's schema is <code>build_scope_schema(scope, current)</code> (categories from
+<code>SCOPE_SUPPORTED_OPTIONS[scope]</code>, pre‑filled). Section fields arrive nested under
+the section key; <code>collect_scope_selection</code> turns each back into a leaf list.
+Scopes whose device type is absent keep their stored value. The under‑configured
+case <strong>blocks</strong> (re‑shows the form with an error) rather than saving.</p>
+<p>No "use default selection" toggle; each scope is edited directly and
+independently.</p>
+<hr />
+<h2 id="9-initial-config-flow-seeding-async_step_user">9. Initial config flow seeding (<code>async_step_user</code>)<a class="headerlink" href="#9-initial-config-flow-seeding-async_step_user" title="Permanent link">&para;</a></h2>
+<p>Name‑only step, seeding sensible per‑scope defaults (intersected with each
+scope's supported set):</p>
+<div class="highlight"><pre><span></span><code><span class="n">DEFAULT_SELECTION</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;calculate_cost_saving_rates&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;accumulate_cost_saving_rates&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_distribution_power&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_distribution_ratios&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_distribution_shares&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_charging_source_shares&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_power_source_shares&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;enable_export_compensation_rate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;accumulate_export_compensation&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;scopes&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="n">s</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">DEFAULT_SELECTION</span> <span class="o">&amp;</span> <span class="n">SCOPE_SUPPORTED_OPTIONS</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;combined&quot;</span><span class="p">,</span> <span class="s2">&quot;grid&quot;</span><span class="p">,</span> <span class="s2">&quot;pv_system&quot;</span><span class="p">,</span> <span class="s2">&quot;battery&quot;</span><span class="p">,</span> <span class="s2">&quot;consumer&quot;</span><span class="p">)</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;debug_power_entities&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>(Defaults are a starting point — tune before implementation if desired.)</p>
+<hr />
+<h2 id="10-migration-minor_version-1-2">10. Migration (<code>MINOR_VERSION</code> 1 → 2)<a class="headerlink" href="#10-migration-minor_version-1-2" title="Permanent link">&para;</a></h2>
+<p>Pre‑release, so <strong>history is not preserved</strong> — entities are recreated. Migration
+only needs to leave the entry in the new schema with behaviour roughly matching
+the old global selection. Best‑effort mapping:</p>
+<div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">async_migrate_entry</span><span class="p">(</span><span class="n">hass</span><span class="p">,</span> <span class="n">entry</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">entry</span><span class="o">.</span><span class="n">minor_version</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">options</span>
+        <span class="n">old_leaves</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">old</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;calculate_instantaneous_rates&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="o">+</span> <span class="n">old</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;calculate_instantaneous_saving_rates&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="o">+</span> <span class="n">old</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;calculate_accumulated_entities&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">old</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;enable_power_shares&quot;</span><span class="p">):</span>
+            <span class="n">old_leaves</span> <span class="o">|=</span> <span class="p">{</span>
+                <span class="s2">&quot;enable_distribution_ratios&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;enable_distribution_shares&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;enable_charging_source_shares&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;enable_power_source_shares&quot;</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="c1"># watt sensors were always-on before → keep them</span>
+        <span class="n">old_leaves</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;enable_distribution_power&quot;</span><span class="p">)</span>
+        <span class="c1"># export compensation used to ride on the cost-rate keys</span>
+        <span class="k">if</span> <span class="s2">&quot;calculate_cost_rates&quot;</span> <span class="ow">in</span> <span class="n">old_leaves</span><span class="p">:</span>
+            <span class="n">old_leaves</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;enable_export_compensation_rate&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;accumulate_cost_rates&quot;</span> <span class="ow">in</span> <span class="n">old_leaves</span><span class="p">:</span>
+            <span class="n">old_leaves</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;accumulate_export_compensation&quot;</span><span class="p">)</span>
+
+        <span class="n">scopes</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">s</span><span class="p">:</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">old_leaves</span> <span class="o">&amp;</span> <span class="n">SCOPE_SUPPORTED_OPTIONS</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;combined&quot;</span><span class="p">,</span> <span class="s2">&quot;grid&quot;</span><span class="p">,</span> <span class="s2">&quot;pv_system&quot;</span><span class="p">,</span> <span class="s2">&quot;battery&quot;</span><span class="p">,</span> <span class="s2">&quot;consumer&quot;</span><span class="p">)</span>
+        <span class="p">}</span>
+        <span class="n">hass</span><span class="o">.</span><span class="n">config_entries</span><span class="o">.</span><span class="n">async_update_entry</span><span class="p">(</span>
+            <span class="n">entry</span><span class="p">,</span>
+            <span class="n">options</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                <span class="s2">&quot;scopes&quot;</span><span class="p">:</span> <span class="n">scopes</span><span class="p">,</span>
+                <span class="s2">&quot;debug_power_entities&quot;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="n">old</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;debug_power_entities&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+            <span class="p">},</span>
+            <span class="n">minor_version</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="kc">True</span>
+</code></pre></div>
+<p>Bump <code>MINOR_VERSION = 2</code> in <code>PowerInsightConfigFlow</code>.</p>
+<hr />
+<h2 id="11-engine-additions-power_insightpy">11. Engine additions (<code>power_insight.py</code>)<a class="headerlink" href="#11-engine-additions-power_insightpy" title="Permanent link">&para;</a></h2>
+<p>Mostly already present:</p>
+<ul>
+<li><code>grid_adapters_import_power</code> → <code>{grid_uid: combined_grid_import}</code> ✅ exists</li>
+<li><code>grid_adapters_export_power</code> → <code>{grid_uid: combined_grid_export}</code> ✅ exists</li>
+<li><strong>New:</strong> <code>grid_adapters_export_compensation_rate</code> →
+  <code>{grid_uid: combined_export_compensation_rate}</code> (uid‑keyed wrapper so the grid
+  device can use the standard adapter/integration sensor classes).</li>
+</ul>
+<p>No change to the calculation logic — the moved sensors read the same combined
+properties, just attached to the grid device. Add a short comment at the
+<code>grid_adapter</code> slot documenting that <strong>one grid per entry is intentional</strong>, and
+keep the <code>grid_already_configured</code> config‑flow guard.</p>
+<hr />
+<h2 id="12-sensor-platform-changes-sensorpy">12. Sensor platform changes (<code>sensor.py</code>)<a class="headerlink" href="#12-sensor-platform-changes-sensorpy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Add grid <code>import_power</code> / <code>export_power</code> descriptions to
+  <code>POWER_INSIGHT_GRID_ADAPTER_SENSORS</code> (value_fn → the uid‑keyed grid power
+  props; standard <code>PowerInsightAdapterSensor</code>).</li>
+<li>Move <code>export_compensation_rate</code> (rate) into
+  <code>POWER_INSIGHT_GRID_ADAPTER_SENSORS</code> and <code>total_export_compensation</code> into
+  <code>POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS</code>; remove the two combined
+  export descriptions from the hub tuples.</li>
+<li>Update <code>_SENSOR_OPTION_GATE</code> to the new keys (section 5).</li>
+<li>Pass the scope into <code>_option_gated_out</code> / <code>OptionsWrapper.check</code> in each loop;
+  gate the dynamic battery (<code>enable_charging_source_shares</code>) and consumer
+  (<code>enable_power_source_shares</code>) sensors accordingly.</li>
+<li><code>_sync_entity_enabled_state</code>, <code>_add</code> accumulation: unchanged.</li>
+</ul>
+<hr />
+<h2 id="13-feasibility-check-per-scope">13. Feasibility check (per scope)<a class="headerlink" href="#13-feasibility-check-per-scope" title="Permanent link">&para;</a></h2>
+<p><code>check_options_feasibility</code> evaluates each subentry against <strong>its scope's</strong>
+resolved options: e.g. enabling levelized categories for <code>pv_system</code> requires
+each PV's lifetime values; enabling cost rates for <code>grid</code> requires a price
+entity on the grid. Errors name the specific device type + missing data.</p>
+<hr />
+<h2 id="14-translations-enjson">14. Translations (<code>en.json</code>)<a class="headerlink" href="#14-translations-enjson" title="Permanent link">&para;</a></h2>
+<p>Add under <code>options.step</code>:
+- <code>init</code> — menu title + <code>menu_options</code> (combined, grid, pv_system, battery,
+  consumer, diagnostics, save).
+- one step per scope with <code>data</code> / <code>data_description</code> for the categories it
+  shows.
+- <code>save</code> step (confirmation).</p>
+<p>Add <code>data</code> labels/descriptions for all new category keys. Remove obsolete
+<code>enable_power_shares</code> strings.</p>
+<hr />
+<h2 id="15-testing-plan">15. Testing plan<a class="headerlink" href="#15-testing-plan" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Migration:</strong> old flat options → new <code>scopes</code> shape; <code>minor_version == 2</code>.</li>
+<li><strong>Resolution:</strong> <code>resolve_scope</code> returns the right set; absent scope → empty.</li>
+<li><strong>Per‑type gating:</strong> a PV override enabling levelized creates PV levelized
+  sensors; battery (not enabled) does not. Grid gets import/export power +
+  export compensation; combined no longer has export compensation.</li>
+<li><strong>Disable/re‑enable</strong> across a per‑scope options change (extend the existing
+  <code>test_disabling_option_disables_entity_but_keeps_it</code>).</li>
+<li><strong>Feasibility:</strong> levelized enabled for <code>pv_system</code> with a PV missing lifetime
+  values flags that PV only.</li>
+<li><strong>Flow:</strong> menu lists only present device types; each scope step round‑trips.</li>
+<li>Update <code>tests/conftest.py</code> <code>BASE_OPTIONS</code> / <code>FULL_OPTIONS</code> to the new schema.</li>
+</ul>
+<hr />
+<h2 id="16-out-of-scope-future">16. Out of scope / future<a class="headerlink" href="#16-out-of-scope-future" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>CO₂ track.</strong> <code>calculate_co2_*</code> / <code>accumulate_co2_*</code> constants exist but are
+  unwired. This taxonomy has room for a parallel "CO₂ rates / savings / totals"
+  set of categories per scope when the engine side is ready.</li>
+<li><strong>Multiple grids in one entry.</strong> Not supported and not planned — two grid
+  connections are modelled as two config entries.</li>
+</ul>
+<hr />
+<h2 id="17-implementation-checklist-file-by-file">17. Implementation checklist (file by file)<a class="headerlink" href="#17-implementation-checklist-file-by-file" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>const.py</code> — new option keys; <code>SCOPE_SUPPORTED_OPTIONS</code>; remove
+  <code>enable_power_shares</code> + container keys; note CO₂ keys remain dormant.</li>
+<li><code>power_insight.py</code> — <code>grid_adapters_export_compensation_rate</code> wrapper; comment
+  on single‑grid intent.</li>
+<li><code>sensor.py</code> — grid import/export power + moved export‑compensation sensors;
+  <code>_SENSOR_OPTION_GATE</code> remap; scope‑aware <code>OptionsWrapper</code>/<code>_option_gated_out</code>;
+  dynamic‑sensor scope gating.</li>
+<li><code>config_flow.py</code> — menu options flow with per‑scope steps; scope‑filtered
+  selectors; per‑scope feasibility; <code>MINOR_VERSION = 2</code>; updated initial seeding.</li>
+<li><code>__init__.py</code> — <code>async_migrate_entry</code> implementation.</li>
+<li><code>translations/en.json</code> — menu + per‑scope steps + new category strings.</li>
+<li><code>tests/</code> — conftest option fixtures; migration, per‑scope gating, flow tests.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../releasing/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Docs versioning &amp; releases">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Docs versioning & releases
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; Hoffmann77 — MIT License
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"alias": true, "default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
