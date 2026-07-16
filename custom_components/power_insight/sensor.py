@@ -473,8 +473,8 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
-        key="self_consumption_power",
-        name="Self-consumption power",
+        key="consumption_power",
+        name="Consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1305,6 +1305,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     # --- Power distribution (W) ---
     "import_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
+    "consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,           # grid
     "self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,      # pv / storage
     "combined_self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_charging_power": CONF_ENABLE_DISTRIBUTION_POWER,
