@@ -193,7 +193,7 @@ async def test_combined_ledger_sensor_includes_retired_totals(
                     "adapter_type": "pv_system",
                     "title": "Old PV",
                     "retired_at": "2026-01-01T00:00:00+00:00",
-                    "totals": {"total_levelized_operating_costs": 42.0},
+                    "totals": {"total_levelized_operating_cost": 42.0},
                 }
             ],
         },
@@ -203,7 +203,7 @@ async def test_combined_ledger_sensor_includes_retired_totals(
     await setup_integration(hass, entry)
 
     ent_reg = er.async_get(hass)
-    uid = f"{entry.entry_id}_combined_total_levelized_operating_costs"
+    uid = f"{entry.entry_id}_combined_total_levelized_operating_cost"
     entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
     assert entity_id is not None
     state = hass.states.get(entity_id)

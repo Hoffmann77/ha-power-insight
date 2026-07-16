@@ -104,7 +104,7 @@ async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     # grid import 1 kW * 0.30 = 0.30 EUR/h
-    assert _float(hass, entry, f"{GRID_SUB_ID}_cost_rate") == pytest.approx(0.30)
+    assert _float(hass, entry, f"{GRID_SUB_ID}_import_cost_rate") == pytest.approx(0.30)
     # combined cost rate = grid 0.30 + PV 0.0
     assert _float(hass, entry, "combined_cost_rate") == pytest.approx(0.30)
     # combined price = 0.30 / 3 kW gross = 0.10 EUR/kWh
@@ -156,8 +156,8 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
         _set(hass, "sensor.grid_power", 1000)
         await _settle(hass)
 
-    rate = _float(hass, entry, f"{GRID_SUB_ID}_cost_rate")
-    total = _float(hass, entry, f"{GRID_SUB_ID}_total_cost")
+    rate = _float(hass, entry, f"{GRID_SUB_ID}_import_cost_rate")
+    total = _float(hass, entry, f"{GRID_SUB_ID}_total_import_cost")
     assert rate == pytest.approx(0.30)
     # 0.30 EUR/h held for 1 h = 0.30 EUR.
     assert total == pytest.approx(0.30, abs=1e-3)
@@ -197,11 +197,11 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
         await _settle(hass)
 
     per_adapter = _float(
-        hass, entry, f"{PV_SUB_ID}_total_levelized_operating_costs"
+        hass, entry, f"{PV_SUB_ID}_total_levelized_operating_cost"
     )
     assert per_adapter == pytest.approx(0.03, abs=1e-3)
     # The derived combined sensor equals the sum of active per-adapter totals.
-    combined = _float(hass, entry, "combined_total_levelized_operating_costs")
+    combined = _float(hass, entry, "combined_total_levelized_operating_cost")
     assert combined == pytest.approx(per_adapter, abs=1e-6)
 
     # Remove the PV device. HA clears its entities, whose teardown snapshots
@@ -213,7 +213,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     # sum the operating-costs key across them.
     ledger = entry.data.get("retired_adapters", [])
     op_total = sum(
-        e.get("totals", {}).get("total_levelized_operating_costs", 0.0)
+        e.get("totals", {}).get("total_levelized_operating_cost", 0.0)
         for e in ledger
     )
     assert op_total == pytest.approx(per_adapter, abs=1e-6)
@@ -222,7 +222,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     # device is gone. Re-report a source entity to refresh the derived sensor.
     _set(hass, "sensor.grid_power", 1000)
     await _settle(hass)
-    combined_after = _float(hass, entry, "combined_total_levelized_operating_costs")
+    combined_after = _float(hass, entry, "combined_total_levelized_operating_cost")
     assert combined_after == pytest.approx(per_adapter, abs=1e-6)
 
     # Reload again: no double-count.
@@ -231,6 +231,6 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     _set(hass, "sensor.grid_power", 1000)
     await _settle(hass)
     combined_reloaded = _float(
-        hass, entry, "combined_total_levelized_operating_costs"
+        hass, entry, "combined_total_levelized_operating_cost"
     )
     assert combined_reloaded == pytest.approx(per_adapter, abs=1e-6)
