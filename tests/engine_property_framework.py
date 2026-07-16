@@ -2,7 +2,7 @@
 
 This module is *infrastructure*, not a test file (its name does not start with
 ``test_`` so pytest never collects it directly). A scenario lists the adapters
-that make up the device, each with its reading, using :func:`Add`; every other
+that make up the device, each with its reading, using :func:`Device`; every other
 detail (adapter config, uid, entity id) comes from a named preset and the
 adapter's index.
 
@@ -13,17 +13,17 @@ adapter routing, …)::
 
     class TestBatteryChargingSplit(EngineScenario):
         DEVICES = [
-            Add("grid", power=1000, price=0.30),
-            Add("pv_with_export", 1, power=3000),
-            Add("battery", 1, power=-500, charge_from=["grid", "pv1"]),
-            Add("consumer", 1, power=-800),
+            Device("grid", power=1000, price=0.30),
+            Device("pv_with_export", 1, power=3000),
+            Device("battery", 1, power=-500, charge_from=["grid", "pv1"]),
+            Device("consumer", 1, power=-800),
         ]
 
         def test_gross_power(self, power_insight):
             assert power_insight.gross_power == pytest.approx(4000.0)
 
-``Add(preset, number=1, *, power, price=None, charge_from=None, inverted=False, **overrides)``
----------------------------------------------------------------------------------------------
+``Device(preset, number=1, *, power, price=None, charge_from=None, inverted=False, **overrides)``
+------------------------------------------------------------------------------------------------
 
 * ``preset`` — an :data:`ADAPTER_PRESETS` key that fixes the adapter kind and
   its default config (``"grid"`` / ``"pv_with_export"`` / ``"pv_no_export"`` /
@@ -86,7 +86,7 @@ ConsumerAdapter = _mod.ConsumerAdapter
 # ---------------------------------------------------------------------------
 # Adapter specs — declarative, decoupled from adapter construction so each
 # ``build()`` yields a fresh (empty) adapter. ``build_engine`` assembles these
-# from the ``Add`` entries; scenarios normally never touch them directly.
+# from the ``Device`` entries; scenarios normally never touch them directly.
 # ---------------------------------------------------------------------------
 
 
@@ -211,7 +211,7 @@ class DeviceConfig:
 
 
 # ---------------------------------------------------------------------------
-# Adapter presets + the Add() authoring surface
+# Adapter presets + the Device() authoring surface
 # ---------------------------------------------------------------------------
 
 # preset -> adapter kind + default config. Config keys are visible here so an
@@ -258,8 +258,8 @@ _OVERRIDE_KEYS = {
 
 
 @dataclass(frozen=True)
-class _AddEntry:
-    """One adapter in a scenario's ``DEVICES`` list — produced by :func:`Add`."""
+class _DeviceEntry:
+    """One adapter in a scenario's ``DEVICES`` list — produced by :func:`Device`."""
 
     preset: str
     kind: str
@@ -281,7 +281,7 @@ class _AddEntry:
         return f"sensor.{self.uid}_power"
 
 
-def Add(
+def Device(
     preset: str,
     number: int = 1,
     *,
@@ -290,7 +290,7 @@ def Add(
     charge_from: list[str] | None = None,
     inverted: bool = False,
     **overrides: Any,
-) -> _AddEntry:
+) -> _DeviceEntry:
     """Declare one adapter (with its reading) for a scenario's ``DEVICES`` list.
 
     See the module docstring for the full parameter reference.
@@ -316,7 +316,7 @@ def Add(
         )
     base.update(overrides)
 
-    return _AddEntry(
+    return _DeviceEntry(
         preset=preset,
         kind=kind,
         number=number,
@@ -328,10 +328,10 @@ def Add(
     )
 
 
-def build_engine(devices: list[_AddEntry]) -> Any:
+def build_engine(devices: list[_DeviceEntry]) -> Any:
     """Build a ready-to-query :class:`PowerInsight` from a ``DEVICES`` list.
 
-    Assembles one adapter per :func:`Add` entry, applies its reading, and
+    Assembles one adapter per :func:`Device` entry, applies its reading, and
     validates the device: exactly one grid, unique indices, and every
     ``charge_from`` target present. Raises ``ValueError`` on any violation.
     """
@@ -430,12 +430,12 @@ def build_engine(devices: list[_AddEntry]) -> Any:
 class EngineScenario:
     """Base for scenario test classes: supplies the ``power_insight`` fixture.
 
-    Subclass it, set ``DEVICES`` to a list of :func:`Add` entries, and write
+    Subclass it, set ``DEVICES`` to a list of :func:`Device` entries, and write
     ``test_`` methods that take the ``power_insight`` fixture. Not collected by
     pytest itself (name does not start with ``Test``).
     """
 
-    DEVICES: list[_AddEntry] = []
+    DEVICES: list[_DeviceEntry] = []
 
     @pytest.fixture
     def power_insight(self) -> Any:
