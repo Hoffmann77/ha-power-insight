@@ -281,6 +281,37 @@ def calculate_co2_intensity(
     return (footprint / production) * 1000
 
 
+def calculate_initial_lcoe(
+    fields: dict[str, Any], existing_data: dict[str, Any] | None = None
+) -> float | None:
+    """Return the immutable base LCOE for a PV adapter.
+
+    The base is captured the first time lifetime values exist — whether that is
+    the initial config or a later reconfigure (e.g. the user left the lifetime
+    fields empty at setup and filled them in afterwards) — and preserved
+    unchanged thereafter, so the correction factor (current / base) has a stable
+    reference. Returns None only while no base has ever been set and no lifetime
+    values are supplied.
+    """
+    existing = (existing_data or {}).get(CONF_INITIAL_LCOE)
+    if existing:
+        return existing
+    return calculate_lcoe(fields)
+
+
+def calculate_initial_lcos(
+    fields: dict[str, Any], existing_data: dict[str, Any] | None = None
+) -> float | None:
+    """Return the immutable base LCOS for a battery adapter.
+
+    Same establish-once semantics as :func:`calculate_initial_lcoe`.
+    """
+    existing = (existing_data or {}).get(CONF_INITIAL_LCOS)
+    if existing:
+        return existing
+    return calculate_lcos(fields)
+
+
 def calculate_correction_factor(
     fields: dict[str, Any], existing_data: dict[str, Any] | None = None
 ) -> float:
@@ -289,7 +320,9 @@ def calculate_correction_factor(
     The base (default) LCOE is immutable and read from the existing adapter
     config; the current LCOE is derived from the edited lifetime values. The
     factor is time-constant, so multiplying an accumulated base total by it is
-    exact and retroactive. Defaults to 1.0 when either value is unavailable.
+    exact and retroactive. Defaults to 1.0 when either value is unavailable —
+    which includes the reconfigure that first establishes the base (the base is
+    still absent from the pre-edit config, so the factor is 1.0 that round).
     """
     base = (existing_data or {}).get(CONF_INITIAL_LCOE)
     current = calculate_lcoe(fields)
@@ -948,13 +981,17 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_data=True,
     ),
     # Calculated fields — derived from the raw inputs above.
-    # The initial (base) LCOE is immutable; current_lcoe and the correction
-    # factor are recomputed on reconfigure from the edited lifetime values.
+    # The initial (base) LCOE is established once (at config, or the first
+    # reconfigure that supplies lifetime values) and preserved unchanged after;
+    # current_lcoe and the correction factor are recomputed on every reconfigure
+    # from the edited lifetime values. It runs in the reconfigure flow too so a
+    # base skipped at setup can still be captured later — the calculator
+    # preserves any base that already exists.
     CONF_INITIAL_LCOE: CalculatedAdapterField(
-        calculator=calculate_lcoe,
+        calculator=calculate_initial_lcoe,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_CURRENT_LCOE: CalculatedAdapterField(
@@ -1083,13 +1120,17 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_data=True,
     ),
     # Calculated fields.
-    # The initial (base) LCOS is immutable; current_lcos and the correction
-    # factor are recomputed on reconfigure from the edited lifetime values.
+    # The initial (base) LCOS is established once (at config, or the first
+    # reconfigure that supplies lifetime values) and preserved unchanged after;
+    # current_lcos and the correction factor are recomputed on every reconfigure
+    # from the edited lifetime values. Runs in the reconfigure flow so a base
+    # skipped at setup can still be captured later — the calculator preserves any
+    # base that already exists.
     CONF_INITIAL_LCOS: CalculatedAdapterField(
-        calculator=calculate_lcos,
+        calculator=calculate_initial_lcos,
         depends_on=[CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION],
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_CURRENT_LCOS: CalculatedAdapterField(
