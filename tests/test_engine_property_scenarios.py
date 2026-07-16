@@ -261,6 +261,92 @@ class TestInvertedGrid(EngineScenario):
         assert power_insight.combined_coe is None
 
 
+class TestBatteryExport(EngineScenario):
+    """Battery discharging straight to the grid (grid + battery, no PV).
+
+    The battery discharges 1000 W while the grid exports 1000 W, so all of the
+    battery's output is exported. Exercises the storage export attribution.
+    """
+
+    DEVICES = [
+        Device("grid", power=-1000, price=0.30),        # export 1000 W
+        Device("battery_with_export", 1, power=1000),   # discharge 1000 W, exports
+    ]
+
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(1000.0)
+
+    def test_combined_discharging_power(self, power_insight):
+        assert power_insight.combined_discharging_power == pytest.approx(1000.0)
+
+    def test_export_ratio_is_one(self, power_insight):
+        assert power_insight.gross_power_export_ratio == pytest.approx(1.0)
+
+    def test_storage_export_power(self, power_insight):
+        assert power_insight.storage_adapters_export_power == {"bat1": pytest.approx(1000.0)}
+
+    def test_storage_export_compensation_rate(self, power_insight):
+        # (1000 W / 1000) * 0.10 EUR/kWh (battery_with_export export_compensation)
+        assert power_insight.storage_adapters_export_compensation_rates == {
+            "bat1": pytest.approx(0.10)
+        }
+
+    def test_combined_export_compensation_rate(self, power_insight):
+        assert power_insight.combined_export_compensation_rate == pytest.approx(0.10)
+
+
+class TestCorrectionFactor(EngineScenario):
+    """PV whose correction_factor (1.25) rescales the corrected combined rates.
+
+    Import 1000 W @ 0.30 and 1000 W of self-consumed PV (lcoe 0.10, gross 2000).
+    The base combined LCOE rate weights every adapter by 1.0; the corrected one
+    scales the PV's contribution by its 1.25 correction factor.
+    """
+
+    DEVICES = [
+        Device("grid", power=1000, price=0.30),
+        Device("pv_corrected", 1, power=1000),
+    ]
+
+    def test_combined_lcoe_rate_base(self, power_insight):
+        # grid (1000/1000 * 0.30) + pv (1000/1000 * 0.10) = 0.40 EUR/h
+        assert power_insight.combined_lcoe_rate == pytest.approx(0.40)
+
+    def test_combined_lcoe_rate_corrected(self, power_insight):
+        # grid 0.30 * 1.0 + pv 0.10 * 1.25 = 0.425 EUR/h
+        assert power_insight.combined_lcoe_rate_corrected == pytest.approx(0.425)
+
+    def test_correction_factors_map(self, power_insight):
+        assert power_insight.levelized_correction_factors == {"pv1": pytest.approx(1.25)}
+
+
+class TestZeroCostPv(EngineScenario):
+    """Fully amortized PV (lcoe 0): contributes nothing to the cost of energy.
+
+    Import 500 W @ 0.30 and 500 W of self-consumed zero-cost PV (gross 1000).
+    Only the grid contributes to the levelized/cost-of-electricity rates.
+    """
+
+    DEVICES = [
+        Device("grid", power=500, price=0.30),
+        Device("pv_no_cost", 1, power=500),
+    ]
+
+    def test_combined_production(self, power_insight):
+        assert power_insight.combined_production == pytest.approx(500.0)
+
+    def test_combined_lcoe_rate_is_grid_only(self, power_insight):
+        # grid (500/1000 * 0.30) + pv (500/1000 * 0.0) = 0.15 EUR/h
+        assert power_insight.combined_lcoe_rate == pytest.approx(0.15)
+
+    def test_combined_lcoe(self, power_insight):
+        # 0.15 EUR/h over 1000 W gross -> 0.15 EUR/kWh
+        assert power_insight.combined_lcoe == pytest.approx(0.15)
+
+    def test_combined_coe(self, power_insight):
+        assert power_insight.combined_coe == pytest.approx(0.15)
+
+
 # ---------------------------------------------------------------------------
 # build_engine / Device validation.
 # ---------------------------------------------------------------------------

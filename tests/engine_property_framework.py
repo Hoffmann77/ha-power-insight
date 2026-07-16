@@ -26,8 +26,9 @@ adapter routing, …)::
 ------------------------------------------------------------------------------------------------
 
 * ``preset`` — an :data:`ADAPTER_PRESETS` key that fixes the adapter kind and
-  its default config (``"grid"`` / ``"pv_with_export"`` / ``"pv_no_export"`` /
-  ``"battery"`` / ``"consumer"``).
+  its default config: ``"grid"``; ``"pv_with_export"`` / ``"pv_no_export"`` /
+  ``"pv_no_cost"`` (lcoe 0) / ``"pv_corrected"`` (correction_factor 1.25);
+  ``"battery"`` / ``"battery_with_export"``; ``"consumer"``.
 * ``number`` — the adapter index. It derives the uid and entity id:
   ``pv`` 1 → uid ``"pv1"``, entity ``"sensor.pv1_power"``; ``battery`` → ``"bat1"``;
   ``consumer`` → ``"cons1"``; ``grid`` is always uid ``"grid"`` (index ignored).
@@ -232,12 +233,39 @@ ADAPTER_PRESETS: dict[str, dict[str, Any]] = {
         "exports_power": False,
         "export_compensation": 0.0,
     },
+    # Fully amortized PV: zero production cost (exercises the coe/lcoe == 0
+    # branches).
+    "pv_no_cost": {
+        "kind": "pv",
+        "lcoe": 0.0,
+        "lco2_intensity": 0.0,
+        "exports_power": False,
+        "export_compensation": 0.0,
+    },
+    # Exporting PV whose current cost sits above its default, so its
+    # correction_factor != 1.0 (exercises the *_corrected combined rates).
+    "pv_corrected": {
+        "kind": "pv",
+        "lcoe": 0.10,
+        "lco2_intensity": 35.0,
+        "exports_power": True,
+        "export_compensation": 0.08,
+        "correction_factor": 1.25,
+    },
     "battery": {
         "kind": "battery",
         "lcos": 0.15,
         "lco2_intensity": 50.0,
         "exports_power": False,
         "export_compensation": 0.0,
+    },
+    # Battery that also feeds the grid (exercises the storage export paths).
+    "battery_with_export": {
+        "kind": "battery",
+        "lcos": 0.20,
+        "lco2_intensity": 60.0,
+        "exports_power": True,
+        "export_compensation": 0.10,
     },
     "consumer": {"kind": "consumer"},
 }
