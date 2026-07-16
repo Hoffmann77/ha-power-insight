@@ -734,6 +734,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../entity-naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entity naming scheme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../releasing/" class="md-nav__link">
         
   
@@ -1925,7 +1953,7 @@ compensation). The sensor-key tables in section 5 reflect the current state.</p>
 <h3 id="consumers">Consumers<a class="headerlink" href="#consumers" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Cost rates (€/h): <code>Cost</code>, <code>Levelized cost</code></li>
-<li>Power source shares <em>(toggle)</em> — per‑source <code>&lt;source&gt; ratio</code></li>
+<li>Power source shares <em>(toggle)</em> — per‑source <code>Power share from &lt;source&gt;</code></li>
 </ul>
 <h3 id="diagnostics_1">Diagnostics<a class="headerlink" href="#diagnostics_1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2005,11 +2033,11 @@ to the option gate.</p>
 <td>calculate_levelized_financial_return_rate</td>
 </tr>
 <tr>
-<td>combined_total_operating_costs</td>
+<td>combined_total_operating_cost</td>
 <td>accumulate_cost_rates</td>
 </tr>
 <tr>
-<td>combined_total_levelized_operating_costs</td>
+<td>combined_total_levelized_operating_cost</td>
 <td>accumulate_levelized_cost_rates</td>
 </tr>
 <tr>
@@ -2062,14 +2090,14 @@ to the option gate.</p>
 <td><code>grid_adapters_export_power</code></td>
 </tr>
 <tr>
-<td>cost_rate</td>
+<td>import_cost_rate</td>
 <td>calculate_cost_rates</td>
 <td><code>grid_adapters_coe_rate</code></td>
 </tr>
 <tr>
-<td>total_cost</td>
+<td>total_import_cost</td>
 <td>accumulate_cost_rates</td>
-<td>(integration of cost_rate)</td>
+<td>(integration of import_cost_rate)</td>
 </tr>
 <tr>
 <td>export_compensation_rate <em>(moved)</em></td>
@@ -2154,12 +2182,12 @@ to the option gate.</p>
 <td>lcoe · exports_power</td>
 </tr>
 <tr>
-<td>total_operating_costs</td>
+<td>total_operating_cost</td>
 <td>accumulate_cost_rates</td>
 <td>—</td>
 </tr>
 <tr>
-<td>total_levelized_operating_costs</td>
+<td>total_levelized_operating_cost</td>
 <td>accumulate_levelized_cost_rates</td>
 <td>lcoe</td>
 </tr>
@@ -2228,7 +2256,7 @@ to the option gate.</p>
 <td>calculate_levelized_cost_rates</td>
 </tr>
 <tr>
-<td>&lt;source&gt;_ratio</td>
+<td>power_share_from_&lt;source&gt;</td>
 <td>enable_power_source_shares</td>
 </tr>
 </tbody>

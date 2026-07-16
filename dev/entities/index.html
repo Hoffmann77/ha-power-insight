@@ -892,6 +892,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../dev/entity-naming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entity naming scheme
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dev/releasing/" class="md-nav__link">
         
   
@@ -1123,6 +1151,19 @@ replaced with <strong>your Home Assistant currency</strong> (e.g. <code>$/h</cod
 <p class="admonition-title">Entity names may change</p>
 <p>Power Insight is in beta; entity names may change until 1.0.</p>
 </div>
+<div class="admonition abstract">
+<p class="admonition-title"><code>ratio</code> vs. <code>share</code> — they are not the same</p>
+<p>Every percentage sensor is one or the other, and the denominator differs:</p>
+<ul>
+<li><strong><code>… ratio</code></strong> — a fraction of the <strong>scope's own power</strong>: for a device, its
+  own production/throughput (e.g. <em>Export ratio</em> = the fraction of <em>this PV
+  system's production</em> that is exported); for the whole home, gross power.</li>
+<li><strong><code>… share</code></strong> — this device's slice of a <strong>home-wide total</strong> (e.g. <em>Export
+  share</em> = this system's exports ÷ <em>all power exported by the home</em>).</li>
+</ul>
+<p>See <a href="../concepts/#the-four-channels">Power distribution → ratio vs. share</a>
+for the full definition.</p>
+</div>
 <p>Legend for the <strong>Enabled by</strong> column — the option/category (and where relevant
 the device capability) that must be on for the sensor to exist:</p>
 <ul>
@@ -1269,13 +1310,13 @@ devices into a single number per metric.</p>
 </thead>
 <tbody>
 <tr>
-<td>Combined total operating costs</td>
+<td>Combined total operating cost</td>
 <td>EUR</td>
 <td>Operating cost rate integrated over time.</td>
 <td>Accumulate costs</td>
 </tr>
 <tr>
-<td>Combined total levelized operating costs</td>
+<td>Combined total levelized operating cost</td>
 <td>EUR</td>
 <td>Levelized operating cost totalled across all devices (retro-corrected).</td>
 <td>Accumulate levelized costs</td>
@@ -1376,13 +1417,13 @@ physically happen). See <a href="../configuration/grid/">Grid connection configu
 <td>Distribution shares</td>
 </tr>
 <tr>
-<td>Cost rate</td>
+<td>Import cost rate</td>
 <td>EUR/h</td>
 <td>Current cost per hour of grid imports (live price × import power).</td>
 <td>Cost — Standard</td>
 </tr>
 <tr>
-<td>Total cost</td>
+<td>Total import cost</td>
 <td>EUR</td>
 <td>Import cost integrated over time.</td>
 <td>Accumulate costs</td>
@@ -1426,13 +1467,13 @@ levelized sensors require lifetime values (an LCOE). See
 <tr>
 <td>Export ratio</td>
 <td>%</td>
-<td>Share of total home power flow that is this system's export.</td>
+<td>Fraction of <strong>this system's own production</strong> currently exported to the grid.</td>
 <td>Distribution ratios · exports</td>
 </tr>
 <tr>
 <td>Export share</td>
 <td>%</td>
-<td>Share of this system's production that is exported.</td>
+<td>This system's share of <strong>all power exported by the home</strong>.</td>
 <td>Distribution shares · exports</td>
 </tr>
 <tr>
@@ -1444,13 +1485,13 @@ levelized sensors require lifetime values (an LCOE). See
 <tr>
 <td>Self-consumption ratio</td>
 <td>%</td>
-<td>Share of total home power flow supplied by this system.</td>
+<td>Fraction of <strong>this system's own production</strong> consumed directly in the home.</td>
 <td>Distribution ratios</td>
 </tr>
 <tr>
 <td>Self-consumption share</td>
 <td>%</td>
-<td>Share of this system's production consumed in the home.</td>
+<td>This system's share of <strong>all self-consumption in the home</strong>.</td>
 <td>Distribution shares</td>
 </tr>
 <tr>
@@ -1539,13 +1580,13 @@ levelized sensors require lifetime values (an LCOE). See
 <td>Accumulated export compensation · exports</td>
 </tr>
 <tr>
-<td>Total operating costs</td>
+<td>Total operating cost</td>
 <td>EUR</td>
 <td>Operating cost rate integrated over time.</td>
 <td>Accumulate costs</td>
 </tr>
 <tr>
-<td>Total levelized operating costs</td>
+<td>Total levelized operating cost</td>
 <td>EUR</td>
 <td>Levelized operating cost integrated (retro-corrected).</td>
 <td>Accumulate levelized costs · has lifetime values</td>
@@ -1626,9 +1667,9 @@ setups they are absent.)</p>
 <td>Distribution shares</td>
 </tr>
 <tr>
-<td>Power source shares (one per source)</td>
+<td>Power share from &lt;source&gt; (one per source)</td>
 <td>%</td>
-<td>Share of this consumer's current power coming from each source (grid / solar / battery).</td>
+<td>Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's <em>Charging share from &lt;source&gt;</em>.</td>
 <td>Power source shares</td>
 </tr>
 <tr>
