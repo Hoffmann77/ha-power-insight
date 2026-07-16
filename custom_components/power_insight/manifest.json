@@ -1,6 +1,6 @@
 {
   "domain": "power_insight",
-  "name": "PowerInsight",
+  "name": "Power Insight",
   "codeowners": ["@Hoffmann77"],
   "config_flow": true,
   "dependencies": [],
@@ -9,5 +9,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Hoffmann77/ha-power-insight/issues",
   "requirements": [],
-  "version": "2026.7.0rc1"
+  "version": "2026.7.1"
 }

@@ -1,6 +1,6 @@
 [project]
 name = "ha-power-insight"
-version = "2026.7.0rc1"
+version = "2026.7.1"
 description = "Home Assistant custom component for electrical power insights"
 requires-python = ">=3.13.2"
 
