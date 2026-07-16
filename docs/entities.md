@@ -11,6 +11,18 @@ Which sensors actually appear depends on the options you enable — see
 !!! warning "Entity names may change"
     Power Insight is in beta; entity names may change until 1.0.
 
+!!! abstract "`ratio` vs. `share` — they are not the same"
+    Every percentage sensor is one or the other, and the denominator differs:
+
+    - **`… ratio`** — a fraction of the **scope's own power**: for a device, its
+      own production/throughput (e.g. *Export ratio* = the fraction of *this PV
+      system's production* that is exported); for the whole home, gross power.
+    - **`… share`** — this device's slice of a **home-wide total** (e.g. *Export
+      share* = this system's exports ÷ *all power exported by the home*).
+
+    See [Power distribution → ratio vs. share](concepts.md#the-four-channels)
+    for the full definition.
+
 Legend for the **Enabled by** column — the option/category (and where relevant
 the device capability) that must be on for the sensor to exist:
 
@@ -84,8 +96,8 @@ physically happen). See [Grid connection configuration](configuration/grid.md).
 | Charging share | % | Grid's share of all battery-charging power in the home. Only exists when a battery charges from the grid. | Distribution shares · charge source |
 | Standby ratio | % | Share of grid import currently going to device standby. | Distribution ratios |
 | Standby share | % | Grid's share of all standby power in the home. | Distribution shares |
-| Cost rate | EUR/h | Current cost per hour of grid imports (live price × import power). | Cost — Standard |
-| Total cost | EUR | Import cost integrated over time. | Accumulate costs |
+| Import cost rate | EUR/h | Current cost per hour of grid imports (live price × import power). | Cost — Standard |
+| Total import cost | EUR | Import cost integrated over time. | Accumulate costs |
 | Export compensation rate | EUR/h | Money earned per hour from exports (export power × compensation rate). | Export compensation rate |
 | Total export compensation | EUR | Export compensation integrated over time. | Accumulated export compensation |
 
@@ -102,11 +114,11 @@ levelized sensors require lifetime values (an LCOE). See
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
 | Export power | W | Power from this system currently sent to the grid. | Distribution (W) · exports |
-| Export ratio | % | Share of total home power flow that is this system's export. | Distribution ratios · exports |
-| Export share | % | Share of this system's production that is exported. | Distribution shares · exports |
+| Export ratio | % | Fraction of **this system's own production** currently exported to the grid. | Distribution ratios · exports |
+| Export share | % | This system's share of **all power exported by the home**. | Distribution shares · exports |
 | Self-consumption power | W | Power from this system currently consumed in the home. | Distribution (W) |
-| Self-consumption ratio | % | Share of total home power flow supplied by this system. | Distribution ratios |
-| Self-consumption share | % | Share of this system's production consumed in the home. | Distribution shares |
+| Self-consumption ratio | % | Fraction of **this system's own production** consumed directly in the home. | Distribution ratios |
+| Self-consumption share | % | This system's share of **all self-consumption in the home**. | Distribution shares |
 | Charging ratio | % | Share of this system's production currently going to battery charging. Only exists when a battery charges from this system. | Distribution ratios · charge source |
 | Charging share | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Distribution shares · charge source |
 | Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
@@ -160,6 +172,6 @@ Per consumer device. Consumer support is still under development. See
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
 | Consumption share | % | This consumer's share of all self-consumption in the home. | Distribution shares |
-| Power source shares (one per source) | % | Share of this consumer's current power coming from each source (grid / solar / battery). | Power source shares |
+| Power share from &lt;source&gt; (one per source) | % | Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's *Charging share from &lt;source&gt;*. | Power source shares |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |

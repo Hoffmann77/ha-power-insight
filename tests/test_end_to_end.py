@@ -104,7 +104,7 @@ async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
     await hass.async_block_till_done()
 
     # grid import 1 kW * 0.30 = 0.30 EUR/h
-    assert _float(hass, entry, f"{GRID_SUB_ID}_cost_rate") == pytest.approx(0.30)
+    assert _float(hass, entry, f"{GRID_SUB_ID}_import_cost_rate") == pytest.approx(0.30)
     # combined cost rate = grid 0.30 + PV 0.0
     assert _float(hass, entry, "combined_cost_rate") == pytest.approx(0.30)
     # combined price = 0.30 / 3 kW gross = 0.10 EUR/kWh
@@ -156,8 +156,8 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
         _set(hass, "sensor.grid_power", 1000)
         await _settle(hass)
 
-    rate = _float(hass, entry, f"{GRID_SUB_ID}_cost_rate")
-    total = _float(hass, entry, f"{GRID_SUB_ID}_total_cost")
+    rate = _float(hass, entry, f"{GRID_SUB_ID}_import_cost_rate")
+    total = _float(hass, entry, f"{GRID_SUB_ID}_total_import_cost")
     assert rate == pytest.approx(0.30)
     # 0.30 EUR/h held for 1 h = 0.30 EUR.
     assert total == pytest.approx(0.30, abs=1e-3)

@@ -170,7 +170,7 @@ keys (the values actually stored and checked).
 
 ### Consumers
 - Cost rates (€/h): `Cost`, `Levelized cost`
-- Power source shares *(toggle)* — per‑source `<source> ratio`
+- Power source shares *(toggle)* — per‑source `Power share from <source>`
 
 ### Diagnostics
 - Enable debug power entities *(toggle)* — global
@@ -218,8 +218,8 @@ to the option gate.
 |---|---|---|
 | import_power *(new)* | enable_distribution_power | `grid_adapters_import_power` |
 | export_power *(new)* | enable_distribution_power | `grid_adapters_export_power` |
-| cost_rate | calculate_cost_rates | `grid_adapters_coe_rate` |
-| total_cost | accumulate_cost_rates | (integration of cost_rate) |
+| import_cost_rate | calculate_cost_rates | `grid_adapters_coe_rate` |
+| total_import_cost | accumulate_cost_rates | (integration of import_cost_rate) |
 | export_compensation_rate *(moved)* | enable_export_compensation_rate | `grid_adapters_export_compensation_rate` *(new wrapper)* |
 | total_export_compensation *(moved)* | accumulate_export_compensation | (integration of export_compensation_rate) |
 | consumption_ratio | enable_distribution_ratios | `grid_adapters_consumption_ratios` |
@@ -255,7 +255,7 @@ to the option gate.
 |---|---|
 | operating_cost_rate | calculate_cost_rates |
 | levelized_operating_cost_rate | calculate_levelized_cost_rates |
-| &lt;source&gt;_ratio | enable_power_source_shares |
+| power_share_from_&lt;source&gt; | enable_power_source_shares |
 
 ### Diagnostics
 | Sensor key | Option key |

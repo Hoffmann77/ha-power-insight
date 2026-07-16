@@ -84,5 +84,6 @@ nav:
   - Services: services.md
   - FAQ: faq.md
   - Development:
+      - Entity naming scheme: dev/entity-naming.md
       - Docs versioning & releases: dev/releasing.md
       - Options-flow spec: dev/options-flow-redesign.md
