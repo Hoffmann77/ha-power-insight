@@ -16,11 +16,11 @@ readings, write another class — a class never sweeps several entity-value sets
         ENTITIES = {GRID_POWER: ..., ...}          # exactly one reading set
 
         @pytest.fixture
-        def pi(self):
+        def power_insight(self):
             return build_engine_for(self.DEVICE, self.ENTITIES)
 
-        def test_some_property(self, pi):
-            assert pi.some_property == pytest.approx(expected)
+        def test_some_property(self, power_insight):
+            assert power_insight.some_property == pytest.approx(expected)
 
 Sign convention: grid + = import / - = export; pv/bat + = produce/discharge
 / - = standby/charge.
@@ -62,26 +62,26 @@ class TestBatteryChargingSplit:
     }
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(4000.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(4000.0)
 
-    def test_combined_charging_power(self, pi):
-        assert pi.combined_charging_power == pytest.approx(500.0)
+    def test_combined_charging_power(self, power_insight):
+        assert power_insight.combined_charging_power == pytest.approx(500.0)
 
-    def test_charging_source_shares(self, pi):
-        assert pi.storage_adapters_charging_source_shares == {
+    def test_charging_source_shares(self, power_insight):
+        assert power_insight.storage_adapters_charging_source_shares == {
             "bat1": {"grid": pytest.approx(0.25), "pv1": pytest.approx(0.75)}
         }
 
-    def test_grid_charging_power(self, pi):
-        assert pi.grid_adapters_charging_power == {"grid": pytest.approx(125.0)}
+    def test_grid_charging_power(self, power_insight):
+        assert power_insight.grid_adapters_charging_power == {"grid": pytest.approx(125.0)}
 
-    def test_dynamic_lcoe_blend(self, pi):
+    def test_dynamic_lcoe_blend(self, power_insight):
         # grid coe (= price 0.30) * 0.25 + pv1 lcoe 0.10 * 0.75 = 0.15
-        assert pi.storage_adapters_dynamic_lcoe == {"bat1": pytest.approx(0.15)}
+        assert power_insight.storage_adapters_dynamic_lcoe == {"bat1": pytest.approx(0.15)}
 
 
 class TestFullExport:
@@ -91,27 +91,27 @@ class TestFullExport:
     ENTITIES = {GRID_POWER: -3000.0, GRID_PRICE: 0.30, PV1_POWER: 3000.0}
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(3000.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(3000.0)
 
-    def test_combined_grid_export(self, pi):
-        assert pi.combined_grid_export == pytest.approx(3000.0)
+    def test_combined_grid_export(self, power_insight):
+        assert power_insight.combined_grid_export == pytest.approx(3000.0)
 
-    def test_export_ratio_is_one(self, pi):
-        assert pi.gross_power_export_ratio == pytest.approx(1.0)
+    def test_export_ratio_is_one(self, power_insight):
+        assert power_insight.gross_power_export_ratio == pytest.approx(1.0)
 
-    def test_combined_consumption_is_zero(self, pi):
-        assert pi.combined_consumption == pytest.approx(0.0)
+    def test_combined_consumption_is_zero(self, power_insight):
+        assert power_insight.combined_consumption == pytest.approx(0.0)
 
-    def test_export_power(self, pi):
-        assert pi.prod_adapters_export_power == {"pv1": pytest.approx(3000.0)}
+    def test_export_power(self, power_insight):
+        assert power_insight.prod_adapters_export_power == {"pv1": pytest.approx(3000.0)}
 
-    def test_export_compensation_rate(self, pi):
+    def test_export_compensation_rate(self, power_insight):
         # (3000 W / 1000) * 0.08 EUR/kWh = 0.24 EUR/h
-        assert pi.combined_export_compensation_rate == pytest.approx(0.24)
+        assert power_insight.combined_export_compensation_rate == pytest.approx(0.24)
 
 
 class TestDaytimeSelfConsumption:
@@ -121,33 +121,33 @@ class TestDaytimeSelfConsumption:
     ENTITIES = {GRID_POWER: 200.0, GRID_PRICE: 0.30, PV1_POWER: 1000.0}
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(1200.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(1200.0)
 
-    def test_combined_consumption(self, pi):
-        assert pi.combined_consumption == pytest.approx(1200.0)
+    def test_combined_consumption(self, power_insight):
+        assert power_insight.combined_consumption == pytest.approx(1200.0)
 
-    def test_no_export(self, pi):
-        assert pi.gross_power_export_ratio == pytest.approx(0.0)
+    def test_no_export(self, power_insight):
+        assert power_insight.gross_power_export_ratio == pytest.approx(0.0)
 
-    def test_full_consumption_ratio(self, pi):
-        assert pi.gross_power_consumption_ratio == pytest.approx(1.0)
-        assert pi.gross_power_applicable_consumption_ratio == pytest.approx(1.0)
+    def test_full_consumption_ratio(self, power_insight):
+        assert power_insight.gross_power_consumption_ratio == pytest.approx(1.0)
+        assert power_insight.gross_power_applicable_consumption_ratio == pytest.approx(1.0)
 
-    def test_gross_power_shares(self, pi):
-        assert pi.prod_adapters_gross_power_shares == {"pv1": pytest.approx(1000.0 / 1200.0)}
-        assert pi.grid_adapters_gross_power_shares == {"grid": pytest.approx(200.0 / 1200.0)}
+    def test_gross_power_shares(self, power_insight):
+        assert power_insight.prod_adapters_gross_power_shares == {"pv1": pytest.approx(1000.0 / 1200.0)}
+        assert power_insight.grid_adapters_gross_power_shares == {"grid": pytest.approx(200.0 / 1200.0)}
 
-    def test_pv_consumption_power(self, pi):
-        assert pi.prod_adapters_consumption_ratios == {"pv1": pytest.approx(1.0)}
-        assert pi.prod_adapters_consumption_power == {"pv1": pytest.approx(1000.0)}
+    def test_pv_consumption_power(self, power_insight):
+        assert power_insight.prod_adapters_consumption_ratios == {"pv1": pytest.approx(1.0)}
+        assert power_insight.prod_adapters_consumption_power == {"pv1": pytest.approx(1000.0)}
 
-    def test_pv_avoided_cost_rate(self, pi):
+    def test_pv_avoided_cost_rate(self, power_insight):
         # (1000 W / 1000) * 0.30 EUR/kWh = 0.30 EUR/h
-        assert pi.prod_adapters_avoided_cost_rates == {"pv1": pytest.approx(0.30)}
+        assert power_insight.prod_adapters_avoided_cost_rates == {"pv1": pytest.approx(0.30)}
 
 
 class TestNightStandby:
@@ -157,28 +157,28 @@ class TestNightStandby:
     ENTITIES = {GRID_POWER: 700.0, GRID_PRICE: 0.25, PV1_POWER: -20.0}
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(700.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(700.0)
 
-    def test_combined_production_is_zero(self, pi):
-        assert pi.combined_production == pytest.approx(0.0)
+    def test_combined_production_is_zero(self, power_insight):
+        assert power_insight.combined_production == pytest.approx(0.0)
 
-    def test_combined_standby_power(self, pi):
-        assert pi.combined_standby_power == pytest.approx(20.0)
+    def test_combined_standby_power(self, power_insight):
+        assert power_insight.combined_standby_power == pytest.approx(20.0)
 
-    def test_combined_consumption(self, pi):
+    def test_combined_consumption(self, power_insight):
         # 700 W import - 20 W PV standby = 680 W self-consumed
-        assert pi.combined_consumption == pytest.approx(680.0)
+        assert power_insight.combined_consumption == pytest.approx(680.0)
 
-    def test_standby_ratio(self, pi):
-        assert pi.gross_power_standby_ratio == pytest.approx(20.0 / 700.0)
+    def test_standby_ratio(self, power_insight):
+        assert power_insight.gross_power_standby_ratio == pytest.approx(20.0 / 700.0)
 
-    def test_combined_coe_equals_grid_price(self, pi):
+    def test_combined_coe_equals_grid_price(self, power_insight):
         # PV produces nothing, so only the grid contributes cost -> coe == price
-        assert pi.combined_coe == pytest.approx(0.25)
+        assert power_insight.combined_coe == pytest.approx(0.25)
 
 
 class TestAllZero:
@@ -194,21 +194,21 @@ class TestAllZero:
     }
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(0.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(0.0)
 
-    def test_combined_consumption(self, pi):
-        assert pi.combined_consumption == pytest.approx(0.0)
+    def test_combined_consumption(self, power_insight):
+        assert power_insight.combined_consumption == pytest.approx(0.0)
 
-    def test_ratios_guard_to_zero(self, pi):
-        assert pi.gross_power_export_ratio == pytest.approx(0.0)
-        assert pi.gross_power_consumption_ratio == pytest.approx(0.0)
+    def test_ratios_guard_to_zero(self, power_insight):
+        assert power_insight.gross_power_export_ratio == pytest.approx(0.0)
+        assert power_insight.gross_power_consumption_ratio == pytest.approx(0.0)
 
-    def test_combined_coe_guards_to_zero(self, pi):
-        assert pi.combined_coe == pytest.approx(0.0)
+    def test_combined_coe_guards_to_zero(self, power_insight):
+        assert power_insight.combined_coe == pytest.approx(0.0)
 
 
 class TestPureGridExportDegenerate:
@@ -219,24 +219,24 @@ class TestPureGridExportDegenerate:
     ENTITIES = {GRID_POWER: -500.0, GRID_PRICE: 0.30}
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_combined_grid_import(self, pi):
-        assert pi.combined_grid_import == pytest.approx(0.0)
+    def test_combined_grid_import(self, power_insight):
+        assert power_insight.combined_grid_import == pytest.approx(0.0)
 
-    def test_combined_grid_export(self, pi):
-        assert pi.combined_grid_export == pytest.approx(500.0)
+    def test_combined_grid_export(self, power_insight):
+        assert power_insight.combined_grid_export == pytest.approx(500.0)
 
-    def test_gross_power_is_zero(self, pi):
-        assert pi.gross_power == pytest.approx(0.0)
+    def test_gross_power_is_zero(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(0.0)
 
-    def test_export_ratio_guards_to_zero(self, pi):
+    def test_export_ratio_guards_to_zero(self, power_insight):
         # _divide(500, 0) must return 0.0 rather than raise.
-        assert pi.gross_power_export_ratio == pytest.approx(0.0)
+        assert power_insight.gross_power_export_ratio == pytest.approx(0.0)
 
-    def test_consumption_goes_negative(self, pi):
-        assert pi.combined_consumption == pytest.approx(-500.0)
+    def test_consumption_goes_negative(self, power_insight):
+        assert power_insight.combined_consumption == pytest.approx(-500.0)
 
 
 class TestGridUnavailable:
@@ -252,25 +252,25 @@ class TestGridUnavailable:
     }
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_scalars_are_none(self, pi):
-        assert pi.combined_grid_import is None
-        assert pi.combined_grid_export is None
-        assert pi.gross_power is None
-        assert pi.combined_consumption is None
-        assert pi.gross_power_export_ratio is None
+    def test_scalars_are_none(self, power_insight):
+        assert power_insight.combined_grid_import is None
+        assert power_insight.combined_grid_export is None
+        assert power_insight.gross_power is None
+        assert power_insight.combined_consumption is None
+        assert power_insight.gross_power_export_ratio is None
 
-    def test_gross_power_derived_dicts_are_empty(self, pi):
+    def test_gross_power_derived_dicts_are_empty(self, power_insight):
         # These gate on gross_power, which is None -> empty dict.
-        assert pi.prod_adapters_gross_power_shares == {}
-        assert pi.grid_adapters_gross_power_shares == {}
+        assert power_insight.prod_adapters_gross_power_shares == {}
+        assert power_insight.grid_adapters_gross_power_shares == {}
 
-    def test_charging_source_shares_degrade_to_zero(self, pi):
+    def test_charging_source_shares_degrade_to_zero(self, power_insight):
         # Charging source shares are NOT gross-power gated: with every source
         # weight unknown they collapse to 0.0 (not {} and not None).
-        assert pi.storage_adapters_charging_source_shares == {
+        assert power_insight.storage_adapters_charging_source_shares == {
             "bat1": {"grid": pytest.approx(0.0), "pv1": pytest.approx(0.0)}
         }
 
@@ -297,22 +297,22 @@ class TestCustomInvertedGrid:
     }
 
     @pytest.fixture
-    def pi(self):
+    def power_insight(self):
         return build_engine_for(self.DEVICE, self.ENTITIES)
 
-    def test_inverted_sign(self, pi):
-        assert pi.combined_grid_import == pytest.approx(0.0)
-        assert pi.combined_grid_export == pytest.approx(600.0)
+    def test_inverted_sign(self, power_insight):
+        assert power_insight.combined_grid_import == pytest.approx(0.0)
+        assert power_insight.combined_grid_export == pytest.approx(600.0)
 
-    def test_gross_power(self, pi):
-        assert pi.gross_power == pytest.approx(2000.0)
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(2000.0)
 
-    def test_combined_consumption(self, pi):
+    def test_combined_consumption(self, power_insight):
         # gross 2000 - export 600 = 1400 W self-consumed
-        assert pi.combined_consumption == pytest.approx(1400.0)
+        assert power_insight.combined_consumption == pytest.approx(1400.0)
 
-    def test_no_price_means_no_coe(self, pi):
-        assert pi.combined_coe is None
+    def test_no_price_means_no_coe(self, power_insight):
+        assert power_insight.combined_coe is None
 
 
 # ---------------------------------------------------------------------------
