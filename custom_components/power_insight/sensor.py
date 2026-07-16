@@ -301,8 +301,8 @@ POWER_INSIGHT_SENSORS = (
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
-        key="combined_total_operating_costs",
-        name="Combined total operating costs",
+        key="combined_total_operating_cost",
+        name="Combined total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -354,7 +354,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
 # Maps each combined ledger sensor key to the per-adapter accumulated key it
 # sums over.
 COMBINED_LEDGER_ADAPTER_KEYS: dict[str, str] = {
-    "combined_total_levelized_operating_costs": "total_levelized_operating_costs",
+    "combined_total_levelized_operating_cost": "total_levelized_operating_cost",
     "combined_total_levelized_cost_savings": "total_levelized_cost_savings",
     "combined_total_levelized_financial_return": "total_levelized_financial_return",
 }
@@ -365,8 +365,8 @@ LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
 
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
-        key="combined_total_levelized_operating_costs",
-        name="Combined total levelized operating costs",
+        key="combined_total_levelized_operating_cost",
+        name="Combined total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -431,8 +431,8 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.grid_adapters_export_power,
     ),
     PowerInsightSensorDescription(
-        key="cost_rate",
-        name="Cost rate",
+        key="import_cost_rate",
+        name="Import cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -473,8 +473,8 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
-        key="self_consumption_power",
-        name="Self-consumption power",
+        key="consumption_power",
+        name="Consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -553,8 +553,8 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
 
 POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
-        key="total_cost",
-        name="Total cost",
+        key="total_import_cost",
+        name="Total import cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -812,8 +812,8 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.prod_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_operating_costs",
-        name="Total operating costs",
+        key="total_operating_cost",
+        name="Total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -824,8 +824,8 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.prod_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_levelized_operating_costs",
-        name="Total levelized operating costs",
+        key="total_levelized_operating_cost",
+        name="Total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1132,8 +1132,8 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_operating_costs",
-        name="Total operating costs",
+        key="total_operating_cost",
+        name="Total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1144,8 +1144,8 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.storage_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_levelized_operating_costs",
-        name="Total levelized operating costs",
+        key="total_levelized_operating_cost",
+        name="Total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1305,6 +1305,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     # --- Power distribution (W) ---
     "import_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
+    "consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,           # grid
     "self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,      # pv / storage
     "combined_self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_charging_power": CONF_ENABLE_DISTRIBUTION_POWER,
@@ -1329,7 +1330,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     "total_export_compensation": CONF_ACCUMULATE_EXPORT_COMPENSATION,
     # --- Cost rates ---
-    "cost_rate": CONF_CALCULATE_COST_RATES,                       # grid
+    "import_cost_rate": CONF_CALCULATE_COST_RATES,                # grid
     "operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_operating_cost_rate": CONF_CALCULATE_COST_RATES,
@@ -1352,11 +1353,11 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "levelized_financial_return_rate": CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     "combined_levelized_financial_return_rate": CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     # --- Accumulated costs ---
-    "total_cost": CONF_ACCUMULATE_COST_RATES,                     # grid
-    "total_operating_costs": CONF_ACCUMULATE_COST_RATES,
-    "combined_total_operating_costs": CONF_ACCUMULATE_COST_RATES,
-    "total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-    "combined_total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "total_import_cost": CONF_ACCUMULATE_COST_RATES,              # grid
+    "total_operating_cost": CONF_ACCUMULATE_COST_RATES,
+    "combined_total_operating_cost": CONF_ACCUMULATE_COST_RATES,
+    "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "combined_total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---
     "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
@@ -1680,13 +1681,16 @@ async def async_setup_entry(
             ))
 
         # Dynamic consumption source share sensors — one per power-providing
-        # adapter. These are power-share sensors, so gate them on that option.
+        # adapter. Named "Power share from {Source}" to mirror the battery's
+        # "Charging share from {Source}" sensors; both report this device's
+        # current draw from that source as a share (%). Gate on the power-share
+        # option.
         if options_wrapped.check(CONF_ENABLE_POWER_SOURCE_SHARES, "consumer"):
             for source_adapter in power_insight.gross_power_adapters:
                 name = source_adapter.verbose_name
                 dynamic_description = PowerInsightSensorDescription(
-                    key=f"{name}_ratio",
-                    name=f"{name} ratio",
+                    key=f"power_share_from_{name}",
+                    name=f"Power share from {name}",
                     icon="mdi:percent",
                     native_unit_of_measurement=PERCENTAGE,
                     state_class=SensorStateClass.MEASUREMENT,

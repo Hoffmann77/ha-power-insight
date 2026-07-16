@@ -104,7 +104,7 @@
             "name": "Export compensation",
             "data": {
               "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation"
+              "export_compensation_total": "Total export compensation"
             },
             "data_description": {
               "export_compensation_rate": "A real-time sensor (in your currency per hour) showing how fast you are currently earning money from power exported to the grid. Calculated from the current export power × your export compensation rate.",
@@ -145,7 +145,7 @@
             "name": "Export compensation",
             "data": {
               "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation"
+              "export_compensation_total": "Total export compensation"
             },
             "data_description": {
               "export_compensation_rate": "A real-time sensor showing how fast you are currently earning money from PV power exported to the grid (your currency per hour).",
@@ -199,7 +199,7 @@
             "name": "Export compensation",
             "data": {
               "export_compensation_rate": "Export compensation rate (per hour)",
-              "export_compensation_total": "Accumulated export compensation"
+              "export_compensation_total": "Total export compensation"
             },
             "data_description": {
               "export_compensation_rate": "A real-time sensor showing how fast you are currently earning money from battery power exported to the grid.",
