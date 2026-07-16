@@ -109,7 +109,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_export_ratio",
-        name="Combined export ratio",
+        name="Export ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -120,7 +120,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_power",
-        name="Combined self-consumption power",
+        name="Self-consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -130,7 +130,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_ratio",
-        name="Combined self-consumption ratio",
+        name="Self-consumption ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -141,7 +141,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_financial_return_rate",
-        name="Combined financial return rate",
+        name="Financial return rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -153,7 +153,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_financial_return_rate",
-        name="Combined levelized financial return rate",
+        name="Levelized financial return rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -165,7 +165,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_power",
-        name="Combined charging power",
+        name="Charging power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -175,7 +175,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_power",
-        name="Combined standby power",
+        name="Standby power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -185,7 +185,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_ratio",
-        name="Combined charging ratio",
+        name="Charging ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -196,7 +196,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_ratio",
-        name="Combined standby ratio",
+        name="Standby ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -207,7 +207,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_price_of_electricity",
-        name="Combined price of electricity",
+        name="Price of electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
@@ -219,7 +219,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_price_of_electricity",
-        name="Combined levelized price of electricity",
+        name="Levelized price of electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
@@ -231,7 +231,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_cost_rate",
-        name="Combined cost rate",
+        name="Cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -241,7 +241,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_cost_rate",
-        name="Combined levelized cost rate",
+        name="Levelized cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -251,7 +251,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_operating_cost_rate",
-        name="Combined operating cost rate",
+        name="Operating cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -263,7 +263,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_operating_cost_rate",
-        name="Combined levelized operating cost rate",
+        name="Levelized operating cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -275,7 +275,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_cost_savings_rate",
-        name="Combined cost savings rate",
+        name="Cost savings rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -287,7 +287,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_cost_savings_rate",
-        name="Combined levelized cost savings rate",
+        name="Levelized cost savings rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -302,7 +302,7 @@ POWER_INSIGHT_SENSORS = (
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="combined_total_operating_costs",
-        name="Combined total operating costs",
+        name="Total operating costs",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -314,7 +314,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_financial_return",
-        name="Combined total financial return",
+        name="Total financial return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -326,7 +326,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_cost_savings",
-        name="Combined total cost savings",
+        name="Total cost savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -366,7 +366,7 @@ LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
         key="combined_total_levelized_operating_costs",
-        name="Combined total levelized operating costs",
+        name="Total levelized operating costs",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -378,7 +378,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_cost_savings",
-        name="Combined total levelized cost savings",
+        name="Total levelized cost savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -390,7 +390,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_financial_return",
-        name="Combined total levelized financial return",
+        name="Total levelized financial return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1771,7 +1771,7 @@ class PowerInsightSensor(BasePowerInsightSensor):
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.config_entry.entry_id)},
-            name=self.config_entry.title or "PowerInsight",
+            name=f"{self.config_entry.title or 'PowerInsight'} Combined",
         )
 
     @property
@@ -1954,7 +1954,7 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
         self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, self.config_entry.entry_id)},
-            name=self.config_entry.title or "PowerInsight",
+            name=f"{self.config_entry.title or 'PowerInsight'} Combined",
         )
 
     @property
