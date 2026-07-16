@@ -319,7 +319,7 @@ class PowerInsight:
             return None
 
         if grid_export and not gross_power:
-            _LOGGER.warning("Data discrepancy: grid export without total power.")
+            _LOGGER.debug("Data discrepancy: grid export without total power.")
 
         return self._divide(grid_export, gross_power)
 
@@ -337,7 +337,7 @@ class PowerInsight:
             return None
 
         if consumption and not gross_power:
-            _LOGGER.warning("Data discrepancy: self-consumption without gross power.")
+            _LOGGER.debug("Data discrepancy: self-consumption without gross power.")
 
         return self._divide(consumption, gross_power)
 
@@ -356,7 +356,7 @@ class PowerInsight:
             return None
 
         if standby_power and not gross_power:
-            _LOGGER.warning("Data discrepancy: utilization without total power.")
+            _LOGGER.debug("Data discrepancy: utilization without total power.")
 
         return self._divide(standby_power, gross_power)
 
@@ -374,7 +374,7 @@ class PowerInsight:
             return None
 
         if charging_power and not gross_power:
-            _LOGGER.warning("Data discrepancy: utilization without total power.")
+            _LOGGER.debug("Data discrepancy: utilization without total power.")
 
         return self._divide(charging_power, gross_power)
 
@@ -2225,11 +2225,9 @@ class PowerInsight:
         identical.  EventHandler uses this to suppress unnecessary custom events
         when a source entity fires state_changed but the numeric value is the same.
         """
-        _LOGGER.debug(f"Trying to set value: `{new_value}` on {entity_id}")
         adapter = self.get_adapter_by_entity(entity_id)
         if adapter is not None:
             return adapter.set_value(entity_id, new_value)
-        _LOGGER.debug(f"No adapter registered for `{entity_id}`.")
         return False
 
     def register_adapter(self, adapter) -> None:
