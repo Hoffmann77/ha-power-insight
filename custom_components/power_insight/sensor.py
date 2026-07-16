@@ -10,6 +10,7 @@ from decimal import Decimal
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -1743,9 +1744,10 @@ async def async_setup_entry(
     _sync_entity_enabled_state(hass, entry, created_unique_ids)
 
     # Register the ``set_value`` service as a platform entity service. HA
-    # resolves the target entity itself; only integration (accumulation)
-    # sensors implement ``async_set_value``, so seeding a running total is
-    # scoped to those entities automatically.
+    # calls ``async_set_value`` on every targeted entity regardless of whether
+    # it implements the method, so all sensor subclasses must define it.
+    # Integration sensors seed their running total; non-integration sensors
+    # raise ``ServiceValidationError`` with a clear message.
     entity_platform.async_get_current_platform().async_register_entity_service(
         "set_value",
         {vol.Required("value"): vol.Coerce(float)},
@@ -1782,6 +1784,14 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         """Substitute the HA-configured currency for the EUR placeholder."""
         return _resolve_currency_unit(
             self.entity_description.native_unit_of_measurement, self.hass
+        )
+
+    async def async_set_value(self, value: float) -> None:
+        """Reject set_value calls on non-accumulation sensors."""
+        raise ServiceValidationError(
+            "set_value is only supported on accumulation (total) sensors. "
+            f"'{self.entity_id}' is an instantaneous measurement sensor "
+            "and does not hold a running total."
         )
 
 
