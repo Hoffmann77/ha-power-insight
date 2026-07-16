@@ -1,49 +1,54 @@
 """Shared building blocks for class-per-scenario ``PowerInsight`` engine tests.
 
 This module is *infrastructure*, not a test file (its name does not start with
-``test_`` so pytest never collects it directly). It provides the two ingredients
-that fully determine every derived engine quantity — a device configuration and
-a set of entity readings — plus one helper that assembles them into an engine.
+``test_`` so pytest never collects it directly). A scenario lists the adapters
+that make up the device, each with its reading, using :func:`Add`; every other
+detail (adapter config, uid, entity id) comes from a named preset and the
+adapter's index.
 
-A scenario test pins exactly one device and one reading set and asserts engine
-properties against hand-written expected values (good for edge cases: zero gross
-power, pure export, unavailable sensors, adapter routing, …). See
-``test_engine_property_scenarios.py`` for the pattern::
+A scenario test subclasses :class:`EngineScenario`, sets ``DEVICES``, and each
+``test_`` method asserts one engine property against a hand-written expected
+value (good for edge cases: zero gross power, pure export, unavailable sensors,
+adapter routing, …)::
 
-    class TestMyScenario:
-        DEVICE = PRESET_DEVICES["grid_pv_battery"]     # or a custom DeviceConfig
-        ENTITIES = {GRID_POWER: 1000.0, ...}            # exactly one reading set
+    class TestBatteryChargingSplit(EngineScenario):
+        DEVICES = [
+            Add("grid", power=1000, price=0.30),
+            Add("pv_with_export", 1, power=3000),
+            Add("battery", 1, power=-500, charge_from=["grid", "pv1"]),
+            Add("consumer", 1, power=-800),
+        ]
 
-        @pytest.fixture
-        def pi(self):
-            return build_engine_for(self.DEVICE, self.ENTITIES)
+        def test_gross_power(self, power_insight):
+            assert power_insight.gross_power == pytest.approx(4000.0)
 
-        def test_gross_power(self, pi):
-            assert pi.gross_power == pytest.approx(4000.0)
+``Add(preset, number=1, *, power, price=None, charge_from=None, inverted=False, **overrides)``
+---------------------------------------------------------------------------------------------
 
-Device configuration — preset or custom
----------------------------------------
+* ``preset`` — an :data:`ADAPTER_PRESETS` key that fixes the adapter kind and
+  its default config (``"grid"`` / ``"pv_with_export"`` / ``"pv_no_export"`` /
+  ``"battery"`` / ``"consumer"``).
+* ``number`` — the adapter index. It derives the uid and entity id:
+  ``pv`` 1 → uid ``"pv1"``, entity ``"sensor.pv1_power"``; ``battery`` → ``"bat1"``;
+  ``consumer`` → ``"cons1"``; ``grid`` is always uid ``"grid"`` (index ignored).
+* ``power`` — the power reading in watts (engine sign convention below).
+  ``None`` models an unavailable sensor.
+* ``price`` — grid only: the price reading (EUR/kWh). Omit → price unavailable.
+* ``charge_from`` — battery only: the uids this battery charges from
+  (e.g. ``["grid", "pv1"]``).
+* ``inverted`` — set ``power_entity_inverted`` (a +reading then means the
+  opposite sign — e.g. grid ``power=600, inverted=True`` is 600 W export).
+* ``**overrides`` — override the preset's config for this adapter
+  (``lcoe`` / ``lcos`` / ``exports_power`` / ``export_compensation`` /
+  ``lco2_intensity`` / ``correction_factor`` / ``name``). Use it when an
+  expected value depends on a config number you want visible at the test site.
 
-``DEVICE`` is either the *name* of a preset in :data:`PRESET_DEVICES`
-(``"grid_only"`` / ``"grid_pv"`` / ``"grid_pv_battery"`` / ``"full"``) or a
-custom :class:`DeviceConfig` built from :class:`GridSpec` / :class:`PvSpec` /
-:class:`BatterySpec` / :class:`ConsumerSpec`. Every device has exactly one grid
-(an engine invariant). Specs are declarative and each ``build()`` yields a fresh
-stateful adapter, so presets are safe to reuse across classes.
+Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
+produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
 
-Entity readings
----------------
-
-``ENTITIES`` is a raw ``{entity_id: watts}`` mapping, already in the engine's
-sign convention:
-
-* Grid   — ``+`` import  / ``-`` export
-* PV/Bat — ``+`` produce/discharge / ``-`` standby/charge
-
-Preset devices draw their ids from the canonical constants below
-(``GRID_POWER`` etc.); custom devices may use their own ids. :func:`build_engine_for`
-validates every id against the chosen device and raises ``ValueError`` on one
-that is not routable — catching both typos and device/reading mismatches.
+:func:`build_engine` turns a ``DEVICES`` list into a ready-to-query engine,
+validating that there is exactly one grid, that indices don't collide, and that
+every ``charge_from`` target exists (raising ``ValueError`` otherwise).
 """
 
 from __future__ import annotations
@@ -51,7 +56,9 @@ from __future__ import annotations
 import importlib.util
 import os
 from dataclasses import dataclass, field
-from typing import Any, Union
+from typing import Any
+
+import pytest
 
 # ---------------------------------------------------------------------------
 # Load the pure-Python engine directly, bypassing all Home Assistant imports
@@ -77,26 +84,9 @@ ConsumerAdapter = _mod.ConsumerAdapter
 
 
 # ---------------------------------------------------------------------------
-# Canonical entity ids used by the preset devices. Custom devices may use their
-# own ids instead.
-# ---------------------------------------------------------------------------
-
-GRID_POWER = "sensor.grid_power"
-GRID_PRICE = "sensor.grid_price"
-GRID_CO2 = "sensor.grid_co2"
-PV1_POWER = "sensor.pv1_power"
-PV2_POWER = "sensor.pv2_power"
-PV3_POWER = "sensor.pv3_power"
-BAT1_POWER = "sensor.bat1_power"
-BAT2_POWER = "sensor.bat2_power"
-BAT3_POWER = "sensor.bat3_power"
-CONS1_POWER = "sensor.cons1_power"
-
-
-# ---------------------------------------------------------------------------
-# Adapter specs — declarative, decoupled from adapter construction so a preset
-# ``DeviceConfig`` can be reused across classes and always yields *fresh* (empty)
-# adapters. Every ``build()`` returns a brand-new stateful adapter instance.
+# Adapter specs — declarative, decoupled from adapter construction so each
+# ``build()`` yields a fresh (empty) adapter. ``build_engine`` assembles these
+# from the ``Add`` entries; scenarios normally never touch them directly.
 # ---------------------------------------------------------------------------
 
 
@@ -106,8 +96,8 @@ class GridSpec:
 
     uid: str = "grid"
     name: str = "Grid"
-    power_entity: str = GRID_POWER
-    price_entity: str | None = GRID_PRICE
+    power_entity: str = "sensor.grid_power"
+    price_entity: str | None = "sensor.grid_price"
     co2_entity: str | None = None
     power_entity_inverted: bool = False
 
@@ -221,114 +211,232 @@ class DeviceConfig:
 
 
 # ---------------------------------------------------------------------------
-# Preset device configurations
+# Adapter presets + the Add() authoring surface
 # ---------------------------------------------------------------------------
 
-_PV1 = PvSpec(
-    uid="pv1",
-    name="PV-1",
-    power_entity=PV1_POWER,
-    lcoe=0.10,
-    lco2_intensity=35.0,
-    exports_power=True,
-    export_compensation=0.08,
-)
-_PV2 = PvSpec(
-    uid="pv2",
-    name="PV-2",
-    power_entity=PV2_POWER,
-    lcoe=0.12,
-    lco2_intensity=40.0,
-    exports_power=True,
-    export_compensation=0.08,
-)
-_PV3 = PvSpec(
-    uid="pv3",
-    name="PV-3",
-    power_entity=PV3_POWER,
-    lcoe=0.15,
-    lco2_intensity=50.0,
-    exports_power=False,
-    export_compensation=0.0,
-)
-_CONS1 = ConsumerSpec(uid="cons1", name="Consumer-1", power_entity=CONS1_POWER)
+# preset -> adapter kind + default config. Config keys are visible here so an
+# expected value that depends on one (e.g. export_compensation) is documented.
+ADAPTER_PRESETS: dict[str, dict[str, Any]] = {
+    "grid": {"kind": "grid"},
+    "pv_with_export": {
+        "kind": "pv",
+        "lcoe": 0.10,
+        "lco2_intensity": 35.0,
+        "exports_power": True,
+        "export_compensation": 0.08,
+    },
+    "pv_no_export": {
+        "kind": "pv",
+        "lcoe": 0.15,
+        "lco2_intensity": 50.0,
+        "exports_power": False,
+        "export_compensation": 0.0,
+    },
+    "battery": {
+        "kind": "battery",
+        "lcos": 0.15,
+        "lco2_intensity": 50.0,
+        "exports_power": False,
+        "export_compensation": 0.0,
+    },
+    "consumer": {"kind": "consumer"},
+}
 
-
-PRESET_DEVICES: dict[str, DeviceConfig] = {
-    # Grid connection only — the minimal legal device.
-    "grid_only": DeviceConfig(grid=GridSpec()),
-    # Grid + one exporting PV system.
-    "grid_pv": DeviceConfig(grid=GridSpec(), pv=(_PV1,)),
-    # Grid + PV + one battery that charges from grid and PV + a consumer.
-    "grid_pv_battery": DeviceConfig(
-        grid=GridSpec(),
-        pv=(_PV1,),
-        batteries=(
-            BatterySpec(
-                uid="bat1",
-                name="Battery-1",
-                power_entity=BAT1_POWER,
-                lcos=0.15,
-                lco2_intensity=50.0,
-                charge_from_adapters=("grid", "pv1"),
-            ),
-        ),
-        consumers=(_CONS1,),
-    ),
-    # The full scenario used by test_power_insight_calculations: 3 PV + 3 bat.
-    "full": DeviceConfig(
-        grid=GridSpec(),
-        pv=(_PV1, _PV2, _PV3),
-        batteries=(
-            BatterySpec(uid="bat1", name="Battery-1", power_entity=BAT1_POWER),
-            BatterySpec(uid="bat2", name="Battery-2", power_entity=BAT2_POWER),
-            BatterySpec(uid="bat3", name="Battery-3", power_entity=BAT3_POWER),
-        ),
-        consumers=(_CONS1,),
-    ),
+_KIND_PREFIX = {"grid": "grid", "pv": "pv", "battery": "bat", "consumer": "cons"}
+_OVERRIDE_KEYS = {
+    "grid": {"name"},
+    "pv": {
+        "name", "lcoe", "lco2_intensity", "exports_power",
+        "export_compensation", "correction_factor",
+    },
+    "battery": {
+        "name", "lcos", "lco2_intensity", "exports_power",
+        "export_compensation", "correction_factor",
+    },
+    "consumer": {"name"},
 }
 
 
-# ---------------------------------------------------------------------------
-# Engine assembly
-# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class _AddEntry:
+    """One adapter in a scenario's ``DEVICES`` list — produced by :func:`Add`."""
 
-DeviceLike = Union[str, DeviceConfig]
+    preset: str
+    kind: str
+    number: int
+    power: float | None
+    price: float | None
+    charge_from: tuple[str, ...] | None
+    inverted: bool
+    config: dict[str, Any]
+
+    @property
+    def uid(self) -> str:
+        if self.kind == "grid":
+            return "grid"
+        return f"{_KIND_PREFIX[self.kind]}{self.number}"
+
+    @property
+    def power_entity(self) -> str:
+        return f"sensor.{self.uid}_power"
 
 
-def resolve_device(device: DeviceLike) -> DeviceConfig:
-    """Resolve a preset device name or a :class:`DeviceConfig` to the latter."""
-    if isinstance(device, DeviceConfig):
-        return device
-    try:
-        return PRESET_DEVICES[device]
-    except KeyError:
-        raise KeyError(
-            f"Unknown preset device {device!r}. Available: {sorted(PRESET_DEVICES)}"
-        ) from None
+def Add(
+    preset: str,
+    number: int = 1,
+    *,
+    power: float | None,
+    price: float | None = None,
+    charge_from: list[str] | None = None,
+    inverted: bool = False,
+    **overrides: Any,
+) -> _AddEntry:
+    """Declare one adapter (with its reading) for a scenario's ``DEVICES`` list.
 
-
-def build_engine_for(device: DeviceLike, entities: dict[str, float | None]) -> Any:
-    """Build a :class:`PowerInsight` engine from a device config and readings.
-
-    ``device`` is a :data:`PRESET_DEVICES` name or a :class:`DeviceConfig`;
-    ``entities`` is a ``{entity_id: watts}`` mapping in the engine's sign
-    convention. Every entity id must be routable for the chosen device (i.e.
-    belong to one of its adapters); an unknown id raises ``ValueError`` to catch
-    typos and device/reading mismatches. Returns the ready-to-query engine.
+    See the module docstring for the full parameter reference.
     """
-    config = resolve_device(device)
-    pi = config.build_engine()
-    routable = set(pi.entity_mapping)
-
-    unknown = sorted(set(entities) - routable)
-    if unknown:
+    if preset not in ADAPTER_PRESETS:
         raise ValueError(
-            f"unknown entity id(s) {unknown}. "
-            f"Routable for this device: {sorted(routable)}"
+            f"Unknown adapter preset {preset!r}. Available: {sorted(ADAPTER_PRESETS)}"
         )
+    base = dict(ADAPTER_PRESETS[preset])
+    kind = base.pop("kind")
 
-    for entity_id, value in entities.items():
+    if price is not None and kind != "grid":
+        raise ValueError(f"'price' is only valid for a grid adapter, not {preset!r}")
+    if charge_from is not None and kind != "battery":
+        raise ValueError(
+            f"'charge_from' is only valid for a battery adapter, not {preset!r}"
+        )
+    bad = set(overrides) - _OVERRIDE_KEYS[kind]
+    if bad:
+        raise ValueError(
+            f"Unknown override(s) {sorted(bad)} for {preset!r}; "
+            f"allowed: {sorted(_OVERRIDE_KEYS[kind])}"
+        )
+    base.update(overrides)
+
+    return _AddEntry(
+        preset=preset,
+        kind=kind,
+        number=number,
+        power=power,
+        price=price,
+        charge_from=tuple(charge_from) if charge_from is not None else None,
+        inverted=inverted,
+        config=base,
+    )
+
+
+def build_engine(devices: list[_AddEntry]) -> Any:
+    """Build a ready-to-query :class:`PowerInsight` from a ``DEVICES`` list.
+
+    Assembles one adapter per :func:`Add` entry, applies its reading, and
+    validates the device: exactly one grid, unique indices, and every
+    ``charge_from`` target present. Raises ``ValueError`` on any violation.
+    """
+    grids: list[GridSpec] = []
+    pvs: list[PvSpec] = []
+    batteries: list[BatterySpec] = []
+    consumers: list[ConsumerSpec] = []
+    readings: dict[str, float | None] = {}
+    uids: set[str] = set()
+
+    for entry in devices:
+        uid = entry.uid
+        if uid in uids:
+            raise ValueError(
+                f"duplicate adapter uid {uid!r} "
+                f"(preset {entry.preset!r}, number {entry.number})"
+            )
+        uids.add(uid)
+        readings[entry.power_entity] = entry.power
+        cfg = entry.config
+
+        if entry.kind == "grid":
+            grids.append(
+                GridSpec(
+                    uid=uid,
+                    name=cfg.get("name", "Grid"),
+                    power_entity=entry.power_entity,
+                    price_entity="sensor.grid_price",
+                    power_entity_inverted=entry.inverted,
+                )
+            )
+            if entry.price is not None:
+                readings["sensor.grid_price"] = entry.price
+        elif entry.kind == "pv":
+            pvs.append(
+                PvSpec(
+                    uid=uid,
+                    power_entity=entry.power_entity,
+                    name=cfg.get("name"),
+                    lcoe=cfg["lcoe"],
+                    lco2_intensity=cfg["lco2_intensity"],
+                    exports_power=cfg["exports_power"],
+                    export_compensation=cfg["export_compensation"],
+                    power_entity_inverted=entry.inverted,
+                    correction_factor=cfg.get("correction_factor", 1.0),
+                )
+            )
+        elif entry.kind == "battery":
+            batteries.append(
+                BatterySpec(
+                    uid=uid,
+                    power_entity=entry.power_entity,
+                    name=cfg.get("name"),
+                    lcos=cfg["lcos"],
+                    lco2_intensity=cfg["lco2_intensity"],
+                    exports_power=cfg["exports_power"],
+                    export_compensation=cfg["export_compensation"],
+                    charge_from_adapters=entry.charge_from or (),
+                    power_entity_inverted=entry.inverted,
+                    correction_factor=cfg.get("correction_factor", 1.0),
+                )
+            )
+        elif entry.kind == "consumer":
+            consumers.append(
+                ConsumerSpec(
+                    uid=uid,
+                    power_entity=entry.power_entity,
+                    name=cfg.get("name"),
+                    power_entity_inverted=entry.inverted,
+                )
+            )
+
+    if len(grids) != 1:
+        raise ValueError(f"exactly one grid adapter required, got {len(grids)}")
+
+    for battery in batteries:
+        for source in battery.charge_from_adapters:
+            if source not in uids:
+                raise ValueError(
+                    f"battery {battery.uid!r} charge_from references unknown "
+                    f"adapter {source!r}; known: {sorted(uids)}"
+                )
+
+    config = DeviceConfig(
+        grid=grids[0],
+        pv=tuple(pvs),
+        batteries=tuple(batteries),
+        consumers=tuple(consumers),
+    )
+    pi = config.build_engine()
+    for entity_id, value in readings.items():
         pi.set_value(entity_id, value)
-
     return pi
+
+
+class EngineScenario:
+    """Base for scenario test classes: supplies the ``power_insight`` fixture.
+
+    Subclass it, set ``DEVICES`` to a list of :func:`Add` entries, and write
+    ``test_`` methods that take the ``power_insight`` fixture. Not collected by
+    pytest itself (name does not start with ``Test``).
+    """
+
+    DEVICES: list[_AddEntry] = []
+
+    @pytest.fixture
+    def power_insight(self) -> Any:
+        return build_engine(self.DEVICES)

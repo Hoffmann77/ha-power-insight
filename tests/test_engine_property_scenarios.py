@@ -1,69 +1,48 @@
 """Class-per-scenario edge-case tests for the ``PowerInsight`` engine.
 
-Each scenario is a *class* that pins exactly one device configuration and one
-set of entity readings; every ``test_`` method asserts one engine property with
-a hand-written expected value (derived from first principles, not read back from
-the engine, so a regression flips a test red). This mirrors the
-``TestFullScenario`` style in ``test_power_insight_calculations.py`` but reuses
-the reusable ``DeviceConfig`` / preset / ``build_engine_for`` machinery in
-``engine_property_framework.py``, so no adapter plumbing is repeated.
+Each scenario subclasses :class:`EngineScenario` and sets ``DEVICES`` to a list
+of :func:`Add` entries — one adapter per line, carrying its preset, index and
+reading. Every ``test_`` method asserts one engine property with a hand-written
+expected value (derived from first principles, not read back from the engine, so
+a regression flips a test red). See ``engine_property_framework.py`` for the
+``Add`` reference.
 
 One class = one (device, entity-state) edge case. To test a different set of
 readings, write another class — a class never sweeps several entity-value sets.
 
-    class TestMyEdgeCase:
-        DEVICE = PRESET_DEVICES["grid_pv"]        # or a custom DeviceConfig
-        ENTITIES = {GRID_POWER: ..., ...}          # exactly one reading set
-
-        @pytest.fixture
-        def power_insight(self):
-            return build_engine_for(self.DEVICE, self.ENTITIES)
+    class TestMyEdgeCase(EngineScenario):
+        DEVICES = [
+            Add("grid", power=200, price=0.30),
+            Add("pv_with_export", 1, power=1000),
+        ]
 
         def test_some_property(self, power_insight):
             assert power_insight.some_property == pytest.approx(expected)
 
 Sign convention: grid + = import / - = export; pv/bat + = produce/discharge
-/ - = standby/charge.
+/ - = standby/charge; consumer - = load.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from tests.engine_property_framework import (
-    BAT1_POWER,
-    CONS1_POWER,
-    GRID_POWER,
-    GRID_PRICE,
-    PV1_POWER,
-    PRESET_DEVICES,
-    ConsumerSpec,
-    DeviceConfig,
-    GridSpec,
-    PvSpec,
-    build_engine_for,
-)
+from tests.engine_property_framework import Add, EngineScenario, build_engine
 
 
-class TestBatteryChargingSplit:
+class TestBatteryChargingSplit(EngineScenario):
     """Grid + PV + one battery charging from grid + PV (gross 4000 W).
 
     Import 1000 W (gross-power share 0.25) and PV 3000 W (share 0.75) feed a
     500 W battery charge, split 125 W / 375 W by those shares.
     """
 
-    DEVICE = PRESET_DEVICES["grid_pv_battery"]
-    ENTITIES = {
-        GRID_POWER: 1000.0,
-        GRID_PRICE: 0.30,
-        PV1_POWER: 3000.0,
-        BAT1_POWER: -500.0,   # charging 500 W
-        CONS1_POWER: -800.0,
-    }
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=1000, price=0.30),
+        Add("pv_with_export", 1, power=3000),
+        Add("battery", 1, power=-500, charge_from=["grid", "pv1"]),
+        Add("consumer", 1, power=-800),
+    ]
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(4000.0)
@@ -84,15 +63,13 @@ class TestBatteryChargingSplit:
         assert power_insight.storage_adapters_dynamic_lcoe == {"bat1": pytest.approx(0.15)}
 
 
-class TestFullExport:
+class TestFullExport(EngineScenario):
     """Grid + PV at midday: import 0, all 3000 W of PV exported."""
 
-    DEVICE = PRESET_DEVICES["grid_pv"]
-    ENTITIES = {GRID_POWER: -3000.0, GRID_PRICE: 0.30, PV1_POWER: 3000.0}
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=-3000, price=0.30),
+        Add("pv_with_export", 1, power=3000),
+    ]
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(3000.0)
@@ -110,19 +87,17 @@ class TestFullExport:
         assert power_insight.prod_adapters_export_power == {"pv1": pytest.approx(3000.0)}
 
     def test_export_compensation_rate(self, power_insight):
-        # (3000 W / 1000) * 0.08 EUR/kWh = 0.24 EUR/h
+        # (3000 W / 1000) * 0.08 EUR/kWh (pv_with_export export_compensation) = 0.24
         assert power_insight.combined_export_compensation_rate == pytest.approx(0.24)
 
 
-class TestDaytimeSelfConsumption:
+class TestDaytimeSelfConsumption(EngineScenario):
     """Grid + PV: 200 W import + 1000 W PV, all self-consumed (gross 1200 W)."""
 
-    DEVICE = PRESET_DEVICES["grid_pv"]
-    ENTITIES = {GRID_POWER: 200.0, GRID_PRICE: 0.30, PV1_POWER: 1000.0}
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=200, price=0.30),
+        Add("pv_with_export", 1, power=1000),
+    ]
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(1200.0)
@@ -146,19 +121,17 @@ class TestDaytimeSelfConsumption:
         assert power_insight.prod_adapters_consumption_power == {"pv1": pytest.approx(1000.0)}
 
     def test_pv_avoided_cost_rate(self, power_insight):
-        # (1000 W / 1000) * 0.30 EUR/kWh = 0.30 EUR/h
+        # (1000 W / 1000) * 0.30 EUR/kWh (grid price) = 0.30 EUR/h
         assert power_insight.prod_adapters_avoided_cost_rates == {"pv1": pytest.approx(0.30)}
 
 
-class TestNightStandby:
+class TestNightStandby(EngineScenario):
     """Grid + PV at night: 700 W import, PV drawing 20 W standby."""
 
-    DEVICE = PRESET_DEVICES["grid_pv"]
-    ENTITIES = {GRID_POWER: 700.0, GRID_PRICE: 0.25, PV1_POWER: -20.0}
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=700, price=0.25),
+        Add("pv_with_export", 1, power=-20),
+    ]
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(700.0)
@@ -181,21 +154,15 @@ class TestNightStandby:
         assert power_insight.combined_coe == pytest.approx(0.25)
 
 
-class TestAllZero:
+class TestAllZero(EngineScenario):
     """Every reading is zero — gross power 0, ratios and coe must guard to 0."""
 
-    DEVICE = PRESET_DEVICES["grid_pv_battery"]
-    ENTITIES = {
-        GRID_POWER: 0.0,
-        GRID_PRICE: 0.30,
-        PV1_POWER: 0.0,
-        BAT1_POWER: 0.0,
-        CONS1_POWER: 0.0,
-    }
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=0, price=0.30),
+        Add("pv_with_export", 1, power=0),
+        Add("battery", 1, power=0, charge_from=["grid", "pv1"]),
+        Add("consumer", 1, power=0),
+    ]
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(0.0)
@@ -211,16 +178,13 @@ class TestAllZero:
         assert power_insight.combined_coe == pytest.approx(0.0)
 
 
-class TestPureGridExportDegenerate:
+class TestPureGridExportDegenerate(EngineScenario):
     """Export 500 W with no production: gross power 0, export_ratio must not
     divide by zero, and consumption goes negative (a documented degenerate)."""
 
-    DEVICE = PRESET_DEVICES["grid_only"]
-    ENTITIES = {GRID_POWER: -500.0, GRID_PRICE: 0.30}
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=-500, price=0.30),
+    ]
 
     def test_combined_grid_import(self, power_insight):
         assert power_insight.combined_grid_import == pytest.approx(0.0)
@@ -239,21 +203,15 @@ class TestPureGridExportDegenerate:
         assert power_insight.combined_consumption == pytest.approx(-500.0)
 
 
-class TestGridUnavailable:
-    """Grid power sensor unavailable -> scalars None, per-adapter dicts {}."""
+class TestGridUnavailable(EngineScenario):
+    """Grid power sensor unavailable -> scalars None, gross-power dicts {}."""
 
-    DEVICE = PRESET_DEVICES["grid_pv_battery"]
-    ENTITIES = {
-        GRID_POWER: None,
-        GRID_PRICE: 0.30,
-        PV1_POWER: 1000.0,
-        BAT1_POWER: 0.0,
-        CONS1_POWER: -200.0,
-    }
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=None, price=0.30),
+        Add("pv_with_export", 1, power=1000),
+        Add("battery", 1, power=0, charge_from=["grid", "pv1"]),
+        Add("consumer", 1, power=-200),
+    ]
 
     def test_scalars_are_none(self, power_insight):
         assert power_insight.combined_grid_import is None
@@ -275,30 +233,18 @@ class TestGridUnavailable:
         }
 
 
-class TestCustomInvertedGrid:
-    """Custom device: inverted grid sensor, no price entity, one PV + consumer.
+class TestInvertedGrid(EngineScenario):
+    """Inverted grid sensor, no price entity reading, one PV + consumer.
 
-    ``power_entity_inverted`` flips the sign, so a +600 reading is 600 W export.
+    ``inverted=True`` flips the sign, so a +600 reading is 600 W export; the
+    grid has no price reading, so the cost of electricity is undefined.
     """
 
-    DEVICE = DeviceConfig(
-        grid=GridSpec(
-            power_entity="sensor.custom_grid",
-            price_entity=None,
-            power_entity_inverted=True,
-        ),
-        pv=(PvSpec(uid="pvx", power_entity="sensor.custom_pv", lcoe=0.11),),
-        consumers=(ConsumerSpec(uid="cx", power_entity="sensor.custom_cons"),),
-    )
-    ENTITIES = {
-        "sensor.custom_grid": 600.0,    # inverted -> 600 W export
-        "sensor.custom_pv": 2000.0,
-        "sensor.custom_cons": -1400.0,
-    }
-
-    @pytest.fixture
-    def power_insight(self):
-        return build_engine_for(self.DEVICE, self.ENTITIES)
+    DEVICES = [
+        Add("grid", power=600, inverted=True),   # +600 inverted -> 600 W export
+        Add("pv_with_export", 1, power=2000),
+        Add("consumer", 1, power=-1400),
+    ]
 
     def test_inverted_sign(self, power_insight):
         assert power_insight.combined_grid_import == pytest.approx(0.0)
@@ -316,21 +262,52 @@ class TestCustomInvertedGrid:
 
 
 # ---------------------------------------------------------------------------
-# build_engine_for validation: entity ids must be routable for the device.
+# build_engine / Add validation.
 # ---------------------------------------------------------------------------
 
 
-def test_build_engine_for_rejects_unknown_entity() -> None:
-    with pytest.raises(ValueError, match="unknown entity id"):
-        build_engine_for("grid_only", {"sensor.grid_powr": 1000.0})  # typo
+def test_add_rejects_unknown_preset() -> None:
+    with pytest.raises(ValueError, match="Unknown adapter preset"):
+        Add("pv_with_exprt", 1, power=1000)  # typo
 
 
-def test_build_engine_for_rejects_nonroutable_entity() -> None:
-    # A battery reading on a grid_pv device (no battery adapter) is a mismatch.
-    with pytest.raises(ValueError, match="unknown entity id"):
-        build_engine_for("grid_pv", {GRID_POWER: 100.0, BAT1_POWER: -100.0})
+def test_add_rejects_misused_kwarg() -> None:
+    with pytest.raises(ValueError, match="'price' is only valid for a grid"):
+        Add("pv_with_export", 1, power=1000, price=0.30)
 
 
-def test_build_engine_for_unknown_preset_device() -> None:
-    with pytest.raises(KeyError, match="Unknown preset device"):
-        build_engine_for("does_not_exist", {GRID_POWER: 100.0})
+def test_add_rejects_unknown_override() -> None:
+    with pytest.raises(ValueError, match="Unknown override"):
+        Add("pv_with_export", 1, power=1000, lcox=0.10)  # typo for lcoe
+
+
+def test_build_engine_requires_exactly_one_grid() -> None:
+    with pytest.raises(ValueError, match="exactly one grid"):
+        build_engine([Add("pv_with_export", 1, power=1000)])
+
+
+def test_build_engine_rejects_duplicate_index() -> None:
+    with pytest.raises(ValueError, match="duplicate adapter uid"):
+        build_engine([
+            Add("grid", power=100, price=0.30),
+            Add("pv_with_export", 1, power=1000),
+            Add("pv_no_export", 1, power=500),  # collides on pv1
+        ])
+
+
+def test_build_engine_rejects_unknown_charge_source() -> None:
+    with pytest.raises(ValueError, match="unknown"):
+        build_engine([
+            Add("grid", power=100, price=0.30),
+            Add("battery", 1, power=-100, charge_from=["pv9"]),  # no pv9
+        ])
+
+
+def test_overrides_are_visible_at_call_site() -> None:
+    # An expected value that hinges on a config number can state it inline.
+    power_insight = build_engine([
+        Add("grid", power=-1000, price=0.30),
+        Add("pv_with_export", 1, power=1000, export_compensation=0.05),
+    ])
+    # All 1000 W exported: (1000 / 1000) * 0.05 = 0.05 EUR/h
+    assert power_insight.combined_export_compensation_rate == pytest.approx(0.05)
