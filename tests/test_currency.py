@@ -83,7 +83,7 @@ async def test_sensor_units_follow_currency(hass: HomeAssistant) -> None:
     # Rate sensor (EUR/h -> USD/h)
     assert _unit(hass, entry, f"{PV_SUB_ID}_operating_cost_rate") == "USD/h"
     # Accumulated total (EUR -> USD)
-    assert _unit(hass, entry, f"{PV_SUB_ID}_total_operating_costs") == "USD"
+    assert _unit(hass, entry, f"{PV_SUB_ID}_total_operating_cost") == "USD"
     # Price sensor (EUR/kWh -> USD/kWh)
     assert (
         _unit(hass, entry, "combined_levelized_price_of_electricity") == "USD/kWh"

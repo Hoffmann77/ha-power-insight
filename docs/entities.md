@@ -66,8 +66,8 @@ devices into a single number per metric.
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Combined total operating costs | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Combined total levelized operating costs | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
+| Combined total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
+| Combined total levelized operating cost | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
 | Combined total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
 | Combined total levelized cost savings | EUR | Levelized cost savings totalled across all devices (retro-corrected). | Accumulate levelized savings |
 | Combined total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return |
@@ -136,8 +136,8 @@ levelized sensors require lifetime values (an LCOE). See
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
 | Total export compensation | EUR | Export compensation integrated over time. | Accumulated export compensation · exports |
-| Total operating costs | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Total levelized operating costs | EUR | Levelized operating cost integrated (retro-corrected). | Accumulate levelized costs · has lifetime values |
+| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
+| Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Accumulate levelized costs · has lifetime values |
 | Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
 | Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Accumulate levelized savings · has lifetime values |
 | Total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return · exports |

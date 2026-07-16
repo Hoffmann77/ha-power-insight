@@ -9,7 +9,7 @@ historical totals when adopting the integration.
 ### Target
 
 A Power Insight `sensor` entity with an accumulated total (state class *total*),
-such as *Total cost savings*, *Total financial return*, *Total operating costs*,
+such as *Total cost savings*, *Total financial return*, *Total operating cost*,
 or *Total export compensation*.
 
 ### Fields

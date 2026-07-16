@@ -64,7 +64,7 @@ vice versa) is a bug.
   The grid's own cost is an *import* cost — it is distinct from a producer's
   *operating* cost, which is why it does not share that name.
 - **Producers** (PV, battery) report running electricity cost as
-  `Operating cost rate` / `Total operating costs`, with `Levelized …` variants.
+  `Operating cost rate` / `Total operating cost`, with `Levelized …` variants.
 - **Per-source attribution** sensors read **`{Category} share from {source}`** —
   `Charging share from Grid` (battery), `Power share from PV` (consumer). Both
   answer "how much of *this device's* {charging|power} comes from that source?".

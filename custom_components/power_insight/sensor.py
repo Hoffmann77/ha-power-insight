@@ -301,8 +301,8 @@ POWER_INSIGHT_SENSORS = (
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
-        key="combined_total_operating_costs",
-        name="Combined total operating costs",
+        key="combined_total_operating_cost",
+        name="Combined total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -354,7 +354,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
 # Maps each combined ledger sensor key to the per-adapter accumulated key it
 # sums over.
 COMBINED_LEDGER_ADAPTER_KEYS: dict[str, str] = {
-    "combined_total_levelized_operating_costs": "total_levelized_operating_costs",
+    "combined_total_levelized_operating_cost": "total_levelized_operating_cost",
     "combined_total_levelized_cost_savings": "total_levelized_cost_savings",
     "combined_total_levelized_financial_return": "total_levelized_financial_return",
 }
@@ -365,8 +365,8 @@ LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
 
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
-        key="combined_total_levelized_operating_costs",
-        name="Combined total levelized operating costs",
+        key="combined_total_levelized_operating_cost",
+        name="Combined total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -812,8 +812,8 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.prod_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_operating_costs",
-        name="Total operating costs",
+        key="total_operating_cost",
+        name="Total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -824,8 +824,8 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.prod_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_levelized_operating_costs",
-        name="Total levelized operating costs",
+        key="total_levelized_operating_cost",
+        name="Total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1132,8 +1132,8 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_operating_costs",
-        name="Total operating costs",
+        key="total_operating_cost",
+        name="Total operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1144,8 +1144,8 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.storage_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
-        key="total_levelized_operating_costs",
-        name="Total levelized operating costs",
+        key="total_levelized_operating_cost",
+        name="Total levelized operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1354,10 +1354,10 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "combined_levelized_financial_return_rate": CONF_CALCULATE_LEVELIZED_FINANCIAL_RETURN_RATE,
     # --- Accumulated costs ---
     "total_import_cost": CONF_ACCUMULATE_COST_RATES,              # grid
-    "total_operating_costs": CONF_ACCUMULATE_COST_RATES,
-    "combined_total_operating_costs": CONF_ACCUMULATE_COST_RATES,
-    "total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-    "combined_total_levelized_operating_costs": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "total_operating_cost": CONF_ACCUMULATE_COST_RATES,
+    "combined_total_operating_cost": CONF_ACCUMULATE_COST_RATES,
+    "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "combined_total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---
     "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,

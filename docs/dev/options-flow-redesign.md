@@ -200,8 +200,8 @@ to the option gate.
 | combined_levelized_cost_savings_rate | calculate_levelized_cost_saving_rates |
 | combined_financial_return_rate | calculate_financial_return_rate |
 | combined_levelized_financial_return_rate | calculate_levelized_financial_return_rate |
-| combined_total_operating_costs | accumulate_cost_rates |
-| combined_total_levelized_operating_costs | accumulate_levelized_cost_rates |
+| combined_total_operating_cost | accumulate_cost_rates |
+| combined_total_levelized_operating_cost | accumulate_levelized_cost_rates |
 | combined_total_cost_savings | accumulate_cost_saving_rates |
 | combined_total_levelized_cost_savings | accumulate_levelized_cost_saving_rates |
 | combined_total_financial_return | accumulate_financial_return |
@@ -238,8 +238,8 @@ to the option gate.
 | levelized_cost_savings_rate | calculate_levelized_cost_saving_rates | lcoe |
 | financial_return_rate | calculate_financial_return_rate | exports_power |
 | levelized_financial_return_rate | calculate_levelized_financial_return_rate | lcoe · exports_power |
-| total_operating_costs | accumulate_cost_rates | — |
-| total_levelized_operating_costs | accumulate_levelized_cost_rates | lcoe |
+| total_operating_cost | accumulate_cost_rates | — |
+| total_levelized_operating_cost | accumulate_levelized_cost_rates | lcoe |
 | total_cost_savings | accumulate_cost_saving_rates | — |
 | total_levelized_cost_savings | accumulate_levelized_cost_saving_rates | lcoe |
 | total_financial_return | accumulate_financial_return | exports_power |

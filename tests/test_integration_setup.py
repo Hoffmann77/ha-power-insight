@@ -47,7 +47,9 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
-    assert entry.minor_version == 2
+    # Migration runs to the latest minor version (scopes migration -> 2, then
+    # the operating-cost ledger-key rename -> 3).
+    assert entry.minor_version == 3
     assert entry.options["schema"] == 2
     grid = set(entry.options["scopes"]["grid"])
     # Cost rate + its accumulation carried over to the grid scope.
@@ -62,6 +64,40 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     # Levelized was not enabled, so it must not appear anywhere.
     all_leaves = {l for s in entry.options["scopes"].values() for l in s}
     assert not any("levelized" in leaf for leaf in all_leaves)
+
+
+async def test_migrate_operating_cost_ledger_key(hass: HomeAssistant) -> None:
+    """A retired-adapter ledger using the old key is renamed on migration."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=2,
+        options={"schema": 2, "scopes": {}},
+        data={
+            "retired_adapters": [
+                {
+                    "subentry_id": "gone",
+                    "title": "Old PV",
+                    "totals": {
+                        "total_levelized_operating_costs": 42.0,
+                        "total_levelized_cost_savings": 7.0,
+                    },
+                }
+            ]
+        },
+        subentries_data=[make_grid_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    assert entry.minor_version == 3
+    totals = entry.data["retired_adapters"][0]["totals"]
+    # Renamed key carries its value; untouched keys are preserved.
+    assert totals == {
+        "total_levelized_operating_cost": 42.0,
+        "total_levelized_cost_savings": 7.0,
+    }
 
 
 async def test_no_grid_creates_repair_issue(

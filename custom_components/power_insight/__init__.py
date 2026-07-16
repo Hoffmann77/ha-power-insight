@@ -141,6 +141,8 @@ async def async_migrate_entry(
     """Migrate the config entry to a newer version."""
     if entry.version == 1 and entry.minor_version < 2:
         _migrate_options_to_scopes(hass, entry)
+    if entry.version == 1 and entry.minor_version < 3:
+        _migrate_operating_cost_key(hass, entry)
 
     return True
 
@@ -195,3 +197,35 @@ def _migrate_options_to_scopes(hass: HomeAssistant, entry: MyConfigEntry) -> Non
     hass.config_entries.async_update_entry(
         entry, options=new_options, minor_version=2
     )
+
+
+def _migrate_operating_cost_key(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Rename the levelized-operating-cost total key in the retired ledger.
+
+    The per-adapter sensor key ``total_levelized_operating_costs`` was renamed to
+    the singular ``total_levelized_operating_cost``. That key is also stored
+    inside each retired-adapter ledger entry's ``totals`` map
+    (``entry.data[CONF_RETIRED_ADAPTERS]``); rename it there too, otherwise the
+    combined levelized-operating-cost total would silently drop the frozen
+    contributions of already-removed devices.
+    """
+    # Imported here to avoid a circular import at module load.
+    from .const import CONF_RETIRED_ADAPTERS
+
+    old_key = "total_levelized_operating_costs"
+    new_key = "total_levelized_operating_cost"
+
+    data = dict(entry.data)
+    ledger = data.get(CONF_RETIRED_ADAPTERS)
+    if ledger:
+        data[CONF_RETIRED_ADAPTERS] = [
+            {
+                **retired,
+                "totals": {
+                    (new_key if key == old_key else key): value
+                    for key, value in retired.get("totals", {}).items()
+                },
+            }
+            for retired in ledger
+        ]
+    hass.config_entries.async_update_entry(entry, data=data, minor_version=3)
