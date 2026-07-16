@@ -77,6 +77,11 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     # exists_fn cannot express this — it has no reference to the battery set —
     # so it is checked inline in async_setup_entry.
     charge_gated: bool = False
+    # When True, the sensor is only created when every production adapter (PV +
+    # battery) has lifetime cost data (lcoe) configured.  exists_fn cannot
+    # express this — it has no reference to the adapter set — so it is checked
+    # inline in async_setup_entry.
+    lcoe_gated: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -162,6 +167,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.combined_levelized_financial_return_rate_corrected,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_charging_power",
@@ -228,6 +234,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.combined_lcoe,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_cost_rate",
@@ -248,6 +255,7 @@ POWER_INSIGHT_SENSORS = (
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.combined_lcoe_rate_corrected,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_operating_cost_rate",
@@ -272,6 +280,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.combined_lcoo_rate_corrected,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_cost_savings_rate",
@@ -296,6 +305,7 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.combined_levelized_saving_rate_corrected,
+        lcoe_gated=True,
     ),
 )
 
@@ -375,6 +385,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: None,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_cost_savings",
@@ -387,6 +398,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: None,
+        lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_financial_return",
@@ -399,6 +411,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: None,
+        lcoe_gated=True,
     ),
 )
 
@@ -1377,6 +1390,12 @@ def _option_gated_out(description, options: OptionsWrapper, scope: str) -> bool:
     return gate is not None and not options.check(gate, scope)
 
 
+def _all_prod_adapters_have_lcoe(power_insight: PowerInsight) -> bool:
+    """Return True if there is at least one prod adapter and all have lcoe configured."""
+    adapters = power_insight.prod_adapters
+    return bool(adapters) and all(a.lcoe is not None for a in adapters)
+
+
 def _provider_is_charge_source(power_insight: PowerInsight, uid: str) -> bool:
     """Return True if any battery is configured to charge from this provider.
 
@@ -1474,10 +1493,17 @@ async def async_setup_entry(
 
     # --- Hub-level sensors ---
     entities: list = []
+    # Evaluated once; shared by the three loops below.
+    _prod_lcoe_available = _all_prod_adapters_have_lcoe(power_insight)
+    # Ledger sensors should also survive after all prod adapters are removed, as
+    # long as their retired-adapter frozen totals are still stored on the entry.
+    _has_retired_lcoe = bool(entry.data.get(CONF_RETIRED_ADAPTERS, []))
     for description in POWER_INSIGHT_SENSORS:
         if not description.exists_fn(options_wrapped):
             continue
         if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
+            continue
+        if description.lcoe_gated and not _prod_lcoe_available:
             continue
         entities.append(PowerInsightSensor(
             description=description,
@@ -1504,6 +1530,8 @@ async def async_setup_entry(
         if not description.exists_fn(options_wrapped):
             continue
         if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
+            continue
+        if description.lcoe_gated and not (_prod_lcoe_available or _has_retired_lcoe):
             continue
         entities.append(PowerInsightCombinedLedgerSensor(
             description=description,
