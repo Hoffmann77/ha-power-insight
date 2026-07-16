@@ -560,16 +560,40 @@ def resolve_entities(entities: EntitiesLike) -> dict[str, float | None]:
         ) from None
 
 
-def build_engine(case: EngineCase) -> Any:
-    """Build the engine for ``case``: register adapters and apply entity values.
+def build_engine_for(
+    device: DeviceLike,
+    entities: EntitiesLike,
+    overrides: Mapping[str, float | None] | None = None,
+    *,
+    label: str | None = None,
+) -> Any:
+    """Build a :class:`PowerInsight` engine from a device config and readings.
 
-    Validates every entity id (raising ``ValueError`` on an unknown one) and
-    sets the readings. Canonical ids not present in the chosen device are
-    accepted but skipped, so a shared entity preset can drive smaller devices.
+    The class-friendly entry point (no :class:`EngineCase` required): use it in
+    a fixture of a scenario test class, e.g.::
+
+        class TestMyScenario:
+            DEVICE = PRESET_DEVICES["grid_pv_battery"]
+            ENTITIES = {GRID_POWER: 1000.0, ...}
+
+            @pytest.fixture
+            def pi(self):
+                return build_engine_for(self.DEVICE, self.ENTITIES)
+
+            def test_gross_power(self, pi):
+                assert pi.gross_power == pytest.approx(4000.0)
+
+    ``device`` is a :data:`PRESET_DEVICES` name or a :class:`DeviceConfig`;
+    ``entities`` is a :data:`PRESET_ENTITIES` name or a raw ``{id: watts}``
+    mapping; ``overrides`` is merged on top. Every entity id is validated
+    (raising ``ValueError`` on an unknown one); canonical ids not present in the
+    chosen device are accepted but skipped, so a shared entity preset can drive
+    smaller devices too. ``label`` only tags the error message.
     """
-    device = resolve_device(case.device)
-    values = resolve_entities(case.entities)
-    values.update(case.entity_overrides)
+    device = resolve_device(device)
+    values = resolve_entities(entities)
+    if overrides:
+        values.update(overrides)
 
     pi = device.build_engine()
     routable = set(pi.entity_mapping)
@@ -577,8 +601,9 @@ def build_engine(case: EngineCase) -> Any:
 
     unknown = sorted(set(values) - valid)
     if unknown:
+        prefix = f"[{label}] " if label else ""
         raise ValueError(
-            f"[{case.name}] unknown entity id(s) {unknown}. "
+            f"{prefix}unknown entity id(s) {unknown}. "
             f"Routable for this device: {sorted(routable)}"
         )
 
@@ -587,6 +612,13 @@ def build_engine(case: EngineCase) -> Any:
             pi.set_value(entity_id, value)
 
     return pi
+
+
+def build_engine(case: EngineCase) -> Any:
+    """Build the engine for an :class:`EngineCase` (declarative entry point)."""
+    return build_engine_for(
+        case.device, case.entities, case.entity_overrides, label=case.name
+    )
 
 
 def evaluate_case(case: EngineCase) -> tuple[Any, list[str]]:
