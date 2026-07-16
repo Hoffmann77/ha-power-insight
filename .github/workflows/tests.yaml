@@ -5,7 +5,26 @@ on:
   pull_request:
 
 jobs:
-  tests:
+  # Engine tier: pure-Python calculation engine, no Home Assistant harness.
+  engine-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version-file: pyproject.toml
+
+      - name: Install dependencies
+        run: uv sync --group engine
+
+      - name: Run engine tests
+        run: uv run --group engine pytest tests/engine -q
+
+  # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.
+  integration-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,5 +38,5 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Run tests
-        run: uv run pytest tests/ -q
+      - name: Run integration tests
+        run: uv run pytest tests/integration -q
