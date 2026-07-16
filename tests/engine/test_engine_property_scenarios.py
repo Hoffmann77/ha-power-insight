@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine_property_framework import Device, EngineScenario, build_engine
+from tests.engine.engine_property_framework import Device, EngineScenario, build_engine
 
 
 class TestBatteryChargingSplit(EngineScenario):

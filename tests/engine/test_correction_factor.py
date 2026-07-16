@@ -14,6 +14,7 @@ import pytest
 _MODULE_PATH = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
+    os.pardir,
     "custom_components",
     "power_insight",
     "power_insight.py",
