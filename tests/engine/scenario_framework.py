@@ -19,15 +19,12 @@ numbers and general laws want different treatment (see the module ``README`` at
 the bottom of this file for the reasoning):
 
 ``CaseScenario``
-    A single fused cell. One ``@topology`` whose adapters carry **their own
-    readings** (``Adapter.grid(price=0.30, power=1000)``) — no separate
-    ``@state``, because a single cell gets no reuse from the topology/state
-    split and only risks a uid/reading mismatch. ``test_`` methods hold
-    **hand-written, pinned** expected values — the home for edge cases (zero
-    gross power, pure export, unavailable sensors, adapter routing). Spiritual
-    successor to ``test_engine_property_scenarios.py``, minus the preset
-    indirection. The ``state`` fixture is auto-derived from the adapters, so a
-    formula assertion can still read ``state.grid``.
+    Exactly one topology × one state. ``test_`` methods hold **hand-written,
+    pinned** expected values — the home for edge cases (zero gross power, pure
+    export, unavailable sensors, adapter routing). Same authoring surface as
+    ``LawScenario`` (``@topology`` + ``@state``), constrained to a single cell.
+    Spiritual successor to ``test_engine_property_scenarios.py``, minus the
+    preset indirection: adapter config lives inline on the ``Adapter`` call.
 
 ``LawScenario``
     The **cartesian product** of every topology × every state. ``test_`` methods
@@ -103,12 +100,7 @@ class Adapter:
     number: int
     config: dict[str, Any]
     inverted: bool = False
-    has_price: bool = True
-    #: Optional inline reading (W). CaseScenario carries readings here; a
-    #: LawScenario leaves them ``None`` and supplies readings via ``@state``.
-    power: float | None = None
-    #: Optional inline grid price reading (EUR/kWh); grid adapters only.
-    price: float | None = None
+    has_price: bool = True  # whether the grid has a price source entity at all
 
     # -- factories --------------------------------------------------------
 
@@ -116,28 +108,17 @@ class Adapter:
     def grid(
         cls,
         *,
-        power: float | None = None,
-        price: float | None = None,
         inverted: bool = False,
         name: str = "Grid",
         has_price_entity: bool = True,
     ) -> Adapter:
-        return cls(
-            "grid",
-            0,
-            {"name": name},
-            inverted=inverted,
-            has_price=has_price_entity,
-            power=power,
-            price=price,
-        )
+        return cls("grid", 0, {"name": name}, inverted=inverted, has_price=has_price_entity)
 
     @classmethod
     def pv(
         cls,
         number: int = 1,
         *,
-        power: float | None = None,
         lcoe: float | None = 0.10,
         lco2_intensity: float | None = 50.0,
         exports: bool = False,
@@ -158,7 +139,6 @@ class Adapter:
                 "correction_factor": correction_factor,
             },
             inverted=inverted,
-            power=power,
         )
 
     @classmethod
@@ -166,7 +146,6 @@ class Adapter:
         cls,
         number: int = 1,
         *,
-        power: float | None = None,
         lcos: float | None = 0.15,
         lco2_intensity: float | None = 100.0,
         exports: bool = False,
@@ -187,7 +166,6 @@ class Adapter:
                 "charge_from_adapters": tuple(charge_from),
             },
             inverted=inverted,
-            power=power,
         )
 
     @classmethod
@@ -195,11 +173,10 @@ class Adapter:
         cls,
         number: int = 1,
         *,
-        power: float | None = None,
         inverted: bool = False,
         name: str | None = None,
     ) -> Adapter:
-        return cls("consumer", number, {"name": name}, inverted=inverted, power=power)
+        return cls("consumer", number, {"name": name}, inverted=inverted)
 
     # -- derived ----------------------------------------------------------
 
@@ -360,41 +337,6 @@ class Cell:
         return pi
 
 
-def _state_from_adapters(topology: Topology) -> State:
-    """Reconstruct a :class:`State` from a topology whose adapters carry readings.
-
-    Single source of truth for a fused CaseScenario: the readings live on the
-    adapters, and the ``state`` fixture is derived from them (so formula-style
-    assertions can still say ``state.grid`` without a second declaration).
-    """
-    readings = {a.uid: a.power for a in topology.adapters}
-    price = next((a.price for a in topology.adapters if a.kind == "grid"), None)
-    return State(name="readings", price=price, **readings)
-
-
-@dataclass(frozen=True)
-class CaseCell:
-    """A single fused cell: one topology whose adapters carry their own readings."""
-
-    topology: Topology
-
-    @property
-    def id(self) -> str:
-        return self.topology.name
-
-    @property
-    def state(self) -> State:
-        return _state_from_adapters(self.topology)
-
-    def build_engine(self) -> Any:
-        pi = self.topology.build_engine()
-        for a in self.topology.adapters:
-            pi.set_value(a.power_entity, a.power)
-            if a.kind == "grid" and a.price is not None:
-                pi.set_value(GRID_PRICE_ENTITY, a.price)
-        return pi
-
-
 def _check_compatible(topology: Topology, state: State) -> None:
     """A state must name exactly the topology's adapter uids (safety rail)."""
     want = topology.uids
@@ -535,30 +477,26 @@ class _ScenarioBase:
 
 
 class CaseScenario(_ScenarioBase):
-    """A single fused cell with **pinned** expected values — the edge-case home.
+    """Exactly one topology × one state, with **pinned** expected values.
 
-    Exactly one ``@topology`` whose adapters carry their own readings
-    (``Adapter.grid(price=0.30, power=1000)``). There is no separate ``@state``:
-    the reading lives next to the adapter it belongs to, so a uid can never fall
-    out of sync with a reading. The ``state`` fixture is auto-derived from the
-    adapters, so formula-style assertions can still read ``state.grid``.
+    The home for edge cases. Same authoring surface as :class:`LawScenario`
+    (``@topology`` + ``@state``), but constrained to a single cell — a pinned
+    number is only valid in one cell. Adding a second ``@state`` or ``@topology``
+    is an error; sweep readings with a :class:`LawScenario` instead.
     """
 
     @classmethod
-    def scenario_cells(cls) -> list[CaseCell]:
-        if _collect(cls, "state"):
-            raise ValueError(
-                f"{cls.__name__} is a CaseScenario: readings go on the adapters "
-                f"(Adapter.grid(power=...)), not a @state. Drop the @state method, "
-                f"or use LawScenario to sweep several states."
-            )
+    def scenario_cells(cls) -> list[Cell]:
         topos = cls._topologies()
-        if len(topos) != 1:
+        states = cls._states()
+        if len(topos) != 1 or len(states) != 1:
             raise ValueError(
                 f"{cls.__name__} is a CaseScenario: expected exactly one "
-                f"@topology, got {len(topos)}. Use LawScenario for a product."
+                f"@topology and one @state, got {len(topos)} topologies and "
+                f"{len(states)} states. Use LawScenario for a product."
             )
-        return [CaseCell(topos[0])]
+        _check_compatible(topos[0], states[0])
+        return [Cell(topos[0], states[0])]
 
 
 class LawScenario(_ScenarioBase):
