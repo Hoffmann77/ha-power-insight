@@ -2,8 +2,10 @@
 
 Two base classes, two philosophies:
 
-* :class:`CaseScenario` — one topology × one state, **pinned** numbers. The
-  edge-case home (successor to ``test_engine_property_scenarios.py``).
+* :class:`CaseScenario` — a single fused cell. One ``@topology`` whose adapters
+  carry their own readings (``Adapter.grid(price=0.30, power=1000)``); **pinned**
+  expected values. The edge-case home (successor to
+  ``test_engine_property_scenarios.py``).
 * :class:`LawScenario` — every topology × every state, **general** assertions
   (invariants + formulas over the injected ``state``). The sweep home
   (successor to ``test_power_insight_calculations.py``).
@@ -35,9 +37,12 @@ from tests.engine.scenario_framework import (
 
 
 def _solar_shape(*, pv_exports: bool) -> Topology:
-    """Grid + one PV, toggling only whether the PV is credited for export."""
+    """Grid + one PV, toggling only whether the PV is credited for export.
+
+    No readings here — a LawScenario supplies those via ``@state``.
+    """
     return Topology(
-        Adapter.grid(price=True),
+        Adapter.grid(),
         Adapter.pv(
             1,
             lcoe=0.10,
@@ -48,7 +53,7 @@ def _solar_shape(*, pv_exports: bool) -> Topology:
 
 
 # ===========================================================================
-# CaseScenario — pinned edge cases (one cell).
+# CaseScenario — fused, pinned edge cases (readings live on the adapters).
 # ===========================================================================
 
 
@@ -56,21 +61,18 @@ class TestBatteryChargingSplit(CaseScenario):
     """Grid + PV + a battery charging from both, gross 4000 W.
 
     Import 1000 W (gross share 0.25) and PV 3000 W (share 0.75) feed a 500 W
-    charge, split 125 W / 375 W. Every expected value is written by hand.
+    charge, split 125 W / 375 W. Each adapter carries its own reading; every
+    expected value is written by hand.
     """
 
     @topology
     def solar_with_battery(self):
         return Topology(
-            Adapter.grid(price=True),
-            Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08),
-            Adapter.battery(1, charge_from=("grid", "pv1")),
-            Adapter.consumer(1),
+            Adapter.grid(price=0.30, power=1000),
+            Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08, power=3000),
+            Adapter.battery(1, charge_from=("grid", "pv1"), power=-500),
+            Adapter.consumer(1, power=-800),
         )
-
-    @state
-    def midmorning(self):
-        return State(grid=1000, pv1=3000, bat1=-500, cons1=-800, price=0.30)
 
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == pytest.approx(4000.0)
@@ -100,16 +102,13 @@ class TestPureGridExportDegenerate(CaseScenario):
 
     A genuine edge case — exactly what CaseScenario is for, and exactly the kind
     of degenerate that would *break* the export-ratio invariant, so it must not
-    live in a LawScenario family.
+    live in a LawScenario family. Also demonstrates the bare-tuple ``@topology``
+    return (no explicit ``Topology(...)`` wrapper).
     """
 
     @topology
     def grid_only(self):
-        return Topology(Adapter.grid(price=True))
-
-    @state
-    def pure_export(self):
-        return State(grid=-500, price=0.30)
+        return (Adapter.grid(price=0.30, power=-500),)
 
     def test_gross_power_is_zero(self, power_insight):
         assert power_insight.gross_power == pytest.approx(0.0)
@@ -119,6 +118,33 @@ class TestPureGridExportDegenerate(CaseScenario):
 
     def test_consumption_goes_negative(self, power_insight):
         assert power_insight.combined_consumption == pytest.approx(-500.0)
+
+
+class TestInvertedGridNoPrice(CaseScenario):
+    """Inverted grid sensor, no price reading — an unavailable-input edge case.
+
+    ``inverted=True`` flips the sign so a +600 reading is 600 W export; with no
+    price reading the cost of electricity is undefined. Shows a per-adapter
+    ``power`` reading combined with adapter config (``inverted``) on one line.
+    """
+
+    @topology
+    def inverted_grid(self):
+        return (
+            Adapter.grid(power=600, inverted=True),  # +600 inverted -> 600 W export
+            Adapter.pv(1, exports=True, export_comp=0.08, power=2000),
+            Adapter.consumer(1, power=-1400),
+        )
+
+    def test_inverted_sign(self, power_insight):
+        assert power_insight.combined_grid_import == pytest.approx(0.0)
+        assert power_insight.combined_grid_export == pytest.approx(600.0)
+
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(2000.0)
+
+    def test_no_price_means_no_coe(self, power_insight):
+        assert power_insight.combined_coe is None
 
 
 # ===========================================================================
@@ -189,22 +215,32 @@ def test_incompatible_state_is_rejected():
         Broken.scenario_cells()
 
 
-def test_case_scenario_rejects_multiple_states():
-    class TwoStates(CaseScenario):
+def test_case_scenario_rejects_state_decorator():
+    class WithState(CaseScenario):
         @topology
         def grid_only(self):
-            return Topology(Adapter.grid())
+            return (Adapter.grid(price=0.30, power=100),)
 
         @state
-        def a(self):
+        def extra(self):
             return State(grid=100, price=0.30)
 
-        @state
+    with pytest.raises(ValueError, match="readings go on the adapters"):
+        WithState.scenario_cells()
+
+
+def test_case_scenario_rejects_multiple_topologies():
+    class TwoTopologies(CaseScenario):
+        @topology
+        def a(self):
+            return (Adapter.grid(price=0.30, power=100),)
+
+        @topology
         def b(self):
-            return State(grid=200, price=0.30)
+            return (Adapter.grid(price=0.30, power=200),)
 
     with pytest.raises(ValueError, match="exactly one"):
-        TwoStates.scenario_cells()
+        TwoTopologies.scenario_cells()
 
 
 def test_topology_rejects_missing_grid():
