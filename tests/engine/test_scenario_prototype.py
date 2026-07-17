@@ -22,9 +22,11 @@ from tests.engine.scenario_framework import (
     Adapter,
     CaseScenario,
     LawScenario,
+    Modify,
     State,
     Topology,
     export_ratio_bounded,
+    modify,
     reconstructs_gross_power,
     state,
     topology,
@@ -156,6 +158,77 @@ class TestInvertedGridNoPrice(CaseScenario):
 
 
 # ===========================================================================
+# CaseScenario + @modify — variant cells from one base topology.
+# ===========================================================================
+
+
+class TestExportFlagIsResultNeutralWhenImporting(CaseScenario):
+    """Toggling PV export credit must not change results while the grid imports.
+
+    Base: 200 W import + 1000 W self-consumed PV. The ``@modify`` flips the PV to
+    an exporting one — but nothing is exported (grid is importing), so every
+    asserted property is identical across base and variant. No ``expect()``
+    overrides: the pinned numbers hold for both cells.
+    """
+
+    @topology
+    def self_consume(self):
+        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10))
+
+    @state
+    def importing(self):
+        return State(grid=200, pv1=1000, price=0.30)
+
+    @modify
+    def as_exporting_pv(self):
+        return Modify("pv1", exports=True, export_comp=0.08)
+
+    def test_gross_power(self, power_insight):
+        assert power_insight.gross_power == pytest.approx(1200.0)
+
+    def test_consumption(self, power_insight):
+        assert power_insight.combined_consumption == pytest.approx(1200.0)
+
+    def test_no_export_compensation(self, power_insight):
+        assert power_insight.combined_export_compensation_rate == pytest.approx(0.0)
+
+
+class TestCorrectionFactorVariant(CaseScenario):
+    """One config change, two outcomes: base rate unchanged, corrected rate not.
+
+    Base: 1000 W import @ 0.30 + 1000 W self-consumed PV (lcoe 0.10). The
+    ``@modify`` sets the PV correction_factor to 1.25. ``combined_lcoe_rate`` is
+    correction-neutral (same in both cells → a pinned assertion), while
+    ``combined_lcoe_rate_corrected`` differs (base 0.40, variant 0.425) → read
+    through the ``expected`` fixture.
+    """
+
+    @topology
+    def base(self):
+        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10))
+
+    @state
+    def midday(self):
+        return State(grid=1000, pv1=1000, price=0.30)
+
+    @modify
+    def corrected(self):
+        return Modify("pv1", correction_factor=1.25).expect(
+            combined_lcoe_rate_corrected=0.425
+        )
+
+    def test_base_rate_is_correction_neutral(self, power_insight):
+        # grid (1000/1000 * 0.30) + pv (1000/1000 * 0.10) = 0.40, both cells.
+        assert power_insight.combined_lcoe_rate == pytest.approx(0.40)
+
+    def test_corrected_rate(self, power_insight, expected):
+        # base: 0.30*1.0 + 0.10*1.0 = 0.40; variant: 0.30 + 0.10*1.25 = 0.425.
+        assert power_insight.combined_lcoe_rate_corrected == pytest.approx(
+            expected("combined_lcoe_rate_corrected", 0.40)
+        )
+
+
+# ===========================================================================
 # LawScenario — every topology × every state, general assertions.
 # ===========================================================================
 
@@ -244,3 +317,39 @@ def test_case_scenario_rejects_multiple_states():
 def test_topology_rejects_missing_grid():
     with pytest.raises(ValueError, match="exactly one grid"):
         Topology(Adapter.pv(1))
+
+
+def test_law_scenario_rejects_modify():
+    class WithModify(LawScenario):
+        @topology
+        def shape(self):
+            return Topology(Adapter.grid(), Adapter.pv(1))
+
+        @state
+        def s(self):
+            return State(grid=100, pv1=200, price=0.30)
+
+        @modify
+        def variant(self):
+            return Modify("pv1", lcoe=0.20)
+
+    with pytest.raises(ValueError, match="CaseScenario-only"):
+        WithModify.scenario_cells()
+
+
+def test_modify_rejects_unknown_target():
+    class BadTarget(CaseScenario):
+        @topology
+        def grid_only(self):
+            return (Adapter.grid(),)
+
+        @state
+        def s(self):
+            return State(grid=100, price=0.30)
+
+        @modify
+        def touches_ghost(self):
+            return Modify("pv9", lcoe=0.20)  # no such adapter
+
+    with pytest.raises(ValueError, match="unknown adapter"):
+        BadTarget.scenario_cells()

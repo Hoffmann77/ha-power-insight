@@ -25,6 +25,9 @@ the bottom of this file for the reasoning):
     ``LawScenario`` (``@topology`` + ``@state``), constrained to a single cell.
     Spiritual successor to ``test_engine_property_scenarios.py``, minus the
     preset indirection: adapter config lives inline on the ``Adapter`` call.
+    Optional ``@modify`` methods add config-variant cells that share the pinned
+    assertions (proving a config change is result-neutral), or override specific
+    values via ``Modify.expect(...)`` read through the ``expected`` fixture.
 
 ``LawScenario``
     The **cartesian product** of every topology × every state. ``test_`` methods
@@ -50,7 +53,7 @@ from __future__ import annotations
 import importlib.util
 import itertools
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable
 
 import pytest
@@ -323,10 +326,16 @@ class State:
 class Cell:
     topology: Topology
     state: State
+    #: Per-cell expected-value overrides, consulted via the ``expected`` fixture.
+    #: Empty for a base cell; populated from a ``Modify.expect(...)`` on variants.
+    expected: dict[str, Any] = field(default_factory=dict)
+    #: Optional explicit id suffix (variant name); falls back to state name.
+    label: str | None = None
 
     @property
     def id(self) -> str:
-        return f"{self.topology.name}-{self.state.name}"
+        suffix = self.label if self.label is not None else self.state.name
+        return f"{self.topology.name}-{suffix}" if suffix else self.topology.name
 
     def build_engine(self) -> Any:
         pi = self.topology.build_engine()
@@ -370,6 +379,98 @@ def state(fn: Callable[[Any], State]) -> Callable[[Any], State]:
     """Mark a method as returning a :class:`State` for the scenario."""
     fn._scenario_role = "state"  # type: ignore[attr-defined]
     return fn
+
+
+def modify(fn: Callable[[Any], "Modify"]) -> Callable[[Any], "Modify"]:
+    """Mark a method as returning a :class:`Modify` — a topology variant.
+
+    CaseScenario only. Each ``@modify`` spins off an extra cell: the base
+    topology with the modification applied, sharing the same ``@state``. The
+    scenario's ``test_`` methods run against the base cell *and* every variant.
+    """
+    fn._scenario_role = "modify"  # type: ignore[attr-defined]
+    return fn
+
+
+# ---------------------------------------------------------------------------
+# Modify — attribute changes to the base topology, producing a variant cell.
+# ---------------------------------------------------------------------------
+
+# Friendly override key -> ("config" dict key | "field" attr, engine name).
+_FRIENDLY_OVERRIDES: dict[str, tuple[str, str]] = {
+    "name": ("config", "name"),
+    "lcoe": ("config", "lcoe"),
+    "lcos": ("config", "lcos"),
+    "lco2_intensity": ("config", "lco2_intensity"),
+    "exports": ("config", "exports_power"),
+    "export_comp": ("config", "export_compensation"),
+    "correction_factor": ("config", "correction_factor"),
+    "charge_from": ("config", "charge_from_adapters"),
+    "inverted": ("field", "inverted"),
+    "has_price_entity": ("field", "has_price"),
+}
+
+
+class Modify:
+    """A named topology variant: one or more adapter overrides + optional expects.
+
+    ``Modify("pv1", correction_factor=1.25)`` overrides the ``pv1`` adapter.
+    Chain ``.and_("grid", inverted=True)`` for a multi-adapter variant, and
+    ``.expect(some_property=value)`` for the expected values this variant
+    *changes* (properties it leaves alone keep the base cell's pinned numbers).
+    """
+
+    def __init__(self, target: str | None = None, **overrides: Any) -> None:
+        self.changes: list[tuple[str, dict[str, Any]]] = []
+        if target is not None:
+            self.changes.append((target, overrides))
+        elif overrides:
+            raise ValueError("Modify(**overrides) needs a target uid")
+        self.expected: dict[str, Any] = {}
+        self.name: str = ""
+
+    def and_(self, target: str, **overrides: Any) -> "Modify":
+        """Also override another adapter as part of the same variant."""
+        self.changes.append((target, overrides))
+        return self
+
+    def expect(self, **expected: Any) -> "Modify":
+        """Declare the expected values this variant changes from the base."""
+        self.expected.update(expected)
+        return self
+
+
+def _override_adapter(adapter: Adapter, overrides: dict[str, Any]) -> Adapter:
+    config = dict(adapter.config)
+    fields: dict[str, Any] = {}
+    for key, value in overrides.items():
+        if key not in _FRIENDLY_OVERRIDES:
+            raise ValueError(
+                f"unknown override {key!r}; allowed: {sorted(_FRIENDLY_OVERRIDES)}"
+            )
+        target, engine_key = _FRIENDLY_OVERRIDES[key]
+        if key == "charge_from":
+            value = tuple(value)
+        if target == "config":
+            config[engine_key] = value
+        else:
+            fields[engine_key] = value
+    return replace(adapter, config=config, **fields)
+
+
+def _apply_modify(topology: Topology, mod: Modify) -> Topology:
+    adapters = list(topology.adapters)
+    by_uid = {a.uid: i for i, a in enumerate(adapters)}
+    for target, overrides in mod.changes:
+        if target not in by_uid:
+            raise ValueError(
+                f"modify {mod.name!r} targets unknown adapter {target!r}; "
+                f"known: {sorted(by_uid)}"
+            )
+        idx = by_uid[target]
+        adapters[idx] = _override_adapter(adapters[idx], overrides)
+    # Keep the base topology's name; the cell's ``label`` carries the variant.
+    return Topology(*adapters, name=topology.name)
 
 
 def _collect(cls: type, role: str) -> list[Callable[[Any], Any]]:
@@ -472,6 +573,15 @@ class _ScenarioBase:
         return out
 
     @classmethod
+    def _modifies(cls) -> list[Modify]:
+        out = []
+        for fn in _collect(cls, "modify"):
+            mod = fn(cls())
+            mod.name = fn.__name__
+            out.append(mod)
+        return out
+
+    @classmethod
     def scenario_cells(cls) -> list[Cell]:  # overridden per base
         raise NotImplementedError
 
@@ -483,6 +593,12 @@ class CaseScenario(_ScenarioBase):
     (``@topology`` + ``@state``), but constrained to a single cell — a pinned
     number is only valid in one cell. Adding a second ``@state`` or ``@topology``
     is an error; sweep readings with a :class:`LawScenario` instead.
+
+    ``@modify`` methods add variant cells (the base topology with adapter
+    attributes changed). The ``test_`` methods run against the base *and* every
+    variant: use this to prove a config change leaves a result unchanged, or —
+    with ``Modify.expect(...)`` + the ``expected`` fixture — to assert a
+    different value for that variant.
     """
 
     @classmethod
@@ -495,8 +611,17 @@ class CaseScenario(_ScenarioBase):
                 f"@topology and one @state, got {len(topos)} topologies and "
                 f"{len(states)} states. Use LawScenario for a product."
             )
-        _check_compatible(topos[0], states[0])
-        return [Cell(topos[0], states[0])]
+        base, st = topos[0], states[0]
+        _check_compatible(base, st)
+        mods = cls._modifies()
+        # With variants present, label the base "base" so ids read uniformly:
+        # [topo-base], [topo-<variant>]. Without variants, keep [topo-state].
+        cells = [Cell(base, st, label="base" if mods else None)]
+        for mod in mods:
+            variant = _apply_modify(base, mod)
+            _check_compatible(variant, st)  # config-only change keeps uids
+            cells.append(Cell(variant, st, expected=mod.expected, label=mod.name))
+        return cells
 
 
 class LawScenario(_ScenarioBase):
@@ -513,6 +638,11 @@ class LawScenario(_ScenarioBase):
 
     @classmethod
     def scenario_cells(cls) -> list[Cell]:
+        if cls._modifies():
+            raise ValueError(
+                f"{cls.__name__}: @modify is CaseScenario-only. A LawScenario "
+                f"already sweeps topologies — add another @topology instead."
+            )
         topos = cls._topologies()
         states = cls._states()
         if not topos or not states:

@@ -42,3 +42,29 @@ def state(_scenario_cell: Any) -> Any:
 def topology(_scenario_cell: Any) -> Any:
     """The current cell's :class:`Topology`."""
     return _scenario_cell.topology
+
+
+_MISSING = object()
+
+
+@pytest.fixture
+def expected(_scenario_cell: Any):
+    """Resolve a per-cell expected value.
+
+    ``expected("gross_power", 4000)`` returns this cell's override for
+    ``gross_power`` if a ``@modify`` declared one, else the base default
+    (``4000``). Omitting the default and having no override is an error, to
+    catch a mistyped key.
+    """
+
+    def _get(key: str, default: Any = _MISSING) -> Any:
+        if key in _scenario_cell.expected:
+            return _scenario_cell.expected[key]
+        if default is _MISSING:
+            raise KeyError(
+                f"no expected value for {key!r} in cell {_scenario_cell.id!r} "
+                f"(declare it with Modify.expect(...) or pass a default)"
+            )
+        return default
+
+    return _get
