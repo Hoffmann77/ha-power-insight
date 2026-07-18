@@ -384,11 +384,23 @@ def state(fn: Callable[[Any], State]) -> Callable[[Any], State]:
 def modify(fn: Callable[[Any], "Modify"]) -> Callable[[Any], "Modify"]:
     """Mark a method as returning a :class:`Modify` — a topology variant.
 
-    CaseScenario only. Each ``@modify`` spins off an extra cell: the base
-    topology with the modification applied, sharing the same ``@state``. The
-    scenario's ``test_`` methods run against the base cell *and* every variant.
+    CaseScenario / DeclarativeScenario. Each ``@modify`` spins off an extra cell:
+    the base topology with the modification applied, sharing the same ``@state``.
+    The assertions run against the base cell *and* every variant.
     """
     fn._scenario_role = "modify"  # type: ignore[attr-defined]
+    return fn
+
+
+def expect(fn: Callable[[Any], dict]) -> Callable[[Any], dict]:
+    """Mark a method as returning a ``{property_name: expected_value}`` map.
+
+    DeclarativeScenario only. The framework generates one assertion per
+    (cell, property): ``getattr(power_insight, property) == expected``. Several
+    ``@expect`` methods are merged; a ``@modify`` variant's ``expect(...)``
+    overrides individual entries for that variant's cell.
+    """
+    fn._scenario_role = "expect"  # type: ignore[attr-defined]
     return fn
 
 
@@ -582,6 +594,38 @@ class _ScenarioBase:
         return out
 
     @classmethod
+    def _expectations(cls) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
+        for fn in _collect(cls, "expect"):
+            merged.update(fn(cls()))
+        return merged
+
+    @classmethod
+    def _single_cell_variants(cls) -> list[Cell]:
+        """Base cell (one topology × one state) plus one cell per ``@modify``.
+
+        Shared by :class:`CaseScenario` and :class:`DeclarativeScenario`.
+        """
+        topos = cls._topologies()
+        states = cls._states()
+        if len(topos) != 1 or len(states) != 1:
+            raise ValueError(
+                f"{cls.__name__}: expected exactly one @topology and one @state, "
+                f"got {len(topos)} topologies and {len(states)} states."
+            )
+        base, st = topos[0], states[0]
+        _check_compatible(base, st)
+        mods = cls._modifies()
+        # With variants present, label the base "base" so ids read uniformly:
+        # [topo-base], [topo-<variant>]. Without variants, keep [topo-state].
+        cells = [Cell(base, st, label="base" if mods else None)]
+        for mod in mods:
+            variant = _apply_modify(base, mod)
+            _check_compatible(variant, st)  # config-only change keeps uids
+            cells.append(Cell(variant, st, expected=mod.expected, label=mod.name))
+        return cells
+
+    @classmethod
     def scenario_cells(cls) -> list[Cell]:  # overridden per base
         raise NotImplementedError
 
@@ -603,25 +647,7 @@ class CaseScenario(_ScenarioBase):
 
     @classmethod
     def scenario_cells(cls) -> list[Cell]:
-        topos = cls._topologies()
-        states = cls._states()
-        if len(topos) != 1 or len(states) != 1:
-            raise ValueError(
-                f"{cls.__name__} is a CaseScenario: expected exactly one "
-                f"@topology and one @state, got {len(topos)} topologies and "
-                f"{len(states)} states. Use LawScenario for a product."
-            )
-        base, st = topos[0], states[0]
-        _check_compatible(base, st)
-        mods = cls._modifies()
-        # With variants present, label the base "base" so ids read uniformly:
-        # [topo-base], [topo-<variant>]. Without variants, keep [topo-state].
-        cells = [Cell(base, st, label="base" if mods else None)]
-        for mod in mods:
-            variant = _apply_modify(base, mod)
-            _check_compatible(variant, st)  # config-only change keeps uids
-            cells.append(Cell(variant, st, expected=mod.expected, label=mod.name))
-        return cells
+        return cls._single_cell_variants()
 
 
 class LawScenario(_ScenarioBase):
@@ -667,6 +693,86 @@ class LawScenario(_ScenarioBase):
 
 
 # ---------------------------------------------------------------------------
+# DeclarativeScenario — expectations as data, assertions auto-generated.
+# ---------------------------------------------------------------------------
+
+
+def _approxify(value: Any) -> Any:
+    """Wrap leaf numbers in ``pytest.approx`` while preserving dict/list shape.
+
+    Lets a nested expected value like ``{"bat1": {"grid": 0.25}}`` compare
+    tolerantly against the engine's floats via a plain ``==``.
+    """
+    if isinstance(value, bool) or value is None:
+        return value
+    if isinstance(value, dict):
+        return {k: _approxify(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return type(value)(_approxify(v) for v in value)
+    if isinstance(value, (int, float)):
+        return pytest.approx(value)
+    return value
+
+
+@dataclass(frozen=True)
+class _DeclCase:
+    """One auto-generated assertion: property ``prop`` on ``cell`` == ``expected``."""
+
+    cell: Cell
+    prop: str
+    expected: Any
+
+    @property
+    def id(self) -> str:
+        return f"{self.cell.id}-{self.prop}"
+
+
+class DeclarativeScenario(_ScenarioBase):
+    """Expectations as data: no ``test_`` methods, assertions generated per cell.
+
+    Declare ``@topology`` + ``@state`` (+ optional ``@modify``) as usual, then an
+    ``@expect`` method returning ``{property_name: expected_value}``. The
+    framework emits one assertion per (cell, property):
+    ``getattr(power_insight, property) == expected`` (tolerant on floats, deep on
+    dicts). A ``@modify`` variant's ``Modify.expect(...)`` overrides individual
+    entries for that variant's cell; untouched entries carry the base value, so a
+    result-neutral variant is verified automatically.
+
+    Trade-off vs. :class:`CaseScenario`: no per-property method (so no place for a
+    bespoke assertion or a docstring per property), but the property name appears
+    exactly once as a map key, ``getattr`` makes a typo fail loudly, and a
+    variant override reuses that same key with no second call site.
+    """
+
+    @classmethod
+    def scenario_cells(cls) -> list[Cell]:
+        return cls._single_cell_variants()
+
+    @classmethod
+    def decl_cases(cls) -> list[_DeclCase]:
+        base_map = cls._expectations()
+        if not base_map:
+            raise ValueError(
+                f"{cls.__name__} is a DeclarativeScenario but declares no "
+                f"@expect map."
+            )
+        cases: list[_DeclCase] = []
+        for cell in cls.scenario_cells():
+            full = {**base_map, **cell.expected}  # variant overrides win
+            for prop, value in full.items():
+                cases.append(_DeclCase(cell, prop, value))
+        return cases
+
+    def test_property(self, _decl_case: _DeclCase) -> None:
+        pi = _decl_case.cell.build_engine()
+        actual = getattr(pi, _decl_case.prop)
+        assert actual == _approxify(_decl_case.expected), (
+            f"{_decl_case.prop} on cell {_decl_case.cell.id!r}: "
+            f"got {actual!r}, expected {_decl_case.expected!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # pytest wiring — called from tests/engine/conftest.py.
 # ---------------------------------------------------------------------------
 
@@ -678,6 +784,11 @@ def generate_scenario_tests(metafunc: Any) -> None:
     """
     cls = getattr(metafunc, "cls", None)
     if cls is None or not (isinstance(cls, type) and issubclass(cls, _ScenarioBase)):
+        return
+    if issubclass(cls, DeclarativeScenario):
+        if "_decl_case" in metafunc.fixturenames:
+            cases = cls.decl_cases()
+            metafunc.parametrize("_decl_case", cases, ids=[c.id for c in cases])
         return
     if "_scenario_cell" not in metafunc.fixturenames:
         return

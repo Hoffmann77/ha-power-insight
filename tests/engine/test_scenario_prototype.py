@@ -21,10 +21,12 @@ import pytest
 from tests.engine.scenario_framework import (
     Adapter,
     CaseScenario,
+    DeclarativeScenario,
     LawScenario,
     Modify,
     State,
     Topology,
+    expect,
     export_ratio_bounded,
     modify,
     reconstructs_gross_power,
@@ -226,6 +228,74 @@ class TestCorrectionFactorVariant(CaseScenario):
         assert power_insight.combined_lcoe_rate_corrected == pytest.approx(
             expected("combined_lcoe_rate_corrected", 0.40)
         )
+
+
+# ===========================================================================
+# DeclarativeScenario — same scenario as TestCorrectionFactorVariant above, but
+# expectations are data and the assertions are generated (no test_ methods).
+# ===========================================================================
+
+
+class TestCorrectionFactorDeclarative(DeclarativeScenario):
+    """Data-driven twin of :class:`TestCorrectionFactorVariant`.
+
+    The ``@expect`` map holds the base outcomes; the ``@modify`` overrides only
+    the one property it changes. The framework generates one assertion per
+    (cell, property): 3 properties × 2 cells = 6 checks, e.g.
+    ``test_property[base-corrected-combined_lcoe_rate_corrected]``.
+    """
+
+    @topology
+    def base(self):
+        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10))
+
+    @state
+    def midday(self):
+        return State(grid=1000, pv1=1000, price=0.30)
+
+    @expect
+    def outputs(self):
+        return {
+            "gross_power": 2000.0,
+            "combined_lcoe_rate": 0.40,  # correction-neutral -> holds for both cells
+            "combined_lcoe_rate_corrected": 0.40,  # base value
+        }
+
+    @modify
+    def corrected(self):
+        # Only the corrected rate shifts; gross_power & base rate carry over.
+        return Modify("pv1", correction_factor=1.25).expect(
+            combined_lcoe_rate_corrected=0.425
+        )
+
+
+class TestChargingSplitDeclarative(DeclarativeScenario):
+    """Nested-dict expectations compare deeply and tolerantly (no @modify)."""
+
+    @topology
+    def solar_with_battery(self):
+        return Topology(
+            Adapter.grid(),
+            Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.battery(1, charge_from=("grid", "pv1")),
+            Adapter.consumer(1),
+        )
+
+    @state
+    def midmorning(self):
+        return State(grid=1000, pv1=3000, bat1=-500, cons1=-800, price=0.30)
+
+    @expect
+    def outputs(self):
+        return {
+            "gross_power": 4000.0,
+            "combined_charging_power": 500.0,
+            "storage_adapters_charging_source_shares": {
+                "bat1": {"grid": 0.25, "pv1": 0.75}
+            },
+            "grid_adapters_charging_power": {"grid": 125.0},
+            "storage_adapters_dynamic_lcoe": {"bat1": 0.15},
+        }
 
 
 # ===========================================================================

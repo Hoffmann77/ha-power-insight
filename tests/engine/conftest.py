@@ -27,6 +27,11 @@ def _scenario_cell(request: Any) -> Any:
 
 
 @pytest.fixture
+def _decl_case(request: Any) -> Any:
+    return request.param
+
+
+@pytest.fixture
 def power_insight(_scenario_cell: Any) -> Any:
     """A freshly built engine for the current (topology, state) cell."""
     return _scenario_cell.build_engine()
