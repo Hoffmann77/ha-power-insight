@@ -93,6 +93,9 @@ class Adapter:
     config: dict[str, Any]
     inverted: bool = False
     has_price: bool = True  # whether the grid has a price source entity at all
+    #: Explicit uid overriding the number-derived default (e.g. "powerwall").
+    #: This is exactly the key used in State(...), charge_from, and Modify(...).
+    explicit_uid: str | None = None
 
     # -- factories --------------------------------------------------------
 
@@ -111,6 +114,7 @@ class Adapter:
         cls,
         number: int = 1,
         *,
+        uid: str | None = None,
         lcoe: float | None = 0.10,
         lco2_intensity: float | None = 50.0,
         exports: bool = False,
@@ -131,6 +135,7 @@ class Adapter:
                 "correction_factor": correction_factor,
             },
             inverted=inverted,
+            explicit_uid=uid,
         )
 
     @classmethod
@@ -138,6 +143,7 @@ class Adapter:
         cls,
         number: int = 1,
         *,
+        uid: str | None = None,
         lcos: float | None = 0.15,
         lco2_intensity: float | None = 100.0,
         exports: bool = False,
@@ -158,6 +164,7 @@ class Adapter:
                 "charge_from_adapters": tuple(charge_from),
             },
             inverted=inverted,
+            explicit_uid=uid,
         )
 
     @classmethod
@@ -165,10 +172,11 @@ class Adapter:
         cls,
         number: int = 1,
         *,
+        uid: str | None = None,
         inverted: bool = False,
         name: str | None = None,
     ) -> Adapter:
-        return cls("consumer", number, {"name": name}, inverted=inverted)
+        return cls("consumer", number, {"name": name}, inverted=inverted, explicit_uid=uid)
 
     # -- derived ----------------------------------------------------------
 
@@ -176,7 +184,7 @@ class Adapter:
     def uid(self) -> str:
         if self.kind == "grid":
             return "grid"
-        return f"{_KIND_PREFIX[self.kind]}{self.number}"
+        return self.explicit_uid or f"{_KIND_PREFIX[self.kind]}{self.number}"
 
     @property
     def power_entity(self) -> str:

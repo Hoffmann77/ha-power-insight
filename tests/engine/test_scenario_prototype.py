@@ -71,6 +71,39 @@ class TestChargingSplit(EngineTestScenario):
         }
 
 
+class TestNamedAdapters(EngineTestScenario):
+    """Explicit ``uid`` links the adapter to its State key with a readable name.
+
+    Same scenario as ``TestChargingSplit`` but the battery is named ``powerwall``
+    instead of the number-derived ``bat1`` — the id used at the adapter is exactly
+    the key used in ``State``, ``charge_from`` and the ``@expect`` map.
+    """
+
+    @topology
+    def solar_with_battery(self):
+        return Topology(
+            Adapter.grid(),
+            Adapter.pv(uid="east_roof", lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.battery(uid="powerwall", charge_from=("grid", "east_roof")),
+            Adapter.consumer(uid="house"),
+        )
+
+    @state
+    def midmorning(self):
+        return State(grid=1000, east_roof=3000, powerwall=-500, house=-800, price=0.30)
+
+    @expect
+    def outputs(self):
+        return {
+            "gross_power": 4000.0,
+            "combined_charging_power": 500.0,
+            "storage_adapters_charging_source_shares": {
+                "powerwall": {"grid": 0.25, "east_roof": 0.75}
+            },
+            "grid_adapters_charging_power": {"grid": 125.0},
+        }
+
+
 class TestPureGridExportDegenerate(EngineTestScenario):
     """Export 500 W with no production: gross 0, consumption goes negative.
 
