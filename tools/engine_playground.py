@@ -4,37 +4,42 @@
 Self-contained: loads the pure-Python engine (``power_insight.py``) directly, so
 no Home Assistant install is needed and there is no dependency on the test suite.
 
-Define the device and its entity values in one place — :func:`define_device` —
-and get a ready-to-query engine from :func:`get_power_insight`. Three ways to use
-it:
+``MockPowerInsight`` **is** a ``PowerInsight`` — construct it with adapter configs
+(the device topology), feed entity values with :meth:`MockPowerInsight.mock`, then
+call any engine method or property on it directly::
 
-1. Interactively — drops you in a REPL with a ``power_insight`` instance ready::
+    pi = MockPowerInsight(
+        Grid(),
+        Pv("pv1", exports_power=True, export_compensation=0.08),
+        Battery("bat1", charge_from=["grid", "pv1"]),
+        Consumer("cons1"),
+    )
+    pi.mock(grid=1500, grid_price=0.30, pv1=4000, bat1=-800, cons1=-1200)
+    pi.gross_power            # 5500.0
+    pi.combined_saving_rate   # 0.96
+    pi.mock(pv1=0)            # re-mock a slot and read again (chainable)
 
-       uv run python -i tools/engine_playground.py
-       >>> power_insight.gross_power
-       >>> power_insight.combined_saving_rate
+Config vs. value:
+  * **config** (constructor) — everything fixed about an adapter: lcoe/lcos,
+    export settings, correction_factor, charge_from, name, inverted, …
+  * **value** (``.mock()``) — the live sensor readings: each adapter's ``power``
+    (keyed by uid) plus the grid's ``grid_price`` / ``grid_co2``. ``None`` models
+    an unavailable sensor. Unknown slot names raise with the valid list.
 
-2. From your own script / REPL — import and build::
+Three ways to use this file:
 
-       from tools.engine_playground import get_power_insight
-       pi = get_power_insight()
-       pi.storage_adapters_dynamic_lcoe
+    uv run python -i tools/engine_playground.py   # REPL with `power_insight` ready
+    uv run python tools/engine_playground.py      # print every engine property
+    uv run python tools/engine_playground.py gross # only names matching "gross"
+    uv run python tools/engine_playground.py --all # include helper properties
 
-3. As a report — print every engine property for the defined device::
-
-       uv run python tools/engine_playground.py            # print every property
-       uv run python tools/engine_playground.py gross      # names matching "gross"
-       uv run python tools/engine_playground.py --all      # include helper properties
-
-The ``Playground`` builder chains one call per adapter, each carrying its entity
-value (``power``, grid ``price``) and config.
+    from tools.engine_playground import MockPowerInsight, Grid, Pv, Battery, Consumer
 
 Sign convention (watts):
     grid      +import    / -export
     pv        +produce   / -standby
     battery   +discharge / -charge
     consumer  -load
-``power=None`` models an unavailable sensor.
 """
 
 from __future__ import annotations
@@ -42,6 +47,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
 # Load the pure-Python engine directly, bypassing all Home Assistant imports.
@@ -64,161 +70,218 @@ BatteryAdapter = _mod.BatteryAdapter
 ConsumerAdapter = _mod.ConsumerAdapter
 
 
-class Playground:
-    """Fluent builder for a :class:`PowerInsight` engine plus its readings.
+# ---------------------------------------------------------------------------
+# Adapter configs — the constructor arguments of MockPowerInsight. Each is pure
+# topology/config; runtime readings are supplied later via .mock().
+# ---------------------------------------------------------------------------
 
-    Each ``grid``/``pv``/``battery``/``consumer`` call registers one adapter and
-    records its sensor reading; :meth:`build` applies the readings and returns the
-    ready-to-query engine. Uids drive the power entity id (``sensor.<uid>_power``);
-    the grid uid is always ``"grid"``.
+
+@dataclass
+class Grid:
+    """The single grid connection. Its uid is always ``"grid"``.
+
+    ``with_price`` / ``with_co2`` decide whether a price / co2 sensor exists;
+    their readings are mocked via the ``grid_price`` / ``grid_co2`` value slots.
     """
 
-    def __init__(self) -> None:
-        self._engine = PowerInsight()
-        self._readings: dict[str, float | None] = {}
-        self.inputs: list[tuple[str, str, str]] = []  # (uid, kind, summary)
-
-    def _record(self, uid: str, kind: str, power, extras: dict) -> None:
-        self._readings[f"sensor.{uid}_power"] = power
-        parts = [f"power={power}"]
-        parts += [f"{k}={v!r}" for k, v in extras.items()]
-        self.inputs.append((uid, kind, "  ".join(parts)))
-
-    def grid(self, *, power, price=None, co2=None, inverted=False, name="Grid"):
-        self._engine.register_adapter(
-            GridAdapter(
-                unique_id="grid",
-                verbose_name=name,
-                power_entity="sensor.grid_power",
-                power_entity_inverted=inverted,
-                price_entity="sensor.grid_price" if price is not None else None,
-                co2_entity="sensor.grid_co2" if co2 is not None else None,
-            )
-        )
-        if price is not None:
-            self._readings["sensor.grid_price"] = price
-        if co2 is not None:
-            self._readings["sensor.grid_co2"] = co2
-        extras = {}
-        if price is not None:
-            extras["price"] = price
-        if co2 is not None:
-            extras["co2"] = co2
-        if inverted:
-            extras["inverted"] = True
-        self._record("grid", "grid", power, extras)
-        return self
-
-    def pv(
-        self,
-        uid,
-        *,
-        power,
-        lcoe=0.10,
-        lco2_intensity=50.0,
-        exports_power=False,
-        export_compensation=0.0,
-        correction_factor=1.0,
-        inverted=False,
-        name=None,
-    ):
-        self._engine.register_adapter(
-            PvAdapter(
-                unique_id=uid,
-                verbose_name=name or uid,
-                power_entity=f"sensor.{uid}_power",
-                power_entity_inverted=inverted,
-                lcoe=lcoe,
-                lco2_intensity=lco2_intensity,
-                exports_power=exports_power,
-                export_compensation=export_compensation,
-                correction_factor=correction_factor,
-            )
-        )
-        self._record(
-            uid,
-            "pv",
-            power,
-            {
-                "lcoe": lcoe,
-                "exports_power": exports_power,
-                "export_compensation": export_compensation,
-            },
-        )
-        return self
-
-    def battery(
-        self,
-        uid,
-        *,
-        power,
-        charge_from=(),
-        lcos=0.15,
-        lco2_intensity=100.0,
-        exports_power=False,
-        export_compensation=0.0,
-        correction_factor=1.0,
-        inverted=False,
-        name=None,
-    ):
-        self._engine.register_adapter(
-            BatteryAdapter(
-                unique_id=uid,
-                verbose_name=name or uid,
-                power_entity=f"sensor.{uid}_power",
-                power_entity_inverted=inverted,
-                lcos=lcos,
-                lco2_intensity=lco2_intensity,
-                exports_power=exports_power,
-                export_compensation=export_compensation,
-                charge_from_adapters=list(charge_from),
-                correction_factor=correction_factor,
-            )
-        )
-        self._record(
-            uid,
-            "battery",
-            power,
-            {"lcos": lcos, "charge_from": list(charge_from)},
-        )
-        return self
-
-    def consumer(self, uid, *, power, inverted=False, name=None):
-        self._engine.register_adapter(
-            ConsumerAdapter(
-                unique_id=uid,
-                verbose_name=name or uid,
-                power_entity=f"sensor.{uid}_power",
-                power_entity_inverted=inverted,
-            )
-        )
-        self._record(uid, "consumer", power, {"inverted": inverted} if inverted else {})
-        return self
-
-    def build(self) -> "PowerInsight":
-        for entity_id, value in self._readings.items():
-            self._engine.set_value(entity_id, value)
-        return self._engine
+    with_price: bool = True
+    with_co2: bool = False
+    inverted: bool = False
+    name: str = "Grid"
 
 
-def define_device() -> Playground:
-    """EDIT ME — declare the device, its adapters and their entity values.
+@dataclass
+class Pv:
+    """A PV-system adapter. ``uid`` (e.g. ``"pv1"``) names its power value slot."""
 
-    This is the single place to change inputs. Returns the populated builder;
-    call :func:`get_power_insight` (or ``.build()``) to get the engine.
+    uid: str
+    lcoe: float | None = 0.10
+    lco2_intensity: float | None = 50.0
+    exports_power: bool = False
+    export_compensation: float = 0.0
+    correction_factor: float = 1.0
+    inverted: bool = False
+    name: str | None = None
+
+
+@dataclass
+class Battery:
+    """A battery adapter. ``charge_from`` lists the uids it charges from."""
+
+    uid: str
+    charge_from: list[str] = field(default_factory=list)
+    lcos: float | None = 0.15
+    lco2_intensity: float | None = 100.0
+    exports_power: bool = False
+    export_compensation: float = 0.0
+    correction_factor: float = 1.0
+    inverted: bool = False
+    name: str | None = None
+
+
+@dataclass
+class Consumer:
+    """A consumer adapter."""
+
+    uid: str
+    inverted: bool = False
+    name: str | None = None
+
+
+class MockPowerInsight(PowerInsight):
+    """A ``PowerInsight`` preconfigured from adapter configs, fed via ``.mock()``.
+
+    Construct with any number of :class:`Grid` / :class:`Pv` / :class:`Battery` /
+    :class:`Consumer` configs (exactly one grid). The instance is a real engine,
+    so every ``PowerInsight`` property/method works on it directly. Validates
+    unique uids and that every ``charge_from`` target exists.
     """
-    return (
-        Playground()
-        .grid(power=1500, price=0.30)
-        .pv("pv1", power=4000, exports_power=True, export_compensation=0.08)
-        .battery("bat1", power=-800, charge_from=["grid", "pv1"])
-        .consumer("cons1", power=-1200)
+
+    def __init__(self, *configs: Grid | Pv | Battery | Consumer) -> None:
+        super().__init__()
+        self.configs = list(configs)
+        self._slots: dict[str, str] = {}  # value slot name -> entity_id
+        self._values: dict[str, float | None] = {}  # slot name -> mocked value
+
+        grids = [c for c in configs if isinstance(c, Grid)]
+        if len(grids) != 1:
+            raise ValueError(f"exactly one Grid config required, got {len(grids)}")
+
+        seen: set[str] = set()
+        for config in configs:
+            self._register(config, seen)
+
+        uids = {"grid"} | {
+            c.uid for c in configs if isinstance(c, (Pv, Battery, Consumer))
+        }
+        for config in configs:
+            if isinstance(config, Battery):
+                for source in config.charge_from:
+                    if source not in uids:
+                        raise ValueError(
+                            f"Battery {config.uid!r} charge_from references unknown "
+                            f"adapter {source!r}; known: {sorted(uids)}"
+                        )
+
+    def _add_slot(self, name: str, entity_id: str, seen: set[str]) -> None:
+        if name in seen:
+            raise ValueError(f"duplicate value slot / uid {name!r}")
+        seen.add(name)
+        self._slots[name] = entity_id
+
+    def _register(self, config, seen: set[str]) -> None:
+        if isinstance(config, Grid):
+            price_entity = "sensor.grid_price" if config.with_price else None
+            co2_entity = "sensor.grid_co2" if config.with_co2 else None
+            self.register_adapter(
+                GridAdapter(
+                    unique_id="grid",
+                    verbose_name=config.name,
+                    power_entity="sensor.grid_power",
+                    power_entity_inverted=config.inverted,
+                    price_entity=price_entity,
+                    co2_entity=co2_entity,
+                )
+            )
+            self._add_slot("grid", "sensor.grid_power", seen)
+            if price_entity:
+                self._add_slot("grid_price", price_entity, seen)
+            if co2_entity:
+                self._add_slot("grid_co2", co2_entity, seen)
+
+        elif isinstance(config, Pv):
+            entity = f"sensor.{config.uid}_power"
+            self.register_adapter(
+                PvAdapter(
+                    unique_id=config.uid,
+                    verbose_name=config.name or config.uid,
+                    power_entity=entity,
+                    power_entity_inverted=config.inverted,
+                    lcoe=config.lcoe,
+                    lco2_intensity=config.lco2_intensity,
+                    exports_power=config.exports_power,
+                    export_compensation=config.export_compensation,
+                    correction_factor=config.correction_factor,
+                )
+            )
+            self._add_slot(config.uid, entity, seen)
+
+        elif isinstance(config, Battery):
+            entity = f"sensor.{config.uid}_power"
+            self.register_adapter(
+                BatteryAdapter(
+                    unique_id=config.uid,
+                    verbose_name=config.name or config.uid,
+                    power_entity=entity,
+                    power_entity_inverted=config.inverted,
+                    lcos=config.lcos,
+                    lco2_intensity=config.lco2_intensity,
+                    exports_power=config.exports_power,
+                    export_compensation=config.export_compensation,
+                    charge_from_adapters=list(config.charge_from),
+                    correction_factor=config.correction_factor,
+                )
+            )
+            self._add_slot(config.uid, entity, seen)
+
+        elif isinstance(config, Consumer):
+            entity = f"sensor.{config.uid}_power"
+            self.register_adapter(
+                ConsumerAdapter(
+                    unique_id=config.uid,
+                    verbose_name=config.name or config.uid,
+                    power_entity=entity,
+                    power_entity_inverted=config.inverted,
+                )
+            )
+            self._add_slot(config.uid, entity, seen)
+
+        else:
+            raise TypeError(f"unknown config type {type(config).__name__}")
+
+    def mock(self, **values: float | None) -> "MockPowerInsight":
+        """Set entity values by slot name; returns ``self`` for chaining.
+
+        Slots are each adapter's uid (its power reading) plus ``grid_price`` /
+        ``grid_co2`` when the grid has them. Unknown names raise ``KeyError``.
+        Merges with previously mocked values, so re-mocking one slot is fine.
+        """
+        for name, value in values.items():
+            if name not in self._slots:
+                raise KeyError(
+                    f"unknown value slot {name!r}; known: {sorted(self._slots)}"
+                )
+            self._values[name] = value
+            self.set_value(self._slots[name], value)
+        return self
+
+    @property
+    def mocked_values(self) -> dict[str, float | None]:
+        """Slot name -> value for every slot mocked so far."""
+        return dict(self._values)
+
+
+def define_device() -> MockPowerInsight:
+    """EDIT ME — configure the adapters, mock their entity values, return it."""
+    pi = MockPowerInsight(
+        Grid(),
+        Pv("pv1", exports_power=True, export_compensation=0.08),
+        Battery("bat1", charge_from=["grid", "pv1"]),
+        Consumer("cons1"),
     )
+    pi.mock(
+        grid=1500,
+        grid_price=0.30,
+        pv1=4000,
+        bat1=-800,
+        cons1=-1200,
+    )
+    return pi
 
 
-def get_power_insight() -> "PowerInsight":
-    """Return a ready-to-query :class:`PowerInsight` for the defined device."""
-    return define_device().build()
+def get_power_insight() -> MockPowerInsight:
+    """Return the ready-to-query engine for the device defined above."""
+    return define_device()
 
 
 # Structural helpers (entity/uid plumbing), not calculation results. Hidden by
@@ -232,6 +295,7 @@ _HELPER_PROPS = {
     "source_entities_power",
     "source_entities_price",
     "source_entities_co2",
+    "mocked_values",
 }
 
 
@@ -258,14 +322,19 @@ def main(argv: list[str]) -> int:
     show_all = "--all" in argv
     filters = [a.lower() for a in argv if not a.startswith("-")]
 
-    device = define_device()
-    engine = device.build()
+    engine = get_power_insight()
 
     print("=" * 72)
-    print("INPUTS")
+    print("CONFIG")
     print("=" * 72)
-    for uid, kind, summary in device.inputs:
-        print(f"  {uid:<8} {kind:<10} {summary}")
+    for config in engine.configs:
+        print(f"  {config}")
+    print()
+    print("=" * 72)
+    print("VALUES  (slot -> reading)")
+    print("=" * 72)
+    for slot, value in engine.mocked_values.items():
+        print(f"  {slot:<12} {_fmt(value)}")
     print()
 
     scalars: list[tuple[str, object]] = []
