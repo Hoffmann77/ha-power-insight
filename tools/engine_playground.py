@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
-"""Run the PowerInsight engine with custom input values — a dev playground.
+"""MockPowerInsight — drive the PowerInsight engine with custom input values.
 
-Self-contained: loads the pure-Python engine (``power_insight.py``) directly, so
-no Home Assistant install is needed and there is no dependency on the test suite.
+Self-contained framework: loads the pure-Python engine (``power_insight.py``)
+directly, so no Home Assistant install is needed and there is no dependency on
+the test suite. Import it, instantiate, mock values, and use it.
 
 ``MockPowerInsight`` **is** a ``PowerInsight`` — construct it with adapter configs
 (the device topology), feed entity values with :meth:`MockPowerInsight.mock`, then
@@ -30,8 +30,7 @@ Config vs. value:
     (keyed by uid) plus the grid's ``grid_price`` / ``grid_co2``. ``None`` models
     an unavailable sensor. Unknown slot names raise with the valid list.
 
-Import it and drive it yourself (run Python from the repo root). Importing the
-module has no side effects — you get the class to instantiate::
+Import it and drive it yourself (run Python from the repo root)::
 
     from tools.engine_playground import MockPowerInsight, Grid, Pv, Battery, Consumer
 
@@ -39,13 +38,6 @@ module has no side effects — you get the class to instantiate::
     pi.mock(grid=1500, grid_price=0.30, pv1=4000, cons1=-1200)
     pi.gross_power
     pi.print_all()
-
-Or run this file directly, which uses the device defined in ``define_device``:
-
-    uv run python -i tools/engine_playground.py   # REPL with `power_insight` ready
-    uv run python tools/engine_playground.py      # print every engine property
-    uv run python tools/engine_playground.py gross # only names matching "gross"
-    uv run python tools/engine_playground.py --all # include helper properties
 
 Sign convention (watts):
     grid      +import    / -export
@@ -58,7 +50,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import sys
 from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
@@ -352,29 +343,6 @@ class MockPowerInsight(PowerInsight):
             print("No properties to print.")
 
 
-def define_device() -> MockPowerInsight:
-    """EDIT ME — configure the adapters, mock their entity values, return it."""
-    pi = MockPowerInsight(
-        Grid(),
-        Pv("pv1", exports_power=True, export_compensation=0.08),
-        Battery("bat1", charge_from=["grid", "pv1"]),
-        Consumer("cons1"),
-    )
-    pi.mock(
-        grid=1500,
-        grid_price=0.30,
-        pv1=4000,
-        bat1=-800,
-        cons1=-1200,
-    )
-    return pi
-
-
-def get_power_insight() -> MockPowerInsight:
-    """Return the ready-to-query engine for the device defined above."""
-    return define_device()
-
-
 # Structural helpers (entity/uid plumbing), not calculation results. Hidden by
 # default; shown with ``--all``.
 _HELPER_PROPS = {
@@ -407,49 +375,3 @@ def _fmt(value: object) -> str:
     if isinstance(value, float):
         return f"{value:.6g}"
     return repr(value)
-
-
-def main(argv: list[str]) -> int:
-    show_all = "--all" in argv
-    filters = [a.lower() for a in argv if not a.startswith("-")]
-
-    engine = get_power_insight()
-
-    print("=" * 72)
-    print("CONFIG")
-    print("=" * 72)
-    for config in engine.configs:
-        print(f"  {config}")
-    print()
-    print("=" * 72)
-    print("VALUES  (slot -> reading)")
-    print("=" * 72)
-    for slot, value in engine.mocked_values.items():
-        print(f"  {slot:<12} {_fmt(value)}")
-    print()
-
-    names = _engine_properties()
-    if not show_all:
-        names = [n for n in names if n not in _HELPER_PROPS]
-    if filters:
-        names = [n for n in names if any(f in n.lower() for f in filters)]
-
-    if names:
-        engine._render_grouped(names)
-    else:
-        print("No properties matched the given filter(s).")
-
-    return 0
-
-
-if __name__ == "__main__":
-    # Only build the default device when run as a script — importing the module
-    # has no side effects, so `from tools.engine_playground import
-    # MockPowerInsight` just gives you the class to instantiate yourself.
-    power_insight = get_power_insight()
-    if sys.flags.interactive:
-        # `python -i tools/engine_playground.py` — leave `power_insight` in scope
-        # instead of printing the full report and exiting.
-        print("power_insight ready — e.g. power_insight.gross_power")
-    else:
-        raise SystemExit(main(sys.argv[1:]))
