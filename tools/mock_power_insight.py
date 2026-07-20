@@ -32,7 +32,7 @@ Config vs. value:
 
 Import it and drive it yourself (run Python from the repo root)::
 
-    from tools.engine_playground import MockPowerInsight, Grid, Pv, Battery, Consumer
+    from tools.mock_power_insight import MockPowerInsight, Grid, Pv, Battery, Consumer
 
     pi = MockPowerInsight(Grid(), Pv("pv1"), Consumer("cons1"))
     pi.mock(grid=1500, grid_price=0.30, pv1=4000, cons1=-1200)
