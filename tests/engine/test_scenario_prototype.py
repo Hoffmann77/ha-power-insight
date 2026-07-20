@@ -26,6 +26,7 @@ from tests.engine.scenario_framework import (
     Modify,
     State,
     Topology,
+    cells,
     expect,
     export_ratio_bounded,
     modify,
@@ -313,6 +314,20 @@ class TestExportConfigScopedDeclarative(DeclarativeScenario):
         # (1000 W / 1000) * 0.08 EUR/kWh — only this cell earns compensation.
         return {"combined_export_compensation_rate": 0.08}
 
+    # --- bespoke test methods, scoped to a subset of the product -----------
+    # These coexist with the @expect maps: use a real assertion where a pinned
+    # number is awkward (a relationship, is-None, a formula).
+
+    @cells(state="midday")
+    def test_export_does_not_exceed_gross(self, power_insight):
+        # Runs only on the two midday cells (exporting + self_consume).
+        assert power_insight.combined_grid_export <= power_insight.gross_power
+
+    @cells(topology="exporting", state="midday")
+    def test_only_exporting_midday_earns_compensation(self, power_insight):
+        # Runs on exactly one cell — a code assertion, not a pinned value.
+        assert power_insight.combined_export_compensation_rate > 0
+
 
 class TestChargingSplitDeclarative(DeclarativeScenario):
     """Nested-dict expectations compare deeply and tolerantly (no @modify)."""
@@ -490,6 +505,26 @@ def test_declarative_rejects_cell_without_expectations():
 
     with pytest.raises(ValueError, match="no expected values"):
         Gap.decl_cases()
+
+
+def test_cells_scope_matching_nothing_errors():
+    # A @cells scope naming a nonexistent state must fail loudly rather than
+    # silently produce a test method that runs against zero cells.
+    from tests.engine.scenario_framework import Cell, _filter_cells_by_scope
+
+    class Shape(LawScenario):
+        @topology
+        def only(self):
+            return Topology(Adapter.grid(), Adapter.pv(1))
+
+        @state
+        def midday(self):
+            return State(grid=100, pv1=200, price=0.30)
+
+    scenario_cells = Shape.scenario_cells()
+    assert isinstance(scenario_cells[0], Cell)
+    with pytest.raises(ValueError, match="matches no state"):
+        _filter_cells_by_scope(scenario_cells, (None, "typo"), "Shape.test_x")
 
 
 def test_modify_rejects_unknown_target():

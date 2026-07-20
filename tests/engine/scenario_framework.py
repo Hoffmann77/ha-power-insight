@@ -422,6 +422,51 @@ def expect(
     return _mark  # @expect(...) usage
 
 
+def cells(
+    *, topology: str | None = None, state: str | None = None
+) -> Callable[[Callable], Callable]:
+    """Restrict a ``test_`` method to product cells matching this scope.
+
+    For product scenarios (DeclarativeScenario / LawScenario). Without it a test
+    method runs against every cell; ``@cells(topology="exporting")`` /
+    ``@cells(state="midday")`` / ``@cells(topology="x", state="y")`` narrow it to
+    the matching subset. Use it to add a bespoke assertion (``is None``, a
+    relationship, a formula) for specific cells alongside the ``@expect`` maps.
+    """
+
+    def deco(fn: Callable) -> Callable:
+        fn._cell_scope = (topology, state)  # type: ignore[attr-defined]
+        return fn
+
+    return deco
+
+
+def _filter_cells_by_scope(
+    cells_: list["Cell"],
+    scope: tuple[str | None, str | None],
+    where: str,
+) -> list["Cell"]:
+    topo_s, state_s = scope
+    topo_names = {c.topology.name for c in cells_}
+    state_names = {c.state.name for c in cells_}
+    if topo_s is not None and topo_s not in topo_names:
+        raise ValueError(
+            f"{where}: @cells(topology={topo_s!r}) matches no topology; "
+            f"known: {sorted(topo_names)}"
+        )
+    if state_s is not None and state_s not in state_names:
+        raise ValueError(
+            f"{where}: @cells(state={state_s!r}) matches no state; "
+            f"known: {sorted(state_names)}"
+        )
+    return [
+        c
+        for c in cells_
+        if (topo_s is None or c.topology.name == topo_s)
+        and (state_s is None or c.state.name == state_s)
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Modify — attribute changes to the base topology, producing a variant cell.
 # ---------------------------------------------------------------------------
@@ -852,12 +897,20 @@ def generate_scenario_tests(metafunc: Any) -> None:
     cls = getattr(metafunc, "cls", None)
     if cls is None or not (isinstance(cls, type) and issubclass(cls, _ScenarioBase)):
         return
-    if issubclass(cls, DeclarativeScenario):
-        if "_decl_case" in metafunc.fixturenames:
-            cases = cls.decl_cases()
-            metafunc.parametrize("_decl_case", cases, ids=[c.id for c in cases])
+    # The built-in DeclarativeScenario.test_property is driven by _decl_case.
+    if "_decl_case" in metafunc.fixturenames:
+        cases = cls.decl_cases()
+        metafunc.parametrize("_decl_case", cases, ids=[c.id for c in cases])
         return
+    # Any other test method (LawScenario, or a bespoke method on a
+    # DeclarativeScenario) runs over the cells, optionally scoped by @cells.
     if "_scenario_cell" not in metafunc.fixturenames:
         return
-    cells = cls.scenario_cells()
-    metafunc.parametrize("_scenario_cell", cells, ids=[c.id for c in cells])
+    scenario_cells = cls.scenario_cells()
+    scope = getattr(metafunc.function, "_cell_scope", None)
+    if scope is not None:
+        where = f"{cls.__name__}.{metafunc.function.__name__}"
+        scenario_cells = _filter_cells_by_scope(scenario_cells, scope, where)
+    metafunc.parametrize(
+        "_scenario_cell", scenario_cells, ids=[c.id for c in scenario_cells]
+    )
