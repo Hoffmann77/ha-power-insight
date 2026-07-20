@@ -14,7 +14,7 @@ It separates the axes that the older ``Device`` surface fused together:
 * **Expectation** — what a property should be, as an ``@expect`` data map and/or
   a ``test_`` method.
 
-A scenario subclasses :class:`DeclarativeScenario` (the only base). Its cells are
+A scenario subclasses :class:`EngineTestScenario` (the only base). Its cells are
 the topology × state product, plus any ``@modify`` variants. Each cell is checked
 by:
 
@@ -386,7 +386,7 @@ def expect(
 ) -> Any:
     """Mark a method as returning a ``{property_name: expected_value}`` map.
 
-    DeclarativeScenario only. Usable bare or scoped::
+    EngineTestScenario only. Usable bare or scoped::
 
         @expect                         # applies to every cell (defaults)
         @expect(state="midday")         # only cells whose state is "midday"
@@ -630,7 +630,7 @@ class _ScenarioBase:
 
 
 # ---------------------------------------------------------------------------
-# DeclarativeScenario — expectations as data, assertions auto-generated.
+# EngineTestScenario — expectations as data, assertions auto-generated.
 # ---------------------------------------------------------------------------
 
 
@@ -664,7 +664,7 @@ class _DeclCase:
         return f"{self.cell.id}-{self.prop}"
 
 
-class DeclarativeScenario(_ScenarioBase):
+class EngineTestScenario(_ScenarioBase):
     """The single scenario base: a topology × state product, checked two ways.
 
     Declare ``@topology`` + ``@state`` (+ optional ``@modify`` variants). Every
@@ -757,7 +757,7 @@ def generate_scenario_tests(metafunc: Any) -> None:
     cls = getattr(metafunc, "cls", None)
     if cls is None or not (isinstance(cls, type) and issubclass(cls, _ScenarioBase)):
         return
-    # The built-in DeclarativeScenario.test_property is driven by _decl_case.
+    # The built-in EngineTestScenario.test_property is driven by _decl_case.
     if "_decl_case" in metafunc.fixturenames:
         cases = cls.decl_cases()
         metafunc.parametrize("_decl_case", cases, ids=[c.id for c in cases])

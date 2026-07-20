@@ -1,6 +1,6 @@
 """Demonstration of the ``@topology`` / ``@state`` scenario framework.
 
-Every scenario subclasses :class:`DeclarativeScenario` (the only base). Its cells
+Every scenario subclasses :class:`EngineTestScenario` (the only base). Its cells
 are the ``@topology`` × ``@state`` product (plus ``@modify`` variants), checked
 by ``@expect`` data maps and/or ``test_`` methods. This one file shows the range:
 
@@ -20,7 +20,7 @@ import pytest
 
 from tests.engine.scenario_framework import (
     Adapter,
-    DeclarativeScenario,
+    EngineTestScenario,
     Modify,
     State,
     Topology,
@@ -37,7 +37,7 @@ from tests.engine.scenario_framework import (
 # ===========================================================================
 
 
-class TestChargingSplit(DeclarativeScenario):
+class TestChargingSplit(EngineTestScenario):
     """Grid + PV + a battery charging from both, gross 4000 W.
 
     Import 1000 W (gross share 0.25) and PV 3000 W (share 0.75) feed a 500 W
@@ -71,7 +71,7 @@ class TestChargingSplit(DeclarativeScenario):
         }
 
 
-class TestPureGridExportDegenerate(DeclarativeScenario):
+class TestPureGridExportDegenerate(EngineTestScenario):
     """Export 500 W with no production: gross 0, consumption goes negative.
 
     Also shows the bare-tuple ``@topology`` return (no ``Topology(...)`` wrapper).
@@ -96,7 +96,7 @@ class TestPureGridExportDegenerate(DeclarativeScenario):
         }
 
 
-class TestInvertedGridNoPrice(DeclarativeScenario):
+class TestInvertedGridNoPrice(EngineTestScenario):
     """Inverted grid sensor, no price reading — an unavailable-input edge case.
 
     ``inverted=True`` (adapter config) flips the sign so a +600 reading is 600 W
@@ -131,7 +131,7 @@ class TestInvertedGridNoPrice(DeclarativeScenario):
 # ===========================================================================
 
 
-class TestExportFlagIsResultNeutralWhenImporting(DeclarativeScenario):
+class TestExportFlagIsResultNeutralWhenImporting(EngineTestScenario):
     """Toggling PV export credit must not change results while the grid imports.
 
     Base: 200 W import + 1000 W self-consumed PV. The ``@modify`` flips the PV to
@@ -160,7 +160,7 @@ class TestExportFlagIsResultNeutralWhenImporting(DeclarativeScenario):
         }
 
 
-class TestCorrectionFactorVariant(DeclarativeScenario):
+class TestCorrectionFactorVariant(EngineTestScenario):
     """One config change, two outcomes: base rate unchanged, corrected rate not.
 
     The ``@expect`` map holds the base outcomes; the ``@modify`` overrides only
@@ -197,7 +197,7 @@ class TestCorrectionFactorVariant(DeclarativeScenario):
 # ===========================================================================
 
 
-class TestExportConfigScoped(DeclarativeScenario):
+class TestExportConfigScoped(EngineTestScenario):
     """2 topologies × 2 states (4 cells) with scoped maps and scoped methods.
 
     ``gross_power`` / ``combined_grid_export`` depend only on the state → scoped
@@ -257,7 +257,7 @@ class TestExportConfigScoped(DeclarativeScenario):
 # ===========================================================================
 
 
-class TestExportConfigurationLaws(DeclarativeScenario):
+class TestExportConfigurationLaws(EngineTestScenario):
     """Same shape/config sweep, verified by laws rather than pinned values.
 
     No ``@expect`` map: the assertions are formulas/relationships that hold for
@@ -305,7 +305,7 @@ class TestExportConfigurationLaws(DeclarativeScenario):
 
 
 def test_incompatible_state_is_rejected():
-    class Broken(DeclarativeScenario):
+    class Broken(EngineTestScenario):
         @topology
         def grid_and_pv(self):
             return Topology(Adapter.grid(), Adapter.pv(1))
@@ -321,7 +321,7 @@ def test_incompatible_state_is_rejected():
 
 
 def test_expect_rejects_unknown_scope():
-    class BadScope(DeclarativeScenario):
+    class BadScope(EngineTestScenario):
         @topology
         def only(self):
             return Topology(Adapter.grid(), Adapter.pv(1))
@@ -341,7 +341,7 @@ def test_expect_rejects_unknown_scope():
 def test_cells_scope_matching_nothing_errors():
     from tests.engine.scenario_framework import Cell, _filter_cells_by_scope
 
-    class Shape(DeclarativeScenario):
+    class Shape(EngineTestScenario):
         @topology
         def only(self):
             return Topology(Adapter.grid(), Adapter.pv(1))
@@ -357,7 +357,7 @@ def test_cells_scope_matching_nothing_errors():
 
 
 def test_modify_rejects_unknown_target():
-    class BadTarget(DeclarativeScenario):
+    class BadTarget(EngineTestScenario):
         @topology
         def grid_only(self):
             return (Adapter.grid(),)
