@@ -30,14 +30,22 @@ Config vs. value:
     (keyed by uid) plus the grid's ``grid_price`` / ``grid_co2``. ``None`` models
     an unavailable sensor. Unknown slot names raise with the valid list.
 
-Three ways to use this file:
+Import it and drive it yourself (run Python from the repo root). Importing the
+module has no side effects — you get the class to instantiate::
+
+    from tools.engine_playground import MockPowerInsight, Grid, Pv, Battery, Consumer
+
+    pi = MockPowerInsight(Grid(), Pv("pv1"), Consumer("cons1"))
+    pi.mock(grid=1500, grid_price=0.30, pv1=4000, cons1=-1200)
+    pi.gross_power
+    pi.print_all()
+
+Or run this file directly, which uses the device defined in ``define_device``:
 
     uv run python -i tools/engine_playground.py   # REPL with `power_insight` ready
     uv run python tools/engine_playground.py      # print every engine property
     uv run python tools/engine_playground.py gross # only names matching "gross"
     uv run python tools/engine_playground.py --all # include helper properties
-
-    from tools.engine_playground import MockPowerInsight, Grid, Pv, Battery, Consumer
 
 Sign convention (watts):
     grid      +import    / -export
@@ -434,11 +442,11 @@ def main(argv: list[str]) -> int:
     return 0
 
 
-# A ready-to-query engine, importable and available in `python -i` sessions.
-power_insight = get_power_insight()
-
-
 if __name__ == "__main__":
+    # Only build the default device when run as a script — importing the module
+    # has no side effects, so `from tools.engine_playground import
+    # MockPowerInsight` just gives you the class to instantiate yourself.
+    power_insight = get_power_insight()
     if sys.flags.interactive:
         # `python -i tools/engine_playground.py` — leave `power_insight` in scope
         # instead of printing the full report and exiting.
