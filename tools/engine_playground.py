@@ -3,16 +3,31 @@
 
 Self-contained: loads the pure-Python engine (``power_insight.py``) directly, so
 no Home Assistant install is needed and there is no dependency on the test suite.
-Edit ``build_engine()`` below to model a device and its live sensor readings,
-then run::
 
-    uv run python tools/engine_playground.py            # print every property
-    uv run python tools/engine_playground.py gross      # only names matching "gross"
-    uv run python tools/engine_playground.py --all      # include helper properties
+Define the device and its entity values in one place — :func:`define_device` —
+and get a ready-to-query engine from :func:`get_power_insight`. Three ways to use
+it:
 
-The ``Playground`` builder chains one call per adapter, each carrying its reading
-and config. It prints the inputs, then evaluates every public engine property and
-prints the results grouped into scalars and per-adapter maps.
+1. Interactively — drops you in a REPL with a ``power_insight`` instance ready::
+
+       uv run python -i tools/engine_playground.py
+       >>> power_insight.gross_power
+       >>> power_insight.combined_saving_rate
+
+2. From your own script / REPL — import and build::
+
+       from tools.engine_playground import get_power_insight
+       pi = get_power_insight()
+       pi.storage_adapters_dynamic_lcoe
+
+3. As a report — print every engine property for the defined device::
+
+       uv run python tools/engine_playground.py            # print every property
+       uv run python tools/engine_playground.py gross      # names matching "gross"
+       uv run python tools/engine_playground.py --all      # include helper properties
+
+The ``Playground`` builder chains one call per adapter, each carrying its entity
+value (``power``, grid ``price``) and config.
 
 Sign convention (watts):
     grid      +import    / -export
@@ -186,8 +201,12 @@ class Playground:
         return self._engine
 
 
-def build_engine() -> Playground:
-    """EDIT ME — declare the device and its sensor readings, return the builder."""
+def define_device() -> Playground:
+    """EDIT ME — declare the device, its adapters and their entity values.
+
+    This is the single place to change inputs. Returns the populated builder;
+    call :func:`get_power_insight` (or ``.build()``) to get the engine.
+    """
     return (
         Playground()
         .grid(power=1500, price=0.30)
@@ -195,6 +214,11 @@ def build_engine() -> Playground:
         .battery("bat1", power=-800, charge_from=["grid", "pv1"])
         .consumer("cons1", power=-1200)
     )
+
+
+def get_power_insight() -> "PowerInsight":
+    """Return a ready-to-query :class:`PowerInsight` for the defined device."""
+    return define_device().build()
 
 
 # Structural helpers (entity/uid plumbing), not calculation results. Hidden by
@@ -234,13 +258,13 @@ def main(argv: list[str]) -> int:
     show_all = "--all" in argv
     filters = [a.lower() for a in argv if not a.startswith("-")]
 
-    playground = build_engine()
-    engine = playground.build()
+    device = define_device()
+    engine = device.build()
 
     print("=" * 72)
     print("INPUTS")
     print("=" * 72)
-    for uid, kind, summary in playground.inputs:
+    for uid, kind, summary in device.inputs:
         print(f"  {uid:<8} {kind:<10} {summary}")
     print()
 
@@ -288,5 +312,14 @@ def main(argv: list[str]) -> int:
     return 0
 
 
+# A ready-to-query engine, importable and available in `python -i` sessions.
+power_insight = get_power_insight()
+
+
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    if sys.flags.interactive:
+        # `python -i tools/engine_playground.py` — leave `power_insight` in scope
+        # instead of printing the full report and exiting.
+        print("power_insight ready — e.g. power_insight.gross_power")
+    else:
+        raise SystemExit(main(sys.argv[1:]))
