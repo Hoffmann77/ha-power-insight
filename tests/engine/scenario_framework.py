@@ -1,41 +1,31 @@
-"""Prototype: ``@topology`` / ``@state`` scenario framework for engine tests.
+"""``@topology`` / ``@state`` scenario framework for engine tests.
 
-This is a *design prototype* exploring a single framework that can host **all**
-engine tests, replacing both the class-per-scenario edge-case file
-(``test_engine_property_scenarios.py``) and the one-topology-many-readings sweep
-(``test_power_insight_calculations.py``).
+A single framework that hosts all engine tests, replacing both the
+class-per-scenario edge-case file (``test_engine_property_scenarios.py``) and the
+one-topology-many-readings sweep (``test_power_insight_calculations.py``).
 
-The framework separates the three axes that the older ``Device`` surface fused
-together:
+It separates the axes that the older ``Device`` surface fused together:
 
 * **Topology** — which adapters exist and their static config (lcoe, export
-  compensation, charge routing …). Declared with an ``@topology`` method.
+  compensation, charge routing …). Declared with an ``@topology`` method, one or
+  more per scenario.
 * **State** — the readings (``grid=-1000, pv1=2000`` …). Declared with a
-  ``@state`` method.
-* **Expectation** — what a property should be, written in the ``test_`` methods.
+  ``@state`` method, one or more per scenario.
+* **Expectation** — what a property should be, as an ``@expect`` data map and/or
+  a ``test_`` method.
 
-Two base classes consume those axes with *different* semantics, because pinned
-numbers and general laws want different treatment (see the module ``README`` at
-the bottom of this file for the reasoning):
+A scenario subclasses :class:`DeclarativeScenario` (the only base). Its cells are
+the topology × state product, plus any ``@modify`` variants. Each cell is checked
+by:
 
-``CaseScenario``
-    Exactly one topology × one state. ``test_`` methods hold **hand-written,
-    pinned** expected values — the home for edge cases (zero gross power, pure
-    export, unavailable sensors, adapter routing). Same authoring surface as
-    ``LawScenario`` (``@topology`` + ``@state``), constrained to a single cell.
-    Spiritual successor to ``test_engine_property_scenarios.py``, minus the
-    preset indirection: adapter config lives inline on the ``Adapter`` call.
-    Optional ``@modify`` methods add config-variant cells that share the pinned
-    assertions (proving a config change is result-neutral), or override specific
-    values via ``Modify.expect(...)`` read through the ``expected`` fixture.
+* **``@expect`` maps** — ``{property: value}`` data, optionally scoped by
+  topology/state (see :func:`expect`); one assertion generated per (cell,
+  property).
+* **``test_`` methods** — ordinary pytest methods for bespoke assertions,
+  optionally narrowed to a subset of cells with ``@cells`` (see :func:`cells`).
 
-``LawScenario``
-    The **cartesian product** of every topology × every state. ``test_`` methods
-    must therefore hold assertions that *generalise* across the whole product —
-    invariants, or formulas written over the current ``state``. This is the home
-    for "one shape, many readings / config variants" sweeps. Because a pinned
-    number is only valid in one cell, pinning is *not allowed* here; the product
-    only makes sense for laws.
+Use maps for the numeric bulk and methods for the awkward cases (``is None``,
+relationships, formulas); a class may use either or both.
 
 Collection-time safety rail: a ``state`` must supply a reading for *exactly* the
 adapter uids its topology defines — no more, no less. A mismatch raises
@@ -45,13 +35,12 @@ battery-less topology while testing nothing).
 
 Wiring: ``tests/engine/conftest.py`` calls :func:`generate_scenario_tests` from
 ``pytest_generate_tests`` and defines the ``power_insight`` / ``state`` /
-``topology`` fixtures that the product is threaded through.
+``topology`` / ``expected`` fixtures the cells are threaded through.
 """
 
 from __future__ import annotations
 
 import importlib.util
-import itertools
 import os
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable
@@ -384,9 +373,9 @@ def state(fn: Callable[[Any], State]) -> Callable[[Any], State]:
 def modify(fn: Callable[[Any], "Modify"]) -> Callable[[Any], "Modify"]:
     """Mark a method as returning a :class:`Modify` — a topology variant.
 
-    CaseScenario / DeclarativeScenario. Each ``@modify`` spins off an extra cell:
-    the base topology with the modification applied, sharing the same ``@state``.
-    The assertions run against the base cell *and* every variant.
+    Each ``@modify`` spins off an extra cell: the base topology with the
+    modification applied, sharing the same ``@state``. The assertions (``@expect``
+    entries and ``test_`` methods) run against the base cell *and* every variant.
     """
     fn._scenario_role = "modify"  # type: ignore[attr-defined]
     return fn
@@ -427,8 +416,8 @@ def cells(
 ) -> Callable[[Callable], Callable]:
     """Restrict a ``test_`` method to product cells matching this scope.
 
-    For product scenarios (DeclarativeScenario / LawScenario). Without it a test
-    method runs against every cell; ``@cells(topology="exporting")`` /
+    Without it a test method runs against every cell of the product;
+    ``@cells(topology="exporting")`` /
     ``@cells(state="midday")`` / ``@cells(topology="x", state="y")`` narrow it to
     the matching subset. Use it to add a bespoke assertion (``is None``, a
     relationship, a formula) for specific cells alongside the ``@expect`` maps.
@@ -563,63 +552,7 @@ def _collect(cls: type, role: str) -> list[Callable[[Any], Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Invariants — laws checked against every cell of a LawScenario.
-# ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class Invariant:
-    """A named law. ``check(power_insight)`` raises ``AssertionError`` if broken."""
-
-    name: str
-    check: Callable[[Any], None]
-
-
-def reconstructs_gross_power() -> Invariant:
-    """gross_power equals an *independent* reconstruction from raw readings.
-
-    This is a differential check: the engine computes gross_power through its
-    adapter chain; here we recompute it straight from the stored raw values, so
-    a formula regression in the engine cannot hide behind a matching test.
-    """
-
-    def _check(pi: Any) -> None:
-        gross = pi.gross_power
-        if gross is None:
-            return
-        expected = 0.0
-        for adapter in [pi.grid_adapter, *pi.pv_system_adapters, *pi.storage_adapters]:
-            raw = adapter.power  # signed W, inversion already normalised
-            if raw is None:
-                return
-            # grid: import only; pv/battery: production / discharge only.
-            expected += max(raw, 0.0)
-        assert gross == pytest.approx(expected), (
-            f"gross_power {gross} != independent reconstruction {expected}"
-        )
-
-    return Invariant("reconstructs_gross_power", _check)
-
-
-def export_ratio_bounded() -> Invariant:
-    """gross_power_export_ratio stays in [0, 1] (or None) in the normal regime.
-
-    NB: this is only a law for *physical* states (production >= export). Pure
-    grid export with no production drives consumption negative — that degenerate
-    belongs in a CaseScenario, not a LawScenario family.
-    """
-
-    def _check(pi: Any) -> None:
-        ratio = pi.gross_power_export_ratio
-        if ratio is None:
-            return
-        assert -1e-9 <= ratio <= 1 + 1e-9, f"export ratio {ratio} out of [0, 1]"
-
-    return Invariant("export_ratio_bounded", _check)
-
-
-# ---------------------------------------------------------------------------
-# Base classes.
+# Base class.
 # ---------------------------------------------------------------------------
 
 
@@ -677,18 +610,6 @@ class _ScenarioBase:
         return cells
 
     @classmethod
-    def _single_cell_variants(cls) -> list[Cell]:
-        """One topology × one state (+ ``@modify`` variants). CaseScenario."""
-        topos = cls._topologies()
-        states = cls._states()
-        if len(topos) != 1 or len(states) != 1:
-            raise ValueError(
-                f"{cls.__name__}: expected exactly one @topology and one @state, "
-                f"got {len(topos)} topologies and {len(states)} states."
-            )
-        return cls._variant_cells(topos[0], states[0])
-
-    @classmethod
     def _product_cells(cls) -> list[Cell]:
         """Every topology × every state (+ ``@modify`` variants). Declarative."""
         topos = cls._topologies()
@@ -704,70 +625,8 @@ class _ScenarioBase:
         return cells
 
     @classmethod
-    def scenario_cells(cls) -> list[Cell]:  # overridden per base
-        raise NotImplementedError
-
-
-class CaseScenario(_ScenarioBase):
-    """Exactly one topology × one state, with **pinned** expected values.
-
-    The home for edge cases. Same authoring surface as :class:`LawScenario`
-    (``@topology`` + ``@state``), but constrained to a single cell — a pinned
-    number is only valid in one cell. Adding a second ``@state`` or ``@topology``
-    is an error; sweep readings with a :class:`LawScenario` instead.
-
-    ``@modify`` methods add variant cells (the base topology with adapter
-    attributes changed). The ``test_`` methods run against the base *and* every
-    variant: use this to prove a config change leaves a result unchanged, or —
-    with ``Modify.expect(...)`` + the ``expected`` fixture — to assert a
-    different value for that variant.
-    """
-
-    @classmethod
     def scenario_cells(cls) -> list[Cell]:
-        return cls._single_cell_variants()
-
-
-class LawScenario(_ScenarioBase):
-    """Every topology × every state. ``test_`` methods must **generalise**.
-
-    Because a cell's expected values differ, pin nothing here: write invariants
-    (see :attr:`INVARIANTS`) or formulas over the injected ``state`` fixture.
-    Multiple topologies should be *config variants of one adapter shape* (same
-    uids) so every state stays compatible with every topology.
-    """
-
-    #: Laws checked against every cell by the built-in ``test_invariants``.
-    INVARIANTS: list[Invariant] = []
-
-    @classmethod
-    def scenario_cells(cls) -> list[Cell]:
-        if cls._modifies():
-            raise ValueError(
-                f"{cls.__name__}: @modify is CaseScenario-only. A LawScenario "
-                f"already sweeps topologies — add another @topology instead."
-            )
-        topos = cls._topologies()
-        states = cls._states()
-        if not topos or not states:
-            raise ValueError(
-                f"{cls.__name__} needs at least one @topology and one @state"
-            )
-        cells = []
-        for topo, st in itertools.product(topos, states):
-            _check_compatible(topo, st)  # safety rail: no silent zero-fill
-            cells.append(Cell(topo, st))
-        return cells
-
-    def test_invariants(self, power_insight: Any, state: State) -> None:
-        """Assert every declared invariant against this cell."""
-        if not self.INVARIANTS:
-            pytest.skip("no INVARIANTS declared")
-        for inv in self.INVARIANTS:
-            try:
-                inv.check(power_insight)
-            except AssertionError as exc:
-                raise AssertionError(f"[{inv.name}] {exc}") from exc
+        return cls._product_cells()
 
 
 # ---------------------------------------------------------------------------
@@ -806,38 +665,42 @@ class _DeclCase:
 
 
 class DeclarativeScenario(_ScenarioBase):
-    """Expectations as data: no ``test_`` methods, assertions generated per cell.
+    """The single scenario base: a topology × state product, checked two ways.
 
-    Declare ``@topology`` + ``@state`` (+ optional ``@modify``) as usual, then an
-    ``@expect`` method returning ``{property_name: expected_value}``. The
-    framework emits one assertion per (cell, property):
-    ``getattr(power_insight, property) == expected`` (tolerant on floats, deep on
-    dicts). A ``@modify`` variant's ``Modify.expect(...)`` overrides individual
-    entries for that variant's cell; untouched entries carry the base value, so a
-    result-neutral variant is verified automatically.
+    Declare ``@topology`` + ``@state`` (+ optional ``@modify`` variants). Every
+    cell of the product can then be checked by either or both of:
 
-    Trade-off vs. :class:`CaseScenario`: no per-property method (so no place for a
-    bespoke assertion or a docstring per property), but the property name appears
-    exactly once as a map key, ``getattr`` makes a typo fail loudly, and a
-    variant override reuses that same key with no second call site.
+    * **``@expect`` maps** — ``{property_name: expected_value}`` data. The
+      framework emits one assertion per (cell, property):
+      ``getattr(power_insight, property) == expected`` (float-tolerant, deep on
+      dicts). Maps may be scoped by topology and/or state (see :func:`expect`);
+      for a cell the matching maps merge least-specific first, then a ``@modify``
+      variant's ``Modify.expect(...)`` wins last. A property name appears once as
+      a map key and ``getattr`` makes a typo fail loudly.
+    * **``test_`` methods** — ordinary pytest methods taking ``power_insight`` /
+      ``state`` / ``topology`` / ``expected``, for a bespoke assertion a pinned
+      number handles badly (a relationship, ``is None``, a formula). Without a
+      decorator a method runs against every cell; ``@cells(topology=, state=)``
+      scopes it to a subset.
 
-    Unlike CaseScenario this runs the full topology × state product, so an
-    ``@expect`` map can be scoped to a topology and/or state (see :func:`expect`)
-    to give different cells different expected values.
+    A class may use only maps, only methods, or both. This subsumes the earlier
+    single-cell (one topology/state) and product (many) styles.
     """
 
-    @classmethod
-    def scenario_cells(cls) -> list[Cell]:
-        return cls._product_cells()
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        # The generated ``test_property`` only makes sense with @expect maps.
+        # For a pure test-method scenario, hide it so pytest does not report an
+        # empty-parameter-set skip.
+        if not _collect(cls, "expect"):
+            cls.test_property = None  # type: ignore[assignment]
 
     @classmethod
     def decl_cases(cls) -> list[_DeclCase]:
         specs = cls._expect_specs()
-        if not specs:
-            raise ValueError(
-                f"{cls.__name__} is a DeclarativeScenario but declares no @expect."
-            )
         cells = cls.scenario_cells()
+        if not specs:
+            return []  # pure test-method scenario: nothing for @expect to check
         topo_names = {c.topology.name for c in cells}
         state_names = {c.state.name for c in cells}
         for topo_s, state_s, _ in specs:  # catch a mistyped scope early
@@ -866,11 +729,8 @@ class DeclarativeScenario(_ScenarioBase):
             for _, _, m in matches:
                 full.update(m)
             full.update(cell.expected)  # @modify variant overrides win last
-            if not full:
-                raise ValueError(
-                    f"{cls.__name__}: cell {cell.id!r} has no expected values; "
-                    f"add an @expect scoped to it (or a bare @expect default)."
-                )
+            # A cell may legitimately carry no @expect entries (checked by a
+            # test_ method instead), so an empty map is not an error here.
             for prop, value in full.items():
                 cases.append(_DeclCase(cell, prop, value))
         return cases
@@ -902,8 +762,7 @@ def generate_scenario_tests(metafunc: Any) -> None:
         cases = cls.decl_cases()
         metafunc.parametrize("_decl_case", cases, ids=[c.id for c in cases])
         return
-    # Any other test method (LawScenario, or a bespoke method on a
-    # DeclarativeScenario) runs over the cells, optionally scoped by @cells.
+    # A bespoke test_ method runs over the cells, optionally scoped by @cells.
     if "_scenario_cell" not in metafunc.fixturenames:
         return
     scenario_cells = cls.scenario_cells()
