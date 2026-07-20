@@ -19,6 +19,10 @@ call any engine method or property on it directly::
     pi.combined_saving_rate   # 0.96
     pi.mock(pv1=0)            # re-mock a slot and read again (chainable)
 
+    pi.print("gross_power", "combined_saving_rate")   # one or many attributes
+    pi.print_all()                                    # every property, grouped
+    pi.print_all(exclude=["combined_coo_rate"])       # ... minus some
+
 Config vs. value:
   * **config** (constructor) — everything fixed about an adapter: lcoe/lcos,
     export settings, correction_factor, charge_from, name, inverted, …
@@ -260,6 +264,85 @@ class MockPowerInsight(PowerInsight):
         """Slot name -> value for every slot mocked so far."""
         return dict(self._values)
 
+    # -- printing helpers ---------------------------------------------------
+
+    def _value_of(self, name: str) -> object:
+        try:
+            return getattr(self, name)
+        except Exception as exc:  # noqa: BLE001 — a raising property is a result too
+            return f"<raised {type(exc).__name__}: {exc}>"
+
+    def print(self, *names: str) -> None:
+        """Print the value(s) of the given engine attribute name(s).
+
+        Accepts one or many names, or a single list/tuple of names::
+
+            pi.print("gross_power")
+            pi.print("gross_power", "combined_saving_rate")
+            pi.print(["gross_power", "prod_adapters_export_power"])
+
+        Scalars print as ``name  value``; dict (per-adapter) results print a
+        header line followed by indented ``uid  value`` lines.
+        """
+        if len(names) == 1 and isinstance(names[0], (list, tuple)):
+            names = tuple(names[0])
+        if not names:
+            return
+        width = max(len(n) for n in names)
+        for name in names:
+            value = self._value_of(name)
+            if isinstance(value, dict):
+                print(f"{name}:")
+                if not value:
+                    print("    {}")
+                for uid, inner in value.items():
+                    print(f"    {uid:<8} {_fmt(inner)}")
+            else:
+                print(f"{name:<{width}}  {_fmt(value)}")
+
+    def print_all(self, exclude: str | list[str] | None = None) -> None:
+        """Print every engine property, grouped into scalars and per-adapter maps.
+
+        ``exclude`` (a name or list of names) drops specific properties;
+        structural/plumbing helpers are always omitted.
+        """
+        if isinstance(exclude, str):
+            exclude = [exclude]
+        excluded = _HELPER_PROPS | set(exclude or ())
+        names = [n for n in _engine_properties() if n not in excluded]
+        self._render_grouped(names)
+
+    def _render_grouped(self, names: list[str]) -> None:
+        scalars: list[tuple[str, object]] = []
+        maps: list[tuple[str, dict]] = []
+        for name in names:
+            value = self._value_of(name)
+            (maps if isinstance(value, dict) else scalars).append((name, value))
+
+        if scalars:
+            print("=" * 72)
+            print("SCALAR / COMBINED PROPERTIES")
+            print("=" * 72)
+            width = max(len(n) for n, _ in scalars)
+            for name, value in scalars:
+                print(f"  {name:<{width}}  {_fmt(value)}")
+            print()
+
+        if maps:
+            print("=" * 72)
+            print("PER-ADAPTER PROPERTIES  (uid -> value)")
+            print("=" * 72)
+            for name, value in maps:
+                print(f"  {name}")
+                if not value:
+                    print("      {}")
+                for uid, inner in value.items():
+                    print(f"      {uid:<8} {_fmt(inner)}")
+                print()
+
+        if not scalars and not maps:
+            print("No properties to print.")
+
 
 def define_device() -> MockPowerInsight:
     """EDIT ME — configure the adapters, mock their entity values, return it."""
@@ -337,45 +420,15 @@ def main(argv: list[str]) -> int:
         print(f"  {slot:<12} {_fmt(value)}")
     print()
 
-    scalars: list[tuple[str, object]] = []
-    maps: list[tuple[str, dict]] = []
+    names = _engine_properties()
+    if not show_all:
+        names = [n for n in names if n not in _HELPER_PROPS]
+    if filters:
+        names = [n for n in names if any(f in n.lower() for f in filters)]
 
-    for name in _engine_properties():
-        if name in _HELPER_PROPS and not show_all:
-            continue
-        if filters and not any(f in name.lower() for f in filters):
-            continue
-        try:
-            value = getattr(engine, name)
-        except Exception as exc:  # noqa: BLE001 — a raising property is a result too
-            value = f"<raised {type(exc).__name__}: {exc}>"
-        if isinstance(value, dict):
-            maps.append((name, value))
-        else:
-            scalars.append((name, value))
-
-    if scalars:
-        print("=" * 72)
-        print("SCALAR / COMBINED PROPERTIES")
-        print("=" * 72)
-        width = max(len(n) for n, _ in scalars)
-        for name, value in scalars:
-            print(f"  {name:<{width}}  {_fmt(value)}")
-        print()
-
-    if maps:
-        print("=" * 72)
-        print("PER-ADAPTER PROPERTIES  (uid -> value)")
-        print("=" * 72)
-        for name, value in maps:
-            print(f"  {name}")
-            if not value:
-                print("      {}")
-            for uid, inner in value.items():
-                print(f"      {uid:<8} {_fmt(inner)}")
-            print()
-
-    if not scalars and not maps:
+    if names:
+        engine._render_grouped(names)
+    else:
         print("No properties matched the given filter(s).")
 
     return 0
