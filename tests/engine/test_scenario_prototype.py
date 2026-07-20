@@ -49,9 +49,9 @@ class TestChargingSplit(EngineTestScenario):
     def solar_with_battery(self):
         return Topology(
             Adapter.grid(),
-            Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08),
-            Adapter.battery(1, charge_from=("grid", "pv1")),
-            Adapter.consumer(1),
+            Adapter.pv("pv1", lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.battery("bat1", charge_from=("grid", "pv1")),
+            Adapter.consumer("cons1"),
         )
 
     @state
@@ -72,20 +72,21 @@ class TestChargingSplit(EngineTestScenario):
 
 
 class TestNamedAdapters(EngineTestScenario):
-    """Explicit ``uid`` links the adapter to its State key with a readable name.
+    """Descriptive uids read the same everywhere they are referenced.
 
-    Same scenario as ``TestChargingSplit`` but the battery is named ``powerwall``
-    instead of the number-derived ``bat1`` — the id used at the adapter is exactly
-    the key used in ``State``, ``charge_from`` and the ``@expect`` map.
+    Every adapter's ``uid`` is required; it need not follow the ``pv1``/``bat1``
+    convention used elsewhere. Here the same scenario as ``TestChargingSplit``
+    uses ``east_roof`` / ``powerwall`` / ``house`` — the id at the adapter is
+    exactly the key in ``State``, ``charge_from`` and the ``@expect`` map.
     """
 
     @topology
     def solar_with_battery(self):
         return Topology(
             Adapter.grid(),
-            Adapter.pv(uid="east_roof", lcoe=0.10, exports=True, export_comp=0.08),
-            Adapter.battery(uid="powerwall", charge_from=("grid", "east_roof")),
-            Adapter.consumer(uid="house"),
+            Adapter.pv("east_roof", lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.battery("powerwall", charge_from=("grid", "east_roof")),
+            Adapter.consumer("house"),
         )
 
     @state
@@ -141,8 +142,8 @@ class TestInvertedGridNoPrice(EngineTestScenario):
     def inverted_grid(self):
         return (
             Adapter.grid(inverted=True),
-            Adapter.pv(1, exports=True, export_comp=0.08),
-            Adapter.consumer(1),
+            Adapter.pv("pv1", exports=True, export_comp=0.08),
+            Adapter.consumer("cons1"),
         )
 
     @state
@@ -174,7 +175,7 @@ class TestExportFlagIsResultNeutralWhenImporting(EngineTestScenario):
 
     @topology
     def self_consume(self):
-        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10))
+        return Topology(Adapter.grid(), Adapter.pv("pv1", lcoe=0.10))
 
     @state
     def importing(self):
@@ -204,7 +205,7 @@ class TestCorrectionFactorVariant(EngineTestScenario):
 
     @topology
     def base(self):
-        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10))
+        return Topology(Adapter.grid(), Adapter.pv("pv1", lcoe=0.10))
 
     @state
     def midday(self):
@@ -242,12 +243,12 @@ class TestExportConfigScoped(EngineTestScenario):
     @topology
     def exporting(self):
         return Topology(
-            Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08)
+            Adapter.grid(), Adapter.pv("pv1", lcoe=0.10, exports=True, export_comp=0.08)
         )
 
     @topology
     def self_consume(self):
-        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=False))
+        return Topology(Adapter.grid(), Adapter.pv("pv1", lcoe=0.10, exports=False))
 
     @state
     def midday(self):
@@ -301,12 +302,12 @@ class TestExportConfigurationLaws(EngineTestScenario):
     @topology
     def exporting(self):
         return Topology(
-            Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08)
+            Adapter.grid(), Adapter.pv("pv1", lcoe=0.10, exports=True, export_comp=0.08)
         )
 
     @topology
     def self_consume(self):
-        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=False))
+        return Topology(Adapter.grid(), Adapter.pv("pv1", lcoe=0.10, exports=False))
 
     @state
     def midday(self):
@@ -341,7 +342,7 @@ def test_incompatible_state_is_rejected():
     class Broken(EngineTestScenario):
         @topology
         def grid_and_pv(self):
-            return Topology(Adapter.grid(), Adapter.pv(1))
+            return Topology(Adapter.grid(), Adapter.pv("pv1"))
 
         @state
         def has_a_battery(self):
@@ -357,7 +358,7 @@ def test_expect_rejects_unknown_scope():
     class BadScope(EngineTestScenario):
         @topology
         def only(self):
-            return Topology(Adapter.grid(), Adapter.pv(1))
+            return Topology(Adapter.grid(), Adapter.pv("pv1"))
 
         @state
         def s(self):
@@ -377,7 +378,7 @@ def test_cells_scope_matching_nothing_errors():
     class Shape(EngineTestScenario):
         @topology
         def only(self):
-            return Topology(Adapter.grid(), Adapter.pv(1))
+            return Topology(Adapter.grid(), Adapter.pv("pv1"))
 
         @state
         def midday(self):
@@ -409,4 +410,4 @@ def test_modify_rejects_unknown_target():
 
 def test_topology_rejects_missing_grid():
     with pytest.raises(ValueError, match="exactly one grid"):
-        Topology(Adapter.pv(1))
+        Topology(Adapter.pv("pv1"))

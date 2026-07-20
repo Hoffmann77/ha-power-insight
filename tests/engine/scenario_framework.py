@@ -71,7 +71,6 @@ BatteryAdapter = _mod.BatteryAdapter
 ConsumerAdapter = _mod.ConsumerAdapter
 
 GRID_PRICE_ENTITY = "sensor.grid_price"
-_KIND_PREFIX = {"grid": "grid", "pv": "pv", "battery": "bat", "consumer": "cons"}
 
 
 # ---------------------------------------------------------------------------
@@ -89,13 +88,12 @@ class Adapter:
     """
 
     kind: str
-    number: int
+    #: The adapter's unique id — exactly the key used in State(...), charge_from,
+    #: Modify(...) and @expect dict keys. Required (grid is always "grid").
+    uid: str
     config: dict[str, Any]
     inverted: bool = False
     has_price: bool = True  # whether the grid has a price source entity at all
-    #: Explicit uid overriding the number-derived default (e.g. "powerwall").
-    #: This is exactly the key used in State(...), charge_from, and Modify(...).
-    explicit_uid: str | None = None
 
     # -- factories --------------------------------------------------------
 
@@ -107,14 +105,13 @@ class Adapter:
         name: str = "Grid",
         has_price_entity: bool = True,
     ) -> Adapter:
-        return cls("grid", 0, {"name": name}, inverted=inverted, has_price=has_price_entity)
+        return cls("grid", "grid", {"name": name}, inverted=inverted, has_price=has_price_entity)
 
     @classmethod
     def pv(
         cls,
-        number: int = 1,
+        uid: str,
         *,
-        uid: str | None = None,
         lcoe: float | None = 0.10,
         lco2_intensity: float | None = 50.0,
         exports: bool = False,
@@ -125,7 +122,7 @@ class Adapter:
     ) -> Adapter:
         return cls(
             "pv",
-            number,
+            uid,
             {
                 "name": name,
                 "lcoe": lcoe,
@@ -135,15 +132,13 @@ class Adapter:
                 "correction_factor": correction_factor,
             },
             inverted=inverted,
-            explicit_uid=uid,
         )
 
     @classmethod
     def battery(
         cls,
-        number: int = 1,
+        uid: str,
         *,
-        uid: str | None = None,
         lcos: float | None = 0.15,
         lco2_intensity: float | None = 100.0,
         exports: bool = False,
@@ -154,7 +149,7 @@ class Adapter:
     ) -> Adapter:
         return cls(
             "battery",
-            number,
+            uid,
             {
                 "name": name,
                 "lcos": lcos,
@@ -164,27 +159,19 @@ class Adapter:
                 "charge_from_adapters": tuple(charge_from),
             },
             inverted=inverted,
-            explicit_uid=uid,
         )
 
     @classmethod
     def consumer(
         cls,
-        number: int = 1,
+        uid: str,
         *,
-        uid: str | None = None,
         inverted: bool = False,
         name: str | None = None,
     ) -> Adapter:
-        return cls("consumer", number, {"name": name}, inverted=inverted, explicit_uid=uid)
+        return cls("consumer", uid, {"name": name}, inverted=inverted)
 
     # -- derived ----------------------------------------------------------
-
-    @property
-    def uid(self) -> str:
-        if self.kind == "grid":
-            return "grid"
-        return self.explicit_uid or f"{_KIND_PREFIX[self.kind]}{self.number}"
 
     @property
     def power_entity(self) -> str:
