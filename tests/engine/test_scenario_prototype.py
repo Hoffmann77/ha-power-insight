@@ -269,6 +269,51 @@ class TestCorrectionFactorDeclarative(DeclarativeScenario):
         )
 
 
+class TestExportConfigScopedDeclarative(DeclarativeScenario):
+    """Scoped ``@expect`` over a 2 topologies × 2 states product (4 cells).
+
+    ``gross_power`` / ``combined_grid_export`` depend only on the state → scoped
+    by state. ``combined_export_compensation_rate`` is 0 everywhere except the
+    exporting PV at midday → a bare-``@expect`` default of 0, overridden for that
+    one cell by a ``topology`` + ``state`` scope.
+    """
+
+    @topology
+    def exporting(self):
+        return Topology(
+            Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=True, export_comp=0.08)
+        )
+
+    @topology
+    def self_consume(self):
+        return Topology(Adapter.grid(), Adapter.pv(1, lcoe=0.10, exports=False))
+
+    @state
+    def midday(self):
+        return State(grid=-1000, pv1=2000, price=0.30)  # PV exports 1000 W
+
+    @state
+    def morning(self):
+        return State(grid=800, pv1=400, price=0.30)  # importing, all self-consumed
+
+    @expect(state="midday")
+    def at_midday(self):
+        return {"gross_power": 2000.0, "combined_grid_export": 1000.0}
+
+    @expect(state="morning")
+    def at_morning(self):
+        return {"gross_power": 1200.0, "combined_grid_export": 0.0}
+
+    @expect
+    def no_export_compensation_by_default(self):
+        return {"combined_export_compensation_rate": 0.0}
+
+    @expect(topology="exporting", state="midday")
+    def exporting_midday(self):
+        # (1000 W / 1000) * 0.08 EUR/kWh — only this cell earns compensation.
+        return {"combined_export_compensation_rate": 0.08}
+
+
 class TestChargingSplitDeclarative(DeclarativeScenario):
     """Nested-dict expectations compare deeply and tolerantly (no @modify)."""
 
@@ -405,6 +450,46 @@ def test_law_scenario_rejects_modify():
 
     with pytest.raises(ValueError, match="CaseScenario-only"):
         WithModify.scenario_cells()
+
+
+def test_expect_rejects_unknown_scope():
+    class BadScope(DeclarativeScenario):
+        @topology
+        def only(self):
+            return Topology(Adapter.grid(), Adapter.pv(1))
+
+        @state
+        def s(self):
+            return State(grid=100, pv1=200, price=0.30)
+
+        @expect(state="typo")  # no state named "typo"
+        def m(self):
+            return {"gross_power": 300.0}
+
+    with pytest.raises(ValueError, match="matches no state"):
+        BadScope.decl_cases()
+
+
+def test_declarative_rejects_cell_without_expectations():
+    class Gap(DeclarativeScenario):
+        @topology
+        def only(self):
+            return Topology(Adapter.grid(), Adapter.pv(1))
+
+        @state
+        def a(self):
+            return State(grid=100, pv1=200, price=0.30)
+
+        @state
+        def b(self):
+            return State(grid=50, pv1=100, price=0.30)
+
+        @expect(state="a")  # nothing covers state "b"
+        def just_a(self):
+            return {"gross_power": 300.0}
+
+    with pytest.raises(ValueError, match="no expected values"):
+        Gap.decl_cases()
 
 
 def test_modify_rejects_unknown_target():

@@ -329,13 +329,13 @@ class Cell:
     #: Per-cell expected-value overrides, consulted via the ``expected`` fixture.
     #: Empty for a base cell; populated from a ``Modify.expect(...)`` on variants.
     expected: dict[str, Any] = field(default_factory=dict)
-    #: Optional explicit id suffix (variant name); falls back to state name.
+    #: Variant name (from a ``@modify``) appended to the id; ``None`` for a base.
     label: str | None = None
 
     @property
     def id(self) -> str:
-        suffix = self.label if self.label is not None else self.state.name
-        return f"{self.topology.name}-{suffix}" if suffix else self.topology.name
+        parts = [self.topology.name, self.state.name, self.label]
+        return "-".join(p for p in parts if p)
 
     def build_engine(self) -> Any:
         pi = self.topology.build_engine()
@@ -392,16 +392,34 @@ def modify(fn: Callable[[Any], "Modify"]) -> Callable[[Any], "Modify"]:
     return fn
 
 
-def expect(fn: Callable[[Any], dict]) -> Callable[[Any], dict]:
+def expect(
+    *args: Any, topology: str | None = None, state: str | None = None
+) -> Any:
     """Mark a method as returning a ``{property_name: expected_value}`` map.
 
-    DeclarativeScenario only. The framework generates one assertion per
-    (cell, property): ``getattr(power_insight, property) == expected``. Several
-    ``@expect`` methods are merged; a ``@modify`` variant's ``expect(...)``
-    overrides individual entries for that variant's cell.
+    DeclarativeScenario only. Usable bare or scoped::
+
+        @expect                         # applies to every cell (defaults)
+        @expect(state="midday")         # only cells whose state is "midday"
+        @expect(topology="exporting")   # only cells whose topology is "exporting"
+        @expect(topology="exporting", state="midday")   # that one cell
+
+    For a given cell the matching maps are merged least-specific first (bare →
+    single-axis → both-axes), then any ``@modify`` variant overrides win. The
+    framework generates one assertion per (cell, property):
+    ``getattr(power_insight, property) == expected``.
     """
-    fn._scenario_role = "expect"  # type: ignore[attr-defined]
-    return fn
+
+    def _mark(fn: Callable[[Any], dict]) -> Callable[[Any], dict]:
+        fn._scenario_role = "expect"  # type: ignore[attr-defined]
+        fn._expect_scope = (topology, state)  # type: ignore[attr-defined]
+        return fn
+
+    if args:
+        if len(args) != 1 or not callable(args[0]) or topology or state:
+            raise TypeError("@expect takes only keyword scopes: topology=, state=")
+        return _mark(args[0])  # bare @expect usage
+    return _mark  # @expect(...) usage
 
 
 # ---------------------------------------------------------------------------
@@ -594,18 +612,28 @@ class _ScenarioBase:
         return out
 
     @classmethod
-    def _expectations(cls) -> dict[str, Any]:
-        merged: dict[str, Any] = {}
+    def _expect_specs(cls) -> list[tuple[str | None, str | None, dict[str, Any]]]:
+        """Every ``@expect`` map with its ``(topology, state)`` scope."""
+        specs = []
         for fn in _collect(cls, "expect"):
-            merged.update(fn(cls()))
-        return merged
+            topo_s, state_s = getattr(fn, "_expect_scope", (None, None))
+            specs.append((topo_s, state_s, fn(cls())))
+        return specs
+
+    @classmethod
+    def _variant_cells(cls, topo: Topology, st: State) -> list[Cell]:
+        """The base cell for ``(topo, st)`` plus one per ``@modify``."""
+        _check_compatible(topo, st)
+        cells = [Cell(topo, st)]
+        for mod in cls._modifies():
+            variant = _apply_modify(topo, mod)
+            _check_compatible(variant, st)  # config-only change keeps uids
+            cells.append(Cell(variant, st, expected=mod.expected, label=mod.name))
+        return cells
 
     @classmethod
     def _single_cell_variants(cls) -> list[Cell]:
-        """Base cell (one topology × one state) plus one cell per ``@modify``.
-
-        Shared by :class:`CaseScenario` and :class:`DeclarativeScenario`.
-        """
+        """One topology × one state (+ ``@modify`` variants). CaseScenario."""
         topos = cls._topologies()
         states = cls._states()
         if len(topos) != 1 or len(states) != 1:
@@ -613,16 +641,21 @@ class _ScenarioBase:
                 f"{cls.__name__}: expected exactly one @topology and one @state, "
                 f"got {len(topos)} topologies and {len(states)} states."
             )
-        base, st = topos[0], states[0]
-        _check_compatible(base, st)
-        mods = cls._modifies()
-        # With variants present, label the base "base" so ids read uniformly:
-        # [topo-base], [topo-<variant>]. Without variants, keep [topo-state].
-        cells = [Cell(base, st, label="base" if mods else None)]
-        for mod in mods:
-            variant = _apply_modify(base, mod)
-            _check_compatible(variant, st)  # config-only change keeps uids
-            cells.append(Cell(variant, st, expected=mod.expected, label=mod.name))
+        return cls._variant_cells(topos[0], states[0])
+
+    @classmethod
+    def _product_cells(cls) -> list[Cell]:
+        """Every topology × every state (+ ``@modify`` variants). Declarative."""
+        topos = cls._topologies()
+        states = cls._states()
+        if not topos or not states:
+            raise ValueError(
+                f"{cls.__name__} needs at least one @topology and one @state"
+            )
+        cells: list[Cell] = []
+        for topo in topos:
+            for st in states:
+                cells.extend(cls._variant_cells(topo, st))
         return cells
 
     @classmethod
@@ -742,23 +775,57 @@ class DeclarativeScenario(_ScenarioBase):
     bespoke assertion or a docstring per property), but the property name appears
     exactly once as a map key, ``getattr`` makes a typo fail loudly, and a
     variant override reuses that same key with no second call site.
+
+    Unlike CaseScenario this runs the full topology × state product, so an
+    ``@expect`` map can be scoped to a topology and/or state (see :func:`expect`)
+    to give different cells different expected values.
     """
 
     @classmethod
     def scenario_cells(cls) -> list[Cell]:
-        return cls._single_cell_variants()
+        return cls._product_cells()
 
     @classmethod
     def decl_cases(cls) -> list[_DeclCase]:
-        base_map = cls._expectations()
-        if not base_map:
+        specs = cls._expect_specs()
+        if not specs:
             raise ValueError(
-                f"{cls.__name__} is a DeclarativeScenario but declares no "
-                f"@expect map."
+                f"{cls.__name__} is a DeclarativeScenario but declares no @expect."
             )
+        cells = cls.scenario_cells()
+        topo_names = {c.topology.name for c in cells}
+        state_names = {c.state.name for c in cells}
+        for topo_s, state_s, _ in specs:  # catch a mistyped scope early
+            if topo_s is not None and topo_s not in topo_names:
+                raise ValueError(
+                    f"@expect(topology={topo_s!r}) matches no topology; "
+                    f"known: {sorted(topo_names)}"
+                )
+            if state_s is not None and state_s not in state_names:
+                raise ValueError(
+                    f"@expect(state={state_s!r}) matches no state; "
+                    f"known: {sorted(state_names)}"
+                )
+
         cases: list[_DeclCase] = []
-        for cell in cls.scenario_cells():
-            full = {**base_map, **cell.expected}  # variant overrides win
+        for cell in cells:
+            matches = [
+                (topo_s, state_s, m)
+                for (topo_s, state_s, m) in specs
+                if (topo_s is None or topo_s == cell.topology.name)
+                and (state_s is None or state_s == cell.state.name)
+            ]
+            # Merge least-specific first; ties keep source order (stable sort).
+            matches.sort(key=lambda t: (t[0] is not None) + (t[1] is not None))
+            full: dict[str, Any] = {}
+            for _, _, m in matches:
+                full.update(m)
+            full.update(cell.expected)  # @modify variant overrides win last
+            if not full:
+                raise ValueError(
+                    f"{cls.__name__}: cell {cell.id!r} has no expected values; "
+                    f"add an @expect scoped to it (or a bare @expect default)."
+                )
             for prop, value in full.items():
                 cases.append(_DeclCase(cell, prop, value))
         return cases
