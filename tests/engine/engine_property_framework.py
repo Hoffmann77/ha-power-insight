@@ -59,13 +59,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-try:
-    import pytest
-except ModuleNotFoundError:  # pragma: no cover
-    # Allows importing this module (for Device()/build_engine()) outside a
-    # pytest environment — e.g. the run_engine.py dev scratchpad. Only the
-    # EngineScenario fixture below needs pytest.
-    pytest = None
+import pytest
 
 # ---------------------------------------------------------------------------
 # Load the pure-Python engine directly, bypassing all Home Assistant imports
@@ -472,10 +466,6 @@ class EngineScenario:
 
     DEVICES: list[_DeviceEntry] = []
 
+    @pytest.fixture
     def power_insight(self) -> Any:
         return build_engine(self.DEVICES)
-
-    if pytest is not None:
-        # Expose ``power_insight`` as a fixture only when running under pytest;
-        # kept as a plain method otherwise so the module imports without pytest.
-        power_insight = pytest.fixture(power_insight)
