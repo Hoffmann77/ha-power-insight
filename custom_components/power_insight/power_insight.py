@@ -404,22 +404,22 @@ class PowerInsight:
 
 
     @property
-    def inflow_adapters_power(self) -> np.array:
+    def inflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
         arr = []
         index = []
 
-        for adapter in inflow_adapters:
+        for adapter in self.inflow_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
         return np.array(arr), index
 
     @property
-    def outflow_adapters_power(self) -> np.array:
+    def outflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
         arr = []
         index = []
 
-        for adapter in outflow_adapters:
+        for adapter in self.outflow_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
@@ -427,8 +427,13 @@ class PowerInsight:
 
     @property
     def gross_power(self) -> float | None:
-        power = inflow_adapters_power.sum() - outflow_adapters_power.sum()
-        return power
+        inflow_arr, _ = self.inflow_adapters_power
+        outflow_arr, _ = self.outflow_adapters_power
+
+        if None in inflow_arr or None in outflow_arr:
+            return None
+
+        return float(inflow_arr.sum() - outflow_arr.sum())
 
 
     # @property
