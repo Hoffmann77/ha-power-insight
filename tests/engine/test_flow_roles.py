@@ -133,6 +133,21 @@ class TestMixedFlowGroups(EngineScenario):
         assert "cons2" not in grouped  # idle
         assert "pv3" not in grouped     # unavailable
 
+    def test_inflow_adapters_includes_importing_grid(self, power_insight):
+        """Grid imports here (+500 W), so it joins the inflow side."""
+        assert _uids(power_insight.inflow_adapters) == {"grid", "pv1", "bat1"}
+
+    def test_outflow_adapters_excludes_importing_grid(self, power_insight):
+        """An importing grid is not on the outflow side."""
+        assert _uids(power_insight.outflow_adapters) == {"pv2", "bat2", "cons1"}
+
+    def test_inflow_outflow_disjoint(self, power_insight):
+        """Direction-aware folding keeps the two grid-inclusive groups disjoint."""
+        assert not (
+            _uids(power_insight.inflow_adapters)
+            & _uids(power_insight.outflow_adapters)
+        )
+
 
 # ---------------------------------------------------------------------------
 # The grid stays in its own group regardless of direction
@@ -155,3 +170,11 @@ class TestGridExportingStillOwnGroup(EngineScenario):
 
     def test_grid_not_in_sink_adapters(self, power_insight):
         assert "grid" not in _uids(power_insight.sink_adapters)
+
+    def test_outflow_adapters_includes_exporting_grid(self, power_insight):
+        """Grid exports here (-1200 W), so it joins the outflow side."""
+        assert _uids(power_insight.outflow_adapters) == {"grid"}
+
+    def test_inflow_adapters_excludes_exporting_grid(self, power_insight):
+        """An exporting grid is not on the inflow side; only pv1 sources here."""
+        assert _uids(power_insight.inflow_adapters) == {"pv1"}

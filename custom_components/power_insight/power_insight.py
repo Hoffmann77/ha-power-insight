@@ -174,6 +174,11 @@ class PowerInsight:
     # IDLE (0 W) or UNKNOWN (sensor unavailable) fall into neither source nor
     # sink, mirroring the engine's None-propagation elsewhere.
     #
+    # source_adapters / sink_adapters are the non-grid (behind-the-meter)
+    # groups; inflow_adapters / outflow_adapters are their grid-inclusive
+    # counterparts, folding the grid in direction-aware (import -> inflow,
+    # export -> outflow) so the two stay disjoint.
+    #
     # This is additive scaffolding: nothing in the engine consumes it yet. The
     # existing prod_adapters_* / storage_adapters_* / cons_adapters_* families
     # are unchanged and remain the source of truth for all current results.
@@ -220,6 +225,40 @@ class PowerInsight:
             adapter for adapter in self._non_grid_adapters
             if adapter.flow_role is FlowRole.SINK
         ]
+
+    @property
+    def inflow_adapters(self) -> list[BasePowerAdapter]:
+        """Return every adapter currently providing power, grid included.
+
+        The grid-inclusive counterpart of ``source_adapters``: all power
+        crossing into the system boundary this snapshot. The grid is folded in
+        direction-aware — it joins only while importing (``FlowRole.SOURCE``) —
+        so ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the
+        grid is never counted on both sides.
+        """
+        grid = (
+            [self.grid_adapter]
+            if self.grid_adapter.flow_role is FlowRole.SOURCE
+            else []
+        )
+        return grid + self.source_adapters
+
+    @property
+    def outflow_adapters(self) -> list[BasePowerAdapter]:
+        """Return every adapter currently drawing power, grid included.
+
+        The grid-inclusive counterpart of ``sink_adapters``: all power crossing
+        out of the system boundary this snapshot. The grid is folded in
+        direction-aware — it joins only while exporting (``FlowRole.SINK``) — so
+        ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the grid
+        is never counted on both sides.
+        """
+        grid = (
+            [self.grid_adapter]
+            if self.grid_adapter.flow_role is FlowRole.SINK
+            else []
+        )
+        return grid + self.sink_adapters
 
     # ------------------->
     # SOURCE ENTITIES --->
