@@ -459,41 +459,43 @@ class PowerInsight:
         return float(power_arr.sum())
 
     @property
-    def source_adapters_gross_power_shares(self) -> dict[str, float]:
-        """Return ``{source_uid: share}`` — each source's fraction of gross power.
+    def source_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(share array, uid index)`` — each source's fraction of gross power.
 
         The shares of the currently-providing adapters (grid import, producing
-        PV, discharging batteries); they sum to 1. Empty when gross power is
-        unavailable.
+        PV, discharging batteries); they sum to 1. Returns an empty array and
+        index when gross power is unavailable. Mirrors ``source_adapters_power``
+        so the numpy pipeline stays composable.
         """
-        if (gross := self.gross_power) is None:
-            return {}
+        gross = self.gross_power
+        if gross is None:
+            return np.array([]), []
 
         power_arr, index = self.source_adapters_power
         if gross == 0.0:
-            return {uid: 0.0 for uid in index}
+            return np.zeros(len(index)), index
 
-        shares = power_arr / gross
-        return {uid: float(share) for uid, share in zip(index, shares)}
+        return power_arr / gross, index
 
     @property
-    def sink_adapters_gross_power_shares(self) -> dict[str, float]:
-        """Return ``{sink_uid: share}`` — each sink's fraction of gross power.
+    def sink_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(share array, uid index)`` — each sink's fraction of gross power.
 
         The shares of the currently-drawing adapters (grid export, charging
-        batteries, consumer loads, PV standby). Unlike the source shares these
-        need not sum to 1: the remainder up to 1 is the unmetered home load.
-        Empty when gross power is unavailable.
+        batteries, consumer loads, PV standby); the readings are unsigned here.
+        Unlike the source shares these need not sum to 1: the remainder up to 1
+        is the unmetered home load. Returns an empty array and index when gross
+        power is unavailable.
         """
-        if (gross := self.gross_power) is None:
-            return {}
+        gross = self.gross_power
+        if gross is None:
+            return np.array([]), []
 
         power_arr, index = self.sink_adapters_power
         if gross == 0.0:
-            return {uid: 0.0 for uid in index}
+            return np.zeros(len(index)), index
 
-        shares = np.abs(power_arr) / gross
-        return {uid: float(share) for uid, share in zip(index, shares)}
+        return np.abs(power_arr) / gross, index
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
@@ -511,26 +513,33 @@ class PowerInsight:
         * **Priority tier** — sinks restricted to specific non-grid sources
           (a battery charging on PV only, a smart-plug consumer on excess
           solar). They get first pick of their allowed sources, weighted by
-          each source's share of gross power.
+          each source's share of gross power. This tier is active **only while
+          the grid is importing**: giving a grid-excluded sink first claim on
+          the scarce local sources is only meaningful when the grid-capable
+          sinks have the grid to fall back on. With no grid import there is
+          nothing to fall back to, so every sink shares the sources in a single
+          pass on equal footing (the tier is empty).
         * **Leftover tier** — every other sink (unrestricted, or allowed to draw
-          the grid). They split the power the priority tier left behind, each
-          still respecting its own restriction if it has one. The unmetered home
-          load implicitly shares this same leftover pool, which is why the
-          priority tier can exhaust a scarce source first.
+          the grid, or *any* sink when the grid is not importing). They split
+          the power the priority tier left behind — the full availability when
+          the priority tier is empty — each still respecting its own restriction
+          if it has one. The unmetered home load implicitly shares this same
+          leftover pool, which is why the priority tier can exhaust a scarce
+          source first.
 
         Empty when gross power is unavailable.
         """
-        source_shares = self.source_adapters_gross_power_shares
-        if not source_shares:
+        availability, index = self.source_adapters_gross_power_shares
+        if not index:
+            # Gross power unavailable, or nothing is currently providing.
             return {}
 
-        sink_shares = self.sink_adapters_gross_power_shares
-        if not sink_shares:
-            return {}
-
-        index = list(source_shares)  # column order (source uids)
-        availability = np.array([source_shares[uid] for uid in index])
+        sink_share_arr, sink_index = self.sink_adapters_gross_power_shares
+        sink_shares = dict(zip(sink_index, sink_share_arr))
         grid_uid = self.grid_adapter.uid
+        # The grid is a source only while it is importing; the priority tier
+        # exists only then (see docstring).
+        grid_importing = grid_uid in index
 
         def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
             """Weights masked to the allowed sources (all sources if unrestricted)."""
@@ -543,13 +552,13 @@ class PowerInsight:
             total = row.sum()
             return row / total if total > 0 else np.zeros_like(row)
 
-        # Partition the sinks into the priority and leftover tiers. A sink is a
-        # priority sink only if it is restricted to sources that exclude the
-        # grid — a grid-capable sink is flexible and waits for the leftover pool.
+        # Partition the sinks. A sink is a priority sink only when the grid is
+        # importing and it is restricted to sources that exclude the grid — a
+        # grid-capable (or unrestricted) sink is flexible and waits for leftover.
         priority, leftover = [], []
         for adapter in self.sink_adapters:
             sources = adapter.power_source_uids
-            if sources and grid_uid not in sources:
+            if grid_importing and sources and grid_uid not in sources:
                 priority.append(adapter)
             else:
                 leftover.append(adapter)
@@ -563,7 +572,8 @@ class PowerInsight:
             result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
             consumed += shares * sink_shares[adapter.uid]
 
-        # Leftover tier draws from what the priority tier left behind.
+        # Leftover tier draws from what the priority tier left behind (the full
+        # availability when the priority tier is empty).
         leftover_availability = np.clip(availability - consumed, 0.0, None)
         for adapter in leftover:
             shares = normalise(
