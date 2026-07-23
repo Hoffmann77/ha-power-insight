@@ -58,6 +58,11 @@ CONF_EXPORT_COMPENSATION = "export_compensation"
 CONF_BAT_EFFICIENCY = "battery_efficiency"
 CONF_CHARGE_FROM_ADAPTERS = "charge_from_adapters"
 
+# Consumer specific (stored in adapter.config) — the sources a consumer draws
+# from (e.g. a smart plug set to run only on excess solar). Mirrors the
+# battery's charge_from_adapters; empty means it draws from the general mix.
+CONF_POWER_FROM_ADAPTERS = "power_from_adapters"
+
 
 
 

@@ -175,14 +175,15 @@ class PowerInsight:
     # IDLE (0 W) or UNKNOWN (sensor unavailable) fall into neither source nor
     # sink, mirroring the engine's None-propagation elsewhere.
     #
-    # source_adapters / sink_adapters are the non-grid (behind-the-meter)
-    # groups; inflow_adapters / outflow_adapters are their grid-inclusive
-    # counterparts, folding the grid in direction-aware (import -> inflow,
-    # export -> outflow) so the two stay disjoint.
+    # source_adapters / sink_adapters are the grid-inclusive groups — every
+    # adapter power is currently drawn from / flows to — with the grid folded
+    # in direction-aware (import -> source, export -> sink) so the two stay
+    # disjoint. local_source_adapters / local_sink_adapters are their
+    # behind-the-meter subsets (grid excluded).
     #
-    # This is additive scaffolding: nothing in the engine consumes it yet. The
-    # existing prod_adapters_* / storage_adapters_* / cons_adapters_* families
-    # are unchanged and remain the source of truth for all current results.
+    # The gross-power split and provenance results below build on these groups;
+    # the existing prod_adapters_* / storage_adapters_* / cons_adapters_*
+    # families remain the source of truth for all other current results.
     # ------------------------------------------------------------------>
 
     @property
@@ -206,10 +207,11 @@ class PowerInsight:
         return [self.grid_adapter]
 
     @property
-    def source_adapters(self) -> list[BasePowerAdapter]:
-        """Return the non-grid adapters currently providing power.
+    def local_source_adapters(self) -> list[BasePowerAdapter]:
+        """Return the behind-the-meter adapters currently providing power.
 
-        Producing PV systems and discharging batteries.
+        Producing PV systems and discharging batteries (grid excluded). The
+        grid-inclusive superset is ``source_adapters``.
         """
         return [
             adapter for adapter in self._non_grid_adapters
@@ -217,10 +219,11 @@ class PowerInsight:
         ]
 
     @property
-    def sink_adapters(self) -> list[BasePowerAdapter]:
-        """Return the non-grid adapters currently drawing power.
+    def local_sink_adapters(self) -> list[BasePowerAdapter]:
+        """Return the behind-the-meter adapters currently drawing power.
 
-        Charging batteries, consumer loads, and PV systems drawing standby.
+        Charging batteries, consumer loads, and PV systems drawing standby
+        (grid excluded). The grid-inclusive superset is ``sink_adapters``.
         """
         return [
             adapter for adapter in self._non_grid_adapters
@@ -228,198 +231,133 @@ class PowerInsight:
         ]
 
     @property
-    def inflow_adapters(self) -> list[BasePowerAdapter]:
+    def source_adapters(self) -> list[BasePowerAdapter]:
         """Return every adapter currently providing power, grid included.
 
-        The grid-inclusive counterpart of ``source_adapters``: all power
-        crossing into the system boundary this snapshot. The grid is folded in
-        direction-aware — it joins only while importing (``FlowRole.SOURCE``) —
-        so ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the
-        grid is never counted on both sides.
+        The grid-inclusive provider group: everything power is currently drawn
+        *from* this snapshot (grid import, producing PV, discharging batteries).
+        The grid is folded in direction-aware — it joins only while importing
+        (``FlowRole.SOURCE``) — so ``source_adapters`` and ``sink_adapters`` stay
+        disjoint and the grid is never counted on both sides. The behind-the-
+        meter subset is ``local_source_adapters``.
         """
         grid = (
             [self.grid_adapter]
             if self.grid_adapter.flow_role is FlowRole.SOURCE
             else []
         )
-        return grid + self.source_adapters
+        return grid + self.local_source_adapters
 
     @property
-    def outflow_adapters(self) -> list[BasePowerAdapter]:
+    def sink_adapters(self) -> list[BasePowerAdapter]:
         """Return every adapter currently drawing power, grid included.
 
-        The grid-inclusive counterpart of ``sink_adapters``: all power crossing
-        out of the system boundary this snapshot. The grid is folded in
-        direction-aware — it joins only while exporting (``FlowRole.SINK``) — so
-        ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the grid
-        is never counted on both sides.
+        The grid-inclusive drawer group: everywhere power currently flows *to*
+        this snapshot (grid export, charging batteries, consumer loads, PV
+        standby). The grid is folded in direction-aware — it joins only while
+        exporting (``FlowRole.SINK``) — so ``source_adapters`` and
+        ``sink_adapters`` stay disjoint and the grid is never counted on both
+        sides. The behind-the-meter subset is ``local_sink_adapters``.
         """
         grid = (
             [self.grid_adapter]
             if self.grid_adapter.flow_role is FlowRole.SINK
             else []
         )
-        return grid + self.sink_adapters
+        return grid + self.local_sink_adapters
 
-    # ------------------->
-    # SOURCE ENTITIES --->
-    # ------------------->
-
-    # @property
-    # def source_entities(self) -> list[str]:
-    #     """Return a list of all source entities."""
-    #     return (
-    #         self.source_entities_power
-    #         + self.source_entities_price
-    #         # + self.source_entities_co2
-    #     )
-
-    # @property
-    # def source_entities_power(self) -> list[str]:
-    #     """Return a list of all entities that affect power."""
-    #     return (
-    #         self.grid_adapter.source_entities_power
-    #         + self.pv_system_adapters.source_entities_power
-    #         + self.storage_adapters.source_entities_power
-    #     )
-
-    # @property
-    # def source_entities_price(self) -> list[str]:
-    #     """Return all entities that affect the total price."""
-    #     return (
-    #         self.grid_adapter.source_entities_price
-    #     )
-
-    # @property
-    # def source_entities_co2(self) -> list[str]:
-    #     """Return all entities that affect the total co2 intensity."""
-    #     # entities = []
-    #     # for adapter in self._adapters:
-    #     #     _entities = adapter.config.source_entities_co2
-    #     #     entities.extend([e for e in _entities if e not in entities])
-
-    #     # return entities
-
-    #     return (
-    #         self.grid_adapter.source_entities_co2
-    #     )
-
-    # ------------------------->
-    # COMBINED POWER VALUES --->
-    # ------------------------->
-
-    # @property
-    # def combined_grid_import(self) -> float | None:
-    #     """Sum of power imported from the grid."""
-    #     if (power := self.grid_adapter.import_power) is None:
-    #         return None
-
-    #     return power
-
-    # @property
-    # def combined_grid_export(self) -> float | None:
-    #     """Sum of power returned to the grid."""
-    #     if (power := self.grid_adapter.export_power) is None:
-    #         return None
-
-    #     return power
-
-    # @property
-    # def combined_production(self) -> float | None:
-    #     """Sum of power generated by the production adapters."""
-    #     power = 0.0
-    #     for adapter in self.pv_system_adapters:
-    #         if (prod := adapter.production) is not None:
-    #             power += prod
-    #         else:
-    #             return None
-
-    #     return power
-
-    # @property
-    # def combined_charging_power(self) -> float | None:
-    #     """Sum of power charged by battery adapters."""
-    #     power = 0.0
-    #     for adapter in self.storage_adapters:
-    #         if (cons := adapter.consumption) is not None:
-    #             power += cons
-    #         else:
-    #             return None
-
-    #     return power
-
-    # @property
-    # def combined_discharging_power(self) -> float | None:
-    #     """Sum of power discharged by the battery adapters."""
-    #     power = 0.0
-    #     for adapter in self.storage_adapters:
-    #         if (prod := adapter.production) is not None:
-    #             power += prod
-    #         else:
-    #             return None
-
-    #     return power
-
-    # @property
-    # def combined_standby_power(self) -> float | None:
-    #     """Sum of power consumed by the production adapters.
-
-    #     This is the power that is consumed by the production adapters during
-    #     nighttime. Its an additional power consumption and thereby split up
-    #     into the cost of operations of the production adapters.
-
-    #     """
-    #     power = 0.0
-    #     for adapter in self.pv_system_adapters:
-    #         if (cons := adapter.consumption) is not None:
-    #             power += cons
-    #         else:
-    #             return None
-
-    #     return power
-
-    # @property
-    # def combined_consumption(self) -> float | None:
-    #     """Sum of power consumed by electrical loads (W).
-
-    #     Sum of power that is neither exported or utilized.
-
-    #     This is the the power that is self consumed and therby
-    #     generates avoided costs when produced by a production adapter.
-
-    #     """
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-
-    #     if (export_power := self.combined_grid_export) is None:
-    #         return None
-
-    #     if (charging_power := self.combined_charging_power) is None:
-    #         return None
-
-    #     if (standby_power := self.combined_standby_power) is None:
-    #         return None
-
-    #     return gross_power - export_power - charging_power - standby_power
-
+    # -------------------------------------------------------------->
+    # SOURCE ENTITIES
+    # -------------------------------------------------------------->
 
     @property
-    def inflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+    def source_entities(self) -> list[str]:
+        """Return every source entity across all adapters."""
+        pass
+
+    @property
+    def source_entities_power(self) -> list[str]:
+        """Return every entity that affects a power result."""
+        pass
+
+    @property
+    def source_entities_price(self) -> list[str]:
+        """Return every entity that affects a price result."""
+        pass
+
+    @property
+    def source_entities_co2(self) -> list[str]:
+        """Return every entity that affects a CO2 result."""
+        pass
+
+    # -------------------------------------------------------------->
+    # COMBINED POWER VALUES
+    # -------------------------------------------------------------->
+
+    @property
+    def combined_grid_import(self) -> float | None:
+        """Power imported from the grid (W)."""
+        pass
+
+    @property
+    def combined_grid_export(self) -> float | None:
+        """Power exported to the grid (W)."""
+        pass
+
+    @property
+    def combined_production(self) -> float | None:
+        """Total power generated by the PV adapters (W)."""
+        pass
+
+    @property
+    def combined_charging_power(self) -> float | None:
+        """Total power charged by the battery adapters (W)."""
+        pass
+
+    @property
+    def combined_discharging_power(self) -> float | None:
+        """Total power discharged by the battery adapters (W)."""
+        pass
+
+    @property
+    def combined_standby_power(self) -> float | None:
+        """Total standby power drawn by the PV adapters (W)."""
+        pass
+
+    @property
+    def combined_consumption(self) -> float | None:
+        """Self-consumed power: gross minus export, charging and standby (W)."""
+        pass
+
+    @property
+    def source_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(signed power array, uid index)`` for the source adapters.
+
+        Source adapters are all currently providing (grid import, producing PV,
+        discharging batteries), so every reading is positive. A ``None`` entry
+        never occurs: an unavailable sensor makes an adapter ``UNKNOWN``, which
+        excludes it from the group.
+        """
         arr = []
         index = []
 
-        for adapter in self.inflow_adapters:
+        for adapter in self.source_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
         return np.array(arr), index
 
     @property
-    def outflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+    def sink_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(signed power array, uid index)`` for the sink adapters.
+
+        Sink adapters are all currently drawing (grid export, charging
+        batteries, consumer loads, PV standby), so every reading is negative.
+        """
         arr = []
         index = []
 
-        for adapter in self.outflow_adapters:
+        for adapter in self.sink_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
@@ -427,1942 +365,422 @@ class PowerInsight:
 
     @property
     def gross_power(self) -> float | None:
-        inflow_arr, _ = self.inflow_adapters_power
-        outflow_arr, _ = self.outflow_adapters_power
-
-        if None in inflow_arr or None in outflow_arr:
-            return None
-
-        return float(inflow_arr.sum() - outflow_arr.sum())
-
-
-    # @property
-    # def gross_power(self) -> float | None:
-    #     """Sum of all power entering the system (W).
-
-    #     The total power available to the system before export and
-    #     utilization are accounted for.
-
-    #     """
-    #     if (grid_import := self.combined_grid_import) is None:
-    #         return None
-
-    #     if (production := self.combined_production) is None:
-    #         return None
-
-    #     if (discharge := self.combined_discharging_power) is None:
-    #         return None
-
-    #     return grid_import + production + discharge
-
-    # # ------------------------->
-    # # GROSS POWER RATIOS --->
-    # # ------------------------->
-
-    # @property
-    # def gross_power_export_ratio(self) -> float | None:
-    #     """Fraction of gross power that is returned to the grid.
-
-    #     In conjunction with our Idealization that we only have one grid power sensor
-    #     this describes the fraction of the combined produced power that is returned to the grid.
-
-    #     Simple: How much of the generated power is returned to the grid.
-
-    #     """
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-
-    #     if (grid_export := self.combined_grid_export) is None:
-    #         return None
-
-    #     if grid_export and not gross_power:
-    #         _LOGGER.debug("Data discrepancy: grid export without total power.")
-
-    #     return self._divide(grid_export, gross_power)
-
-    # @property
-    # def gross_power_consumption_ratio(self) -> float | None:
-    #     """Fraction of gross power that is self consumed.
-
-    #     How much of the gross power is consumed.
-
-    #     """
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-
-    #     if (consumption := self.combined_consumption) is None:
-    #         return None
-
-    #     if consumption and not gross_power:
-    #         _LOGGER.debug("Data discrepancy: self-consumption without gross power.")
-
-    #     return self._divide(consumption, gross_power)
-
-    # @property
-    # def gross_power_standby_ratio(self) -> float | None:
-    #     """Fraction of gross power that is used as standby power by adapters.
-
-    #     How much of the gross power is stored in used to keep the adapters
-    #     ready to produce energy.
-
-    #     """
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-
-    #     if (standby_power := self.combined_standby_power) is None:
-    #         return None
-
-    #     if standby_power and not gross_power:
-    #         _LOGGER.debug("Data discrepancy: utilization without total power.")
-
-    #     return self._divide(standby_power, gross_power)
-
-    # @property
-    # def gross_power_charging_ratio(self) -> float | None:
-    #     """Fraction of gross power that is charged by storage adapters.
-
-    #     How much of the gross power is stored in energy storages.
-
-    #     """
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-
-    #     if (charging_power := self.combined_charging_power) is None:
-    #         return None
-
-    #     if charging_power and not gross_power:
-    #         _LOGGER.debug("Data discrepancy: utilization without total power.")
-
-    #     return self._divide(charging_power, gross_power)
-
-    # # --------------------------------->
-    # # APPLICABLE GROSS POWER RATIOS --->
-    # # --------------------------------->
-
-    # # @property
-    # # def applicable_combined_charging_ratio(self) -> float | None:
-    # #     """Fraction of gross power that is charged by battery adapters.
-
-
-
-    # #     This is the share of power that is utilized by the production adapters.
-
-    # #     """
-    # #     if (export_share := self.gross_power_export_ratio) is None:
-    # #         return None
-
-    # #     if (utilization_share := self.combined_utilization_share) is None:
-    # #         return None
-
-    # #     return self._divide(utilization_share, (1.0 - export_share))
-
-
-    # # @property
-    # # def applicable_combined_utilization_ratio(self) -> float | None:
-    # #     """Return the share of total_power that is self consumed.
-
-    # #     This is the share of power that is utilized by the production adapters.
-
-    # #     """
-    # #     if (export_share := self.gross_power_export_ratio) is None:
-    # #         return None
-
-    # #     if (utilization_share := self.combined_utilization_share) is None:
-    # #         return None
-
-    # #     return self._divide(utilization_share, (1.0 - export_share))
-
-    # @property
-    # def gross_power_applicable_consumption_ratio(self) -> float | None:
-    #     """Return the share of total_power that is self consumed."""
-    #     if (export_ratio := self.gross_power_export_ratio) is None:
-    #         return
-
-    #     if (charging_ratio := self.gross_power_charging_ratio) is None:
-    #         return None
-
-    #     if (cons_ratio := self.gross_power_consumption_ratio) is None:
-    #         return None
-
-    #     return self._divide(cons_ratio, (1.0 - export_ratio - charging_ratio))
-
-    # # --------------------------->
-    # # COMBINED MONETARY RATES --->
-    # # --------------------------->
-
-    # @property
-    # def combined_export_compensation_rate(self) -> float | None:
-    #     """Combined export compensation rate."""
-    #     result = 0.0
-    #     compensation_rates = self.prod_adapters_export_compensation_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := compensation_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_avoided_cost_rate(self) -> float | None:
-    #     """Combined avoided cost by self consumption cost rate."""
-    #     result = 0.0
-    #     self_cons_saving_rates = self.prod_adapters_avoided_cost_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := self_cons_saving_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_coe_rate(self) -> float | None:
-    #     """Combined cost of electricity rate."""
-    #     result = 0.0
-    #     adapters = [self.grid_adapter] + self.prod_adapters
-    #     for adapter in adapters:
-    #         if (coe_rate := adapter.coe_rate) is None:
-    #             return None
-
-    #         result += coe_rate
-
-    #     return result
-
-    # @property
-    # def combined_lcoe_rate(self) -> float | None:
-    #     """Combined levelized cost of electricity rate."""
-    #     result = 0.0
-    #     adapters = [self.grid_adapter] + self.prod_adapters
-    #     for adapter in adapters:
-    #         if (lcoe_rate := adapter.lcoe_rate) is None:
-    #             return None
-
-    #         result += lcoe_rate
-
-    #     return result
-
-    # @property
-    # def combined_coo_rate(self) -> float | None:
-    #     """Total export compensation rate."""
-    #     result = 0.0
-    #     coo_rates = self.prod_adapters_coo_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := coo_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_lcoo_rate(self) -> float | None:
-    #     """Total export compensation rate."""
-    #     result = 0.0
-    #     lcoo_rates = self.prod_adapters_lcoo_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := lcoo_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_saving_rate(self) -> float | None:
-    #     """Total export compensation rate."""
-    #     result = 0.0
-    #     saving_rates = self.prod_adapters_cost_saving_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := saving_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_levelized_saving_rate(self) -> float | None:
-    #     """Total export compensation rate."""
-    #     result = 0.0
-    #     levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := levelized_saving_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # # ----------------------------->
-    # # CORRECTION-FACTOR VARIANTS --->
-    # # ----------------------------->
-    # #
-    # # These mirror the base combined levelized rates but scale each adapter's
-    # # contribution by its (time-constant) correction factor. The base variants
-    # # above are left untouched so the accumulating sensors keep integrating the
-    # # base rate; correction is applied only to displayed values.
-
-    # @property
-    # def combined_lcoe_rate_corrected(self) -> float | None:
-    #     """Combined levelized cost rate with per-adapter correction applied."""
-    #     result = 0.0
-    #     adapters = [self.grid_adapter] + self.prod_adapters
-    #     for adapter in adapters:
-    #         if (lcoe_rate := adapter.lcoe_rate) is None:
-    #             return None
-
-    #         result += lcoe_rate * adapter.correction_factor
-
-    #     return result
-
-    # @property
-    # def combined_lcoo_rate_corrected(self) -> float | None:
-    #     """Combined levelized operating cost rate with correction applied."""
-    #     result = 0.0
-    #     lcoo_rates = self.prod_adapters_lcoo_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := lcoo_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate * adapter.correction_factor
-
-    #     return result
-
-    # @property
-    # def combined_levelized_saving_rate_corrected(self) -> float | None:
-    #     """Combined levelized cost savings rate with correction applied."""
-    #     result = 0.0
-    #     levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := levelized_saving_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate * adapter.correction_factor
-
-    #     return result
-
-    # @property
-    # def combined_financial_return_rate(self) -> float | None:
-    #     """Combined financial return rate (cost savings + export compensation)."""
-    #     saving = self.combined_saving_rate
-    #     comp = self.combined_export_compensation_rate
-    #     if saving is None or comp is None:
-    #         return None
-    #     return saving + comp
-
-    # @property
-    # def combined_levelized_financial_return_rate(self) -> float | None:
-    #     """Combined levelized financial return rate (base, for accumulation)."""
-    #     result = 0.0
-    #     levelized_return_rates = self.prod_adapters_levelized_financial_return_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := levelized_return_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate
-
-    #     return result
-
-    # @property
-    # def combined_levelized_financial_return_rate_corrected(self) -> float | None:
-    #     """Combined levelized financial return rate with correction applied."""
-    #     result = 0.0
-    #     levelized_return_rates = self.prod_adapters_levelized_financial_return_rates
-    #     for adapter in self.prod_adapters:
-    #         if (rate := levelized_return_rates.get(adapter.uid)) is None:
-    #             return None
-
-    #         result += rate * adapter.correction_factor
-
-    #     return result
-
-    # @property
-    # def levelized_correction_factors(self) -> dict[str, float]:
-    #     """Return ``uid -> correction_factor`` for prod adapters with an LCOE.
-
-    #     Used by the combined accumulated levelized sensor to enumerate the
-    #     active contributors whose per-adapter base totals it sums.
-    #     """
-    #     factors: dict[str, float] = {}
-    #     for adapter in self.prod_adapters:
-    #         if adapter.lcoe is not None:
-    #             factors[adapter.uid] = adapter.correction_factor
-
-    #     return factors
-
-    # # ------------------->
-    # # COMBINED PRICES --->
-    # # ------------------->
-
-    # @property
-    # def combined_coe(self) -> float | None:
-    #     """Cost of electricity."""
-    #     if (coe_rate := self.combined_coe_rate) is None:
-    #         return None
-
-    #     if coe_rate == 0.0:
-    #         return 0.0
-
-    #     if (gross_power := self.gross_power) is None:
-    #         return None
-    #     else:
-    #         gross_power = self._to_kilo(gross_power)
-
-    #     return self._divide(coe_rate, gross_power)
-
-    # @property
-    # def combined_lcoe(self) -> float | None:
-    #     """Levelized cost of electricity."""
-    #     if (lcoe_rate := self.combined_lcoe_rate) is None:
-    #         return None
-
-    #     if lcoe_rate == 0.0:
-    #         return 0.0
-
-    #     if (total_power := self.gross_power) is None:
-    #         return None
-    #     else:
-    #         total_power = self._to_kilo(total_power)
-
-    #     return self._divide(lcoe_rate, total_power)
-
-    # # ----------------->
-    # # GRID ADAPTERS --->
-    # # ----------------->
-
-    # @property
-    # def grid_adapters_gross_power_shares(self) -> dict:
-    #     """Return the grid adapter's share of total power.
-
-    #     The fraction of total power that is imported by the adapter.
-
-    #     """
-    #     shares = {}
-    #     if (gross_power := self.gross_power) is None:
-    #         return {}
-
-    #     if (grid_import := self.combined_grid_import) is None:
-    #         return {}
-
-    #     for adapter in [self.grid_adapter]:
-    #         shares[adapter.uid] = self._divide(grid_import, gross_power)
-
-    #     return shares
-
-    # @property
-    # def grid_adapters_consumption_ratios(self) -> dict:
-    #     """Return the relative self consumption rate."""
-    #     rates = {}
-    #     # ???: use applicable share or not?
-    #     applicable_share = self.gross_power_applicable_consumption_ratio
-    #     if applicable_share is None:
-    #         return {}
-
-    #     for adapter in [self.grid_adapter]:
-    #         rates[adapter.uid] = applicable_share
-
-    #     return rates
-
-    # # @property
-    # # def grid_adapters_utilization_ratios(self) -> float | None:
-    # #     """Return the relative utilization rate."""
-    # #     rates = {}
-    # #     # ???: use applicable share or not?
-    # #     applicable_ratio = self.applicable_combined_utilization_ratio
-    # #     if applicable_ratio is None:
-    # #         return {}
-
-    # #     for adapter in [self.grid_adapter]:
-    # #         rates[adapter.uid] = applicable_ratio
-
-    # #     return rates
-
-    # @property
-    # def grid_adapters_consumption_shares(self) -> dict:
-    #     """Return the relative self consumption shares."""
-    #     shares = {}
-    #     if (self_cons_share := self.gross_power_consumption_ratio) is None:
-    #         return {}
-
-    #     consumption_ratios = self.grid_adapters_consumption_ratios
-    #     total_power_shares = self.grid_adapters_gross_power_shares
-    #     for adapter in [self.grid_adapter]:
-    #         if (cons_ratios := consumption_ratios.get(adapter.uid)) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         if (power_share := total_power_shares.get(adapter.uid)) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         shares[adapter.uid] = self._divide(
-    #             (cons_ratios * power_share), self_cons_share
-    #         )
-
-    #     return shares
-
-    # # Replaced by charging_shares
-    # # @property
-    # # def grid_adapters_utilization_shares(self) -> float | None:
-    # #     """Return the relative utilization shares."""
-    # #     shares = {}
-    # #     if (utilization_share := self.combined_utilization_share) is None:
-    # #         return {}
-
-    # #     utilization_rates = self.grid_adapters_utilization_ratios
-    # #     total_power_shares = self.grid_adapters_gross_power_shares
-    # #     for adapter in [self.grid_adapter]:
-    # #         if (utilization_rate := utilization_rates.get(adapter.uid)) is None:
-    # #             shares[adapter.uid] = None
-    # #             continue
-
-    # #         if (power_share := total_power_shares.get(adapter.uid)) is None:
-    # #             shares[adapter.uid] = None
-    # #             continue
-
-    # #         shares[adapter.uid] = self._divide(
-    # #             (utilization_rate * power_share), utilization_share
-    # #         )
-
-    # #     return shares
-
-    # @property
-    # def grid_adapters_import_power(self) -> dict[str, float | None]:
-    #     """Return the grid adapter's import power keyed by uid."""
-    #     return {self.grid_adapter.uid: self.combined_grid_import}
-
-    # @property
-    # def grid_adapters_export_power(self) -> dict[str, float | None]:
-    #     """Return the grid adapter's export power keyed by uid."""
-    #     return {self.grid_adapter.uid: self.combined_grid_export}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_self_consumption_power(self) -> dict[str, float | None]:
-    #     """Watts of grid import used for direct self-consumption."""
-    #     if (consumption := self.combined_consumption) is None:
-    #         return {}
-    #     uid = self.grid_adapter.uid
-    #     if (share := self.grid_adapters_consumption_shares.get(uid)) is None:
-    #         return {}
-    #     return {uid: consumption * share}
-
-    # @property
-    # def grid_adapters_coe_rate(self) -> dict[str, float | None]:
-    #     """Return the grid import cost rate (EUR/h) keyed by uid."""
-    #     if (import_power := self.combined_grid_import) is None:
-    #         return {self.grid_adapter.uid: None}
-    #     if (coe := self.grid_adapter.coe) is None:
-    #         return {self.grid_adapter.uid: None}
-    #     return {self.grid_adapter.uid: (import_power / 1000) * coe}
-
-    # @property
-    # def grid_adapters_export_compensation_rate(self) -> dict[str, float | None]:
-    #     """Return the grid export compensation rate (EUR/h) keyed by uid.
-
-    #     Export physically happens at the (single) grid connection, so the
-    #     combined export compensation is surfaced on the grid device.
-    #     """
-    #     return {self.grid_adapter.uid: self.combined_export_compensation_rate}
-
-    # # ----------------------->
-    # # PRODUCTION ADAPTERS --->
-    # # ----------------------->
-
-    # @property
-    # def prod_adapters_coo_rates(self):
-    #     """Cost of consumption rates."""
-    #     coo_rates = {}
-    #     if (coe := self.combined_coe) is None:
-    #         return {}
-
-    #     for adapter in self.prod_adapters:
-    #         if (coo_rate := adapter.get_coo_rate(coe)) is None:
-    #             coo_rates[adapter.uid] = None
-    #             continue
-
-    #         coo_rates[adapter.uid] = coo_rate
-
-    #     return coo_rates
-
-    # @property
-    # def prod_adapters_lcoo_rates(self):
-    #     """Cost of consumption rates."""
-    #     lcoo_rates = {}
-    #     if (lcoe := self.combined_lcoe) is None:
-    #         return {}
-
-    #     for adapter in self.prod_adapters:
-    #         if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
-    #             lcoo_rates[adapter.uid] = None
-    #             continue
-
-    #         lcoo_rates[adapter.uid] = lcoo_rate
-
-    #     return lcoo_rates
-
-    # @property
-    # def prod_adapters_gross_power_shares(self) -> dict[str, float]:
-    #     """Return the production adapter's share of total power.
-
-    #     The fraction of total power that is generated by the adapter.
-
-    #     """
-    #     shares = {}
-    #     if (total_power := self.gross_power) is None:
-    #         return {}
-
-    #     for adapter in self.prod_adapters:
-    #         if (production := adapter.production) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         shares[adapter.uid] = self._divide(production, total_power)
-
-    #     return shares
-
-    # @property
-    # def prod_adapters_export_ratios(self) -> dict[str, float]:
-    #     """Return the production adapter's export ratio.
-
-    #     The fraction of generated power that is returned to the grid.
-    #     Equals: production / returned to grid.
-
-    #     How much of the power generated by the adapter is send to the grid.
-
-    #     """
-    #     export_ratios = {}
-    #     if (total_export_share := self.gross_power_export_ratio) is None:
-    #         return {}
-
-    #     power_shares = self.prod_adapters_gross_power_shares
-    #     export_shares = self.prod_adapters_export_shares
-    #     for adapter in self.prod_adapters:
-    #         if (power_share := power_shares.get(adapter.uid)) is None:
-    #             export_ratios[adapter.uid] = None
-
-    #         elif (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_ratios[adapter.uid] = None
-
-    #         else:
-    #             value = export_share * total_export_share
-    #             export_ratios[adapter.uid] = self._divide(value, power_share)
-
-    #     return export_ratios
-
-    # @property
-    # def prod_adapters_export_shares(self) -> dict[str, float]:
-    #     """Return the production adapter's share of exported power.
-
-    #     The fraction of exported power that is generated by the adapter.
-
-    #     How much of the total exported power is generated by the adapter.
-
-    #     """
-    #     shares = {}
-    #     exports = {}
-    #     total_share = 0.0
-
-    #     total_power_shares = self.prod_adapters_gross_power_shares
-    #     for adapter in self.prod_adapters:
-    #         if not adapter.exports_power:
-    #             shares[adapter.uid] = 0.0
-    #             continue
-
-    #         if (share := total_power_shares.get(adapter.uid)) is None:
-    #             return {}
-
-    #         total_share += share
-    #         exports[adapter.uid] = share
-
-    #     for uid, share in exports.items():
-    #         shares[uid] = self._divide(share, total_share)
-
-    #     return shares
-
-    # @property
-    # def prod_adapters_export_power(self) -> dict[str, float]:
-    #     """Return the production adapter's export power."""
-    #     export_power = {}
-    #     if (grid_export := self.combined_grid_export) is None:
-    #         return {}
-
-    #     export_shares = self.prod_adapters_export_shares
-    #     for adapter in self.prod_adapters:
-    #         if (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_power[adapter.uid] = None
-    #         else:
-    #             export_power[adapter.uid] = grid_export * export_share
-
-    #     return export_power
-
-    # @property
-    # def prod_adapters_export_compensation_rates(self) -> dict[str, float]:
-    #     """Return the export compensation rates."""
-    #     compensation_rates = {}
-    #     export_power = self.prod_adapters_export_power
-    #     for adapter in self.prod_adapters:
-    #         if (power := export_power.get(adapter.uid)) is None:
-    #             compensation_rates[adapter.uid] = None
-    #             continue
-
-    #         if (compensation := adapter.export_compensation) is None:
-    #             compensation_rates[adapter.uid] = None
-    #             continue
-
-    #         power = self._to_kilo(power)
-    #         compensation_rates[adapter.uid] = power * compensation
-
-    #     return compensation_rates
-
-    # @property
-    # def prod_adapters_charging_ratios_by_battery(self) -> dict[str, float]:
-    #     """Return the production adapter's charging ratio.
-
-    #     The fraction of generated power that is charged by batteries.
-
-    #     """
-    #     charging_ratios = defaultdict(dict)
-
-    #     if (combined_charging_ratio := self.gross_power_charging_ratio) is None:
-    #         return {}
-
-    #     gross_power_shares = self.prod_adapters_gross_power_shares
-    #     charging_shares = self.prod_adapters_charging_shares_by_battery
-
-    #     for adapter in self.prod_adapters:
-    #         if (power_share := gross_power_shares.get(adapter.uid)) is None:
-    #             charging_ratios[adapter.uid] = None
-    #             continue
-
-    #         # No entry means no battery tracks this adapter as a source → ratio = 0.
-    #         adapter_charging_shares = charging_shares.get(adapter.uid, {})
-    #         charging_ratios[adapter.uid]  # initialise as empty dict via defaultdict
-    #         for uid, charging_share in adapter_charging_shares.items():
-    #             value = charging_share * combined_charging_ratio
-    #             charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
-
-    #     return charging_ratios
-
-    # # BUG (multi-battery): this over-counts a provider's charging ratio.
-    # #
-    # # It sums the per-battery ratios from prod_adapters_charging_ratios_by_battery, each of
-    # # which is  charging_share[P][B] * combined_charging_power / production[P].
-    # # Because every term uses the *total* charging power (combined_charging_power)
-    # # rather than battery B's own charging power, a provider with N batteries
-    # # sourcing from it is credited with N times the charging it actually feeds.
-    # #
-    # # Correct only with a single battery. With two batteries charging from one
-    # # 1000 W PV (100 W + 300 W = 400 W total) it returns 0.8 instead of the true
-    # # 0.4, and with enough batteries it can exceed 1.0 (>100% of production).
-    # #
-    # # This feeds prod_adapters_consumption_ratios via
-    # # (1 - export_ratio - charging_ratio) * applicable_ratio, so it also
-    # # understates self-consumption (and the avoided-cost savings) for
-    # # multi-battery homes. A power-weighted attribution
-    # # (Sum_B battery.consumption * charging_share[P][B]) fixes it — see the
-    # # CLAUDE-GENERATED _provider_charging_powers helper below. Left untouched
-    # # here because correcting it changes the self-consumption/savings outputs
-    # # and warrants its own review.
-    # @property
-    # def prod_adapters_combined_charging_ratios(self) -> dict[str, float]:
-
-    #     combined_charging_ratios = {}
-
-    #     all_charging_ratios = self.prod_adapters_charging_ratios_by_battery
-
-    #     for adapter in self.prod_adapters:
-    #         adapter_ratios = all_charging_ratios.get(adapter.uid)
-    #         if adapter_ratios is None:
-    #             combined_charging_ratios[adapter.uid] = None
-    #             continue
-
-    #         combined_ratio = 0.0
-    #         for uid, charging_ratio in adapter_ratios.items():
-    #             combined_ratio += charging_ratio
-
-    #         combined_charging_ratios[adapter.uid] = combined_ratio
-
-    #     return combined_charging_ratios
-
-    # @property
-    # def prod_adapters_charging_shares_by_battery(self) -> dict[str, float]:
-    #     """Return the production adapter's share of charging power.
-
-    #     The fraction of charging power that is generated by the adapter.
-
-    #     """
-    #     charging_shares = defaultdict(dict)
-    #     gross_power_shares = self.prod_adapters_gross_power_shares
-
-    #     for battery in self.storage_adapters:
-    #         if not (charge_from := battery.charge_from_adapters):
-    #             continue
-
-    #         # The grid contributes to the denominator when it is one of the
-    #         # battery's configured sources. It has no own gross-power entry
-    #         # here, so its share is seeded from the grid gross-power shares.
-    #         if self.grid_adapter.uid in charge_from:
-    #             total_share = self.grid_adapters_gross_power_shares.get(
-    #                 self.grid_adapter.uid, 0.0
-    #             )
-    #         else:
-    #             total_share = 0.0
-
-    #         for adapter_uid in charge_from:
-    #             if (share := gross_power_shares.get(adapter_uid)) is None:
-    #                 charging_shares[adapter_uid][battery.uid] = 0.0
-    #                 continue
-
-    #             total_share += share
-    #             charging_shares[adapter_uid][battery.uid] = share
-
-    #         for adapter_uid in charge_from:
-    #             share = charging_shares[adapter_uid][battery.uid]
-    #             charging_shares[adapter_uid][battery.uid] = self._divide(share, total_share)
-
-    #     return charging_shares
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def prod_adapters_charging_power(self) -> dict[str, float | None]:
-    #     """Watts of each PV adapter's output that go to battery charging."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     return {adapter.uid: powers.get(adapter.uid, 0.0) for adapter in self.prod_adapters}
-
-    # @property
-    # def prod_adapters_consumption_ratios(self) -> dict[str, float]:
-    #     """Ratio of power that is self consumed."""
-    #     consumption_ratios = {}
-    #     applicable_ratio = self.gross_power_applicable_consumption_ratio
-    #     if applicable_ratio is None:
-    #         return {}
-
-    #     export_ratios = self.prod_adapters_export_ratios
-    #     combined_charging_ratios = self.prod_adapters_combined_charging_ratios
-
-    #     for adapter in self.prod_adapters:
-    #         if not (prod := adapter.production):
-    #             consumption_ratios[adapter.uid] = prod
-    #             continue
-
-    #         if (export_ratio := export_ratios.get(adapter.uid)) is None:
-    #             consumption_ratios[adapter.uid] = None
-    #             continue
-
-    #         if (charging_ratio := combined_charging_ratios.get(adapter.uid)) is None:
-    #             consumption_ratios[adapter.uid] = None
-    #             continue
-
-    #         consumption_ratios[adapter.uid] = (
-    #             (1.0 - export_ratio - charging_ratio) * applicable_ratio
-    #         )
-
-    #     return consumption_ratios
-
-    # @property
-    # def prod_adapters_consumption_shares(self) -> dict[str, float]:
-    #     """Return the absolute self consumption shares.
-
-    #     How much of the combined consumption power is produdec by this adapter.
-
-    #     """
-    #     consumption_shares = {}
-    #     if (combined_cons_ratio := self.gross_power_consumption_ratio) is None:
-    #         return {}
-
-    #     consumption_ratios = self.prod_adapters_consumption_ratios
-    #     gross_power_shares = self.prod_adapters_gross_power_shares
-    #     for adapter in self.prod_adapters:
-    #         if (cons_ratio := consumption_ratios.get(adapter.uid)) is None:
-    #             consumption_shares[adapter.uid] = None
-    #             continue
-
-    #         if (power_share := gross_power_shares.get(adapter.uid)) is None:
-    #             consumption_shares[adapter.uid] = None
-    #             continue
-
-    #         consumption_shares[adapter.uid] = self._divide(
-    #             (cons_ratio * power_share), combined_cons_ratio
-    #         )
-
-    #     return consumption_shares
-
-    # @property
-    # def prod_adapters_consumption_power(self) -> dict[str, float]:
-    #     """Return the self consumption power."""
-    #     consumption_power = {}
-    #     consumption_ratios = self.prod_adapters_consumption_ratios
-    #     for adapter in self.prod_adapters:
-    #         consumption_ratio = consumption_ratios.get(adapter.uid)
-    #         if consumption_ratio is None:
-    #             consumption_power[adapter.uid] = None
-    #             continue
-
-    #         cons_power = adapter.get_power_from_ratio(consumption_ratio)
-    #         if cons_power is None:
-    #             consumption_power[adapter.uid] = None
-    #             continue
-
-    #         consumption_power[adapter.uid] = cons_power
-
-    #     return consumption_power
-
-    # @property
-    # def prod_adapters_avoided_cost_rates(self) -> dict[str, float]:
-    #     """Return the self consumption power."""
-    #     avoided_cost_rates = {}
-    #     if (coe := self.grid_adapter.coe) is None:
-    #         return {}
-
-    #     cons_power = self.prod_adapters_consumption_power
-    #     for adapter in self.prod_adapters:
-    #         if (power := cons_power.get(adapter.uid)) is None:
-    #             avoided_cost_rates[adapter.uid] = None
-    #             continue
-
-    #         avoided_cost_rates[adapter.uid] = self._to_kilo(power) * coe
-
-    #     return avoided_cost_rates
-
-    # # NOTE: This is not required at the moment (Grid COE == Grid LCOE).
-    # # @property
-    # # def prod_adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
-    # #     """Return the self consumption power."""
-    # #     saving_rates = {}
-    # #     if (lcoe := self.grid_adapter.lcoe) is None:
-    # #         return {}
-
-    # #     self_cons_power = self.prod_adapters_consumption_power
-    # #     for adapter in self.prod_adapters:
-    # #         if (power := self_cons_power.get(adapter.uid)) is None:
-    # #             saving_rates[adapter.uid] = None
-    # #             continue
-
-    # #         saving_rates[adapter.uid] = self._to_kilo(power) * lcoe
-
-    # #     return saving_rates
-
-    # @property
-    # def prod_adapters_cost_saving_rates(self) -> dict[str, float]:
-    #     """Return the production adapter's cost saving rates (avoided import cost only)."""
-    #     saving_rates = {}
-
-    #     avoided_costs = self.prod_adapters_avoided_cost_rates
-    #     coo_rates = self.prod_adapters_coo_rates
-
-    #     for adapter in self.prod_adapters:
-    #         if (coe_rate := adapter.coe_rate) is None:
-    #             return {}
-
-    #         if (avoided := avoided_costs.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (coo_rate := coo_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         saving_rates[adapter.uid] = avoided - coo_rate - coe_rate
-
-    #     return saving_rates
-
-    # @property
-    # def prod_adapters_levelized_cost_saving_rates(self) -> dict[str, float]:
-    #     """Return the production adapter's levelized cost saving rates (avoided import cost only)."""
-    #     saving_rates = {}
-
-    #     # Disabled see: adapters_levelized_self_cons_saving_rates
-    #     # self_cons_savings = self.prod_adapters_levelized_self_cons_saving_rates
-    #     avoided_costs = self.prod_adapters_avoided_cost_rates
-    #     lcoo_rates = self.prod_adapters_lcoo_rates
-
-    #     for adapter in self.prod_adapters:
-    #         if (lcoe_rate := adapter.lcoe_rate) is None:
-    #             return {}
-
-    #         if (avoided := avoided_costs.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (lcoo_rate := lcoo_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         saving_rates[adapter.uid] = avoided - lcoo_rate - lcoe_rate
-
-    #     return saving_rates
-
-    # @property
-    # def prod_adapters_financial_return_rates(self) -> dict[str, float]:
-    #     """Return the production adapter's financial return rates (savings + export compensation)."""
-    #     financial_return_rates = {}
-
-    #     export_compensations = self.prod_adapters_export_compensation_rates
-    #     saving_rates = self.prod_adapters_cost_saving_rates
-
-    #     for adapter in self.prod_adapters:
-    #         if (earnings := export_compensations.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (saving := saving_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         financial_return_rates[adapter.uid] = earnings + saving
-
-    #     return financial_return_rates
-
-    # @property
-    # def prod_adapters_levelized_financial_return_rates(self) -> dict[str, float]:
-    #     """Return the production adapter's levelized financial return rates."""
-    #     financial_return_rates = {}
-
-    #     export_compensations = self.prod_adapters_export_compensation_rates
-    #     levelized_saving_rates = self.prod_adapters_levelized_cost_saving_rates
-
-    #     for adapter in self.prod_adapters:
-    #         if (earnings := export_compensations.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (saving := levelized_saving_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         financial_return_rates[adapter.uid] = earnings + saving
-
-    #     return financial_return_rates
-
-    # # -------------------->
-    # # STORAGE ADAPTERS --->
-    # # -------------------->
-
-    # @property
-    # def storage_adapters_dynamic_coe(self) -> dict[str, float | None]:
-    #     dynamic_coe = {}
-    #     source_shares = self.storage_adapters_charging_source_shares
-
-    #     for storage in self.storage_adapters:
-    #         sources = source_shares.get(storage.uid, {})
-    #         if not sources:
-    #             # No configured charge sources: the charging mix is unknown, so
-    #             # the blended cost is left undefined (uid stays absent -> None).
-    #             continue
-
-    #         blended = 0.0
-
-    #         for source_uid, share in sources.items():
-    #             adapter = self.get_adapter_by_uid(source_uid)
-    #             if adapter is None or adapter.coe is None:
-    #                 dynamic_coe[storage.uid] = None
-    #                 break
-
-    #             blended += adapter.coe * share
-    #         else:
-    #             # No break: every source resolved to a value.
-    #             dynamic_coe[storage.uid] = blended
-
-    #     return dynamic_coe
-
-    # @property
-    # def storage_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
-    #     dynamic_lcoe = {}
-    #     source_shares = self.storage_adapters_charging_source_shares
-
-    #     for storage in self.storage_adapters:
-    #         sources = source_shares.get(storage.uid, {})
-    #         if not sources:
-    #             # No configured charge sources: the charging mix is unknown, so
-    #             # the blended cost is left undefined (uid stays absent -> None).
-    #             continue
-
-    #         blended = 0.0
-
-    #         for source_uid, share in sources.items():
-    #             adapter = self.get_adapter_by_uid(source_uid)
-    #             if adapter is None or adapter.lcoe is None:
-    #                 dynamic_lcoe[storage.uid] = None
-    #                 break
-
-    #             blended += adapter.lcoe * share
-    #         else:
-    #             # No break: every source resolved to a value.
-    #             dynamic_lcoe[storage.uid] = blended
-
-    #     return dynamic_lcoe
-
-    # @property
-    # def storage_adapters_coo_rates(self):
-    #     """Cost of consumption rates."""
-    #     coo_rates = {}
-    #     dynamic_coe = self.storage_adapters_dynamic_coe
-    #     for adapter in self.storage_adapters:
-    #         if (coe_rate := dynamic_coe.get(adapter.uid)) is None:
-    #             coo_rates[adapter.uid] = None
-    #             continue
-
-    #         if (coo_rate := adapter.get_coo_rate(coe_rate)) is None:
-    #             coo_rates[adapter.uid] = None
-    #             continue
-
-    #         coo_rates[adapter.uid] = coo_rate
-
-    #     return coo_rates
-
-    # @property
-    # def storage_adapters_lcoo_rates(self):
-    #     """Cost of consumption rates."""
-    #     lcoo_rates = {}
-    #     dynamic_lcoe = self.storage_adapters_dynamic_lcoe
-    #     for adapter in self.storage_adapters:
-    #         if (lcoe_rate := dynamic_lcoe.get(adapter.uid)) is None:
-    #             lcoo_rates[adapter.uid] = None
-    #             continue
-
-    #         if (lcoo_rate := adapter.get_lcoo_rate(lcoe_rate)) is None:
-    #             lcoo_rates[adapter.uid] = None
-    #             continue
-
-    #         lcoo_rates[adapter.uid] = lcoo_rate
-
-    #     return lcoo_rates
-
-    # @property
-    # def storage_adapters_gross_power_shares(self) -> dict[str, float]:
-    #     """Return the production adapter's share of total power.
-
-    #     The fraction of total power that is generated by the adapter.
-
-    #     """
-    #     shares = {}
-    #     if (total_power := self.gross_power) is None:
-    #         return {}
-
-    #     for adapter in self.storage_adapters:
-    #         if (production := adapter.production) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         shares[adapter.uid] = self._divide(production, total_power)
-
-    #     return shares
-
-    # @property
-    # def storage_adapters_export_ratios(self) -> dict[str, float]:
-    #     """Return the production adapter's export ratio.
-
-    #     The fraction of generated power that is returned to the grid.
-    #     Equals: production / returned to grid.
-
-    #     How much of the power generated by the adapter is send to the grid.
-
-    #     """
-    #     export_ratios = {}
-    #     if (total_export_share := self.gross_power_export_ratio) is None:
-    #         return {}
-
-    #     power_shares = self.storage_adapters_gross_power_shares
-    #     export_shares = self.storage_adapters_export_shares
-    #     for adapter in self.storage_adapters:
-    #         if (power_share := power_shares.get(adapter.uid)) is None:
-    #             export_ratios[adapter.uid] = None
-
-    #         elif (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_ratios[adapter.uid] = None
-
-    #         else:
-    #             value = export_share * total_export_share
-    #             export_ratios[adapter.uid] = self._divide(value, power_share)
-
-    #     return export_ratios
-
-    # @property
-    # def storage_adapters_export_shares(self) -> dict[str, float]:
-    #     """Return the production adapter's share of exported power.
-
-    #     The fraction of exported power that is generated by the adapter.
-
-    #     How much of the total exported power is generated by the adapter.
-
-    #     """
-    #     shares = {}
-    #     exports = {}
-    #     total_share = 0.0
-
-    #     total_power_shares = self.storage_adapters_gross_power_shares
-    #     for adapter in self.storage_adapters:
-    #         if not adapter.exports_power:
-    #             shares[adapter.uid] = 0.0
-    #             continue
-
-    #         if (share := total_power_shares.get(adapter.uid)) is None:
-    #             return {}
-
-    #         total_share += share
-    #         exports[adapter.uid] = share
-
-    #     for uid, share in exports.items():
-    #         shares[uid] = self._divide(share, total_share)
-
-    #     return shares
-
-    # @property
-    # def storage_adapters_export_power(self) -> dict[str, float]:
-    #     """Return the production adapter's export power."""
-    #     export_power = {}
-    #     if (grid_export := self.combined_grid_export) is None:
-    #         return {}
-
-    #     export_shares = self.storage_adapters_export_shares
-    #     for adapter in self.storage_adapters:
-    #         if (export_share := export_shares.get(adapter.uid)) is None:
-    #             export_power[adapter.uid] = None
-    #         else:
-    #             export_power[adapter.uid] = grid_export * export_share
-
-    #     return export_power
-
-    # @property
-    # def storage_adapters_export_compensation_rates(self) -> dict[str, float]:
-    #     """Return the export compensation rates."""
-    #     compensation_rates = {}
-    #     export_power = self.storage_adapters_export_power
-    #     for adapter in self.storage_adapters:
-    #         if (power := export_power.get(adapter.uid)) is None:
-    #             compensation_rates[adapter.uid] = None
-    #             continue
-
-    #         if (compensation := adapter.export_compensation) is None:
-    #             compensation_rates[adapter.uid] = None
-    #             continue
-
-    #         power = self._to_kilo(power)
-    #         compensation_rates[adapter.uid] = power * compensation
-
-    #     return compensation_rates
-
-    # @property
-    # def storage_adapters_charging_ratios_by_battery(self) -> dict[str, float]:
-    #     """Return the production adapter's charging ratio.
-
-    #     The fraction of generated power that is charged by batteries.
-
-    #     """
-    #     charging_ratios = defaultdict(dict)
-
-    #     if (combined_charging_ratio := self.gross_power_charging_ratio) is None:
-    #         return {}
-
-    #     gross_power_shares = self.storage_adapters_gross_power_shares
-    #     charging_shares = self.storage_adapters_charging_shares_by_battery
-
-    #     for adapter in self.storage_adapters:
-    #         if (power_share := gross_power_shares.get(adapter.uid)) is None:
-    #             charging_ratios[adapter.uid] = None
-    #             continue
-
-    #         # No entry means no battery tracks this adapter as a source → ratio = 0.
-    #         adapter_charging_shares = charging_shares.get(adapter.uid, {})
-    #         charging_ratios[adapter.uid]  # initialise as empty dict via defaultdict
-    #         for uid, charging_share in adapter_charging_shares.items():
-    #             value = charging_share * combined_charging_ratio
-    #             charging_ratios[adapter.uid][uid] = self._divide(value, power_share)
-
-    #     return charging_ratios
-
-    # # BUG (multi-battery): same over-counting as
-    # # prod_adapters_combined_charging_ratios (see that property for the full
-    # # explanation). It sums per-battery ratios that each use the *total*
-    # # charging power instead of the battery's own, so a provider feeding N
-    # # batteries is credited N times its real charging contribution; correct only
-    # # with a single battery, and can exceed 1.0. The power-weighted
-    # # CLAUDE-GENERATED _provider_charging_powers helper is the fix; left
-    # # untouched here as it would change self-consumption/savings outputs.
-    # @property
-    # def storage_adapters_combined_charging_ratios(self) -> dict[str, float]:
-
-    #     combined_charging_ratios = {}
-
-    #     all_charging_ratios = self.storage_adapters_charging_ratios_by_battery
-
-    #     for adapter in self.storage_adapters:
-    #         adapter_ratios = all_charging_ratios.get(adapter.uid)
-    #         if adapter_ratios is None:
-    #             combined_charging_ratios[adapter.uid] = None
-    #             continue
-
-    #         combined_ratio = 0.0
-    #         for uid, charging_ratio in adapter_ratios.items():
-    #             combined_ratio += charging_ratio
-
-    #         combined_charging_ratios[adapter.uid] = combined_ratio
-
-    #     return combined_charging_ratios
-
-    # @property
-    # def storage_adapters_charging_shares_by_battery(self) -> dict[str, float]:
-    #     """Return the production adapter's share of charging power.
-
-    #     The fraction of charging power that is generated by the adapter.
-
-    #     """
-    #     charging_shares = defaultdict(dict)
-    #     gross_power_shares = self.storage_adapters_gross_power_shares
-
-    #     for battery in self.storage_adapters:
-    #         if not (charge_from := battery.charge_from_adapters):
-    #             continue
-
-    #         # The grid contributes to the denominator when it is one of the
-    #         # battery's configured sources. It has no own gross-power entry
-    #         # here, so its share is seeded from the grid gross-power shares.
-    #         if self.grid_adapter.uid in charge_from:
-    #             total_share = self.grid_adapters_gross_power_shares.get(
-    #                 self.grid_adapter.uid, 0.0
-    #             )
-    #         else:
-    #             total_share = 0.0
-
-    #         for adapter_uid in charge_from:
-    #             if (share := gross_power_shares.get(adapter_uid)) is None:
-    #                 charging_shares[adapter_uid][battery.uid] = 0.0
-    #                 continue
-
-    #             total_share += share
-    #             charging_shares[adapter_uid][battery.uid] = share
-
-    #         for adapter_uid in charge_from:
-    #             share = charging_shares[adapter_uid][battery.uid]
-    #             charging_shares[adapter_uid][battery.uid] = self._divide(share, total_share)
-
-    #     return charging_shares
-
-    # @property
-    # def storage_adapters_charging_source_shares(self):
-    #     """Return ``{battery_uid: {source_uid: share}}``.
-
-    #     ``share`` is the fraction of the battery's charging power supplied by
-    #     that source, weighting each configured source by its share of gross
-    #     power. A battery's sources are the adapters listed in its
-    #     ``charge_from_adapters`` (grid and/or PV — batteries are never
-    #     selectable as a source). Batteries with no configured sources are
-    #     omitted: their charging mix is unknown.
-    #     """
-    #     source_shares = defaultdict(dict)
-
-    #     # uid -> share of gross power, spanning every possible source. The
-    #     # production shares already cover PV; the grid is added explicitly.
-    #     gross_shares = (
-    #         self.grid_adapters_gross_power_shares
-    #         | self.prod_adapters_gross_power_shares
-    #     )
-
-    #     for battery in self.storage_adapters:
-    #         sources = battery.charge_from_adapters
-    #         if not sources:
-    #             continue
-
-    #         weights = {
-    #             uid: (weight if (weight := gross_shares.get(uid)) is not None else 0.0)
-    #             for uid in sources
-    #         }
-    #         total = sum(weights.values())
-    #         for uid, weight in weights.items():
-    #             source_shares[battery.uid][uid] = self._divide(weight, total)
-
-    #     return source_shares
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def storage_adapters_charging_power(self) -> dict[str, float | None]:
-    #     """Watts of each battery's discharge that go to charging other batteries."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     return {adapter.uid: powers.get(adapter.uid, 0.0) for adapter in self.storage_adapters}
-
-    # @property
-    # def storage_adapters_consumption_ratios(self) -> dict[str, float]:
-    #     """Ratio of power that is self consumed."""
-    #     consumption_ratios = {}
-    #     applicable_ratio = self.gross_power_applicable_consumption_ratio
-    #     if applicable_ratio is None:
-    #         return {}
-
-    #     export_ratios = self.storage_adapters_export_ratios
-    #     combined_charging_ratios = self.storage_adapters_combined_charging_ratios
-
-    #     for adapter in self.storage_adapters:
-    #         if not (prod := adapter.production):
-    #             consumption_ratios[adapter.uid] = prod
-    #             continue
-
-    #         if (export_ratio := export_ratios.get(adapter.uid)) is None:
-    #             consumption_ratios[adapter.uid] = None
-    #             continue
-
-    #         if (charging_ratio := combined_charging_ratios.get(adapter.uid)) is None:
-    #             consumption_ratios[adapter.uid] = None
-    #             continue
-
-    #         consumption_ratios[adapter.uid] = (
-    #             (1.0 - export_ratio - charging_ratio) * applicable_ratio
-    #         )
-
-    #     return consumption_ratios
-
-    # @property
-    # def storage_adapters_consumption_shares(self) -> dict[str, float]:
-    #     """Return the absolute self consumption shares.
-
-    #     How much of the combined consumption power is produdec by this adapter.
-
-    #     """
-    #     consumption_shares = {}
-    #     if (combined_cons_ratio := self.gross_power_consumption_ratio) is None:
-    #         return {}
-
-    #     consumption_ratios = self.storage_adapters_consumption_ratios
-    #     gross_power_shares = self.storage_adapters_gross_power_shares
-    #     for adapter in self.storage_adapters:
-    #         if (cons_ratio := consumption_ratios.get(adapter.uid)) is None:
-    #             consumption_shares[adapter.uid] = None
-    #             continue
-
-    #         if (power_share := gross_power_shares.get(adapter.uid)) is None:
-    #             consumption_shares[adapter.uid] = None
-    #             continue
-
-    #         consumption_shares[adapter.uid] = self._divide(
-    #             (cons_ratio * power_share), combined_cons_ratio
-    #         )
-
-    #     return consumption_shares
-
-    # @property
-    # def storage_adapters_consumption_power(self) -> dict[str, float]:
-    #     """Return the self consumption power."""
-    #     consumption_power = {}
-    #     consumption_ratios = self.storage_adapters_consumption_ratios
-    #     for adapter in self.storage_adapters:
-    #         consumption_ratio = consumption_ratios.get(adapter.uid)
-    #         if consumption_ratio is None:
-    #             consumption_power[adapter.uid] = None
-    #             continue
-
-    #         cons_power = adapter.get_power_from_ratio(consumption_ratio)
-    #         if cons_power is None:
-    #             consumption_power[adapter.uid] = None
-    #             continue
-
-    #         consumption_power[adapter.uid] = cons_power
-
-    #     return consumption_power
-
-    # @property
-    # def storage_adapters_avoided_cost_rates(self) -> dict[str, float]:
-    #     """Return the self consumption power."""
-    #     avoided_cost_rates = {}
-    #     if (coe := self.grid_adapter.coe) is None:
-    #         return {}
-
-    #     cons_power = self.storage_adapters_consumption_power
-    #     for adapter in self.storage_adapters:
-    #         if (power := cons_power.get(adapter.uid)) is None:
-    #             avoided_cost_rates[adapter.uid] = None
-    #             continue
-
-    #         avoided_cost_rates[adapter.uid] = self._to_kilo(power) * coe
-
-    #     return avoided_cost_rates
-
-    # # NOTE: This is not required at the moment (Grid COE == Grid LCOE).
-    # # @property
-    # # def storage_adapters_levelized_self_cons_saving_rates(self) -> dict[str, float]:
-    # #     """Return the self consumption power."""
-    # #     saving_rates = {}
-    # #     if (lcoe := self.grid_adapter.lcoe) is None:
-    # #         return {}
-
-    # #     self_cons_power = self.storage_adapters_consumption_power
-    # #     for adapter in self.storage_adapters:
-    # #         if (power := self_cons_power.get(adapter.uid)) is None:
-    # #             saving_rates[adapter.uid] = None
-    # #             continue
-
-    # #         saving_rates[adapter.uid] = self._to_kilo(power) * lcoe
-
-    # #     return saving_rates
-
-    # @property
-    # def storage_adapters_cost_saving_rates(self) -> dict[str, float]:
-    #     """Return the storage adapter's cost saving rates (avoided import cost only)."""
-    #     saving_rates = {}
-
-    #     avoided_costs = self.storage_adapters_avoided_cost_rates
-    #     coo_rates = self.storage_adapters_coo_rates
-
-    #     for adapter in self.storage_adapters:
-    #         if (coe_rate := adapter.coe_rate) is None:
-    #             return {}
-
-    #         if (avoided := avoided_costs.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (coo_rate := coo_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         saving_rates[adapter.uid] = avoided - coo_rate - coe_rate
-
-    #     return saving_rates
-
-    # @property
-    # def storage_adapters_levelized_cost_saving_rates(self) -> dict[str, float]:
-    #     """Return the storage adapter's levelized cost saving rates (avoided import cost only)."""
-    #     saving_rates = {}
-
-    #     # Disabled see: adapters_levelized_self_cons_saving_rates
-    #     # self_cons_savings = self.storage_adapters_levelized_self_cons_saving_rates
-    #     avoided_costs = self.storage_adapters_avoided_cost_rates
-    #     lcoo_rates = self.storage_adapters_lcoo_rates
-
-    #     for adapter in self.storage_adapters:
-    #         if (lcoe_rate := adapter.lcoe_rate) is None:
-    #             return {}
-
-    #         if (avoided := avoided_costs.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (lcoo_rate := lcoo_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         saving_rates[adapter.uid] = avoided - lcoo_rate - lcoe_rate
-
-    #     return saving_rates
-
-    # @property
-    # def storage_adapters_financial_return_rates(self) -> dict[str, float]:
-    #     """Return the storage adapter's financial return rates (savings + export compensation)."""
-    #     financial_return_rates = {}
-
-    #     export_compensations = self.storage_adapters_export_compensation_rates
-    #     saving_rates = self.storage_adapters_cost_saving_rates
-
-    #     for adapter in self.storage_adapters:
-    #         if (earnings := export_compensations.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (saving := saving_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         financial_return_rates[adapter.uid] = earnings + saving
-
-    #     return financial_return_rates
-
-    # @property
-    # def storage_adapters_levelized_financial_return_rates(self) -> dict[str, float]:
-    #     """Return the storage adapter's levelized financial return rates."""
-    #     financial_return_rates = {}
-
-    #     export_compensations = self.storage_adapters_export_compensation_rates
-    #     levelized_saving_rates = self.storage_adapters_levelized_cost_saving_rates
-
-    #     for adapter in self.storage_adapters:
-    #         if (earnings := export_compensations.get(adapter.uid)) is None:
-    #             return {}
-
-    #         if (saving := levelized_saving_rates.get(adapter.uid)) is None:
-    #             return {}
-
-    #         financial_return_rates[adapter.uid] = earnings + saving
-
-    #     return financial_return_rates
-
-    # # ----------------------->
-    # # CONSUMPTION ADAPTERS --->
-    # # ----------------------->
-
-    # @property
-    # def cons_adapter_total_power_shares(self) -> dict:
-    #     """Return the grid adapter's share of total power.
-
-    #     The fraction of total power that is imported by the adapter.
-
-    #     """
-    #     shares = {}
-    #     if (total_power := self.gross_power) is None:
-    #         return {}
-
-    #     for adapter in self.consumer_adapters.adapters:
-    #         if (consumption := adapter.consumption) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         shares[adapter.uid] = self._divide(consumption, total_power)
-
-    #     return shares
-
-    # @property
-    # def cons_adapters_consumption_share(self):
-    #     """Return the self consumption shares."""
-    #     shares = {}
-    #     if (self_cons_share := self.gross_power_consumption_ratio) is None:
-    #         return {}
-
-    #     total_power_shares = self.cons_adapter_total_power_shares
-    #     for adapter in self.consumer_adapters.adapters:
-    #         if (power_share := total_power_shares.get(adapter.uid)) is None:
-    #             shares[adapter.uid] = None
-    #             continue
-
-    #         shares[adapter.uid] = self._divide(power_share, self_cons_share)
-
-    #     return shares
-
-    # @property
-    # def cons_adapters_source_shares(self):
-    #     """Return the source distribution."""
-    #     shares = {}
-    #     power_adapter_cons_shares = (
-    #         self.prod_adapters_consumption_shares
-    #         | self.grid_adapters_consumption_shares
-    #     )
-
-    #     for cons_adapter in self.consumer_adapters.adapters:
-    #         _shares = {}
-    #         for power_adapter in self.gross_power_adapters:
-    #             if (power_adapter_cons_share := power_adapter_cons_shares.get(power_adapter.uid)) is None:
-    #                 _shares[power_adapter.uid] = None
-    #                 continue
-
-    #             _shares[power_adapter.uid] = power_adapter_cons_share
-
-    #         shares[cons_adapter.uid] = _shares
-
-    #     return shares
-
-    # @property
-    # def cons_adapters_coo_rates(self):
-    #     """Cost of consumption rates."""
-    #     coo_rates = {}
-    #     if (coe := self.combined_coe) is None:
-    #         return {}
-
-    #     for adapter in self.consumer_adapters.adapters:
-    #         if (coo_rate := adapter.get_coo_rate(coe)) is None:
-    #             coo_rates[adapter.uid] = None
-    #             continue
-
-    #         coo_rates[adapter.uid] = coo_rate
-
-    #     return coo_rates
-
-    # @property
-    # def cons_adapters_lcoo_rates(self):
-    #     """Cost of consumption rates."""
-    #     lcoo_rates = {}
-    #     if (lcoe := self.combined_lcoe) is None:
-    #         return {}
-
-    #     for adapter in self.consumer_adapters.adapters:
-    #         if (lcoo_rate := adapter.get_lcoo_rate(lcoe)) is None:
-    #             lcoo_rates[adapter.uid] = None
-    #             continue
-
-    #         lcoo_rates[adapter.uid] = lcoo_rate
-
-    #     return lcoo_rates
-
-    # # ----------------------------------------------------------------->
-    # # CHANNEL ATTRIBUTION — CHARGING (CHG) & STANDBY (STB)
-    # #
-    # # ┌────────────────────────────────────────────────────────────────┐
-    # # │ CLAUDE-GENERATED — please review the attribution model.         │
-    # # │                                                                 │
-    # # │ Provider-side ratio/share for the charging and standby          │
-    # # │ channels, mirroring the existing consumption/export properties: │
-    # # │                                                                 │
-    # # │   ratio[p] = provider_channel_power[p] / provider_output[p]     │
-    # # │   share[p] = provider_channel_power[p] / combined_channel_power  │
-    # # │                                                                 │
-    # # │ provider_output is grid import for the grid, production for      │
-    # # │ PV/battery. CHG uses real source routing (charge_from_adapters); │
-    # # │ STB has no routing and is modelled as drawn proportionally from  │
-    # # │ the gross-power pool (so every provider's STB ratio equals the   │
-    # # │ global gross_power_standby_ratio and its STB share equals its    │
-    # # │ gross-power share).                                             │
-    # # └────────────────────────────────────────────────────────────────┘
-    # # ----------------------------------------------------------------->
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def _provider_charging_powers(self) -> dict[str, float] | None:
-    #     """Return ``{provider_uid: watts contributed to battery charging}``.
-
-    #     Each battery's charging power (``battery.consumption``) is split across
-    #     its configured sources using ``storage_adapters_charging_source_shares``.
-    #     Providers that are not a charge source for any battery are absent, so a
-    #     ``.get(uid, 0.0)`` yields 0.0 for them. Returns ``None`` when any
-    #     battery's charging power is unavailable or gross power is unknown (the
-    #     source split is undefined without it).
-    #     """
-    #     if self.gross_power is None:
-    #         return None
-
-    #     source_shares = self.storage_adapters_charging_source_shares
-    #     powers: dict[str, float] = defaultdict(float)
-    #     for battery in self.storage_adapters:
-    #         if (charging := battery.consumption) is None:
-    #             return None
-    #         for source_uid, share in source_shares.get(battery.uid, {}).items():
-    #             powers[source_uid] += charging * share
-
-    #     return dict(powers)
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def _provider_standby_powers(self) -> dict[str, float | None] | None:
-    #     """Return ``{provider_uid: watts contributed to device standby}``.
-
-    #     Standby has no routing configuration, so the combined standby power is
-    #     attributed to providers in proportion to their share of gross power.
-    #     Returns ``None`` when the combined standby power or gross power is
-    #     unavailable; a provider maps to ``None`` when its own gross-power share
-    #     is unavailable.
-    #     """
-    #     if self.gross_power is None:
-    #         return None
-    #     if (standby := self.combined_standby_power) is None:
-    #         return None
-
-    #     gross_shares = (
-    #         self.grid_adapters_gross_power_shares
-    #         | self.prod_adapters_gross_power_shares
-    #         | self.storage_adapters_gross_power_shares
-    #     )
-    #     powers: dict[str, float | None] = {}
-    #     for uid, share in gross_shares.items():
-    #         powers[uid] = None if share is None else standby * share
-
-    #     return powers
-
-    # # --- Grid ---
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_charging_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of grid import that goes to battery charging."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     if (grid_import := self.combined_grid_import) is None:
-    #         return {}
-
-    #     uid = self.grid_adapter.uid
-    #     return {uid: self._divide(powers.get(uid, 0.0), grid_import)}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_charging_shares(self) -> dict[str, float | None]:
-    #     """Grid's share of the total battery-charging power."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     if (combined := self.combined_charging_power) is None:
-    #         return {}
-
-    #     uid = self.grid_adapter.uid
-    #     return {uid: self._divide(powers.get(uid, 0.0), combined)}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_charging_power(self) -> dict[str, float | None]:
-    #     """Watts of grid import used for battery charging."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     uid = self.grid_adapter.uid
-    #     return {uid: powers.get(uid, 0.0)}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_standby_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of grid import that goes to device standby."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-
-    #     uid = self.grid_adapter.uid
-    #     if (standby := powers.get(uid)) is None:
-    #         return {}
-    #     if (grid_import := self.combined_grid_import) is None:
-    #         return {}
-
-    #     return {uid: self._divide(standby, grid_import)}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_standby_shares(self) -> dict[str, float | None]:
-    #     """Grid's share of the total standby power."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-    #     if (combined := self.combined_standby_power) is None:
-    #         return {}
-
-    #     uid = self.grid_adapter.uid
-    #     if (standby := powers.get(uid)) is None:
-    #         return {}
-
-    #     return {uid: self._divide(standby, combined)}
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def grid_adapters_standby_power(self) -> dict[str, float | None]:
-    #     """Watts of grid import used for device standby."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-    #     uid = self.grid_adapter.uid
-    #     if (standby := powers.get(uid)) is None:
-    #         return {}
-    #     return {uid: standby}
-
-    # # --- Production (PV) ---
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def prod_adapters_charging_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of each PV system's production that goes to charging."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-
-    #     ratios: dict[str, float | None] = {}
-    #     for adapter in self.prod_adapters:
-    #         if (prod := adapter.production) is None:
-    #             ratios[adapter.uid] = None
-    #             continue
-    #         ratios[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), prod)
-
-    #     return ratios
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def prod_adapters_charging_shares(self) -> dict[str, float | None]:
-    #     """Each PV system's share of the total battery-charging power."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     if (combined := self.combined_charging_power) is None:
-    #         return {}
-
-    #     shares: dict[str, float | None] = {}
-    #     for adapter in self.prod_adapters:
-    #         shares[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), combined)
-
-    #     return shares
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def prod_adapters_standby_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of each PV system's production that goes to standby."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-
-    #     ratios: dict[str, float | None] = {}
-    #     for adapter in self.prod_adapters:
-    #         standby = powers.get(adapter.uid)
-    #         prod = adapter.production
-    #         if standby is None or prod is None:
-    #             ratios[adapter.uid] = None
-    #             continue
-    #         ratios[adapter.uid] = self._divide(standby, prod)
-
-    #     return ratios
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def prod_adapters_standby_shares(self) -> dict[str, float | None]:
-    #     """Each PV system's share of the total standby power."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-    #     if (combined := self.combined_standby_power) is None:
-    #         return {}
-
-    #     shares: dict[str, float | None] = {}
-    #     for adapter in self.prod_adapters:
-    #         standby = powers.get(adapter.uid)
-    #         shares[adapter.uid] = (
-    #             None if standby is None else self._divide(standby, combined)
-    #         )
-
-    #     return shares
-
-    # # --- Storage (battery) ---
-    # # Same as the production variants above, iterating the storage adapters so
-    # # the battery device reads from ``storage_adapters_*`` like its other sensors.
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def storage_adapters_charging_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of each battery's discharge that goes to charging."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-
-    #     ratios: dict[str, float | None] = {}
-    #     for adapter in self.storage_adapters:
-    #         if (prod := adapter.production) is None:
-    #             ratios[adapter.uid] = None
-    #             continue
-    #         ratios[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), prod)
-
-    #     return ratios
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def storage_adapters_charging_shares(self) -> dict[str, float | None]:
-    #     """Each battery's share of the total battery-charging power."""
-    #     if (powers := self._provider_charging_powers) is None:
-    #         return {}
-    #     if (combined := self.combined_charging_power) is None:
-    #         return {}
-
-    #     shares: dict[str, float | None] = {}
-    #     for adapter in self.storage_adapters:
-    #         shares[adapter.uid] = self._divide(powers.get(adapter.uid, 0.0), combined)
-
-    #     return shares
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def storage_adapters_standby_ratios(self) -> dict[str, float | None]:
-    #     """Fraction of each battery's discharge that goes to standby."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-
-    #     ratios: dict[str, float | None] = {}
-    #     for adapter in self.storage_adapters:
-    #         standby = powers.get(adapter.uid)
-    #         prod = adapter.production
-    #         if standby is None or prod is None:
-    #             ratios[adapter.uid] = None
-    #             continue
-    #         ratios[adapter.uid] = self._divide(standby, prod)
-
-    #     return ratios
-
-    # # CLAUDE-GENERATED — review
-    # @property
-    # def storage_adapters_standby_shares(self) -> dict[str, float | None]:
-    #     """Each battery's share of the total standby power."""
-    #     powers = self._provider_standby_powers
-    #     if powers is None:
-    #         return {}
-    #     if (combined := self.combined_standby_power) is None:
-    #         return {}
-
-    #     shares: dict[str, float | None] = {}
-    #     for adapter in self.storage_adapters:
-    #         standby = powers.get(adapter.uid)
-    #         shares[adapter.uid] = (
-    #             None if standby is None else self._divide(standby, combined)
-    #         )
-
-    #     return shares
+        """Total power entering the system (W): grid import + PV + discharge.
+
+        Equal to the sum of the source-adapter readings. Returns ``None`` when
+        any inflow-capable adapter (grid / PV / battery) has an unavailable
+        power sensor, since the total would then be unreliable — a consumer
+        sensor dropping out does not affect it.
+        """
+        for adapter in self.gross_power_adapters:
+            if adapter.power is None:
+                return None
+
+        power_arr, _ = self.source_adapters_power
+        return float(power_arr.sum())
+
+    @property
+    def source_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(share array, uid index)`` — each source's fraction of gross power.
+
+        The shares of the currently-providing adapters (grid import, producing
+        PV, discharging batteries); they sum to 1. Returns an empty array and
+        index when gross power is unavailable. Mirrors ``source_adapters_power``
+        so the numpy pipeline stays composable.
+        """
+        gross = self.gross_power
+        if gross is None:
+            return np.array([]), []
+
+        power_arr, index = self.source_adapters_power
+        if gross == 0.0:
+            return np.zeros(len(index)), index
+
+        return power_arr / gross, index
+
+    @property
+    def sink_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(share array, uid index)`` — each sink's fraction of gross power.
+
+        The shares of the currently-drawing adapters (grid export, charging
+        batteries, consumer loads, PV standby); the readings are unsigned here.
+        Unlike the source shares these need not sum to 1: the remainder up to 1
+        is the unmetered home load. Returns an empty array and index when gross
+        power is unavailable.
+        """
+        gross = self.gross_power
+        if gross is None:
+            return np.array([]), []
+
+        power_arr, index = self.sink_adapters_power
+        if gross == 0.0:
+            return np.zeros(len(index)), index
+
+        return np.abs(power_arr) / gross, index
+
+    @property
+    def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
+        """Return ``{sink_uid: {source_uid: share}}`` — each sink's power provenance.
+
+        For every currently-drawing adapter, the fraction of its power supplied
+        by each source adapter (grid import, producing PV, discharging
+        batteries). Each row sums to 1 (a sink whose allowed sources are all
+        idle collapses to all-zeros).
+
+        The attribution is two-tier, honouring per-device source restrictions
+        (a battery's ``charge_from_adapters``, a consumer's
+        ``power_from_adapters``, both surfaced as ``power_source_uids``):
+
+        * **Priority tier** — sinks restricted to specific non-grid sources
+          (a battery charging on PV only, a smart-plug consumer on excess
+          solar). They get first pick of their allowed sources, weighted by
+          each source's share of gross power. This tier is active **only while
+          the grid is importing**: giving a grid-excluded sink first claim on
+          the scarce local sources is only meaningful when the grid-capable
+          sinks have the grid to fall back on. With no grid import there is
+          nothing to fall back to, so every sink shares the sources in a single
+          pass on equal footing (the tier is empty).
+        * **Leftover tier** — every other sink (unrestricted, or allowed to draw
+          the grid, or *any* sink when the grid is not importing). They split
+          the power the priority tier left behind — the full availability when
+          the priority tier is empty — each still respecting its own restriction
+          if it has one. The unmetered home load implicitly shares this same
+          leftover pool, which is why the priority tier can exhaust a scarce
+          source first.
+
+        Empty when gross power is unavailable.
+        """
+        availability, index = self.source_adapters_gross_power_shares
+        if not index:
+            # Gross power unavailable, or nothing is currently providing.
+            return {}
+
+        sink_share_arr, sink_index = self.sink_adapters_gross_power_shares
+        sink_shares = dict(zip(sink_index, sink_share_arr))
+        grid_uid = self.grid_adapter.uid
+        # The grid is a source only while it is importing; the priority tier
+        # exists only then (see docstring).
+        grid_importing = grid_uid in index
+
+        def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
+            """Weights masked to the allowed sources (all sources if unrestricted)."""
+            if not sources:
+                return weights.copy()
+            mask = np.array([1.0 if uid in sources else 0.0 for uid in index])
+            return weights * mask
+
+        def normalise(row: np.ndarray) -> np.ndarray:
+            total = row.sum()
+            return row / total if total > 0 else np.zeros_like(row)
+
+        # Partition the sinks. A sink is a priority sink only when the grid is
+        # importing and it is restricted to sources that exclude the grid — a
+        # grid-capable (or unrestricted) sink is flexible and waits for leftover.
+        priority, leftover = [], []
+        for adapter in self.sink_adapters:
+            sources = adapter.power_source_uids
+            if grid_importing and sources and grid_uid not in sources:
+                priority.append(adapter)
+            else:
+                leftover.append(adapter)
+
+        result: dict[str, dict[str, float]] = {}
+
+        # Priority tier draws from the full availability vector, consuming it.
+        consumed = np.zeros(len(index))
+        for adapter in priority:
+            shares = normalise(restricted_row(adapter.power_source_uids, availability))
+            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
+            consumed += shares * sink_shares[adapter.uid]
+
+        # Leftover tier draws from what the priority tier left behind (the full
+        # availability when the priority tier is empty).
+        leftover_availability = np.clip(availability - consumed, 0.0, None)
+        for adapter in leftover:
+            shares = normalise(
+                restricted_row(adapter.power_source_uids, leftover_availability)
+            )
+            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
+
+        return result
+
+
+    # -------------------------------------------------------------->
+    # GROSS POWER RATIOS
+    # -------------------------------------------------------------->
+
+    @property
+    def gross_power_export_ratio(self) -> float | None:
+        """Fraction of gross power returned to the grid."""
+        pass
+
+    @property
+    def gross_power_consumption_ratio(self) -> float | None:
+        """Fraction of gross power self-consumed."""
+        pass
+
+    @property
+    def gross_power_standby_ratio(self) -> float | None:
+        """Fraction of gross power used as adapter standby."""
+        pass
+
+    @property
+    def gross_power_charging_ratio(self) -> float | None:
+        """Fraction of gross power charged into storage."""
+        pass
+
+    # -------------------------------------------------------------->
+    # APPLICABLE GROSS POWER RATIOS
+    # -------------------------------------------------------------->
+
+    @property
+    def gross_power_applicable_consumption_ratio(self) -> float | None:
+        """Self-consumption ratio excluding export and charging."""
+        pass
+
+    # -------------------------------------------------------------->
+    # COMBINED MONETARY RATES
+    # -------------------------------------------------------------->
+
+    @property
+    def combined_export_compensation_rate(self) -> float | None:
+        """Combined export compensation rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_avoided_cost_rate(self) -> float | None:
+        """Combined avoided-cost rate from self-consumption (EUR/h)."""
+        pass
+
+    @property
+    def combined_coe_rate(self) -> float | None:
+        """Combined cost-of-electricity rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_lcoe_rate(self) -> float | None:
+        """Combined levelized cost-of-electricity rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_coo_rate(self) -> float | None:
+        """Combined cost-of-operations rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_lcoo_rate(self) -> float | None:
+        """Combined levelized cost-of-operations rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_saving_rate(self) -> float | None:
+        """Combined cost-saving rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_levelized_saving_rate(self) -> float | None:
+        """Combined levelized cost-saving rate (EUR/h)."""
+        pass
+
+    @property
+    def combined_lcoe_rate_corrected(self) -> float | None:
+        """Combined levelized cost rate with per-adapter correction applied."""
+        pass
+
+    @property
+    def combined_lcoo_rate_corrected(self) -> float | None:
+        """Combined levelized operating-cost rate with correction applied."""
+        pass
+
+    @property
+    def combined_levelized_saving_rate_corrected(self) -> float | None:
+        """Combined levelized saving rate with correction applied."""
+        pass
+
+    @property
+    def combined_financial_return_rate(self) -> float | None:
+        """Combined financial return rate (savings + export compensation)."""
+        pass
+
+    @property
+    def combined_levelized_financial_return_rate(self) -> float | None:
+        """Combined levelized financial return rate (base)."""
+        pass
+
+    @property
+    def combined_levelized_financial_return_rate_corrected(self) -> float | None:
+        """Combined levelized financial return rate with correction applied."""
+        pass
+
+    @property
+    def levelized_correction_factors(self) -> dict[str, float]:
+        """Return uid -> correction_factor for prod adapters with an LCOE."""
+        pass
+
+    # -------------------------------------------------------------->
+    # COMBINED PRICES
+    # -------------------------------------------------------------->
+
+    @property
+    def combined_coe(self) -> float | None:
+        """Combined cost of electricity (EUR/kWh)."""
+        pass
+
+    @property
+    def combined_lcoe(self) -> float | None:
+        """Combined levelized cost of electricity (EUR/kWh)."""
+        pass
+
+    # -------------------------------------------------------------->
+    # SOURCE ADAPTERS
+    # -------------------------------------------------------------->
+
+    # The provider side, keyed by source uid (grid import, producing PV,
+    # discharging battery). The share of gross power each source supplies is
+    # source_adapters_gross_power_shares (foundation, above).
+
+    @property
+    def source_adapters_export_power(self) -> dict:
+        """Watts of each source's output that is exported."""
+        pass
+
+    @property
+    def source_adapters_export_shares(self) -> dict:
+        """Each source's share of total exported power."""
+        pass
+
+    @property
+    def source_adapters_export_ratios(self) -> dict:
+        """Fraction of each source's output that is exported."""
+        pass
+
+    @property
+    def source_adapters_consumption_power(self) -> dict:
+        """Watts of each source's output that is self-consumed."""
+        pass
+
+    @property
+    def source_adapters_consumption_shares(self) -> dict:
+        """Each source's share of total self-consumption."""
+        pass
+
+    @property
+    def source_adapters_consumption_ratios(self) -> dict:
+        """Fraction of each source's output that is self-consumed."""
+        pass
+
+    @property
+    def source_adapters_charging_power(self) -> dict:
+        """Watts of each source's output that goes to battery charging."""
+        pass
+
+    @property
+    def source_adapters_charging_shares(self) -> dict:
+        """Each source's share of total charging power."""
+        pass
+
+    @property
+    def source_adapters_charging_ratios(self) -> dict:
+        """Fraction of each source's output that goes to charging."""
+        pass
+
+    @property
+    def source_adapters_standby_power(self) -> dict:
+        """Watts of each source's output that goes to device standby."""
+        pass
+
+    @property
+    def source_adapters_standby_shares(self) -> dict:
+        """Each source's share of total standby power."""
+        pass
+
+    @property
+    def source_adapters_standby_ratios(self) -> dict:
+        """Fraction of each source's output that goes to standby."""
+        pass
+
+    @property
+    def source_adapters_coe_rate(self) -> dict:
+        """Cost-of-electricity rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_lcoe_rate(self) -> dict:
+        """Levelized cost-of-electricity rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_coo_rates(self) -> dict:
+        """Cost-of-operations rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_lcoo_rates(self) -> dict:
+        """Levelized cost-of-operations rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_export_compensation_rates(self) -> dict:
+        """Export compensation rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_avoided_cost_rates(self) -> dict:
+        """Avoided-cost rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_cost_saving_rates(self) -> dict:
+        """Cost-saving rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_levelized_cost_saving_rates(self) -> dict:
+        """Levelized cost-saving rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_financial_return_rates(self) -> dict:
+        """Financial return rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_levelized_financial_return_rates(self) -> dict:
+        """Levelized financial return rate per source (EUR/h)."""
+        pass
+
+    @property
+    def source_adapters_dynamic_coe(self) -> dict[str, float | None]:
+        """Blended cost of electricity per source (EUR/kWh); batteries use their charge mix."""
+        pass
+
+    @property
+    def source_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
+        """Blended levelized cost of electricity per source (EUR/kWh)."""
+        pass
+
+    # -------------------------------------------------------------->
+    # SINK ADAPTERS
+    # -------------------------------------------------------------->
+
+    # The drawer side, keyed by sink uid (grid export, charging battery, PV
+    # standby, consumer load). Where each sink's power comes from is
+    # sink_adapters_source_shares (foundation, above).
+
+    @property
+    def sink_adapters_consumption_shares(self) -> dict:
+        """Each consuming sink's share of total self-consumption."""
+        pass
+
+    @property
+    def sink_adapters_coo_rates(self) -> dict:
+        """Cost-of-operations rate per sink (EUR/h)."""
+        pass
+
+    @property
+    def sink_adapters_lcoo_rates(self) -> dict:
+        """Levelized cost-of-operations rate per sink (EUR/h)."""
+        pass
 
     #
     # Utility methods
@@ -2450,6 +868,18 @@ class AbstractBaseAdapter(ABC):
         be applied to an accumulated base total to retroactively rescale it.
         """
         return 1.0
+
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Return the source uids this adapter is restricted to draw power from.
+
+        An empty list means unrestricted (the adapter draws from the general
+        mix). Only battery and smart-plug consumer adapters override this to
+        expose their configured restriction; every other adapter kind stays
+        unrestricted. Consumed by ``PowerInsight.sink_adapters_source_shares``
+        to give restricted sinks first pick of their allowed sources.
+        """
+        return []
 
     # @property
     # def source_entities(self) -> list[str]:
@@ -2929,6 +1359,11 @@ class BatteryAdapter(BaseProductionAdapter):
         """Return the levelized-cost correction factor for this battery."""
         return self._correction_factor
 
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Sources this battery charges from (its ``charge_from_adapters``)."""
+        return self.charge_from_adapters
+
 class BaseConsumerAdapter(BasePowerAdapter):
     """Base adapter for consumers."""
 
@@ -2938,12 +1373,24 @@ class BaseConsumerAdapter(BasePowerAdapter):
         verbose_name: str,
         power_entity: str,
         power_entity_inverted: bool = False,
+        power_from_adapters: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Initialize instance."""
         super().__init__(
             unique_id, verbose_name, power_entity, power_entity_inverted, **kwargs,
         )
+        # Normalise: None (field not yet configured) becomes an empty list.
+        # These are the sources this consumer draws from (e.g. a smart plug set
+        # to run only on excess solar); empty means it draws the general mix.
+        self.power_from_adapters: list[str] = (
+            power_from_adapters if power_from_adapters is not None else []
+        )
+
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Sources this consumer draws from (its ``power_from_adapters``)."""
+        return self.power_from_adapters
 
     @property
     def consumption(self) -> float | None:
