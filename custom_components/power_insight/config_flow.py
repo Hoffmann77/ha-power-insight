@@ -42,6 +42,7 @@ from .const import (
     CONF_EXPORT_COMPENSATION,
     CONF_BAT_EFFICIENCY,
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_POWER_FROM_ADAPTERS,
     CONF_ENABLE_DEBUG_ENTITIES,
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
@@ -173,15 +174,16 @@ def _levelized_production_required(options: dict) -> bool:
 # HELPERS
 # ============================================================================
 
-def _build_charge_from_selector(
+def _build_power_source_selector(
     entry: ConfigEntry,
     exclude_subentry_id: str | None = None,
 ) -> selector.SelectSelector:
-    """Build the dynamic multi-select selector for charge_from_adapters.
+    """Build the dynamic multi-select selector for a power-source restriction.
 
-    Called by ``build_schema`` when resolving ``AdapterField.selector_fn``
-    for ``CONF_CHARGE_FROM_ADAPTERS``.  Includes the grid adapter (if
-    configured) followed by all PV-system adapters.
+    Shared by ``build_schema`` when resolving ``AdapterField.selector_fn`` for
+    both the battery ``CONF_CHARGE_FROM_ADAPTERS`` and the consumer
+    ``CONF_POWER_FROM_ADAPTERS`` fields — the selectable sources are identical:
+    the grid adapter (if configured) followed by all PV-system adapters.
     """
     options: list[selector.SelectOptionDict] = []
 
@@ -1076,7 +1078,7 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         store_in_adapter_config=True,
     ),
     CONF_CHARGE_FROM_ADAPTERS: AdapterField(
-        selector_fn=_build_charge_from_selector,
+        selector_fn=_build_power_source_selector,
         required=False,
         default=[],
         in_config_flow=True,
@@ -1185,6 +1187,17 @@ CONSUMER_FIELDS: dict[str, AdapterField] = {
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=False,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
+    # Optional source restriction — the sources this consumer draws from (e.g. a
+    # smart plug set to run only on excess solar). Mirrors the battery's
+    # charge_from field; empty means it draws from the general mix.
+    CONF_POWER_FROM_ADAPTERS: AdapterField(
+        selector_fn=_build_power_source_selector,
+        required=False,
+        default=[],
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
@@ -1814,18 +1827,20 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             if k != "adapter" and k in self._adapter_fields:
                 seed.setdefault(k, v)
 
-        # For charge_from_adapters, strip stale subentry IDs before seeding so
-        # the selector is pre-populated with only currently valid selections.
-        # Valid sources are grid and pv_system adapters.
-        if CONF_CHARGE_FROM_ADAPTERS in seed:
-            valid_source_ids = {
-                sub.subentry_id
-                for sub in parent_entry.subentries.values()
-                if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
-            }
-            seed[CONF_CHARGE_FROM_ADAPTERS] = [
-                i for i in seed[CONF_CHARGE_FROM_ADAPTERS] if i in valid_source_ids
-            ]
+        # For the power-source restriction fields (battery charge_from,
+        # consumer power_from), strip stale subentry IDs before seeding so the
+        # selector is pre-populated with only currently valid selections. Valid
+        # sources are grid and pv_system adapters.
+        valid_source_ids = {
+            sub.subentry_id
+            for sub in parent_entry.subentries.values()
+            if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
+        }
+        for source_field in (CONF_CHARGE_FROM_ADAPTERS, CONF_POWER_FROM_ADAPTERS):
+            if source_field in seed:
+                seed[source_field] = [
+                    i for i in seed[source_field] if i in valid_source_ids
+                ]
 
         schema = build_schema(
             self._adapter_fields,

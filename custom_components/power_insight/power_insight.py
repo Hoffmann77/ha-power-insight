@@ -175,14 +175,15 @@ class PowerInsight:
     # IDLE (0 W) or UNKNOWN (sensor unavailable) fall into neither source nor
     # sink, mirroring the engine's None-propagation elsewhere.
     #
-    # source_adapters / sink_adapters are the non-grid (behind-the-meter)
-    # groups; inflow_adapters / outflow_adapters are their grid-inclusive
-    # counterparts, folding the grid in direction-aware (import -> inflow,
-    # export -> outflow) so the two stay disjoint.
+    # source_adapters / sink_adapters are the grid-inclusive groups — every
+    # adapter power is currently drawn from / flows to — with the grid folded
+    # in direction-aware (import -> source, export -> sink) so the two stay
+    # disjoint. local_source_adapters / local_sink_adapters are their
+    # behind-the-meter subsets (grid excluded).
     #
-    # This is additive scaffolding: nothing in the engine consumes it yet. The
-    # existing prod_adapters_* / storage_adapters_* / cons_adapters_* families
-    # are unchanged and remain the source of truth for all current results.
+    # The gross-power split and provenance results below build on these groups;
+    # the existing prod_adapters_* / storage_adapters_* / cons_adapters_*
+    # families remain the source of truth for all other current results.
     # ------------------------------------------------------------------>
 
     @property
@@ -206,10 +207,11 @@ class PowerInsight:
         return [self.grid_adapter]
 
     @property
-    def source_adapters(self) -> list[BasePowerAdapter]:
-        """Return the non-grid adapters currently providing power.
+    def local_source_adapters(self) -> list[BasePowerAdapter]:
+        """Return the behind-the-meter adapters currently providing power.
 
-        Producing PV systems and discharging batteries.
+        Producing PV systems and discharging batteries (grid excluded). The
+        grid-inclusive superset is ``source_adapters``.
         """
         return [
             adapter for adapter in self._non_grid_adapters
@@ -217,10 +219,11 @@ class PowerInsight:
         ]
 
     @property
-    def sink_adapters(self) -> list[BasePowerAdapter]:
-        """Return the non-grid adapters currently drawing power.
+    def local_sink_adapters(self) -> list[BasePowerAdapter]:
+        """Return the behind-the-meter adapters currently drawing power.
 
-        Charging batteries, consumer loads, and PV systems drawing standby.
+        Charging batteries, consumer loads, and PV systems drawing standby
+        (grid excluded). The grid-inclusive superset is ``sink_adapters``.
         """
         return [
             adapter for adapter in self._non_grid_adapters
@@ -228,38 +231,40 @@ class PowerInsight:
         ]
 
     @property
-    def inflow_adapters(self) -> list[BasePowerAdapter]:
+    def source_adapters(self) -> list[BasePowerAdapter]:
         """Return every adapter currently providing power, grid included.
 
-        The grid-inclusive counterpart of ``source_adapters``: all power
-        crossing into the system boundary this snapshot. The grid is folded in
-        direction-aware — it joins only while importing (``FlowRole.SOURCE``) —
-        so ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the
-        grid is never counted on both sides.
+        The grid-inclusive provider group: everything power is currently drawn
+        *from* this snapshot (grid import, producing PV, discharging batteries).
+        The grid is folded in direction-aware — it joins only while importing
+        (``FlowRole.SOURCE``) — so ``source_adapters`` and ``sink_adapters`` stay
+        disjoint and the grid is never counted on both sides. The behind-the-
+        meter subset is ``local_source_adapters``.
         """
         grid = (
             [self.grid_adapter]
             if self.grid_adapter.flow_role is FlowRole.SOURCE
             else []
         )
-        return grid + self.source_adapters
+        return grid + self.local_source_adapters
 
     @property
-    def outflow_adapters(self) -> list[BasePowerAdapter]:
+    def sink_adapters(self) -> list[BasePowerAdapter]:
         """Return every adapter currently drawing power, grid included.
 
-        The grid-inclusive counterpart of ``sink_adapters``: all power crossing
-        out of the system boundary this snapshot. The grid is folded in
-        direction-aware — it joins only while exporting (``FlowRole.SINK``) — so
-        ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the grid
-        is never counted on both sides.
+        The grid-inclusive drawer group: everywhere power currently flows *to*
+        this snapshot (grid export, charging batteries, consumer loads, PV
+        standby). The grid is folded in direction-aware — it joins only while
+        exporting (``FlowRole.SINK``) — so ``source_adapters`` and
+        ``sink_adapters`` stay disjoint and the grid is never counted on both
+        sides. The behind-the-meter subset is ``local_sink_adapters``.
         """
         grid = (
             [self.grid_adapter]
             if self.grid_adapter.flow_role is FlowRole.SINK
             else []
         )
-        return grid + self.sink_adapters
+        return grid + self.local_sink_adapters
 
     # ------------------->
     # SOURCE ENTITIES --->
@@ -404,22 +409,34 @@ class PowerInsight:
 
 
     @property
-    def inflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+    def source_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(signed power array, uid index)`` for the source adapters.
+
+        Source adapters are all currently providing (grid import, producing PV,
+        discharging batteries), so every reading is positive. A ``None`` entry
+        never occurs: an unavailable sensor makes an adapter ``UNKNOWN``, which
+        excludes it from the group.
+        """
         arr = []
         index = []
 
-        for adapter in self.inflow_adapters:
+        for adapter in self.source_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
         return np.array(arr), index
 
     @property
-    def outflow_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+    def sink_adapters_power(self) -> tuple[np.ndarray, list[str]]:
+        """Return ``(signed power array, uid index)`` for the sink adapters.
+
+        Sink adapters are all currently drawing (grid export, charging
+        batteries, consumer loads, PV standby), so every reading is negative.
+        """
         arr = []
         index = []
 
-        for adapter in self.outflow_adapters:
+        for adapter in self.sink_adapters:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
@@ -427,13 +444,134 @@ class PowerInsight:
 
     @property
     def gross_power(self) -> float | None:
-        inflow_arr, _ = self.inflow_adapters_power
-        outflow_arr, _ = self.outflow_adapters_power
+        """Total power entering the system (W): grid import + PV + discharge.
 
-        if None in inflow_arr or None in outflow_arr:
-            return None
+        Equal to the sum of the source-adapter readings. Returns ``None`` when
+        any inflow-capable adapter (grid / PV / battery) has an unavailable
+        power sensor, since the total would then be unreliable — a consumer
+        sensor dropping out does not affect it.
+        """
+        for adapter in self.gross_power_adapters:
+            if adapter.power is None:
+                return None
 
-        return float(inflow_arr.sum() - outflow_arr.sum())
+        power_arr, _ = self.source_adapters_power
+        return float(power_arr.sum())
+
+    @property
+    def source_adapters_gross_power_shares(self) -> dict[str, float]:
+        """Return ``{source_uid: share}`` — each source's fraction of gross power.
+
+        The shares of the currently-providing adapters (grid import, producing
+        PV, discharging batteries); they sum to 1. Empty when gross power is
+        unavailable.
+        """
+        if (gross := self.gross_power) is None:
+            return {}
+
+        power_arr, index = self.source_adapters_power
+        if gross == 0.0:
+            return {uid: 0.0 for uid in index}
+
+        shares = power_arr / gross
+        return {uid: float(share) for uid, share in zip(index, shares)}
+
+    @property
+    def sink_adapters_gross_power_shares(self) -> dict[str, float]:
+        """Return ``{sink_uid: share}`` — each sink's fraction of gross power.
+
+        The shares of the currently-drawing adapters (grid export, charging
+        batteries, consumer loads, PV standby). Unlike the source shares these
+        need not sum to 1: the remainder up to 1 is the unmetered home load.
+        Empty when gross power is unavailable.
+        """
+        if (gross := self.gross_power) is None:
+            return {}
+
+        power_arr, index = self.sink_adapters_power
+        if gross == 0.0:
+            return {uid: 0.0 for uid in index}
+
+        shares = np.abs(power_arr) / gross
+        return {uid: float(share) for uid, share in zip(index, shares)}
+
+    @property
+    def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
+        """Return ``{sink_uid: {source_uid: share}}`` — each sink's power provenance.
+
+        For every currently-drawing adapter, the fraction of its power supplied
+        by each source adapter (grid import, producing PV, discharging
+        batteries). Each row sums to 1 (a sink whose allowed sources are all
+        idle collapses to all-zeros).
+
+        The attribution is two-tier, honouring per-device source restrictions
+        (a battery's ``charge_from_adapters``, a consumer's
+        ``power_from_adapters``, both surfaced as ``power_source_uids``):
+
+        * **Priority tier** — sinks restricted to specific non-grid sources
+          (a battery charging on PV only, a smart-plug consumer on excess
+          solar). They get first pick of their allowed sources, weighted by
+          each source's share of gross power.
+        * **Leftover tier** — every other sink (unrestricted, or allowed to draw
+          the grid). They split the power the priority tier left behind, each
+          still respecting its own restriction if it has one. The unmetered home
+          load implicitly shares this same leftover pool, which is why the
+          priority tier can exhaust a scarce source first.
+
+        Empty when gross power is unavailable.
+        """
+        source_shares = self.source_adapters_gross_power_shares
+        if not source_shares:
+            return {}
+
+        sink_shares = self.sink_adapters_gross_power_shares
+        if not sink_shares:
+            return {}
+
+        index = list(source_shares)  # column order (source uids)
+        availability = np.array([source_shares[uid] for uid in index])
+        grid_uid = self.grid_adapter.uid
+
+        def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
+            """Weights masked to the allowed sources (all sources if unrestricted)."""
+            if not sources:
+                return weights.copy()
+            mask = np.array([1.0 if uid in sources else 0.0 for uid in index])
+            return weights * mask
+
+        def normalise(row: np.ndarray) -> np.ndarray:
+            total = row.sum()
+            return row / total if total > 0 else np.zeros_like(row)
+
+        # Partition the sinks into the priority and leftover tiers. A sink is a
+        # priority sink only if it is restricted to sources that exclude the
+        # grid — a grid-capable sink is flexible and waits for the leftover pool.
+        priority, leftover = [], []
+        for adapter in self.sink_adapters:
+            sources = adapter.power_source_uids
+            if sources and grid_uid not in sources:
+                priority.append(adapter)
+            else:
+                leftover.append(adapter)
+
+        result: dict[str, dict[str, float]] = {}
+
+        # Priority tier draws from the full availability vector, consuming it.
+        consumed = np.zeros(len(index))
+        for adapter in priority:
+            shares = normalise(restricted_row(adapter.power_source_uids, availability))
+            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
+            consumed += shares * sink_shares[adapter.uid]
+
+        # Leftover tier draws from what the priority tier left behind.
+        leftover_availability = np.clip(availability - consumed, 0.0, None)
+        for adapter in leftover:
+            shares = normalise(
+                restricted_row(adapter.power_source_uids, leftover_availability)
+            )
+            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
+
+        return result
 
 
     # @property
@@ -2451,6 +2589,18 @@ class AbstractBaseAdapter(ABC):
         """
         return 1.0
 
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Return the source uids this adapter is restricted to draw power from.
+
+        An empty list means unrestricted (the adapter draws from the general
+        mix). Only battery and smart-plug consumer adapters override this to
+        expose their configured restriction; every other adapter kind stays
+        unrestricted. Consumed by ``PowerInsight.sink_adapters_source_shares``
+        to give restricted sinks first pick of their allowed sources.
+        """
+        return []
+
     # @property
     # def source_entities(self) -> list[str]:
     #     """Return the source entities for this adapter."""
@@ -2929,6 +3079,11 @@ class BatteryAdapter(BaseProductionAdapter):
         """Return the levelized-cost correction factor for this battery."""
         return self._correction_factor
 
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Sources this battery charges from (its ``charge_from_adapters``)."""
+        return self.charge_from_adapters
+
 class BaseConsumerAdapter(BasePowerAdapter):
     """Base adapter for consumers."""
 
@@ -2938,12 +3093,24 @@ class BaseConsumerAdapter(BasePowerAdapter):
         verbose_name: str,
         power_entity: str,
         power_entity_inverted: bool = False,
+        power_from_adapters: list[str] | None = None,
         **kwargs,
     ) -> None:
         """Initialize instance."""
         super().__init__(
             unique_id, verbose_name, power_entity, power_entity_inverted, **kwargs,
         )
+        # Normalise: None (field not yet configured) becomes an empty list.
+        # These are the sources this consumer draws from (e.g. a smart plug set
+        # to run only on excess solar); empty means it draws the general mix.
+        self.power_from_adapters: list[str] = (
+            power_from_adapters if power_from_adapters is not None else []
+        )
+
+    @property
+    def power_source_uids(self) -> list[str]:
+        """Sources this consumer draws from (its ``power_from_adapters``)."""
+        return self.power_from_adapters
 
     @property
     def consumption(self) -> float | None:

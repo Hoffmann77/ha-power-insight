@@ -11,7 +11,7 @@ from .const import (
     CONF_INITIAL_LCOS,
     CONF_CORRECTION_FACTOR,
     CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
-    CONF_CHARGE_FROM_ADAPTERS,
+    CONF_CHARGE_FROM_ADAPTERS, CONF_POWER_FROM_ADAPTERS,
     CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION, CONF_CO2_FOOTPRINT,
 )
 from .power_insight import (
@@ -211,6 +211,7 @@ class ConsumerAdapterModel:
     name: str
     power_entity: str
     power_entity_inverted: bool = False
+    power_from_adapters: list[str] = field(default_factory=list)
 
     @classmethod
     def from_subentry(cls, subentry) -> ConsumerAdapterModel:
@@ -221,6 +222,7 @@ class ConsumerAdapterModel:
             name=subentry.title,
             power_entity=config[CONF_POWER_ENTITY],
             power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
+            power_from_adapters=config.get(CONF_POWER_FROM_ADAPTERS, []),
         )
 
     def create_adapter(self) -> ConsumerAdapter:
@@ -230,4 +232,5 @@ class ConsumerAdapterModel:
             verbose_name=self.name,
             power_entity=self.power_entity,
             power_entity_inverted=self.power_entity_inverted,
+            power_from_adapters=self.power_from_adapters,
         )
