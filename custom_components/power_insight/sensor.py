@@ -432,7 +432,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_import_power,
+        value_fn=lambda obj: {obj.grid_adapter.uid: obj.combined_grid_import},
     ),
     PowerInsightSensorDescription(
         key="export_power",
@@ -442,7 +442,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_export_power,
+        value_fn=lambda obj: {obj.grid_adapter.uid: obj.combined_grid_export},
     ),
     PowerInsightSensorDescription(
         key="import_cost_rate",
@@ -452,7 +452,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_coe_rate,
+        value_fn=lambda obj: obj.source_adapters_coe_rate,
     ),
     PowerInsightSensorDescription(
         key="export_compensation_rate",
@@ -462,7 +462,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
+        value_fn=lambda obj: {obj.grid_adapter.uid: obj.combined_export_compensation_rate},
     ),
     PowerInsightSensorDescription(
         key="consumption_ratio",
@@ -472,7 +472,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_consumption_ratios,
+        value_fn=lambda obj: obj.source_adapters_consumption_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -483,7 +483,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_consumption_shares,
+        value_fn=lambda obj: obj.source_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -494,7 +494,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_self_consumption_power,
+        value_fn=lambda obj: obj.source_adapters_consumption_power,
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
@@ -504,7 +504,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_charging_ratios,
+        value_fn=lambda obj: obj.source_adapters_charging_ratios,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -516,7 +516,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_charging_shares,
+        value_fn=lambda obj: obj.source_adapters_charging_shares,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -528,7 +528,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_charging_power,
+        value_fn=lambda obj: obj.source_adapters_charging_power,
         charge_gated=True,
     ),
     PowerInsightSensorDescription(
@@ -539,7 +539,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_standby_ratios,
+        value_fn=lambda obj: obj.source_adapters_standby_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -550,7 +550,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_standby_shares,
+        value_fn=lambda obj: obj.source_adapters_standby_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -561,7 +561,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.grid_adapters_standby_power,
+        value_fn=lambda obj: obj.source_adapters_standby_power,
     ),
 )
 
@@ -574,7 +574,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        integration_value_fn=lambda obj: obj.grid_adapters_coe_rate,
+        integration_value_fn=lambda obj: obj.source_adapters_coe_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
@@ -584,7 +584,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
         device_class=SensorDeviceClass.MONETARY,
         suggested_display_precision=2,
         entities_fn=lambda obj: obj.source_entities_price + obj.source_entities_power,
-        integration_value_fn=lambda obj: obj.grid_adapters_export_compensation_rate,
+        integration_value_fn=lambda obj: {obj.grid_adapter.uid: obj.combined_export_compensation_rate},
     ),
 )
 
@@ -603,7 +603,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.prod_adapters_export_power,
+        value_fn=lambda obj: obj.source_adapters_export_power,
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
@@ -614,7 +614,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.prod_adapters_export_ratios,
+        value_fn=lambda obj: obj.source_adapters_export_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -626,7 +626,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.prod_adapters_export_shares,
+        value_fn=lambda obj: obj.source_adapters_export_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -640,7 +640,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.prod_adapters_export_compensation_rates,
+        value_fn=lambda obj: obj.source_adapters_export_compensation_rates,
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
@@ -650,7 +650,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_consumption_power,
+        value_fn=lambda obj: obj.source_adapters_consumption_power,
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
@@ -660,7 +660,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_consumption_ratios,
+        value_fn=lambda obj: obj.source_adapters_consumption_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -671,7 +671,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_consumption_shares,
+        value_fn=lambda obj: obj.source_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -682,7 +682,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_charging_ratios,
+        value_fn=lambda obj: obj.source_adapters_charging_ratios,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -694,7 +694,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_charging_shares,
+        value_fn=lambda obj: obj.source_adapters_charging_shares,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -706,7 +706,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_charging_power,
+        value_fn=lambda obj: obj.source_adapters_charging_power,
         charge_gated=True,
     ),
     PowerInsightSensorDescription(
@@ -717,7 +717,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_standby_ratios,
+        value_fn=lambda obj: obj.source_adapters_standby_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -728,7 +728,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.prod_adapters_standby_shares,
+        value_fn=lambda obj: obj.source_adapters_standby_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -741,7 +741,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_financial_return_rates,
+        value_fn=lambda obj: obj.source_adapters_financial_return_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
@@ -754,7 +754,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.prod_adapters_levelized_financial_return_rates,
+        value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -767,7 +767,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_coo_rates,
+        value_fn=lambda obj: obj.source_adapters_coo_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
@@ -780,7 +780,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.prod_adapters_lcoo_rates,
+        value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -793,7 +793,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.prod_adapters_cost_saving_rates,
+        value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
@@ -806,7 +806,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
+        value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
         apply_correction_factor=True,
     ),
 )
@@ -823,7 +823,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.exports_power,
-        integration_value_fn=lambda obj: obj.prod_adapters_export_compensation_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
@@ -835,7 +835,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_coo_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
@@ -848,7 +848,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.prod_adapters_lcoo_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -861,7 +861,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
@@ -874,7 +874,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.prod_adapters_levelized_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -887,7 +887,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.prod_adapters_financial_return_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_financial_return_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
@@ -900,7 +900,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.prod_adapters_levelized_financial_return_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
 )
@@ -923,7 +923,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.storage_adapters_export_power,
+        value_fn=lambda obj: obj.source_adapters_export_power,
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
@@ -934,7 +934,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.storage_adapters_export_ratios,
+        value_fn=lambda obj: obj.source_adapters_export_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -946,7 +946,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.storage_adapters_export_shares,
+        value_fn=lambda obj: obj.source_adapters_export_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -960,7 +960,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.exports_power,
-        value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
+        value_fn=lambda obj: obj.source_adapters_export_compensation_rates,
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
@@ -970,7 +970,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_consumption_power,
+        value_fn=lambda obj: obj.source_adapters_consumption_power,
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
@@ -980,7 +980,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_consumption_ratios,
+        value_fn=lambda obj: obj.source_adapters_consumption_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -991,7 +991,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_consumption_shares,
+        value_fn=lambda obj: obj.source_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -1002,7 +1002,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_charging_ratios,
+        value_fn=lambda obj: obj.source_adapters_charging_ratios,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -1014,7 +1014,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_charging_shares,
+        value_fn=lambda obj: obj.source_adapters_charging_shares,
         transform_fn=lambda val: val * 100,
         charge_gated=True,
     ),
@@ -1026,7 +1026,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         device_class=SensorDeviceClass.POWER,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_charging_power,
+        value_fn=lambda obj: obj.source_adapters_charging_power,
         charge_gated=True,
     ),
     PowerInsightSensorDescription(
@@ -1037,7 +1037,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_standby_ratios,
+        value_fn=lambda obj: obj.source_adapters_standby_ratios,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -1048,7 +1048,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.storage_adapters_standby_shares,
+        value_fn=lambda obj: obj.source_adapters_standby_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -1061,7 +1061,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.storage_adapters_financial_return_rates,
+        value_fn=lambda obj: obj.source_adapters_financial_return_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
@@ -1074,7 +1074,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.storage_adapters_levelized_financial_return_rates,
+        value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -1087,7 +1087,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.storage_adapters_coo_rates,
+        value_fn=lambda obj: obj.source_adapters_coo_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
@@ -1100,7 +1100,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+        value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -1113,7 +1113,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.storage_adapters_cost_saving_rates,
+        value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
@@ -1126,7 +1126,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+        value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
         apply_correction_factor=True,
     ),
 )
@@ -1143,7 +1143,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.exports_power,
-        integration_value_fn=lambda obj: obj.storage_adapters_export_compensation_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_export_compensation_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
@@ -1155,7 +1155,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.storage_adapters_coo_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_coo_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
@@ -1168,7 +1168,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.storage_adapters_lcoo_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -1181,7 +1181,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.storage_adapters_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
@@ -1194,7 +1194,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.storage_adapters_levelized_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -1207,7 +1207,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.storage_adapters_financial_return_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_financial_return_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
@@ -1220,7 +1220,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.storage_adapters_levelized_financial_return_rates,
+        integration_value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
 )
@@ -1239,7 +1239,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
         state_class=SensorStateClass.MEASUREMENT,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
-        value_fn=lambda obj: obj.cons_adapters_consumption_share,
+        value_fn=lambda obj: obj.sink_adapters_consumption_shares,
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
@@ -1252,7 +1252,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.cons_adapters_coo_rates,
+        value_fn=lambda obj: obj.sink_adapters_coo_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
@@ -1264,7 +1264,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.cons_adapters_lcoo_rates,
+        value_fn=lambda obj: obj.sink_adapters_lcoo_rates,
     ),
 )
 
@@ -1665,7 +1665,7 @@ async def async_setup_entry(
                     state_class=SensorStateClass.MEASUREMENT,
                     suggested_display_precision=0,
                     entities_fn=lambda obj: obj.source_entities_power,
-                    value_fn=lambda obj: obj.storage_adapters_charging_source_shares,
+                    value_fn=lambda obj: obj.sink_adapters_source_shares,
                     transform_fn=lambda val: val * 100,
                 )
                 entities.append(PowerInsightDynamicAdapterSensor(
@@ -1725,7 +1725,7 @@ async def async_setup_entry(
                     state_class=SensorStateClass.MEASUREMENT,
                     suggested_display_precision=0,
                     entities_fn=lambda obj: obj.source_entities_power,
-                    value_fn=lambda obj: obj.cons_adapters_source_shares,
+                    value_fn=lambda obj: obj.sink_adapters_source_shares,
                     transform_fn=lambda val: val * 100,
                 )
                 entities.append(PowerInsightDynamicAdapterSensor(
