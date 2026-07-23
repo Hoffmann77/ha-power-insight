@@ -632,373 +632,154 @@ class PowerInsight:
         pass
 
     # -------------------------------------------------------------->
-    # GRID ADAPTERS
+    # SOURCE ADAPTERS
     # -------------------------------------------------------------->
 
+    # The provider side, keyed by source uid (grid import, producing PV,
+    # discharging battery). The share of gross power each source supplies is
+    # source_adapters_gross_power_shares (foundation, above).
+
     @property
-    def grid_adapters_gross_power_shares(self) -> dict:
-        """Grid adapter's share of gross power, keyed by uid."""
+    def source_adapters_export_power(self) -> dict:
+        """Watts of each source's output that is exported."""
         pass
 
     @property
-    def grid_adapters_consumption_ratios(self) -> dict:
-        """Grid adapter's relative self-consumption ratio."""
+    def source_adapters_export_shares(self) -> dict:
+        """Each source's share of total exported power."""
         pass
 
     @property
-    def grid_adapters_consumption_shares(self) -> dict:
-        """Grid adapter's share of total self-consumption."""
+    def source_adapters_export_ratios(self) -> dict:
+        """Fraction of each source's output that is exported."""
         pass
 
     @property
-    def grid_adapters_import_power(self) -> dict[str, float | None]:
-        """Grid import power keyed by uid."""
+    def source_adapters_consumption_power(self) -> dict:
+        """Watts of each source's output that is self-consumed."""
         pass
 
     @property
-    def grid_adapters_export_power(self) -> dict[str, float | None]:
-        """Grid export power keyed by uid."""
+    def source_adapters_consumption_shares(self) -> dict:
+        """Each source's share of total self-consumption."""
         pass
 
     @property
-    def grid_adapters_self_consumption_power(self) -> dict[str, float | None]:
-        """Grid import used for direct self-consumption (W)."""
+    def source_adapters_consumption_ratios(self) -> dict:
+        """Fraction of each source's output that is self-consumed."""
         pass
 
     @property
-    def grid_adapters_coe_rate(self) -> dict[str, float | None]:
-        """Grid import cost rate (EUR/h) keyed by uid."""
+    def source_adapters_charging_power(self) -> dict:
+        """Watts of each source's output that goes to battery charging."""
         pass
 
     @property
-    def grid_adapters_export_compensation_rate(self) -> dict[str, float | None]:
-        """Grid export compensation rate (EUR/h) keyed by uid."""
-        pass
-
-    # -------------------------------------------------------------->
-    # PRODUCTION ADAPTERS
-    # -------------------------------------------------------------->
-
-    @property
-    def prod_adapters_coo_rates(self) -> dict:
-        """PV cost-of-operations rates keyed by uid."""
+    def source_adapters_charging_shares(self) -> dict:
+        """Each source's share of total charging power."""
         pass
 
     @property
-    def prod_adapters_lcoo_rates(self) -> dict:
-        """PV levelized cost-of-operations rates keyed by uid."""
+    def source_adapters_charging_ratios(self) -> dict:
+        """Fraction of each source's output that goes to charging."""
         pass
 
     @property
-    def prod_adapters_gross_power_shares(self) -> dict:
-        """Each PV adapter's share of gross power."""
+    def source_adapters_standby_power(self) -> dict:
+        """Watts of each source's output that goes to device standby."""
         pass
 
     @property
-    def prod_adapters_export_ratios(self) -> dict:
-        """Fraction of each PV adapter's output that is exported."""
+    def source_adapters_standby_shares(self) -> dict:
+        """Each source's share of total standby power."""
         pass
 
     @property
-    def prod_adapters_export_shares(self) -> dict:
-        """Each PV adapter's share of total exported power."""
+    def source_adapters_standby_ratios(self) -> dict:
+        """Fraction of each source's output that goes to standby."""
         pass
 
     @property
-    def prod_adapters_export_power(self) -> dict:
-        """Each PV adapter's exported power (W)."""
+    def source_adapters_coe_rate(self) -> dict:
+        """Cost-of-electricity rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_export_compensation_rates(self) -> dict:
-        """Each PV adapter's export compensation rate (EUR/h)."""
+    def source_adapters_lcoe_rate(self) -> dict:
+        """Levelized cost-of-electricity rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_charging_ratios_by_battery(self) -> dict:
-        """Per-PV charging ratio split by battery."""
+    def source_adapters_coo_rates(self) -> dict:
+        """Cost-of-operations rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_combined_charging_ratios(self) -> dict:
-        """Per-PV combined charging ratio across batteries."""
+    def source_adapters_lcoo_rates(self) -> dict:
+        """Levelized cost-of-operations rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_charging_shares_by_battery(self) -> dict:
-        """Per-PV share of each battery's charging power."""
+    def source_adapters_export_compensation_rates(self) -> dict:
+        """Export compensation rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_charging_power(self) -> dict[str, float | None]:
-        """Watts of each PV adapter's output that go to charging."""
+    def source_adapters_avoided_cost_rates(self) -> dict:
+        """Avoided-cost rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_consumption_ratios(self) -> dict:
-        """Fraction of each PV adapter's output that is self-consumed."""
+    def source_adapters_cost_saving_rates(self) -> dict:
+        """Cost-saving rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_consumption_shares(self) -> dict:
-        """Each PV adapter's share of total self-consumption."""
+    def source_adapters_levelized_cost_saving_rates(self) -> dict:
+        """Levelized cost-saving rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_consumption_power(self) -> dict:
-        """Each PV adapter's self-consumed power (W)."""
+    def source_adapters_financial_return_rates(self) -> dict:
+        """Financial return rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_avoided_cost_rates(self) -> dict:
-        """Each PV adapter's avoided-cost rate (EUR/h)."""
+    def source_adapters_levelized_financial_return_rates(self) -> dict:
+        """Levelized financial return rate per source (EUR/h)."""
         pass
 
     @property
-    def prod_adapters_cost_saving_rates(self) -> dict:
-        """Each PV adapter's cost-saving rate (EUR/h)."""
+    def source_adapters_dynamic_coe(self) -> dict[str, float | None]:
+        """Blended cost of electricity per source (EUR/kWh); batteries use their charge mix."""
         pass
 
     @property
-    def prod_adapters_levelized_cost_saving_rates(self) -> dict:
-        """Each PV adapter's levelized cost-saving rate (EUR/h)."""
-        pass
-
-    @property
-    def prod_adapters_financial_return_rates(self) -> dict:
-        """Each PV adapter's financial return rate (EUR/h)."""
-        pass
-
-    @property
-    def prod_adapters_levelized_financial_return_rates(self) -> dict:
-        """Each PV adapter's levelized financial return rate (EUR/h)."""
+    def source_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
+        """Blended levelized cost of electricity per source (EUR/kWh)."""
         pass
 
     # -------------------------------------------------------------->
-    # STORAGE ADAPTERS
+    # SINK ADAPTERS
     # -------------------------------------------------------------->
 
+    # The drawer side, keyed by sink uid (grid export, charging battery, PV
+    # standby, consumer load). Where each sink's power comes from is
+    # sink_adapters_source_shares (foundation, above).
+
     @property
-    def storage_adapters_dynamic_coe(self) -> dict[str, float | None]:
-        """Blended charging cost of electricity per battery (EUR/kWh)."""
+    def sink_adapters_consumption_shares(self) -> dict:
+        """Each consuming sink's share of total self-consumption."""
         pass
 
     @property
-    def storage_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
-        """Blended charging levelized cost per battery (EUR/kWh)."""
+    def sink_adapters_coo_rates(self) -> dict:
+        """Cost-of-operations rate per sink (EUR/h)."""
         pass
 
     @property
-    def storage_adapters_coo_rates(self) -> dict:
-        """Battery cost-of-operations rates keyed by uid."""
-        pass
-
-    @property
-    def storage_adapters_lcoo_rates(self) -> dict:
-        """Battery levelized cost-of-operations rates keyed by uid."""
-        pass
-
-    @property
-    def storage_adapters_gross_power_shares(self) -> dict:
-        """Each battery's share of gross power."""
-        pass
-
-    @property
-    def storage_adapters_export_ratios(self) -> dict:
-        """Fraction of each battery's discharge that is exported."""
-        pass
-
-    @property
-    def storage_adapters_export_shares(self) -> dict:
-        """Each battery's share of total exported power."""
-        pass
-
-    @property
-    def storage_adapters_export_power(self) -> dict:
-        """Each battery's exported power (W)."""
-        pass
-
-    @property
-    def storage_adapters_export_compensation_rates(self) -> dict:
-        """Each battery's export compensation rate (EUR/h)."""
-        pass
-
-    @property
-    def storage_adapters_charging_ratios_by_battery(self) -> dict:
-        """Per-battery charging ratio split by battery."""
-        pass
-
-    @property
-    def storage_adapters_combined_charging_ratios(self) -> dict:
-        """Per-battery combined charging ratio across batteries."""
-        pass
-
-    @property
-    def storage_adapters_charging_shares_by_battery(self) -> dict:
-        """Per-battery share of each battery's charging power."""
-        pass
-
-    @property
-    def storage_adapters_charging_source_shares(self) -> dict:
-        """Each battery's charging power split by source (uid -> {source: share})."""
-        pass
-
-    @property
-    def storage_adapters_charging_power(self) -> dict[str, float | None]:
-        """Watts of each battery's discharge that go to charging."""
-        pass
-
-    @property
-    def storage_adapters_consumption_ratios(self) -> dict:
-        """Fraction of each battery's discharge that is self-consumed."""
-        pass
-
-    @property
-    def storage_adapters_consumption_shares(self) -> dict:
-        """Each battery's share of total self-consumption."""
-        pass
-
-    @property
-    def storage_adapters_consumption_power(self) -> dict:
-        """Each battery's self-consumed power (W)."""
-        pass
-
-    @property
-    def storage_adapters_avoided_cost_rates(self) -> dict:
-        """Each battery's avoided-cost rate (EUR/h)."""
-        pass
-
-    @property
-    def storage_adapters_cost_saving_rates(self) -> dict:
-        """Each battery's cost-saving rate (EUR/h)."""
-        pass
-
-    @property
-    def storage_adapters_levelized_cost_saving_rates(self) -> dict:
-        """Each battery's levelized cost-saving rate (EUR/h)."""
-        pass
-
-    @property
-    def storage_adapters_financial_return_rates(self) -> dict:
-        """Each battery's financial return rate (EUR/h)."""
-        pass
-
-    @property
-    def storage_adapters_levelized_financial_return_rates(self) -> dict:
-        """Each battery's levelized financial return rate (EUR/h)."""
-        pass
-
-    # -------------------------------------------------------------->
-    # CONSUMPTION ADAPTERS
-    # -------------------------------------------------------------->
-
-    @property
-    def cons_adapter_total_power_shares(self) -> dict:
-        """Each consumer's share of gross power."""
-        pass
-
-    @property
-    def cons_adapters_consumption_share(self) -> dict:
-        """Each consumer's share of total self-consumption."""
-        pass
-
-    @property
-    def cons_adapters_source_shares(self) -> dict:
-        """Each consumer's power split by source (uid -> {source: share})."""
-        pass
-
-    @property
-    def cons_adapters_coo_rates(self) -> dict:
-        """Each consumer's cost-of-operations rate (EUR/h)."""
-        pass
-
-    @property
-    def cons_adapters_lcoo_rates(self) -> dict:
-        """Each consumer's levelized cost-of-operations rate (EUR/h)."""
-        pass
-
-    # -------------------------------------------------------------->
-    # CHANNEL ATTRIBUTION - CHARGING & STANDBY
-    # -------------------------------------------------------------->
-
-    @property
-    def _provider_charging_powers(self) -> dict[str, float] | None:
-        """Watts each provider contributes to battery charging, keyed by uid."""
-        pass
-
-    @property
-    def _provider_standby_powers(self) -> dict[str, float | None] | None:
-        """Watts each provider contributes to device standby, keyed by uid."""
-        pass
-
-    @property
-    def grid_adapters_charging_ratios(self) -> dict[str, float | None]:
-        """Fraction of grid import that goes to battery charging."""
-        pass
-
-    @property
-    def grid_adapters_charging_shares(self) -> dict[str, float | None]:
-        """Grid's share of the total battery-charging power."""
-        pass
-
-    @property
-    def grid_adapters_charging_power(self) -> dict[str, float | None]:
-        """Watts of grid import used for battery charging."""
-        pass
-
-    @property
-    def grid_adapters_standby_ratios(self) -> dict[str, float | None]:
-        """Fraction of grid import that goes to device standby."""
-        pass
-
-    @property
-    def grid_adapters_standby_shares(self) -> dict[str, float | None]:
-        """Grid's share of the total standby power."""
-        pass
-
-    @property
-    def grid_adapters_standby_power(self) -> dict[str, float | None]:
-        """Watts of grid import used for device standby."""
-        pass
-
-    @property
-    def prod_adapters_charging_ratios(self) -> dict[str, float | None]:
-        """Fraction of each PV system's output that goes to charging."""
-        pass
-
-    @property
-    def prod_adapters_charging_shares(self) -> dict[str, float | None]:
-        """Each PV system's share of the total charging power."""
-        pass
-
-    @property
-    def prod_adapters_standby_ratios(self) -> dict[str, float | None]:
-        """Fraction of each PV system's output that goes to standby."""
-        pass
-
-    @property
-    def prod_adapters_standby_shares(self) -> dict[str, float | None]:
-        """Each PV system's share of the total standby power."""
-        pass
-
-    @property
-    def storage_adapters_charging_ratios(self) -> dict[str, float | None]:
-        """Fraction of each battery's discharge that goes to charging."""
-        pass
-
-    @property
-    def storage_adapters_charging_shares(self) -> dict[str, float | None]:
-        """Each battery's share of the total charging power."""
-        pass
-
-    @property
-    def storage_adapters_standby_ratios(self) -> dict[str, float | None]:
-        """Fraction of each battery's discharge that goes to standby."""
-        pass
-
-    @property
-    def storage_adapters_standby_shares(self) -> dict[str, float | None]:
-        """Each battery's share of the total standby power."""
+    def sink_adapters_lcoo_rates(self) -> dict:
+        """Levelized cost-of-operations rate per sink (EUR/h)."""
         pass
 
     #
