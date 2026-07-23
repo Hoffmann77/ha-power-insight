@@ -83,6 +83,7 @@ GridAdapter = _mod.GridAdapter
 PvAdapter = _mod.PvAdapter
 BatteryAdapter = _mod.BatteryAdapter
 ConsumerAdapter = _mod.ConsumerAdapter
+FlowRole = _mod.FlowRole
 
 
 # ---------------------------------------------------------------------------

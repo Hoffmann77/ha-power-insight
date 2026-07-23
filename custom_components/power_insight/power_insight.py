@@ -5,11 +5,35 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from enum import Enum
 
 
 _LOGGER = logging.getLogger(__name__)
 
 UNIT_PREFIXES = {None: 1, "k": 10**3, "M": 10**6, "G": 10**9, "T": 10**12}
+
+
+class FlowRole(Enum):
+    """The instantaneous power-flow role of an adapter.
+
+    This is the *flow axis*: a per-snapshot classification derived purely from
+    an adapter's current signed power, orthogonal to its static *identity* axis
+    (grid / pv / battery / consumer). The engine's internal sign convention is
+    uniform — positive power means the adapter is providing, negative means it
+    is drawing — so a single rule classifies every adapter kind:
+
+    * ``SOURCE`` — providing power now (grid import, PV producing, battery
+      discharging).
+    * ``SINK`` — drawing power now (grid export, PV standby, battery charging,
+      consumer load).
+    * ``IDLE`` — reading is exactly ``0`` W.
+    * ``UNKNOWN`` — the power sensor is unavailable (``None``).
+    """
+
+    SOURCE = "source"
+    SINK = "sink"
+    IDLE = "idle"
+    UNKNOWN = "unknown"
 
 
 class AdapterContainer:
@@ -137,6 +161,104 @@ class PowerInsight:
             + self.pv_system_adapters.adapters
             + self.storage_adapters.adapters
         )
+
+    # ------------------------------------------------------------------>
+    # FLOW VIEW (dynamic source / sink / grid grouping)
+    #
+    # A per-snapshot partition of the adapters by their current FlowRole,
+    # orthogonal to the static identity containers above. Membership follows
+    # each adapter's signed power (see FlowRole): a battery is a source while
+    # discharging and a sink while charging; a PV is a source while producing
+    # and a sink while drawing standby. The grid is the balancing node and is
+    # always kept in its own group regardless of direction. Adapters that are
+    # IDLE (0 W) or UNKNOWN (sensor unavailable) fall into neither source nor
+    # sink, mirroring the engine's None-propagation elsewhere.
+    #
+    # source_adapters / sink_adapters are the non-grid (behind-the-meter)
+    # groups; inflow_adapters / outflow_adapters are their grid-inclusive
+    # counterparts, folding the grid in direction-aware (import -> inflow,
+    # export -> outflow) so the two stay disjoint.
+    #
+    # This is additive scaffolding: nothing in the engine consumes it yet. The
+    # existing prod_adapters_* / storage_adapters_* / cons_adapters_* families
+    # are unchanged and remain the source of truth for all current results.
+    # ------------------------------------------------------------------>
+
+    @property
+    def _non_grid_adapters(self) -> list[BasePowerAdapter]:
+        """Return every non-grid adapter (the flow-view candidate pool)."""
+        return (
+            self.pv_system_adapters.adapters
+            + self.storage_adapters.adapters
+            + self.consumer_adapters.adapters
+        )
+
+    @property
+    def grid_adapters(self) -> list[BasePowerAdapter]:
+        """Return the grid adapters as their own flow group.
+
+        The grid is the balancing node, so it stays in a dedicated group
+        whether it is currently importing (source) or exporting (sink). Modelled
+        as a list to mirror ``source_adapters`` / ``sink_adapters``, even though
+        the engine holds exactly one grid.
+        """
+        return [self.grid_adapter]
+
+    @property
+    def source_adapters(self) -> list[BasePowerAdapter]:
+        """Return the non-grid adapters currently providing power.
+
+        Producing PV systems and discharging batteries.
+        """
+        return [
+            adapter for adapter in self._non_grid_adapters
+            if adapter.flow_role is FlowRole.SOURCE
+        ]
+
+    @property
+    def sink_adapters(self) -> list[BasePowerAdapter]:
+        """Return the non-grid adapters currently drawing power.
+
+        Charging batteries, consumer loads, and PV systems drawing standby.
+        """
+        return [
+            adapter for adapter in self._non_grid_adapters
+            if adapter.flow_role is FlowRole.SINK
+        ]
+
+    @property
+    def inflow_adapters(self) -> list[BasePowerAdapter]:
+        """Return every adapter currently providing power, grid included.
+
+        The grid-inclusive counterpart of ``source_adapters``: all power
+        crossing into the system boundary this snapshot. The grid is folded in
+        direction-aware — it joins only while importing (``FlowRole.SOURCE``) —
+        so ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the
+        grid is never counted on both sides.
+        """
+        grid = (
+            [self.grid_adapter]
+            if self.grid_adapter.flow_role is FlowRole.SOURCE
+            else []
+        )
+        return grid + self.source_adapters
+
+    @property
+    def outflow_adapters(self) -> list[BasePowerAdapter]:
+        """Return every adapter currently drawing power, grid included.
+
+        The grid-inclusive counterpart of ``sink_adapters``: all power crossing
+        out of the system boundary this snapshot. The grid is folded in
+        direction-aware — it joins only while exporting (``FlowRole.SINK``) — so
+        ``inflow_adapters`` and ``outflow_adapters`` stay disjoint and the grid
+        is never counted on both sides.
+        """
+        grid = (
+            [self.grid_adapter]
+            if self.grid_adapter.flow_role is FlowRole.SINK
+            else []
+        )
+        return grid + self.sink_adapters
 
     # ------------------->
     # SOURCE ENTITIES --->
@@ -2372,6 +2494,24 @@ class BasePowerAdapter(AbstractBaseAdapter):
 
         return -power if self._invert_power else power
 
+    @property
+    def flow_role(self) -> FlowRole:
+        """Return this adapter's instantaneous power-flow role.
+
+        Classifies the adapter from its current signed power using the engine's
+        uniform convention (positive = providing, negative = drawing). See
+        :class:`FlowRole` for the categories. Subclasses whose sign convention
+        differs (e.g. a consumer can never *provide*) override this.
+        """
+        power = self.power
+        if power is None:
+            return FlowRole.UNKNOWN
+        if power > 0:
+            return FlowRole.SOURCE
+        if power < 0:
+            return FlowRole.SINK
+        return FlowRole.IDLE
+
     def _multiply_cons(self, value: float) -> float | None:
         """Return ``value`` scaled by this adapter's consumption (in kW).
 
@@ -2777,6 +2917,17 @@ class BaseConsumerAdapter(BasePowerAdapter):
             return self.power * -1. if self.power < 0 else 0
 
         return None
+
+    @property
+    def flow_role(self) -> FlowRole:
+        """Return this consumer's instantaneous power-flow role.
+
+        A consumer is a pure sink: it can only draw power. A positive reading
+        (which the engine's convention would treat as providing) is therefore
+        reported as ``IDLE`` rather than ``SOURCE``.
+        """
+        role = super().flow_role
+        return FlowRole.IDLE if role is FlowRole.SOURCE else role
 
     def get_coo_rate(self, coe: float) -> float | None:
         """Return the cost of operations rate."""
