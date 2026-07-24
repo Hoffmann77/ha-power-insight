@@ -20,7 +20,7 @@ load, then a restricted-to-idle collapse, then a two-source export pass with no
 priority tier, and finally the full priority/home/leftover split with several
 restricted sinks at once.
 
-Each ``test_`` method uses the ``@test("sink_adapters_source_shares")`` decorator
+Each ``test_`` method uses the ``@expect_attribute("sink_adapters_source_shares")`` decorator
 (see ``scenario_framework.py``): it returns the hand-written expected map for the
 ``@topology`` / ``@state`` block declared above it, and the framework reads the
 engine attribute back and compares. Expected values are derived from first
@@ -42,13 +42,13 @@ from tests.engine.scenario_framework import (
     EngineScenario,
     State,
     state,
-    test,
+    expect_attribute,
     topology,
 )
 
 
 # Shares written as rounded literals (e.g. 0.615 for 8/13) are compared to three
-# decimal places via ``@test(..., abs_tol=SHARE_ABS_TOL)`` — enough to catch any
+# decimal places via ``@expect_attribute(..., abs_tol=SHARE_ABS_TOL)`` — enough to catch any
 # real regression (which shifts a share by far more) while keeping the expected
 # map readable. Blocks whose expectations are exact fractions omit ``abs_tol`` so
 # ``pytest.approx``'s tight relative tolerance applies. See
@@ -80,7 +80,7 @@ class TestSourceShares(EngineScenario):
         # bat draws all 2000 W of gross -> no unmetered home load.
         return State(grid=1000, pv1=1000, bat=-2000, price=0.30)
 
-    @test("sink_adapters_source_shares")
+    @expect_attribute("sink_adapters_source_shares")
     def test_no_home_load_battery_keeps_half_solar(self):
         """No home load competes for the PV, so bat mirrors 0.5 / 0.5 availability."""
         return {"bat": {"grid": 0.5, "pv1": 0.5}}
@@ -90,7 +90,7 @@ class TestSourceShares(EngineScenario):
         # bat draws 1500 W -> 500 W unmetered home load (0.25 of gross).
         return State(grid=1000, pv1=1000, bat=-1500, price=0.30)
 
-    @test("sink_adapters_source_shares")
+    @expect_attribute("sink_adapters_source_shares")
     def test_moderate_home_load_shifts_battery_toward_grid(self):
         """Home eats 0.25 of the 0.5 pv1 share first; bat splits the rest, 2/3 grid."""
         return {"bat": {"grid": 2 / 3, "pv1": 1 / 3}}
@@ -100,7 +100,7 @@ class TestSourceShares(EngineScenario):
         # bat draws 1000 W -> 1000 W home load (0.5 of gross) eats all the PV.
         return State(grid=1000, pv1=1000, bat=-1000, price=0.30)
 
-    @test("sink_adapters_source_shares")
+    @expect_attribute("sink_adapters_source_shares")
     def test_large_home_load_pushes_battery_fully_to_grid(self):
         """Home load consumes the whole pv1 share; bat falls fully back on grid."""
         return {"bat": {"grid": 1.0, "pv1": 0.0}}
@@ -127,7 +127,7 @@ class TestSourceShares(EngineScenario):
         # plug (300 W) and battery (200 W) are pinned to the now-idle pv1.
         return State(grid=1000, pv1=-10, cons_plug=-300, bat_dead=-200, price=0.30)
 
-    @test("sink_adapters_source_shares")
+    @expect_attribute("sink_adapters_source_shares")
     def test_restricted_to_idle_source_collapses_to_zero(self):
         """pv1 is idle: sinks pinned to it collapse to all-zeros; standby pv1 -> grid."""
         # Masking to the idle pv1 leaves nothing over the sole source (grid), so
@@ -163,7 +163,7 @@ class TestSourceShares(EngineScenario):
             grid=-1000, pv1=2000, pv2=1000, bat_solar=-500, bat_flex=-500, price=0.30
         )
 
-    @test("sink_adapters_source_shares")
+    @expect_attribute("sink_adapters_source_shares")
     def test_export_single_pass_honours_restriction(self):
         """No import -> one pass at full availability; bat_solar still masked to pv1."""
         # Grid and the unrestricted bat_flex take the full 2/3 / 1/3 availability;
@@ -206,7 +206,7 @@ class TestSourceShares(EngineScenario):
             price=0.30,
         )
 
-    @test("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
+    @expect_attribute("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
     def test_charging_with_import(self):
         """Grid-capable bat_1/bat_2 land on grid; pv-only bat_3/cons_1 take priority PV."""
         return {
@@ -229,7 +229,7 @@ class TestSourceShares(EngineScenario):
             price=0.30,
         )
 
-    @test("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
+    @expect_attribute("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
     def test_charging_with_partial_import(self):
         """Abundant pv_1 survives the priority + home tiers, so bat_1 keeps more local."""
         # pv_1 (1000 W) is more abundant than pv_2 (600 W): after the priority +
