@@ -13,8 +13,8 @@ scenario, one block per branch of the two-tier algorithm:
   the grid is not importing). They split what the priority tier left behind.
 
 See ``scenario_framework.py`` for the block layout (``@topology`` → ``@state`` →
-``test_`` methods, bound by source order). Expected values are derived by hand
-from the shares in each docstring, not read back from the engine.
+``test_`` methods, bound by source order). Expected values are hand-written, not
+read back from the engine.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -27,50 +27,91 @@ import pytest
 from tests.engine.scenario_framework import Adapter, EngineScenario, State, state, topology
 
 
+def _assert_source_shares(power_insight, expected):
+    """Compare ``sink_adapters_source_shares`` to a hand-written nested map.
+
+    Row by row so ``pytest.approx`` can tolerate the float shares while the sink
+    set and per-sink source set must still match exactly.
+    """
+    shares = power_insight.sink_adapters_source_shares
+    assert shares.keys() == expected.keys()
+    for uid, row in expected.items():
+        assert shares[uid] == pytest.approx(row)
+
+
 class TestSourceShares(EngineScenario):
     """Power provenance under the two-tier ``sink_adapters_source_shares`` rule."""
 
     # -----------------------------------------------------------------------
-    # Block 1 — grid importing: a PV-only battery (priority) drains the PV
-    # first, pushing the unrestricted battery (leftover) onto the grid.
+    # Two PV, three batteries (each restricted differently) and a smart-plug
+    # consumer — the priority/leftover split with several restricted sinks at
+    # once. Expected values below are author-maintained.
     # -----------------------------------------------------------------------
 
     @topology
-    def grid_pv_two_batteries(self):
+    def two_pv_three_batteries(self):
         return (
             Adapter.grid(),
-            Adapter.pv("pv1", exports=True),
-            # Restricted to PV -> priority tier while the grid imports.
-            Adapter.battery("bat_solar", charge_from=("pv1",)),
-            # Unrestricted -> leftover tier (can fall back on the grid).
-            Adapter.battery("bat_flex"),
+            Adapter.pv("pv_1", lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.pv("pv_2", lcoe=0.10, exports=True, export_comp=0.08),
+            Adapter.battery("bat_1", charge_from=("grid", "pv_1")),
+            Adapter.battery("bat_2", charge_from=("grid", "pv_2")),
+            Adapter.battery("bat_3", charge_from=("pv_1", "pv_2")),
+            Adapter.consumer("cons_1", power_from=("pv_1", "pv_2")),
         )
 
     @state
-    def import_and_solar(self):
-        # Sources: grid 1000 W + pv1 1000 W -> gross 2000 W, each a 0.5 share.
-        # Both batteries charge at 500 W (each a 0.25 sink share of gross).
-        return State(grid=1000, pv1=1000, bat_solar=-500, bat_flex=-500, price=0.30)
+    def charging_with_import(self):
+        return State(
+            grid=1200,
+            pv_1=800,
+            pv_2=500,
+            bat_1=-400,
+            bat_2=-400,
+            bat_3=-600,
+            cons_1=-600,
+            price=0.30,
+        )
 
-    def test_priority_battery_takes_all_pv(self, power_insight):
-        # bat_solar (priority) masks the 0.5/0.5 availability to PV only, so it
-        # normalises to 100% pv1 and consumes 0.25 * 1.0 = 0.25 of the pv1 share.
-        shares = power_insight.sink_adapters_source_shares
-        assert shares["bat_solar"] == pytest.approx({"grid": 0.0, "pv1": 1.0})
+    def test_charging_with_import(self, power_insight):
+        _assert_source_shares(
+            power_insight,
+            {
+                "bat_1": {"grid": 1.0, "pv_1": 0.0},
+                "bat_2": {"pv_1": 1.0, "pv_2": 0.0},
+                "bat_3": {"pv_1": 0.615, "pv_2": 0.385},
+                "cons_1": {"pv_1": 0.615, "pv_2": 0.385},
+            },
+        )
 
-    def test_leftover_battery_falls_back_to_grid(self, power_insight):
-        # bat_flex draws the leftover availability: grid 0.5 (untouched) and the
-        # 0.25 of pv1 the priority tier left -> normalise (0.5, 0.25) = 2/3, 1/3.
-        shares = power_insight.sink_adapters_source_shares
-        assert shares["bat_flex"] == pytest.approx({"grid": 2 / 3, "pv1": 1 / 3})
+    @state
+    def charging_with_partial_import(self):
+        return State(
+            grid=400,
+            pv_1=1000,
+            pv_2=600,
+            bat_1=-400,
+            bat_2=-400,
+            bat_3=-500,
+            cons_1=-500,
+            price=0.30,
+        )
 
-    def test_only_the_two_batteries_are_sinks(self, power_insight):
-        assert set(power_insight.sink_adapters_source_shares) == {"bat_solar", "bat_flex"}
+    def test_charging_with_partial_import(self, power_insight):
+        _assert_source_shares(
+            power_insight,
+            {
+                "bat_1": {"grid": 0.5, "pv_1": 0.5},
+                "bat_2": {"grid": 0.5, "pv_2": 0.5},
+                "bat_3": {"pv_1": 0.625, "pv_2": 0.375},
+                "cons_1": {"pv_1": 0.625, "pv_2": 0.375},
+            },
+        )
 
     # -----------------------------------------------------------------------
-    # Block 2 — grid exporting: no import, so the priority tier is empty and
-    # every sink shares the sources in a single pass (restriction still honoured).
-    # The exporting grid is itself a sink, sourced from the PV mix.
+    # Grid exporting: no import, so the priority tier is empty and every sink
+    # shares the sources in a single pass (restriction still honoured). The
+    # exporting grid is itself a sink, sourced from the PV mix.
     # -----------------------------------------------------------------------
 
     @topology
@@ -107,10 +148,10 @@ class TestSourceShares(EngineScenario):
         assert shares["bat_flex"] == pytest.approx({"pv1": 2 / 3, "pv2": 1 / 3})
 
     # -----------------------------------------------------------------------
-    # Block 3 — restricted sinks whose only allowed source is idle. The lone PV
-    # is in standby (a sink, not a source), so a battery and a smart plug both
-    # pinned to it collapse to an all-zeros row, while the unrestricted standby
-    # PV draws from the grid.
+    # Restricted sinks whose only allowed source is idle. The lone PV is in
+    # standby (a sink, not a source), so a battery and a smart plug both pinned
+    # to it collapse to an all-zeros row, while the unrestricted standby PV
+    # draws from the grid.
     # -----------------------------------------------------------------------
 
     @topology
