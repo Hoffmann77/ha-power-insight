@@ -13,10 +13,10 @@ uv run pytest tests/engine          # pure-Python engine, no HA needed
 uv run pytest tests/integration     # Home Assistant layer
 
 # Run a single test file
-uv run pytest tests/engine/test_power_insight_calculations.py
+uv run pytest tests/engine/test_source_shares.py
 
 # Run a single test method
-uv run pytest tests/engine/test_power_insight_calculations.py::TestFullScenario::test_combined_grid_import
+uv run pytest tests/engine/test_source_shares.py::TestSourceShares::test_priority_battery_takes_all_pv
 
 # Run a specific parametrized case by keyword
 uv run pytest -k "import"
@@ -107,8 +107,8 @@ Integration sensors (`BaseEventIntegrationSensorEntity`) accumulate rate values 
 
 ### Testing
 
-Engine-tier tests in `tests/engine/` import `power_insight.py` directly via `importlib.util` to bypass all HA dependencies. Each test class defines `ENTITY_VALUES` as a `dict[str, dict[entity_id, value]]`; a `@pytest.fixture(params=...)` parametrizes every test method over all named cases automatically.
+Engine-tier tests in `tests/engine/` import `power_insight.py` directly via `importlib.util` to bypass all HA dependencies, and all use the **source-order scenario framework** (`tests/engine/scenario_framework.py`, wired via `conftest.py`).
 
-**Engine edge-case framework** (`tests/engine/engine_property_framework.py`): shared infrastructure for pinning down individual engine-property return values in edge cases. A scenario lists its adapters with `Device(preset, number=1, *, power, price=None, charge_from=None, inverted=False, **overrides)` — one adapter per line carrying its reading. `preset` is an `ADAPTER_PRESETS` key (`grid`; `pv_with_export`/`pv_no_export`/`pv_no_cost`/`pv_corrected`; `battery`/`battery_with_export`; `consumer`) that fixes the adapter kind and default config; `number` derives the uid and entity id (`pv` 1 → `pv1` / `sensor.pv1_power`, `grid` is always `grid`); `power=None` models an unavailable sensor; `**overrides` (e.g. `lcoe`, `export_compensation`) surface a config value at the test site. `build_engine(devices)` assembles the adapters, applies the readings, and validates the device (exactly one grid, unique indices, resolvable `charge_from` targets — raising `ValueError` otherwise).
+**Source-order scenario framework**: a scenario is a class subclassing `EngineScenario` that concentrates on one aspect of the engine. Inside it, methods appear in repeating **blocks** — a `@topology` method (which adapters exist + their static config), a `@state` method (the `uid → power` readings plus grid `price`), then `test_` methods. Each `test_` method binds to the `@topology` and `@state` declared closest **above** it, located by source line (`__code__.co_firstlineno`), so a block reads top to bottom as *wiring → readings → assertions*; a comment line separates blocks. Reusing one topology across two reading sets is just two `@state`/`test_` runs under it.
 
-Tests using it live in `tests/engine/test_engine_property_scenarios.py` in a **class-per-scenario** style: each class subclasses `EngineScenario` (which supplies the `power_insight` fixture via `build_engine`), pins exactly one `DEVICES` list, and each `test_` method asserts one property against a hand-written expected value (`pytest.approx` for floats). Unlike `test_power_insight_calculations.py` (which re-derives expectations from the engine's own formulas), here you write the expected number out by hand. A scenario class never sweeps several entity-value sets — to test a different reading set, add another class.
+Adapters are declared with the `Adapter.grid()/pv()/battery()/consumer()` factories, config inline at the call site (`Adapter.pv("pv1", lcoe=0.10, exports=True)`, `Adapter.battery("bat1", charge_from=("pv1",))`, `Adapter.consumer("plug", power_from=("pv1",))`). A `@state` is `State(grid=1000, pv1=-500, price=0.30)`; `None` power models an unavailable sensor. A safety rail requires a state to name *exactly* its topology's uids. Each test receives a freshly built engine via the `power_insight` fixture (or `state` / `topology` for the raw block objects), and asserts hand-written expected values derived from first principles — not read back from the engine — so a regression flips the test red. Property families the engine has not implemented yet get skipped-stub scenarios (`test_engine_stubs.py`) with a ready topology/state to fill in.

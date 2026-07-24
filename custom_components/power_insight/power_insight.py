@@ -427,7 +427,7 @@ class PowerInsight:
         batteries). Each row sums to 1 (a sink whose allowed sources are all
         idle collapses to all-zeros).
 
-        The attribution is two-tier, honouring per-device source restrictions
+        The attribution is three-tier, honouring per-device source restrictions
         (a battery's ``charge_from_adapters``, a consumer's
         ``power_from_adapters``, both surfaced as ``power_source_uids``):
 
@@ -440,13 +440,17 @@ class PowerInsight:
           sinks have the grid to fall back on. With no grid import there is
           nothing to fall back to, so every sink shares the sources in a single
           pass on equal footing (the tier is empty).
+        * **Home base-load tier** — the unmetered home load (the gross power no
+          sink accounts for). It consumes the remaining *local* generation next,
+          falling back on the grid for its deficit, so a scarce local source can
+          be exhausted before the flexible grid-capable sinks see it. Unmetered,
+          it never appears in the result — it only depletes the pool. Active
+          only while the grid is importing, for the same scarcity reason.
         * **Leftover tier** — every other sink (unrestricted, or allowed to draw
           the grid, or *any* sink when the grid is not importing). They split
-          the power the priority tier left behind — the full availability when
-          the priority tier is empty — each still respecting its own restriction
-          if it has one. The unmetered home load implicitly shares this same
-          leftover pool, which is why the priority tier can exhaust a scarce
-          source first.
+          the power the priority and home tiers left behind — the full
+          availability when both are empty — each still respecting its own
+          restriction if it has one.
 
         Empty when gross power is unavailable.
         """
@@ -496,6 +500,29 @@ class PowerInsight:
         # Leftover tier draws from what the priority tier left behind (the full
         # availability when the priority tier is empty).
         leftover_availability = np.clip(availability - consumed, 0.0, None)
+
+        # Home base-load tier. The unmetered home load — the gross power no sink
+        # accounts for — sits between the priority and the flexible grid-capable
+        # sinks: it consumes the remaining *local* generation first (the grid is
+        # its fallback), so the leftover sinks that can draw the grid only claim
+        # the local generation the home load did not eat. Like the priority tier
+        # this scarcity ordering is meaningful only while the grid is importing;
+        # with no import every sink already shares the sources in a single pass.
+        # The load is unmetered, so it never appears in ``result`` — it only
+        # depletes ``leftover_availability``.
+        if grid_importing:
+            home_share = max(0.0, 1.0 - float(sum(sink_shares.values())))
+            grid_i = index.index(grid_uid)
+            local_mask = np.array([0.0 if uid == grid_uid else 1.0 for uid in index])
+            local_residual = leftover_availability * local_mask
+            # Local drawn first (capped at what is left), grid covers the rest.
+            local_take = min(home_share, float(local_residual.sum()))
+            home_consumed = normalise(local_residual) * local_take
+            home_consumed[grid_i] += home_share - local_take
+            leftover_availability = np.clip(
+                leftover_availability - home_consumed, 0.0, None
+            )
+
         for adapter in leftover:
             shares = normalise(
                 restricted_row(adapter.power_source_uids, leftover_availability)

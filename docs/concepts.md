@@ -196,8 +196,54 @@ Insight traces that mix in real time to:
 - attribute the battery's charging cost to the right source, and
 - power the **charging source share** sensors ("70 % solar, 30 % grid").
 
+The same tracing decides where a smart-plug **consumer** restricted to specific
+sources (its **Powers from** list) draws its power, and how the power you export
+is sourced.
+
+### How the mix is decided
+
+Your local generation — solar production and battery discharge — is limited, and
+while you are *importing* from the grid it is the scarce, cheaper resource. Power
+Insight hands it out in a fixed priority order, and the grid fills whatever is
+left over:
+
+1. **Locked devices first.** A battery set to charge from *solar only*, or a
+   smart plug that runs on *excess solar*, has no fallback — so it gets first
+   claim on its allowed local sources.
+2. **Your home base load next.** The always-on household consumption you don't
+   meter directly takes the local power it needs before any flexible device
+   does.
+3. **Flexible devices last.** A battery allowed to charge from the grid *can*
+   fall back on it, so it only receives the local generation the first two steps
+   left behind; the grid covers the rest of its draw.
+
+When you are *exporting* — your solar is in surplus — local power isn't scarce,
+so this ordering doesn't apply and every device is simply attributed to the live
+mix.
+
+### Why two devices can show different mixes
+
+Because local generation is allocated in order rather than split evenly, two
+devices drawing power at the same instant can show different source mixes:
+
+- A battery locked to solar shows **100 % solar** while any is available; a
+  battery that can also use the grid, charging at the same moment, may show
+  mostly **grid** — it receives only the solar the locked battery and your home
+  load didn't take.
+- The mix shifts with your **household load**: the more your home consumes
+  directly, the less local generation reaches a flexible battery, so its grid
+  share rises — even though nothing about the battery itself changed.
+- Two PV strings of different sizes show it too: a battery drawing from the
+  larger string keeps more solar (a lower grid share) than one drawing from a
+  smaller string, because more of the larger string survives the earlier steps.
+
 The **round-trip efficiency** is used to account for the energy lost in a
 charge/discharge cycle when attributing these costs.
+
+!!! info "The exact rules"
+    The precise allocation — the three tiers above and their edge cases — is
+    written up for contributors in
+    [Engine calculation decisions](dev/engine-calculations.md).
 
 ## Scopes
 
