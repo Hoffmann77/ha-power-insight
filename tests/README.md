@@ -19,12 +19,22 @@ Pure-Python tests for the `PowerInsight` calculation engine. They import
 `custom_components/power_insight/power_insight.py` directly via `importlib`,
 so they need **no Home Assistant** and run in a fraction of a second.
 
-- `test_power_insight_calculations.py` — full grid + PV + battery + consumer
-  scenario; each expectation is re-derived from the engine's own formulas.
-- `test_engine_property_scenarios.py` — class-per-scenario edge cases with
-  hand-written expected values, built on `engine_property_framework.py`.
-- `test_correction_factor.py`, `test_release_bugfixes.py`,
-  `test_storage_dynamic_lcoe.py` — targeted regression tests.
+All engine tests use the **source-order scenario framework**
+(`scenario_framework.py`, wired in `conftest.py`). A scenario is a class that
+concentrates on one aspect of the engine; inside it, methods appear in repeating
+blocks of `@topology` → `@state` → `test_` methods, and each test binds to the
+block declared above it (found by source line). See the module docstring for the
+authoring surface.
+
+- `test_source_shares.py` — the two-tier `sink_adapters_source_shares`
+  power-provenance attribution (the richest engine logic).
+- `test_flow_view.py` — the dynamic source/sink partition, `gross_power`, the
+  gross-power share vectors, and `None`/zero-gross guards.
+- `test_engine_stubs.py` — skipped stubs for property families the engine has
+  not implemented yet (combined rates/prices, per-source attribution), each with
+  a ready topology/state to fill in.
+- `test_scenario_framework.py` — self-tests for the framework's validation and
+  source-order binding.
 
 ```bash
 uv run --group engine pytest tests/engine   # HA harness not required
