@@ -425,8 +425,7 @@ class PowerInsight:
         For every currently-drawing adapter, the fraction of its power supplied
         by each source adapter (grid import, producing PV, discharging
         batteries). Each row sums to 1 (a sink whose allowed sources are all
-        idle — or a battery with no configured charge source, which cannot
-        charge from anything — collapses to all-zeros).
+        idle collapses to all-zeros).
 
         The attribution is three-tier, honouring per-device source restrictions
         (a battery's ``charge_from_adapters``, a consumer's
@@ -467,17 +466,9 @@ class PowerInsight:
         # exists only then (see docstring).
         grid_importing = grid_uid in index
 
-        def restricted_row(adapter, weights: np.ndarray) -> np.ndarray:
-            """Weights masked to ``adapter``'s allowed sources.
-
-            An empty restriction is unrestricted (all sources) for most sinks,
-            but a battery ``requires_explicit_sources``: with none configured it
-            cannot charge, so its row is all-zeros rather than the full mix.
-            """
-            sources = adapter.power_source_uids
+        def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
+            """Weights masked to the allowed sources (all sources if unrestricted)."""
             if not sources:
-                if adapter.requires_explicit_sources:
-                    return np.zeros_like(weights)
                 return weights.copy()
             mask = np.array([1.0 if uid in sources else 0.0 for uid in index])
             return weights * mask
@@ -502,7 +493,7 @@ class PowerInsight:
         # Priority tier draws from the full availability vector, consuming it.
         consumed = np.zeros(len(index))
         for adapter in priority:
-            shares = normalise(restricted_row(adapter, availability))
+            shares = normalise(restricted_row(adapter.power_source_uids, availability))
             result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
             consumed += shares * sink_shares[adapter.uid]
 
@@ -533,7 +524,9 @@ class PowerInsight:
             )
 
         for adapter in leftover:
-            shares = normalise(restricted_row(adapter, leftover_availability))
+            shares = normalise(
+                restricted_row(adapter.power_source_uids, leftover_availability)
+            )
             result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
 
         return result
@@ -907,30 +900,17 @@ class AbstractBaseAdapter(ABC):
     def power_source_uids(self) -> list[str]:
         """Return the source uids this adapter is restricted to draw power from.
 
-        Only battery and smart-plug consumer adapters override this to expose
-        their configured restriction; every other adapter kind stays
+        An empty list means unrestricted (the adapter draws from the whole
+        source mix). Only battery and smart-plug consumer adapters override this
+        to expose their configured restriction; every other adapter kind stays
         unrestricted. Consumed by ``PowerInsight.sink_adapters_source_shares``
         to give restricted sinks first pick of their allowed sources.
 
-        An empty list is read via :attr:`requires_explicit_sources`: for most
-        adapters it means *unrestricted* (draw from the general mix), but a
-        battery with no configured charge source cannot charge at all.
+        The config flow surfaces the empty-vs-restricted choice as an explicit
+        "whole mix" / "specific devices" mode, but the engine only ever sees the
+        resulting list: empty is the whole mix, non-empty is the restriction.
         """
         return []
-
-    @property
-    def requires_explicit_sources(self) -> bool:
-        """Whether an empty ``power_source_uids`` means "no sources" (not "all").
-
-        Most sinks treat an empty restriction as *unrestricted* — a normal
-        consumer or a standby PV draws from the general mix. A battery is the
-        exception (overrides this to ``True``): with no configured
-        ``charge_from_adapters`` it cannot charge from anything, so its
-        provenance collapses to all-zeros rather than the full mix. That
-        empty-charge-source state is a misconfiguration the HA layer surfaces;
-        the engine just attributes it to nothing.
-        """
-        return False
 
     # @property
     # def source_entities(self) -> list[str]:
@@ -1412,13 +1392,12 @@ class BatteryAdapter(BaseProductionAdapter):
 
     @property
     def power_source_uids(self) -> list[str]:
-        """Sources this battery charges from (its ``charge_from_adapters``)."""
-        return self.charge_from_adapters
+        """Sources this battery charges from (its ``charge_from_adapters``).
 
-    @property
-    def requires_explicit_sources(self) -> bool:
-        """A battery must name its charge sources; empty means it cannot charge."""
-        return True
+        Empty means the whole mix — the config flow's "whole mix" source mode
+        stores an empty list, which the engine reads as unrestricted.
+        """
+        return self.charge_from_adapters
 
 class BaseConsumerAdapter(BasePowerAdapter):
     """Base adapter for consumers."""
