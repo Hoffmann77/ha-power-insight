@@ -124,6 +124,52 @@ class TestSourceShares(EngineScenario):
         )
 
     # -----------------------------------------------------------------------
+    # Home base-load tier in isolation. Sources are held constant (grid 1000 W +
+    # pv1 1000 W, so availability is a fixed 0.5 / 0.5); only the unmetered home
+    # load changes, by varying how much of gross the lone grid-capable battery
+    # draws. As the home load grows it eats the local PV first, pushing the
+    # battery's provenance from half-solar fully onto the grid.
+    # -----------------------------------------------------------------------
+
+    @topology
+    def grid_pv_flex_battery(self):
+        return (
+            Adapter.grid(),
+            Adapter.pv("pv1", exports=True),
+            Adapter.battery("bat"),  # unrestricted -> grid-capable leftover sink
+        )
+
+    @state
+    def home_none(self):
+        # bat draws all 2000 W of gross -> no unmetered home load.
+        return State(grid=1000, pv1=1000, bat=-2000, price=0.30)
+
+    def test_no_home_load_battery_keeps_half_solar(self, power_insight):
+        # Nothing competes for the PV: bat mirrors the 0.5 / 0.5 availability.
+        shares = power_insight.sink_adapters_source_shares
+        assert shares["bat"] == pytest.approx({"grid": 0.5, "pv1": 0.5})
+
+    @state
+    def home_moderate(self):
+        # bat draws 1500 W -> 500 W unmetered home load (0.25 of gross).
+        return State(grid=1000, pv1=1000, bat=-1500, price=0.30)
+
+    def test_moderate_home_load_shifts_battery_toward_grid(self, power_insight):
+        # Home eats 0.25 of the 0.5 pv1 share first; bat splits the rest -> 2/3 grid.
+        shares = power_insight.sink_adapters_source_shares
+        assert shares["bat"] == pytest.approx({"grid": 2 / 3, "pv1": 1 / 3})
+
+    @state
+    def home_large(self):
+        # bat draws 1000 W -> 1000 W home load (0.5 of gross) eats all the PV.
+        return State(grid=1000, pv1=1000, bat=-1000, price=0.30)
+
+    def test_large_home_load_pushes_battery_fully_to_grid(self, power_insight):
+        # Home load consumes the entire pv1 share; bat falls fully back on grid.
+        shares = power_insight.sink_adapters_source_shares
+        assert shares["bat"] == pytest.approx({"grid": 1.0, "pv1": 0.0})
+
+    # -----------------------------------------------------------------------
     # Grid exporting: no import, so the priority tier is empty and every sink
     # shares the sources in a single pass (restriction still honoured). The
     # exporting grid is itself a sink, sourced from the PV mix.
