@@ -78,9 +78,9 @@ class TestSourceShares(EngineScenario):
             power_insight,
             {
                 "bat_1": {"grid": 1.0, "pv_1": 0.0},
-                "bat_2": {"pv_1": 1.0, "pv_2": 0.0},
-                "bat_3": {"pv_1": 0.615, "pv_2": 0.385},
-                "cons_1": {"pv_1": 0.615, "pv_2": 0.385},
+                "bat_2": {"grid": 0.0, "pv_1": 1.0, "pv_2": 0.0},
+                "bat_3": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
+                "cons_1": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
             },
         )
 
@@ -103,8 +103,8 @@ class TestSourceShares(EngineScenario):
             {
                 "bat_1": {"grid": 0.5, "pv_1": 0.5},
                 "bat_2": {"grid": 0.5, "pv_2": 0.5},
-                "bat_3": {"pv_1": 0.625, "pv_2": 0.375},
-                "cons_1": {"pv_1": 0.625, "pv_2": 0.375},
+                "bat_3": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
+                "cons_1": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
             },
         )
 
