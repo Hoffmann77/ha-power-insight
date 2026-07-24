@@ -4,13 +4,16 @@
 adapter's power come from?" — ``{sink_uid: {source_uid: share}}``, each row
 summing to 1 (or collapsing to all-zeros when the sink's allowed sources are all
 idle). It is the single richest piece of engine logic, so it gets its own
-scenario, one block per branch of the two-tier algorithm:
+scenario, one block per branch of the three-tier algorithm (see
+``docs/dev/engine-calculations.md`` for the full model):
 
 * **Priority tier** — sinks restricted to non-grid sources (a PV-only battery, a
   smart-plug consumer). Active *only while the grid is importing*: they get first
   pick of their allowed sources and can exhaust a scarce one.
+* **Home base-load tier** — the unmetered home load consumes the remaining local
+  generation next, grid as fallback.
 * **Leftover tier** — grid-capable / unrestricted sinks (and *every* sink when
-  the grid is not importing). They split what the priority tier left behind.
+  the grid is not importing). They split what the first two tiers left behind.
 
 See ``scenario_framework.py`` for the block layout (``@topology`` → ``@state`` →
 ``test_`` methods, bound by source order). Expected values are hand-written, not
@@ -27,16 +30,25 @@ import pytest
 from tests.engine.scenario_framework import Adapter, EngineScenario, State, state, topology
 
 
+# Shares are compared to three decimal places (0.1 percentage point). That lets
+# a row list a readable rounded literal like 0.615 for 8/13 while still catching
+# any real regression (which shifts a share by far more than this). Write a share
+# as an exact fraction when you want it pinned tighter. See
+# docs/dev/engine-calculations.md ("Approximation policy").
+SHARE_ABS_TOL = 1e-3
+
+
 def _assert_source_shares(power_insight, expected):
     """Compare ``sink_adapters_source_shares`` to a hand-written nested map.
 
-    Row by row so ``pytest.approx`` can tolerate the float shares while the sink
-    set and per-sink source set must still match exactly.
+    Row by row so the shares compare within ``SHARE_ABS_TOL`` while the sink set
+    and each row's source set must still match exactly (a full row, every source
+    uid the engine reports — so a leaked non-zero source fails loudly).
     """
     shares = power_insight.sink_adapters_source_shares
     assert shares.keys() == expected.keys()
     for uid, row in expected.items():
-        assert shares[uid] == pytest.approx(row)
+        assert shares[uid] == pytest.approx(row, abs=SHARE_ABS_TOL)
 
 
 class TestSourceShares(EngineScenario):
@@ -101,8 +113,11 @@ class TestSourceShares(EngineScenario):
         _assert_source_shares(
             power_insight,
             {
-                "bat_1": {"grid": 0.5, "pv_1": 0.5},
-                "bat_2": {"grid": 0.5, "pv_2": 0.5},
+                # pv_1 (1000 W) is more abundant than pv_2 (600 W), so after the
+                # priority + home tiers consume local, more pv_1 survives:
+                # bat_1 (on pv_1) keeps more local than bat_2 (on pv_2).
+                "bat_1": {"grid": 0.615, "pv_1": 0.385, "pv_2": 0.0},
+                "bat_2": {"grid": 0.727, "pv_1": 0.0, "pv_2": 0.273},
                 "bat_3": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
                 "cons_1": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
             },

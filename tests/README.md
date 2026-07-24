@@ -26,7 +26,7 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
-- `test_source_shares.py` — the two-tier `sink_adapters_source_shares`
+- `test_source_shares.py` — the three-tier `sink_adapters_source_shares`
   power-provenance attribution (the richest engine logic).
 - `test_flow_view.py` — the dynamic source/sink partition, `gross_power`, the
   gross-power share vectors, and `None`/zero-gross guards.
@@ -35,6 +35,11 @@ authoring surface.
   a ready topology/state to fill in.
 - `test_scenario_framework.py` — self-tests for the framework's validation and
   source-order binding.
+
+Expected values are hand-derived, compared with `pytest.approx`: exact values
+(`0.5`, `2/3`) at the default tolerance, rounded shares/ratios to three decimals
+(`abs=1e-3`). The engine's own modelling decisions are recorded in
+[`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md).
 
 ```bash
 uv run --group engine pytest tests/engine   # HA harness not required

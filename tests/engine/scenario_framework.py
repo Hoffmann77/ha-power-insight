@@ -46,6 +46,13 @@ Each test receives a freshly built engine through the ``power_insight`` fixture
 are hand-written expected values — derived from first principles, not read back
 from the engine, so a regression flips the test red.
 
+Approximation: tests compare with ``pytest.approx``. Exact expectations (``0.5``,
+``2/3``, ``0.625``) use the default tolerance (relative ``1e-6``); shares/ratios
+that need a rounded literal are compared to three decimal places
+(``abs=1e-3``) — enough to catch any real regression while keeping the expected
+value readable. Write a value as an exact fraction when you want it pinned
+tighter than three decimals. See ``docs/dev/engine-calculations.md``.
+
 Authoring surface
 -----------------
 
