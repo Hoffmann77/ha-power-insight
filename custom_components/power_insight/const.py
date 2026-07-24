@@ -63,6 +63,20 @@ CONF_CHARGE_FROM_ADAPTERS = "charge_from_adapters"
 # battery's charge_from_adapters; empty means it draws from the general mix.
 CONF_POWER_FROM_ADAPTERS = "power_from_adapters"
 
+# Source-attribution mode — a form-only selector (never persisted on its own).
+# It is realised entirely through the paired device list: "mix" stores an empty
+# list (the engine reads empty as "draw from the whole source mix"); "devices"
+# stores the explicitly selected sources. Shared by the battery charge_from and
+# consumer power_from fields so both offer the same mix-vs-specific choice.
+CONF_SOURCE_MODE = "source_mode"
+SOURCE_MODE_MIX = "mix"
+SOURCE_MODE_DEVICES = "devices"
+#: adapter_type -> the device-list field the source mode drives.
+SOURCE_MODE_DEVICE_FIELD = {
+    "battery": CONF_CHARGE_FROM_ADAPTERS,
+    "consumer": CONF_POWER_FROM_ADAPTERS,
+}
+
 
 
 

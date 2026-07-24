@@ -900,11 +900,15 @@ class AbstractBaseAdapter(ABC):
     def power_source_uids(self) -> list[str]:
         """Return the source uids this adapter is restricted to draw power from.
 
-        An empty list means unrestricted (the adapter draws from the general
-        mix). Only battery and smart-plug consumer adapters override this to
-        expose their configured restriction; every other adapter kind stays
+        An empty list means unrestricted (the adapter draws from the whole
+        source mix). Only battery and smart-plug consumer adapters override this
+        to expose their configured restriction; every other adapter kind stays
         unrestricted. Consumed by ``PowerInsight.sink_adapters_source_shares``
         to give restricted sinks first pick of their allowed sources.
+
+        The config flow surfaces the empty-vs-restricted choice as an explicit
+        "whole mix" / "specific devices" mode, but the engine only ever sees the
+        resulting list: empty is the whole mix, non-empty is the restriction.
         """
         return []
 
@@ -1388,7 +1392,11 @@ class BatteryAdapter(BaseProductionAdapter):
 
     @property
     def power_source_uids(self) -> list[str]:
-        """Sources this battery charges from (its ``charge_from_adapters``)."""
+        """Sources this battery charges from (its ``charge_from_adapters``).
+
+        Empty means the whole mix — the config flow's "whole mix" source mode
+        stores an empty list, which the engine reads as unrestricted.
+        """
         return self.charge_from_adapters
 
 class BaseConsumerAdapter(BasePowerAdapter):

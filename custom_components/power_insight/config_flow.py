@@ -43,6 +43,10 @@ from .const import (
     CONF_BAT_EFFICIENCY,
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_POWER_FROM_ADAPTERS,
+    CONF_SOURCE_MODE,
+    SOURCE_MODE_MIX,
+    SOURCE_MODE_DEVICES,
+    SOURCE_MODE_DEVICE_FIELD,
     CONF_ENABLE_DEBUG_ENTITIES,
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
@@ -173,6 +177,47 @@ def _levelized_production_required(options: dict) -> bool:
 # ============================================================================
 # HELPERS
 # ============================================================================
+
+SOURCE_MODE_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=[
+            selector.SelectOptionDict(value=SOURCE_MODE_MIX, label="Whole mix"),
+            selector.SelectOptionDict(
+                value=SOURCE_MODE_DEVICES, label="Specific devices"
+            ),
+        ],
+        mode=selector.SelectSelectorMode.LIST,
+    )
+)
+
+
+def apply_source_mode(
+    adapter_type: str | None,
+    user_input: dict[str, Any],
+    errors: dict[str, str],
+) -> None:
+    """Reconcile the source-mode selector with its paired device list, in place.
+
+    The mode is a UI-only choice realised through the device list (see
+    :data:`CONF_SOURCE_MODE`):
+
+    * ``mix`` — clear the device list to ``[]``; the engine reads an empty list
+      as "draw from the whole source mix".
+    * ``devices`` — keep the selection but require at least one device; an empty
+      selection here is the only misconfiguration (records a field error).
+
+    No-op for adapter types without a source restriction (grid, pv_system).
+    """
+    device_field = SOURCE_MODE_DEVICE_FIELD.get(adapter_type)
+    if device_field is None:
+        return
+    mode = user_input.get(CONF_SOURCE_MODE, SOURCE_MODE_MIX)
+    if mode == SOURCE_MODE_DEVICES:
+        if not user_input.get(device_field):
+            errors[device_field] = "source_devices_required"
+    else:
+        user_input[device_field] = []
+
 
 def _build_power_source_selector(
     entry: ConfigEntry,
@@ -1077,6 +1122,15 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=False,
         store_in_adapter_config=True,
     ),
+    # Source mode selector — form-only (not persisted). "Whole mix" clears the
+    # charge_from list; "Specific devices" keeps it and requires >= 1 source.
+    CONF_SOURCE_MODE: AdapterField(
+        selector=SOURCE_MODE_SELECTOR,
+        required=True,
+        default=SOURCE_MODE_MIX,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+    ),
     CONF_CHARGE_FROM_ADAPTERS: AdapterField(
         selector_fn=_build_power_source_selector,
         required=False,
@@ -1191,9 +1245,18 @@ CONSUMER_FIELDS: dict[str, AdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
+    # Source mode selector — form-only (not persisted). "Whole mix" clears the
+    # power_from list; "Specific devices" keeps it and requires >= 1 source.
+    CONF_SOURCE_MODE: AdapterField(
+        selector=SOURCE_MODE_SELECTOR,
+        required=True,
+        default=SOURCE_MODE_MIX,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+    ),
     # Optional source restriction — the sources this consumer draws from (e.g. a
     # smart plug set to run only on excess solar). Mirrors the battery's
-    # charge_from field; empty means it draws from the general mix.
+    # charge_from field; empty (the "whole mix" mode) draws from the general mix.
     CONF_POWER_FROM_ADAPTERS: AdapterField(
         selector_fn=_build_power_source_selector,
         required=False,
@@ -1683,6 +1746,11 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             )
             errors.update(validation_errors)
 
+            # Reconcile the source-mode selector with its device list ("whole
+            # mix" clears it; "specific devices" requires >= 1). Mutates
+            # user_input so the stored list matches the chosen mode.
+            apply_source_mode(self._adapter_type, user_input, errors)
+
             if not errors:
                 # Determine key and title
                 if self._adapter_type == "grid":
@@ -1776,6 +1844,10 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             )
             errors.update(validation_errors)
 
+            # Reconcile the source-mode selector with its device list, as in the
+            # configure step.
+            apply_source_mode(self._adapter_type, user_input, errors)
+
             if not errors:
                 # Evaluate calculated fields (current_lcoe/lcos, correction
                 # factor) from the edited lifetime values, reading the immutable
@@ -1841,6 +1913,15 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 seed[source_field] = [
                     i for i in seed[source_field] if i in valid_source_ids
                 ]
+
+        # Derive the (form-only) source-mode selector from the seeded list: a
+        # non-empty restriction pre-selects "specific devices", an empty one
+        # pre-selects "whole mix".
+        device_field = SOURCE_MODE_DEVICE_FIELD.get(self._adapter_type)
+        if device_field is not None:
+            seed[CONF_SOURCE_MODE] = (
+                SOURCE_MODE_DEVICES if seed.get(device_field) else SOURCE_MODE_MIX
+            )
 
         schema = build_schema(
             self._adapter_fields,

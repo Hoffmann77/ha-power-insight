@@ -6,7 +6,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from .conftest import DOMAIN, BASE_OPTIONS, make_grid_subentry_data
+from .conftest import (
+    DOMAIN,
+    GRID_SUB_ID,
+    BAT_SUB_ID,
+    BASE_OPTIONS,
+    make_grid_subentry_data,
+    make_battery_subentry_data,
+)
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
@@ -293,6 +300,156 @@ async def test_subentry_pv_creates_subentry(hass: HomeAssistant) -> None:
     adapter = subentries[0].data["adapter"]
     assert adapter["adapter_type"] == "pv_system"
     assert adapter["config"]["exports_power"] is True
+
+
+# ---------------------------------------------------------------------------
+# Subentry flow — battery adapter
+# ---------------------------------------------------------------------------
+
+
+def _battery_config_input(**overrides) -> dict:
+    """Base battery configure-step input; override the source-mode fields per test."""
+    data = {
+        "name": "Home Battery",
+        "power_entity": "sensor.battery_power",
+        "power_entity_inverted": False,
+    }
+    data.update(overrides)
+    return data
+
+
+async def _start_battery_flow(hass, entry):
+    """Init a subentry flow and advance to the battery configure step."""
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    return await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "battery"}
+    )
+
+
+async def test_subentry_battery_specific_mode_requires_a_source(
+    hass: HomeAssistant,
+) -> None:
+    """'Specific devices' mode with nothing selected is rejected with an error.
+
+    This is the only source misconfiguration left: 'Whole mix' is always valid,
+    but picking 'Specific devices' means at least one source must be selected.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+
+    result = await _start_battery_flow(hass, entry)
+    assert result["step_id"] == "configure"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_battery_config_input(
+            source_mode="devices", charge_from_adapters=[]
+        ),
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"].get("charge_from_adapters") == "source_devices_required"
+
+
+async def test_subentry_battery_specific_mode_creates_with_source(
+    hass: HomeAssistant,
+) -> None:
+    """'Specific devices' with a source selected stores exactly that source."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+
+    result = await _start_battery_flow(hass, entry)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_battery_config_input(
+            source_mode="devices", charge_from_adapters=[GRID_SUB_ID]
+        ),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["adapter_type"] == "battery"
+    assert adapter["config"]["charge_from_adapters"] == [GRID_SUB_ID]
+
+
+async def test_subentry_battery_whole_mix_stores_empty_list(
+    hass: HomeAssistant,
+) -> None:
+    """'Whole mix' mode is valid and stores an empty list (engine reads it as mix).
+
+    Any stray device selection is cleared, so 'Whole mix' always persists ``[]``.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+
+    result = await _start_battery_flow(hass, entry)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_battery_config_input(
+            source_mode="mix", charge_from_adapters=[GRID_SUB_ID]
+        ),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["adapter_type"] == "battery"
+    assert adapter["config"]["charge_from_adapters"] == []
+
+
+async def test_reconfigure_battery_switch_to_whole_mix_clears_sources(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfiguring a specific-devices battery to 'Whole mix' clears its sources."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": BAT_SUB_ID},
+    )
+    assert result["step_id"] == "reconfigure"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.battery_power",
+            "power_entity_inverted": False,
+            "source_mode": "mix",
+            "charge_from_adapters": [GRID_SUB_ID],  # cleared because mode is mix
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+
+    config = entry.subentries[BAT_SUB_ID].data["adapter"]["config"]
+    assert config["charge_from_adapters"] == []
 
 
 # ---------------------------------------------------------------------------

@@ -288,6 +288,7 @@
             "exports_power": "Exports power to grid",
             "export_compensation": "Export compensation rate",
             "battery_efficiency": "Round-trip efficiency",
+            "source_mode": "Source mode",
             "charge_from_adapters": "Charges from",
             "power_from_adapters": "Powered from",
             "lifetime_production": "Lifetime production",
@@ -303,8 +304,9 @@
             "exports_power": "Turn on if this device can feed surplus power back to the grid. Enables export-compensation tracking when the corresponding option is active.",
             "export_compensation": "The amount you are paid per kWh of power exported to the grid, in your currency. Required when export-compensation or savings sensors are enabled.",
             "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Used to correctly attribute charging losses to their source.",
-            "charge_from_adapters": "Select which sources this battery can charge from — the grid and/or specific PV systems you have configured. Power Insight uses this to trace how much of the battery's stored energy came from each source.",
-            "power_from_adapters": "Optionally restrict which sources power this consumer — the grid and/or specific PV systems. Useful for a smart plug set to run only on excess solar. Leave empty to draw from your home's general power mix.",
+            "source_mode": "How to attribute this device's power. **Whole mix** shares it across every source by availability. **Specific devices** restricts it to the sources you pick below — useful for a battery that only charges from solar, or a smart plug set to run on excess PV.",
+            "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources this battery may charge from (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
+            "power_from_adapters": "Only used with the **Specific devices** source mode: which sources power this consumer (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
             "lifetime_production": "Total energy in kWh you expect this device to produce (or store) over its entire lifetime. Combined with the total lifetime cost to derive the levelized (per-kWh) cost. Required when any levelized sensor is enabled.",
             "lifetime_cost": "Total purchase, installation, and expected maintenance cost of this device over its lifetime, in your currency. Combined with lifetime production to derive the levelized cost per kWh. Required when any levelized cost sensor is enabled.",
             "co2_footprint": "Total CO₂ emitted to manufacture and install this device (in kg). Used to derive a levelized CO₂ intensity per kWh produced. Required when any levelized CO₂ sensor is enabled."
@@ -318,6 +320,7 @@
             "power_entity_inverted": "Invert power direction",
             "grid_electricity_price_entity": "Electricity price entity",
             "co2_intensity_entity": "CO₂ intensity entity",
+            "source_mode": "Source mode",
             "charge_from_adapters": "Charges from",
             "power_from_adapters": "Powered from",
             "lifetime_production": "Lifetime production",
@@ -328,8 +331,9 @@
             "power_entity_inverted": "Turn on if your sensor reports power with the opposite sign to the expected convention.",
             "grid_electricity_price_entity": "Sensor or input number with the current grid import price per kWh. Required when cost or savings sensors are enabled.",
             "co2_intensity_entity": "Sensor with the current grid CO₂ intensity in g/kWh. Required when CO₂ sensors are enabled.",
-            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from.",
-            "power_from_adapters": "Select which sources (the grid and/or your PV systems) power this consumer. Leave empty to draw from the general mix.",
+            "source_mode": "**Whole mix** shares this device's power across every source by availability; **Specific devices** restricts it to the sources you pick below.",
+            "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) this battery charges from.",
+            "power_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) power this consumer.",
             "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this value rescales the device's already-recorded levelized values.",
             "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values."
           }
@@ -342,7 +346,8 @@
         "invalid_price_entity": "The selected entity does not exist or is unavailable.",
         "invalid_co2_entity": "The selected entity does not exist or is unavailable.",
         "invalid_input": "Invalid input.",
-        "required": "This field is required with the sensors you currently have enabled."
+        "required": "This field is required with the sensors you currently have enabled.",
+        "source_devices_required": "Select at least one source, or switch the source mode to \"Whole mix\"."
       },
       "abort": {
         "grid_already_configured": "A grid connection is already configured for this integration. Only one grid connection is supported per configuration.",
