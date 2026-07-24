@@ -78,7 +78,7 @@ class TestSourceShares(EngineScenario):
             power_insight,
             {
                 "bat_1": {"grid": 1.0, "pv_1": 0.0},
-                "bat_2": {"grid": 0.0, "pv_1": 1.0, "pv_2": 0.0},
+                "bat_2": {"grid": 1.0, "pv_2": 0.0},
                 "bat_3": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
                 "cons_1": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
             },
