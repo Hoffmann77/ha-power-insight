@@ -65,6 +65,12 @@ Authoring surface
   ``pv`` / ``battery`` / ``consumer`` factories. Config lives inline at the call
   site so an expected value that hinges on (say) ``export_comp`` is documented
   where it is used.
+* :func:`test` — an optional decorator for the common shape where a test just
+  compares one engine attribute to a hand-written expected value. Instead of
+  taking ``power_insight`` and asserting, the method takes only ``self`` and
+  *returns* the expected value; ``@test("<attribute>")`` names the property to
+  read back and compare against it. A plain ``def test_x(self, power_insight)``
+  still works for anything that needs finer control.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -84,6 +90,8 @@ import importlib.util
 import os
 from dataclasses import dataclass
 from typing import Any, Callable
+
+import pytest
 
 # ---------------------------------------------------------------------------
 # Load the pure-Python engine directly (same importlib trick as the other
@@ -417,6 +425,76 @@ def state(fn: Callable[[Any], State]) -> Callable[[Any], State]:
     return fn
 
 
+def _assert_attribute_matches(actual: Any, expected: Any, *, abs_tol: float | None) -> None:
+    """Assert ``actual`` (an engine attribute value) equals the ``expected`` map.
+
+    A nested ``{row: {col: value}}`` mapping (e.g. ``sink_adapters_source_shares``)
+    is compared row by row: the row set and every row's column set must match
+    exactly, so a leaked or missing key fails loudly, while the values compare
+    within ``abs_tol``. Anything else (a flat mapping, a sequence, a scalar) is
+    compared in one go. ``abs_tol=None`` falls back to ``pytest.approx``'s default
+    relative tolerance — use it for expectations written as exact fractions.
+    """
+    is_nested = (
+        isinstance(expected, dict)
+        and bool(expected)
+        and all(isinstance(v, dict) for v in expected.values())
+    )
+    if is_nested:
+        assert actual.keys() == expected.keys()
+        for key, row in expected.items():
+            assert actual[key] == pytest.approx(row, abs=abs_tol)
+    else:
+        assert actual == pytest.approx(expected, abs=abs_tol)
+
+
+def test(attribute: str, *, abs_tol: float | None = None) -> Callable[[Callable], Callable]:
+    """Turn a method that *returns* an expected value into a bound scenario test.
+
+    The decorated method takes only ``self`` and returns the value
+    ``power_insight.<attribute>`` should have for the block it binds to (source
+    order, like any ``test_`` method). The engine's actual attribute is then
+    compared against the returned value by :func:`_assert_attribute_matches`, so
+    the body reads as *"``<attribute>`` should be this"* with no assertion
+    boilerplate::
+
+        @test("sink_adapters_source_shares")
+        def test_export_sourced_from_pv_mix(self):
+            return {"grid": {"pv1": 2 / 3, "pv2": 1 / 3}, ...}
+
+    ``abs_tol`` sets the per-value absolute tolerance for the comparison (pass it
+    when the expected map lists rounded literals); the default keeps
+    ``pytest.approx``'s relative tolerance for expectations pinned as exact
+    fractions.
+    """
+
+    def decorator(fn: Callable) -> Callable:
+        def wrapper(self: Any, power_insight: Any) -> None:
+            expected = fn(self)
+            actual = getattr(power_insight, attribute)
+            _assert_attribute_matches(actual, expected, abs_tol=abs_tol)
+
+        # Copy identity for pytest's node id / docstring display, but do NOT set
+        # ``__wrapped__`` — that would make ``inspect.signature`` follow through
+        # to ``fn`` and hide the ``power_insight`` parameter pytest must inject.
+        wrapper.__name__ = fn.__name__
+        wrapper.__qualname__ = fn.__qualname__
+        wrapper.__doc__ = fn.__doc__
+        wrapper.__module__ = fn.__module__
+        # The original method, so source-order binding reads its line number
+        # rather than this wrapper's (see ``bind_cell``).
+        wrapper._scenario_test_fn = fn  # type: ignore[attr-defined]
+        wrapper._scenario_attribute = attribute  # type: ignore[attr-defined]
+        return wrapper
+
+    return decorator
+
+
+# ``test`` matches pytest's ``test*`` collection pattern, so tell pytest this
+# decorator is not itself a test when it is imported into a test module.
+test.__test__ = False  # type: ignore[attr-defined]
+
+
 def _role_methods(cls: type, role: str) -> list[tuple[int, str, Callable]]:
     """Return ``(lineno, name, fn)`` for this class's own methods of ``role``.
 
@@ -448,7 +526,10 @@ def _nearest_above(
 
 def bind_cell(cls: type, test_fn: Callable) -> Cell:
     """Bind a scenario ``test_`` method to its nearest topology + state block."""
-    lineno = test_fn.__code__.co_firstlineno
+    # A @test-decorated method is a wrapper; bind on the original method's line
+    # number so the block layout is read from where the author wrote it.
+    original = getattr(test_fn, "_scenario_test_fn", test_fn)
+    lineno = original.__code__.co_firstlineno
     where = f"{cls.__name__}.{test_fn.__name__}"
 
     topo_name, topo_fn = _nearest_above(
