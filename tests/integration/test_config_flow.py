@@ -6,7 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from .conftest import DOMAIN, BASE_OPTIONS, make_grid_subentry_data
+from .conftest import DOMAIN, GRID_SUB_ID, BASE_OPTIONS, make_grid_subentry_data
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
@@ -293,6 +293,90 @@ async def test_subentry_pv_creates_subentry(hass: HomeAssistant) -> None:
     adapter = subentries[0].data["adapter"]
     assert adapter["adapter_type"] == "pv_system"
     assert adapter["config"]["exports_power"] is True
+
+
+# ---------------------------------------------------------------------------
+# Subentry flow — battery adapter
+# ---------------------------------------------------------------------------
+
+
+async def test_subentry_battery_rejects_empty_charge_source(
+    hass: HomeAssistant,
+) -> None:
+    """A battery submitted with no charge source is rejected with an error.
+
+    An empty charge_from is a misconfiguration (a battery with no source cannot
+    charge), so the flow re-shows the form instead of creating the subentry.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+
+    hass.states.async_set(
+        "sensor.battery_power", "0", {"unit_of_measurement": "W"}
+    )
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "battery"}
+    )
+    assert result["step_id"] == "configure"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Home Battery",
+            "power_entity": "sensor.battery_power",
+            "power_entity_inverted": False,
+            "charge_from_adapters": [],  # no charge source selected
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"].get("charge_from_adapters") == "charge_sources_required"
+
+
+async def test_subentry_battery_creates_subentry_with_charge_source(
+    hass: HomeAssistant,
+) -> None:
+    """Selecting at least one charge source lets the battery subentry be created."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+
+    hass.states.async_set(
+        "sensor.battery_power", "0", {"unit_of_measurement": "W"}
+    )
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "battery"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Home Battery",
+            "power_entity": "sensor.battery_power",
+            "power_entity_inverted": False,
+            "charge_from_adapters": [GRID_SUB_ID],
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["adapter_type"] == "battery"
+    assert adapter["config"]["charge_from_adapters"] == [GRID_SUB_ID]
 
 
 # ---------------------------------------------------------------------------

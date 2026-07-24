@@ -13,6 +13,10 @@ from .const import (
     DOMAIN,
     PLATFORMS,
 )
+from .exceptions import (
+    BatteryChargeSourcesNotConfigured,
+    ensure_battery_charge_sources,
+)
 from .utils import state_to_value
 from .power_insight import PowerInsight
 from .event_handler import EventHandler
@@ -80,6 +84,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
             if subentry.data.get("adapter", {}).get("adapter_type") != "battery":
                 continue
             charge_from = subentry.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
+
+            # A battery with no charge source cannot charge from anything — an
+            # explicit misconfiguration, not a shorthand for the full mix. Flag
+            # it with a repair issue (and self-clear it once sources are set).
+            try:
+                ensure_battery_charge_sources(subentry.title, charge_from)
+            except BatteryChargeSourcesNotConfigured as err:
+                _LOGGER.warning("%s", err)
+                ir.async_create_issue(
+                    hass,
+                    DOMAIN,
+                    f"battery_no_charge_source_{subentry.subentry_id}",
+                    is_fixable=False,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="battery_no_charge_source",
+                    translation_placeholders={"battery_name": subentry.title},
+                )
+                continue
+            ir.async_delete_issue(
+                hass, DOMAIN, f"battery_no_charge_source_{subentry.subentry_id}"
+            )
+
             if any(source_id not in valid_source_ids for source_id in charge_from):
                 ir.async_create_issue(
                     hass,

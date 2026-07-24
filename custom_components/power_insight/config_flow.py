@@ -239,6 +239,17 @@ def validate_power_entity(hass, entity_id: str | None) -> bool:
     return unit in ["W", "kW", "MW"]
 
 
+def validate_charge_sources_configured(hass, value) -> bool:
+    """Validate that a battery has at least one charge source selected.
+
+    A battery with an empty ``charge_from_adapters`` cannot charge from
+    anything, so an empty selection is a misconfiguration rather than a
+    shorthand for "the whole mix" — to draw from every source the user selects
+    them explicitly. See :class:`.exceptions.BatteryChargeSourcesNotConfigured`.
+    """
+    return bool(value)
+
+
 # ============================================================================
 # CALCULATION FUNCTIONS
 # ============================================================================
@@ -1081,6 +1092,8 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         selector_fn=_build_power_source_selector,
         required=False,
         default=[],
+        validator=validate_charge_sources_configured,
+        error_key="charge_sources_required",
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,

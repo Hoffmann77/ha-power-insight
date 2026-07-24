@@ -303,7 +303,7 @@
             "exports_power": "Turn on if this device can feed surplus power back to the grid. Enables export-compensation tracking when the corresponding option is active.",
             "export_compensation": "The amount you are paid per kWh of power exported to the grid, in your currency. Required when export-compensation or savings sensors are enabled.",
             "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Used to correctly attribute charging losses to their source.",
-            "charge_from_adapters": "Select which sources this battery can charge from — the grid and/or specific PV systems you have configured. Power Insight uses this to trace how much of the battery's stored energy came from each source.",
+            "charge_from_adapters": "Select which sources this battery can charge from — the grid and/or specific PV systems you have configured. Power Insight uses this to trace how much of the battery's stored energy came from each source. At least one source is required; a battery with none cannot charge, so to draw from your whole mix select every source.",
             "power_from_adapters": "Optionally restrict which sources power this consumer — the grid and/or specific PV systems. Useful for a smart plug set to run only on excess solar. Leave empty to draw from your home's general power mix.",
             "lifetime_production": "Total energy in kWh you expect this device to produce (or store) over its entire lifetime. Combined with the total lifetime cost to derive the levelized (per-kWh) cost. Required when any levelized sensor is enabled.",
             "lifetime_cost": "Total purchase, installation, and expected maintenance cost of this device over its lifetime, in your currency. Combined with lifetime production to derive the levelized cost per kWh. Required when any levelized cost sensor is enabled.",
@@ -328,7 +328,7 @@
             "power_entity_inverted": "Turn on if your sensor reports power with the opposite sign to the expected convention.",
             "grid_electricity_price_entity": "Sensor or input number with the current grid import price per kWh. Required when cost or savings sensors are enabled.",
             "co2_intensity_entity": "Sensor with the current grid CO₂ intensity in g/kWh. Required when CO₂ sensors are enabled.",
-            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from.",
+            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from. At least one is required — a battery with no charge source cannot charge; select every source to draw from your whole mix.",
             "power_from_adapters": "Select which sources (the grid and/or your PV systems) power this consumer. Leave empty to draw from the general mix.",
             "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this value rescales the device's already-recorded levelized values.",
             "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values."
@@ -342,7 +342,8 @@
         "invalid_price_entity": "The selected entity does not exist or is unavailable.",
         "invalid_co2_entity": "The selected entity does not exist or is unavailable.",
         "invalid_input": "Invalid input.",
-        "required": "This field is required with the sensors you currently have enabled."
+        "required": "This field is required with the sensors you currently have enabled.",
+        "charge_sources_required": "Select at least one source this battery can charge from. A battery with no charge source cannot charge — to draw from your whole mix, select every source."
       },
       "abort": {
         "grid_already_configured": "A grid connection is already configured for this integration. Only one grid connection is supported per configuration.",
@@ -358,6 +359,10 @@
     "reconfigure_battery_adapters": {
       "title": "Battery {battery_name} needs reconfiguration",
       "description": "A charging source was added or removed. Please reconfigure **{battery_name}** so the correct charging sources are applied. Open the integration, find the device, and use the **Reconfigure** option."
+    },
+    "battery_no_charge_source": {
+      "title": "Battery {battery_name} has no charge source",
+      "description": "**{battery_name}** has no charge source configured, so Power Insight cannot attribute its charging to any source. Open the integration, find the device, and use the **Reconfigure** option to select the sources (the grid and/or your PV systems) it charges from. To draw from your whole mix, select every source.\n\nThis warning clears automatically once a charge source is set."
     }
   },
   "services": {

@@ -26,10 +26,12 @@ Each ``test_`` method uses the ``@expect_attribute("sink_adapters_source_shares"
 engine attribute back and compares. Expected values are derived from first
 principles, not read from the engine.
 
-An adapter with no ``charge_from`` / ``power_from`` restriction (e.g.
-``Adapter.battery("bat")``) is *unrestricted*: it draws from the full source mix
-and is treated as a grid-capable leftover sink — matching the config entry
-default, where the restriction field defaults to empty ("draw the general mix").
+An empty restriction is read per adapter kind. A consumer with no ``power_from``
+is *unrestricted* — it draws the full source mix (the normal household case). A
+battery is the exception: with no ``charge_from`` it cannot charge from anything,
+so its provenance collapses to all-zeros (a misconfiguration the HA layer flags).
+To make a battery draw the whole mix the sources are named explicitly, e.g.
+``Adapter.battery("bat", charge_from=("grid", "pv1"))``.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -60,11 +62,12 @@ class TestSourceShares(EngineScenario):
     """Power provenance under the three-tier ``sink_adapters_source_shares`` rule."""
 
     # -----------------------------------------------------------------------
-    # Home base-load tier in isolation. One grid, one PV, one unrestricted
-    # (grid-capable leftover) battery. Sources are held at grid 1000 W + pv1
-    # 1000 W (a fixed 0.5 / 0.5 availability); only the home load varies, set by
-    # how much of gross the battery leaves unclaimed. As it grows it eats the
-    # local PV first, pushing the battery's provenance from half-solar to grid.
+    # Home base-load tier in isolation. One grid, one PV, one grid-capable
+    # battery charging from both sources (so it lands in the leftover tier).
+    # Sources are held at grid 1000 W + pv1 1000 W (a fixed 0.5 / 0.5
+    # availability); only the home load varies, set by how much of gross the
+    # battery leaves unclaimed. As it grows it eats the local PV first, pushing
+    # the battery's provenance from half-solar to grid.
     # -----------------------------------------------------------------------
 
     @topology
@@ -72,7 +75,8 @@ class TestSourceShares(EngineScenario):
         return (
             Adapter.grid(),
             Adapter.pv("pv1", exports=True),
-            Adapter.battery("bat"),  # no charge_from -> unrestricted leftover sink
+            # Charges from every source -> full mix, grid-capable leftover sink.
+            Adapter.battery("bat", charge_from=("grid", "pv1")),
         )
 
     @state
@@ -140,6 +144,39 @@ class TestSourceShares(EngineScenario):
         }
 
     # -----------------------------------------------------------------------
+    # A charging battery with no charge source configured. An empty charge_from
+    # is not shorthand for "the full mix": the battery cannot charge from
+    # anything, so its provenance collapses to all-zeros while a grid-capable
+    # battery beside it draws normally. (The HA layer flags the empty battery as
+    # a misconfiguration; the engine just attributes it to nothing.) The two
+    # batteries together draw all of gross, so there is no home load to muddy it.
+    # -----------------------------------------------------------------------
+
+    @topology
+    def grid_pv_unconfigured_battery(self):
+        return (
+            Adapter.grid(),
+            Adapter.pv("pv1", exports=True),
+            Adapter.battery("bat_bad"),  # no charge_from -> cannot charge
+            Adapter.battery("bat_ok", charge_from=("grid", "pv1")),
+        )
+
+    @state
+    def both_charging(self):
+        # gross 2000 W (grid 1000 + pv1 1000); the two batteries draw it all.
+        return State(grid=1000, pv1=1000, bat_bad=-1000, bat_ok=-1000, price=0.30)
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_battery_without_charge_source_collapses_to_zero(self):
+        """An empty charge_from cannot charge from anything -> an all-zeros row."""
+        # bat_bad has no configured source, so it attributes to nothing; bat_ok
+        # charges from the full 0.5 / 0.5 mix.
+        return {
+            "bat_bad": {"grid": 0.0, "pv1": 0.0},
+            "bat_ok": {"grid": 0.5, "pv1": 0.5},
+        }
+
+    # -----------------------------------------------------------------------
     # Grid exporting: no import, so the priority tier is empty and every sink
     # shares the sources in a single pass (restriction still honoured). The
     # exporting grid is itself a sink, sourced from the PV mix. Sources are
@@ -153,7 +190,8 @@ class TestSourceShares(EngineScenario):
             Adapter.pv("pv1", exports=True),
             Adapter.pv("pv2", exports=True),
             Adapter.battery("bat_solar", charge_from=("pv1",)),
-            Adapter.battery("bat_flex"),  # unrestricted leftover sink
+            # Charges from every source -> full mix, grid-capable leftover sink.
+            Adapter.battery("bat_flex", charge_from=("grid", "pv1", "pv2")),
         )
 
     @state
