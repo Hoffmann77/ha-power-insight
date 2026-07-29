@@ -86,6 +86,34 @@ Power Insight can create.
 ## 4. (Optional) Seed accumulated totals
 
 Accumulated **total** sensors (e.g. *Total cost savings*) start counting from
-zero. If you are adopting Power Insight partway through the year and want to
-carry over a historical total, use the
-[`power_insight.set_value` service](services.md).
+zero. If you are adopting Power Insight partway through the year, you can carry
+over the totals your system had already reached before you added the integration.
+
+### Starting totals (recommended)
+
+The easiest way is the **Starting totals** section built into the flows:
+
+- **Whole-home totals** — open the integration's **Configure / Options**, choose
+  **Custom**, and expand *Starting totals (carry over history)* on the **Combined
+  sensors** page. Enter your historical *Total cost savings*, *Total financial
+  return* and/or *Total operating cost*.
+- **Per-device totals** — open a device and use **Reconfigure**; the same
+  *Starting totals* section lets you seed that device's totals (import cost,
+  export compensation, operating cost, cost savings, financial return).
+
+Each value is added as a **fixed baseline on top of** whatever the sensor
+accumulates from then on — it never disturbs the live accumulation. Leave a field
+empty for no baseline; clearing a value later simply drops that baseline back to
+zero.
+
+!!! note
+    Levelized totals (the *…levelized…* sensors) don't offer a starting-total
+    field — their values are rescaled retroactively by each device's lifetime
+    figures, so a fixed baseline wouldn't stay consistent.
+
+### `set_value` service (scripting / one-offs)
+
+The [`power_insight.set_value` service](services.md) is the scripting-friendly
+alternative: it seeds a sensor's running accumulator directly. It **composes**
+with the starting-total baseline above — the displayed total is always
+`baseline + accumulator` — so use one or the other for a given figure, not both.

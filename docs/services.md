@@ -6,6 +6,15 @@ Set the accumulated total of a Power Insight **total / accumulation** sensor. Us
 this to seed a sensor with a known starting value — for example to carry over
 historical totals when adopting the integration.
 
+!!! tip "Prefer the Starting totals fields for adoption"
+    For carrying over pre-adoption history, the **Starting totals** sections in the
+    options flow (whole-home) and per-device **Reconfigure** flow are usually
+    easier — see [Getting started §4](getting-started.md#4-optional-seed-accumulated-totals).
+    They store an editable baseline that survives reconfiguration. `set_value`
+    seeds the live accumulator instead; the displayed total is always
+    `baseline + accumulator`, so the two **add together** — apply a given figure
+    through one path only.
+
 ### Target
 
 A Power Insight `sensor` entity with an accumulated total (state class *total*),

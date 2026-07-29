@@ -50,6 +50,13 @@ CONF_CORRECTION_FACTOR = "correction_factor"
 # Ledger of retired (removed end-of-life) adapters, stored in ConfigEntry.data
 CONF_RETIRED_ADAPTERS = "retired_adapters"
 
+# User-seeded starting totals for accumulation sensors, keyed by sensor
+# description ``key``. Combined totals live in ``ConfigEntry.options``; per-adapter
+# totals live in the adapter's ``ConfigSubentry.data``. A baseline offset is added
+# to the sensor's live-accumulated value for display, letting users carry over the
+# savings their system produced before adopting the integration. Absent/empty -> 0.
+CONF_STARTING_TOTALS = "starting_totals"
+
 # PV/Battery user settings (stored in adapter.config)
 CONF_EXPORTS_POWER = "exports_power"
 CONF_EXPORT_COMPENSATION = "export_compensation"
@@ -120,6 +127,34 @@ CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN = "accumulate_levelized_financial_ret
 
 SCOPE_COMBINED = "combined"
 SCOPES = (SCOPE_COMBINED, "grid", "pv_system", "battery", "consumer")
+
+# Which accumulation sensors expose a starting-total field, per scope. Only the
+# plain (non-levelized) integration totals are included; levelized totals carry the
+# correction-factor / retired-adapter-ledger machinery and are intentionally left
+# out so the offset stays a simple additive constant.
+STARTING_TOTAL_KEYS: dict[str, tuple[str, ...]] = {
+    SCOPE_COMBINED: (
+        "combined_total_cost_savings",
+        "combined_total_financial_return",
+        "combined_total_operating_cost",
+    ),
+    "grid": (
+        "total_import_cost",
+        "total_export_compensation",
+    ),
+    "pv_system": (
+        "total_export_compensation",
+        "total_operating_cost",
+        "total_cost_savings",
+        "total_financial_return",
+    ),
+    "battery": (
+        "total_export_compensation",
+        "total_operating_cost",
+        "total_cost_savings",
+        "total_financial_return",
+    ),
+}
 
 # ---------------------------------------------------------------------------
 # Options presets

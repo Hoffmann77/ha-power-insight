@@ -53,6 +53,8 @@ from .const import (
     SCOPES,
     SCOPE_COMBINED,
     SCOPE_SUPPORTED_OPTIONS,
+    CONF_STARTING_TOTALS,
+    STARTING_TOTAL_KEYS,
     CONF_PRESET,
     PRESET_MINIMAL,
     PRESET_RECOMMENDED,
@@ -440,6 +442,67 @@ def make_money_selector(currency: str) -> selector.NumberSelector:
             min=1, max=10**8, unit_of_measurement=currency, mode="box"
         )
     )
+
+
+def make_starting_total_selector(currency: str) -> selector.NumberSelector:
+    """Build a starting-total input selector (signed money, cent precision).
+
+    Unlike ``make_money_selector`` this allows negatives and zero: an accumulated
+    total carried over from before adoption can be a net loss.
+    """
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=-(10**8), max=10**8, step=0.01,
+            unit_of_measurement=currency, mode="box",
+        )
+    )
+
+
+def build_starting_total_section(
+    scope: str, currency: str, current: dict | None,
+) -> dict:
+    """Return a one-entry schema dict adding the collapsed starting-totals section.
+
+    The section holds one optional signed-money field per accumulation sensor that
+    *scope* exposes (see ``STARTING_TOTAL_KEYS``), pre-filled from *current*. Empty
+    fields are simply omitted from the submitted input, meaning "no baseline".
+    Returns ``{}`` when the scope exposes no starting-total fields.
+    """
+    keys = STARTING_TOTAL_KEYS.get(scope, ())
+    if not keys:
+        return {}
+    current = current or {}
+    fields: dict = {}
+    sel = make_starting_total_selector(currency)
+    for key in keys:
+        # ``suggested_value`` (not ``default``) pre-fills the UI without forcing the
+        # value back on submit, so clearing a field genuinely removes the baseline.
+        if key in current and current[key] is not None:
+            marker = vol.Optional(key, description={"suggested_value": current[key]})
+        else:
+            marker = vol.Optional(key)
+        fields[marker] = sel
+    return {
+        vol.Optional(CONF_STARTING_TOTALS): section(
+            vol.Schema(fields), {"collapsed": True}
+        )
+    }
+
+
+def clean_starting_totals(scope: str, raw: dict | None) -> dict:
+    """Coerce submitted starting-total values to floats, dropping blanks.
+
+    Only keys valid for *scope* are kept; blank/None values are omitted so that
+    clearing a field removes its baseline (drops the offset back to 0).
+    """
+    raw = raw or {}
+    result: dict[str, float] = {}
+    for key in STARTING_TOTAL_KEYS.get(scope, ()):
+        value = raw.get(key)
+        if value is None or value == "":
+            continue
+        result[key] = float(value)
+    return result
 
 
 CO2_SELECTOR = selector.NumberSelector(
@@ -1758,6 +1821,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
         self._adapter_fields = ADAPTER_TYPE_FIELDS[self._adapter_type]
 
         if user_input is not None:
+            # Pull the starting-totals section out before adapter-field validation;
+            # it is not an adapter field and is stored separately on the subentry.
+            st_raw = user_input.pop(CONF_STARTING_TOTALS, {})
             validation_errors = validate_fields(
                 self.hass, self._adapter_fields, user_input, options, "reconfigure"
             )
@@ -1788,6 +1854,13 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                     "key": adapter.get("key"),
                     "config": adapter_config,
                 }
+                # Persist the user-seeded starting totals for this adapter; drop
+                # the key entirely when none remain so a cleared field means "0".
+                starting_totals = clean_starting_totals(self._adapter_type, st_raw)
+                if starting_totals:
+                    updated[CONF_STARTING_TOTALS] = starting_totals
+                else:
+                    updated.pop(CONF_STARTING_TOTALS, None)
                 # Dismiss the per-battery reconfigure issue (raised when a
                 # charge-source adapter was added or removed) now that the
                 # user has reconfigured this battery.
@@ -1837,6 +1910,14 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             currency=self.hass.config.currency or "EUR",
         )
 
+        extra = build_starting_total_section(
+            self._adapter_type,
+            self.hass.config.currency or "EUR",
+            subentry.data.get(CONF_STARTING_TOTALS),
+        )
+        if extra:
+            schema = schema.extend(extra)
+
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=schema,
@@ -1863,6 +1944,7 @@ class PowerInsightOptionsFlow(OptionsFlow):
         self._scopes: dict[str, list[str]] = {}
         self._debug: bool = False
         self._device_types: set[str] = set()
+        self._starting_totals: dict[str, float] = {}
 
     def _init_device_types(self) -> None:
         """Populate _device_types from the current subentries."""
@@ -1899,6 +1981,8 @@ class PowerInsightOptionsFlow(OptionsFlow):
             CONF_ENABLE_DEBUG_ENTITIES: self._debug,
             CONF_PRESET: PRESET_CUSTOM,
         }
+        if self._starting_totals:
+            new_options[CONF_STARTING_TOTALS] = self._starting_totals
         problems = check_options_feasibility(self.config_entry, new_options)
         if not problems:
             return self.async_create_entry(title="", data=new_options)
@@ -1934,15 +2018,18 @@ class PowerInsightOptionsFlow(OptionsFlow):
                     else sorted(stored.get(scope, []))
                     for scope in SCOPES
                 }
-                return self.async_create_entry(
-                    title="",
-                    data={
-                        "schema": 2,
-                        "scopes": new_scopes,
-                        CONF_ENABLE_DEBUG_ENTITIES: self._debug,
-                        CONF_PRESET: preset,
-                    },
-                )
+                data = {
+                    "schema": 2,
+                    "scopes": new_scopes,
+                    CONF_ENABLE_DEBUG_ENTITIES: self._debug,
+                    CONF_PRESET: preset,
+                }
+                # A preset only changes which sensors exist; keep any historical
+                # starting totals the user already seeded.
+                existing_totals = self.config_entry.options.get(CONF_STARTING_TOTALS)
+                if existing_totals:
+                    data[CONF_STARTING_TOTALS] = existing_totals
+                return self.async_create_entry(title="", data=data)
 
             return await self.async_step_combined()
 
@@ -1970,6 +2057,8 @@ class PowerInsightOptionsFlow(OptionsFlow):
     ) -> FlowResult:
         """Configure combined (whole-home aggregate) sensors."""
         if user_input is not None:
+            st_raw = user_input.pop(CONF_STARTING_TOTALS, {})
+            self._starting_totals = clean_starting_totals(SCOPE_COMBINED, st_raw)
             flat = _flatten_scope_sections(user_input)
             self._scopes[SCOPE_COMBINED] = scope_ui_to_leaves(SCOPE_COMBINED, flat)
             next_step = self._next_scope_step("combined")
@@ -1980,11 +2069,19 @@ class PowerInsightOptionsFlow(OptionsFlow):
         stored = set(
             self.config_entry.options.get("scopes", {}).get(SCOPE_COMBINED, [])
         )
+        schema = build_scope_form(
+            SCOPE_COMBINED, scope_leaves_to_ui_defaults(SCOPE_COMBINED, stored)
+        )
+        extra = build_starting_total_section(
+            SCOPE_COMBINED,
+            self.hass.config.currency or "EUR",
+            self.config_entry.options.get(CONF_STARTING_TOTALS),
+        )
+        if extra:
+            schema = schema.extend(extra)
         return self.async_show_form(
             step_id="combined",
-            data_schema=build_scope_form(
-                SCOPE_COMBINED, scope_leaves_to_ui_defaults(SCOPE_COMBINED, stored)
-            ),
+            data_schema=schema,
             last_step=self._next_scope_step("combined") is None,
         )
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -57,6 +57,7 @@ from .const import (
     CONF_ACCUMULATE_FINANCIAL_RETURN,
     CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
     CONF_RETIRED_ADAPTERS,
+    CONF_STARTING_TOTALS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -1951,6 +1952,22 @@ class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
 # ---------------------------------------------------------------------------
 
 
+def _read_starting_total(source: dict | None, key: str) -> Decimal:
+    """Return the user-seeded baseline offset for *key*, or 0 if unset.
+
+    ``source`` is the ``starting_totals`` mapping (from entry options for combined
+    sensors, or subentry data for per-adapter sensors). A missing/blank value means
+    "no baseline", i.e. a 0 offset that leaves the sensor identical to before.
+    """
+    raw = (source or {}).get(key)
+    if raw is None or raw == "":
+        return Decimal(0)
+    try:
+        return Decimal(str(raw))
+    except (InvalidOperation, ValueError):
+        return Decimal(0)
+
+
 class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
     """Base integration sensor entity."""
 
@@ -1998,6 +2015,12 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
             identifiers={(DOMAIN, self.config_entry.entry_id)},
             name=f"{self.config_entry.title or 'PowerInsight'} Combined",
         )
+        # User-seeded historical baseline, read from entry options. Re-read on every
+        # reload so editing the field takes effect without disturbing the live
+        # accumulator; added to the displayed total, never to ``_state``.
+        self._starting_total = _read_starting_total(
+            config_entry.options.get(CONF_STARTING_TOTALS), description.key
+        )
 
     @property
     def integration_value(self) -> float | None:
@@ -2006,6 +2029,14 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+    @property
+    def native_value(self) -> Decimal | None:
+        """Return the accumulated total plus the user-seeded baseline offset."""
+        base = self._state
+        if not self._starting_total:
+            return base
+        return self._starting_total + (base if base is not None else Decimal(0))
 
 
 class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
@@ -2030,6 +2061,15 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
             identifiers={(DOMAIN, self.device_adapter.uid)},
             name=f"{self.config_entry.title} {self.device_adapter.verbose_name}",
         )
+        # User-seeded historical baseline for this adapter, read from its subentry
+        # data. Only the plain (non-levelized) totals expose a field, so this is 0
+        # for levelized sensors. Added to the displayed (already correction-scaled)
+        # total, never to the base ``_state`` that feeds the ledger.
+        subentry = self.config_entry.subentries.get(self.device_adapter.uid)
+        self._starting_total = _read_starting_total(
+            subentry.data.get(CONF_STARTING_TOTALS) if subentry else None,
+            self.entity_description.key,
+        )
 
     @property
     def integration_value(self) -> float | None:
@@ -2047,11 +2087,21 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
     @property
     def native_value(self) -> Decimal | None:
-        """Return the accumulated base total, scaled for display if requested."""
+        """Return the accumulated base total, scaled for display if requested.
+
+        A user-seeded baseline offset (0 unless set) is added on top of the
+        correction-scaled display value, carrying over pre-adoption totals.
+        """
         base = self._state
         if base is not None and self.entity_description.apply_correction_factor:
-            return base * Decimal(str(self.device_adapter.correction_factor))
-        return base
+            display: Decimal | None = base * Decimal(
+                str(self.device_adapter.correction_factor)
+            )
+        else:
+            display = base
+        if not self._starting_total:
+            return display
+        return self._starting_total + (display if display is not None else Decimal(0))
 
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:

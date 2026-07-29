@@ -80,6 +80,20 @@
               "savings_method": "Cost savings measure how much money you avoid spending on grid electricity by self-consuming locally-produced power.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price. Requires a price entity on the grid adapter.\n**Levelized** — savings calculated using each device's LCOE as the baseline. Requires lifetime values per device.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. The total is stored in Home Assistant's recorder and survives restarts."
             }
+          },
+          "starting_totals": {
+            "name": "Starting totals (carry over history)",
+            "description": "Adopting Power Insight partway through? Enter the totals your system had already reached before you added the integration. Each value is added as a fixed baseline on top of what the sensor accumulates from now on. Leave a field empty for no baseline; clearing a value later drops it back to zero.",
+            "data": {
+              "combined_total_cost_savings": "Total cost savings",
+              "combined_total_financial_return": "Total financial return",
+              "combined_total_operating_cost": "Total operating cost"
+            },
+            "data_description": {
+              "combined_total_cost_savings": "Historical whole-home cost savings to carry over.",
+              "combined_total_financial_return": "Historical whole-home financial return to carry over.",
+              "combined_total_operating_cost": "Historical whole-home operating cost to carry over."
+            }
           }
         }
       },
@@ -328,6 +342,26 @@
             "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from.",
             "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this value rescales the device's already-recorded levelized values.",
             "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values."
+          },
+          "sections": {
+            "starting_totals": {
+              "name": "Starting totals (carry over history)",
+              "description": "Enter the totals this device had already reached before you added the integration. Each value is added as a fixed baseline on top of what the sensor accumulates from now on. Leave a field empty for no baseline; clearing a value later drops it back to zero.",
+              "data": {
+                "total_import_cost": "Total import cost",
+                "total_export_compensation": "Total export compensation",
+                "total_operating_cost": "Total operating cost",
+                "total_cost_savings": "Total cost savings",
+                "total_financial_return": "Total financial return"
+              },
+              "data_description": {
+                "total_import_cost": "Historical import cost for this device to carry over.",
+                "total_export_compensation": "Historical export compensation for this device to carry over.",
+                "total_operating_cost": "Historical operating cost for this device to carry over.",
+                "total_cost_savings": "Historical cost savings for this device to carry over.",
+                "total_financial_return": "Historical financial return for this device to carry over."
+              }
+            }
           }
         }
       },
