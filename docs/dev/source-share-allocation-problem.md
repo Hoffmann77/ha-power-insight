@@ -120,7 +120,7 @@ Rare and small — but not acceptable.
 | phased greedy (singleton captive rule) | **1 of 217 fails** | exact | yes | 12 µs | ~90 lines |
 | exact per-edge ceiling used as a *mask* | 1 of 217 fails | exact | yes | 315 µs | +80 lines |
 | exact per-edge ceiling used as a *cap*, recomputed per round | **0** | exact | **no** — port lost preferences 5 and 7 | 513 µs | +80 lines |
-| critical-set (tight-set) peel | not reached | — | — | — | — |
+| critical-set peel, home+unrestricted as slack | **1 of 217 fails** | exact | **all 6, exactly** | 24 µs | ~40 lines |
 | Sinkhorn / scarcity pricing | **0** | exact | to 3–4 decimals | 216 µs | **~25 lines** |
 
 **Per-edge ceiling.** For each `(u,k)`, the most `u` could draw from `k` in *any*
@@ -159,11 +159,40 @@ to change is how each step divides a source, and that decision needs a global
 view.
 
 **Critical-set peel.** Find a tight sink set (`Σd(S) = Σs(N(S))`), peel it with
-its sources, recurse. Cheaper in principle. Blocked: because `Σs = Σd` always
-(the home load absorbs the remainder), the min cut is degenerate — a lattice of
-tight sets, and residual reachability returns only the trivial members (∅ and
-everything). Extracting a *minimal nontrivial* tight set needs a perturbation or
-parametric trick that has not been worked out.
+its sources, recurse; inside a block with no tight set, run the phased fill.
+
+Originally reported as blocked on a degenerate min cut. **Unblocked**, by three
+fixes:
+
+1. *Home and every other unrestricted sink move to the slack side* — they are not
+   competitors. This removes the identity `Σs = Σd` that made every cut minimal
+   and hid the real bottlenecks.
+2. *Source→sink edges must be uncapped* in the flow network. Capping them at the
+   sink's demand does not change the max-flow value, but it saturates edges that
+   the min-cut extraction needs to walk, so residual reachability silently
+   returned the wrong set.
+3. *Verify the extracted set is actually tight* (`Σd(S) == Σs(N(S))`) before
+   peeling. The reachability set is a valid tight set only when the cut really is
+   minimum; guard rather than assume.
+
+With those, the peel reproduces **all six hand-derived cases exactly** — the
+full-topology scenario, all four source-share blocks, and the east/west/south
+counterexample — with exact columns and rows, at 24 µs. That is twice the cost of
+the broken greedy and twenty times cheaper than the per-edge ceiling method.
+
+**What is still missing.** One corpus case in 217 still leaks, and the cause is
+now precisely known: *no tight set exists at the start*, so the phased fill runs
+— and its own commitments **create** tightness. In the failing snapshot the grid
+phase hands `cons0` 68 W of grid it does not need (it has 2400 W of pv1
+available), and only then are `bat1` and `cons1` stranded. Peeling before the
+fill cannot see this; peeling after cannot undo it.
+
+**The completion** is the water-fill of Proposals A/C3, and it is now a small
+step rather than a rewrite: instead of committing a whole phase at once, advance
+all sinks together and stop at the first *event* — a source exhausting, or a set
+going tight — then peel and continue. Each breakpoint is a linear equation in one
+unknown, so every intermediate value stays an exact fraction. The peel machinery
+this needs already exists and is verified.
 
 **Sinkhorn / scarcity pricing.** Weight every `(u,k)`: 1 if allowed, `1e-9` if
 not, `×1e4` for the grid-first preference. Alternately rescale rows to `d_u` and
