@@ -131,6 +131,33 @@ feasibility half is proven; re-expressing the selection preferences inside those
 bounds is unsolved — a quick port lost grid-first, captive-first, *and* symmetry
 (two identical sinks came out different).
 
+### Is the tier structure the problem?
+
+No — measured, because it is the first thing a reader assumes.
+
+- **The counterexample lives inside a single tier.** In east/west/south there is
+  no grid, so tier 1 is empty and `A`, `B`, `C` are all restricted: they share
+  tier 2. The failure happens with no tier boundary involved.
+- **Tiers do not make the output jumpier.** Perturbing each source by 1 W across
+  120 topologies, the worst share movement is **0.0018 for the tiered greedy and
+  0.0018 for pricing** — identical. The "tier boundaries cause discontinuities"
+  intuition is not supported.
+- **What goes wrong is the division rule inside a step**, which commits power
+  without knowing what its peers or later steps need. On the corpus
+  counterexample tier 1 handed `cons0` 67.7 W of grid although `cons0` had
+  2400 W of pv1 available, stranding `bat1` and `cons1`; giving `bat1` the whole
+  import instead leaves the remainder feasible.
+- **A minimal clamp is not enough.** Keeping `proportional_fill` unchanged and
+  capping every offer at the global per-edge ceiling fixes the isolated
+  counterexample and keeps blocks 1/2/3A exact, but the corpus gap stays at 2
+  (the ceiling goes stale as soon as anything is committed inside a round) and
+  the full-topology and block-3B values break. 699 µs.
+
+So the tier skeleton is worth keeping — it is cheap, hand-derivable, and the
+only mechanism found that expresses the grid-first preference exactly. What has
+to change is how each step divides a source, and that decision needs a global
+view.
+
 **Critical-set peel.** Find a tight sink set (`Σd(S) = Σs(N(S))`), peel it with
 its sources, recurse. Cheaper in principle. Blocked: because `Σs = Σd` always
 (the home load absorbs the remainder), the min cut is degenerate — a lattice of
@@ -173,16 +200,21 @@ Median 2 iterations; only the degenerate cases hit the 200-iteration cap.
    allocation on it uniquely determined?
 3. **Can the preferences be re-expressed inside per-edge feasibility bounds**
    while preserving symmetry (requirement 5)? That is the one missing piece of
-   the max-flow approach.
-4. **Is the minimal-tight-set extraction fixable** for the `Σs = Σd` degenerate
+   the max-flow approach. Recomputing the ceiling once per round is measurably
+   not tight enough; does it have to be recomputed after every commit, and if so
+   can the cost be kept sane?
+4. **Tiers for the preference, pricing for the division?** Keep the tier
+   skeleton to express grid-first exactly, but replace the per-source division
+   inside each tier with the scarcity-price iteration. Untested.
+5. **Is the minimal-tight-set extraction fixable** for the `Σs = Σd` degenerate
    case, and would it be materially cheaper than one max-flow per edge?
-5. **Is the hard-constraint model the right one at all?** Making `charge_from` a
+6. **Is the hard-constraint model the right one at all?** Making `charge_from` a
    preference ordering rather than a hard mask removes the feasibility problem
    entirely — no Hall condition, no max-flow, no fallback. The cost is semantic:
    a "PV only" battery could show grid in its mix. Given that the setting
    describes a controller's behaviour rather than physical wiring, is the hard
    reading defensible?
-6. **Does requirement 7 (grid-first) earn its complexity?** It is the only
+7. **Does requirement 7 (grid-first) earn its complexity?** It is the only
    non-physical rule in the model and the hardest to carry through any exact
    method. Dropping it makes scarcity pricing considerably better behaved.
 
