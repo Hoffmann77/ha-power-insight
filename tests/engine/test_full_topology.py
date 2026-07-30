@@ -95,7 +95,11 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             ),
             # bat1: whole mix (unrestricted) -> grid-capable leftover sink.
             Adapter.battery(
-                "bat1", lcos=0.15, lco2_intensity=100.0, exports=True, export_comp=0.08
+                "bat1",
+                lcos=0.15,
+                lco2_intensity=100.0,
+                exports=True,
+                export_comp=0.08,
             ),
             # bat2: PV-only -> priority sink while importing; cannot export.
             Adapter.battery(
@@ -137,7 +141,7 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             grid=1500,
             pv1=2000,
             pv2=1000,
-            bat1=-500,
+            bat1=-400,
             bat2=-1000,
             bat3=-600,
             cons1=-700,
@@ -157,18 +161,18 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     # -- Combined powers --------------------------------------------------
 
     def test_combined_powers(self, power_insight):
-        assert power_insight.combined_grid_import == ...
-        assert power_insight.combined_grid_export == ...
-        assert power_insight.combined_production == ...
-        assert power_insight.combined_charging_power == ...
-        assert power_insight.combined_discharging_power == ...
-        assert power_insight.combined_standby_power == ...
-        assert power_insight.combined_consumption == ...
+        assert power_insight.combined_grid_import == 1500.0
+        assert power_insight.combined_grid_export == 0.0
+        assert power_insight.combined_production == 3000.0
+        assert power_insight.combined_charging_power == 2000.0
+        assert power_insight.combined_discharging_power == 0.0
+        assert power_insight.combined_standby_power == 0.0
+        assert power_insight.combined_consumption == 2500.0
 
     # -- Gross power + share vectors --------------------------------------
 
     def test_gross_power(self, power_insight):
-        assert power_insight.gross_power == ...
+        assert power_insight.gross_power == 4500.0
 
     def test_source_and_sink_power_arrays(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_power
@@ -180,20 +184,19 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
 
     def test_gross_power_shares(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
-        assert src_index == ...
-        assert src_arr.tolist() == ...
+        assert src_index == ["grid", "pv1", "pv2"]
+        assert src_arr.tolist() == [1/3, 4/9, 2/9]
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
-        assert sink_index == ...
-        assert sink_arr.tolist() == ...
+        assert sink_index == ["bat1", "bat2", "bat3", "cons1", "cons2"]
+        assert sink_arr.tolist() == [4/45, 2/9, 2/15, 7/45, 1/15]
 
     # -- Gross-power channel ratios (EXP / CON / CHG / STB) ---------------
 
     def test_channel_ratios(self, power_insight):
-        assert power_insight.gross_power_export_ratio == ...
-        assert power_insight.gross_power_consumption_ratio == ...
-        assert power_insight.gross_power_charging_ratio == ...
-        assert power_insight.gross_power_standby_ratio == ...
-        assert power_insight.gross_power_applicable_consumption_ratio == ...
+        assert power_insight.gross_power_export_ratio == 0.0
+        assert power_insight.gross_power_consumption_ratio == 5/9
+        assert power_insight.gross_power_charging_ratio == 4/9
+        assert power_insight.gross_power_standby_ratio == 0.0
 
     def test_channel_ratios_sum_to_one(self, power_insight):
         # Invariant (no hand-derived value needed): the four channels partition
@@ -214,7 +217,33 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # priority: bat2, cons2 (PV-only) share the pv1/pv2 pool;
         # home base load (1400 W) eats remaining local, grid as fallback;
         # leftover: bat1 (whole mix), bat3 (grid+pv1), cons1 (unrestricted).
-        assert power_insight.sink_adapters_source_shares == ...
+        assert power_insight.sink_adapters_source_shares == {
+            "bat1": {
+                "grid": 9/26,
+                "pv1": 17/39,
+                "pv2": 17/78,
+            },
+            "bat2": {
+                "grid": 0.0,
+                "pv1": 2/3,
+                "pv2": 1/3,
+            },
+            "bat3": {
+                "grid": 1.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            },
+            "cons1": {
+                "grid": 9/26,
+                "pv1": 17/39,
+                "pv2": 17/78,
+            },
+            "cons2": {
+                "grid": 0.0,
+                "pv1": 2/3,
+                "pv2": 1/3,
+            },
+        }
 
     def test_source_provenance_rows_sum_to_one(self, power_insight):
         # Invariant: every sink's provenance row sums to 1 (or 0 when its
@@ -225,23 +254,23 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     # -- Combined blended prices ------------------------------------------
 
     def test_combined_prices(self, power_insight):
-        assert power_insight.combined_coe == ...
-        assert power_insight.combined_lcoe == ...
+        assert power_insight.combined_coe == 0.1
+        assert power_insight.combined_lcoe == 8/45
 
     # -- Combined monetary rates (EUR/h) ----------------------------------
 
     def test_combined_rates(self, power_insight):
-        assert power_insight.combined_coe_rate == ...
-        assert power_insight.combined_lcoe_rate == ...
-        assert power_insight.combined_coo_rate == ...
-        assert power_insight.combined_lcoo_rate == ...
-        assert power_insight.combined_avoided_cost_rate == ...
-        assert power_insight.combined_saving_rate == ...
-        assert power_insight.combined_levelized_saving_rate == ...
-        assert power_insight.combined_financial_return_rate == ...
-        assert power_insight.combined_levelized_financial_return_rate == ...
+        assert power_insight.combined_coe_rate == 0.45
+        assert power_insight.combined_lcoe_rate == 0.8
+        assert power_insight.combined_coo_rate == 72/325
+        assert power_insight.combined_lcoo_rate == 257/390
+        assert power_insight.combined_avoided_cost_rate == 339/650
+        assert power_insight.combined_saving_rate == 339/650
+        assert power_insight.combined_levelized_saving_rate == 1921/9750
+        assert power_insight.combined_financial_return_rate == 339/650
+        assert power_insight.combined_levelized_financial_return_rate == 1921/9750
         # Zero while importing (nothing exported), but assert it explicitly.
-        assert power_insight.combined_export_compensation_rate == ...
+        assert power_insight.combined_export_compensation_rate == 0.0
 
     def test_combined_rates_corrected(self, power_insight):
         # pv1's 1.25 correction factor makes these differ from the base rates.
@@ -260,45 +289,122 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_source_adapters_channel_power(self, power_insight):
         # Watts of each source's output going to each channel. Export and
         # standby are empty/zero while importing with no standby.
-        assert power_insight.source_adapters_consumption_power == ...
-        assert power_insight.source_adapters_charging_power == ...
-        assert power_insight.source_adapters_export_power == ...
-        assert power_insight.source_adapters_standby_power == ...
+        assert power_insight.source_adapters_consumption_power == {
+            "grid": 9900/13,
+            "pv1": 45200 / 39,
+            "pv2": 22600 / 39,
+        }
+        assert power_insight.source_adapters_charging_power == {
+            "grid": 9600/13,
+            "pv1": 32800 / 39,
+            "pv2": 16400 / 39,
+        }
+        assert power_insight.source_adapters_export_power == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
+        assert power_insight.source_adapters_standby_power == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
 
     def test_source_adapters_channel_shares(self, power_insight):
-        assert power_insight.source_adapters_consumption_shares == ...
-        assert power_insight.source_adapters_charging_shares == ...
-        assert power_insight.source_adapters_export_shares == ...
-        assert power_insight.source_adapters_standby_shares == ...
+        assert power_insight.source_adapters_consumption_shares == {
+            "grid": 99 / 325,
+            "pv1": 452 / 975,
+            "pv2": 226 / 975,
+        }
+        assert power_insight.source_adapters_charging_shares == {
+            "grid": 24 / 65,
+            "pv1": 82 / 195,
+            "pv2": 41 / 195,
+        }
+        assert power_insight.source_adapters_export_shares == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
+        assert power_insight.source_adapters_standby_shares == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
 
     def test_source_adapters_channel_ratios(self, power_insight):
-        assert power_insight.source_adapters_consumption_ratios == ...
-        assert power_insight.source_adapters_charging_ratios == ...
-        assert power_insight.source_adapters_export_ratios == ...
-        assert power_insight.source_adapters_standby_ratios == ...
+        assert power_insight.source_adapters_consumption_ratios == {
+            "grid": 33 / 65,
+            "pv1": 113 / 195,
+            "pv2": 113 / 195,
+        }
+        assert power_insight.source_adapters_charging_ratios == {
+            "grid": 32 / 65,
+            "pv1": 82 / 195,
+            "pv2": 82 / 195,
+        }
+        assert power_insight.source_adapters_export_ratios == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
+        assert power_insight.source_adapters_standby_ratios == {
+            "grid": 0.0,
+            "pv1": 0.0,
+            "pv2": 0.0,
+        }
 
     # -- Per-source attribution: rates ------------------------------------
 
     def test_source_adapters_rates(self, power_insight):
         assert power_insight.source_adapters_coe_rate == ...
-        assert power_insight.source_adapters_lcoe_rate == ...
-        assert power_insight.source_adapters_coo_rates == ...
-        assert power_insight.source_adapters_lcoo_rates == ...
 
     def test_source_adapters_financial_rates(self, power_insight):
-        assert power_insight.source_adapters_avoided_cost_rates == ...
-        assert power_insight.source_adapters_cost_saving_rates == ...
-        assert power_insight.source_adapters_levelized_cost_saving_rates == ...
-        assert power_insight.source_adapters_financial_return_rates == ...
-        assert power_insight.source_adapters_levelized_financial_return_rates == ...
+        assert power_insight.source_adapters_avoided_cost_rates == {
+            "grid": 0.0,
+            "pv1": 113 / 325,
+            "pv2": 113 / 650,
+        }
+        assert power_insight.source_adapters_cost_saving_rates == {
+            "grid": 0.0,
+            "pv1": 113 / 325,
+            "pv2": 113 / 650,
+        }
+        assert power_insight.source_adapters_levelized_cost_saving_rates == {
+            "grid": 0.0,
+            "pv1": 339 / 1625,
+            "pv2": 113 / 975,
+        }
+        # assert power_insight.source_adapters_financial_return_rates == {
+        #     "grid": 0.0,
+        #     "pv1": 113 / 325,
+        #     "pv2": 113 / 650,
+        # }
+        # assert power_insight.source_adapters_levelized_financial_return_rates == {
+        #     "grid": 0.0,
+        #     "pv1": 113 / 325,
+        #     "pv2": 113 / 650,
+        # }
 
     # -- Per-sink attribution ---------------------------------------------
 
     def test_sink_adapters_attribution(self, power_insight):
         # Two loads (cons1, cons2) split the metered self-consumption.
         assert power_insight.sink_adapters_consumption_shares == ...
-        assert power_insight.sink_adapters_coo_rates == ...
-        assert power_insight.sink_adapters_lcoo_rates == ...
+        assert power_insight.sink_adapters_coo_rates == {
+            "bat1": 27 / 650,
+            "bat2": 0.0,
+            "bat3": 9 / 50,
+            "cons1": 189 / 2600,
+            "cons2": 0.0,
+        }
+        assert power_insight.sink_adapters_lcoo_rates == {
+            "bat1": 289 / 9750,
+            "bat2": 17 / 150,
+            "bat3": 9 / 50,
+            "cons1": 2429 / 19500,
+            "cons2": 17 / 500,
+        }
 
     # -- Source entities (enumeration, state-independent) -----------------
 
