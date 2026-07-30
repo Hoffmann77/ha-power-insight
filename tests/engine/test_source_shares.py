@@ -1,24 +1,33 @@
-"""Source-share scenario: the two-tier power-provenance attribution.
+"""Source-share edge cases: power provenance at the boundaries.
 
 ``PowerInsight.sink_adapters_source_shares`` answers "where does each drawing
 adapter's power come from?" — ``{sink_uid: {source_uid: share}}``, each row
 summing to 1 (or collapsing to all-zeros when the sink's allowed sources are all
-idle). It is the single richest piece of engine logic, so it gets its own
-scenario, one block per branch of the three-tier algorithm (see
-``docs/dev/engine-calculations.md`` for the full model):
+idle). See ``docs/dev/engine-calculations.md`` for the model.
 
-* **Priority tier** — sinks restricted to non-grid sources (a PV-only battery, a
-  smart-plug consumer). Active *only while the grid is importing*: they get first
-  pick of their allowed sources and can exhaust a scarce one.
-* **Home base-load tier** — the unmetered home load consumes the remaining local
-  generation next, grid as fallback.
-* **Leftover tier** — grid-capable / unrestricted sinks (and *every* sink when
-  the grid is not importing). They split what the first two tiers left behind.
+This file is deliberately **not** a second pass over the ordinary case: the rich
+everyday wiring (two PV strings, batteries in all three restriction modes,
+restricted and unrestricted consumers, a large home base load, import and export
+snapshots) is pinned by ``test_full_topology.py``. What lives here is only what
+that scenario cannot reach — the degenerate and the over-constrained:
 
-The blocks run simplest → hardest: one unrestricted battery tracking a home
-load, then a restricted-to-idle collapse, then a two-source export pass with no
-priority tier, and finally the full priority/home/leftover split with several
-restricted sinks at once.
+* **No restrictions at all** — every sink mirrors the raw availability. The
+  degenerate baseline the tiered logic must collapse to.
+* **Every allowed source idle** — a sink pinned to a PV that is in standby has
+  nowhere to draw from and collapses to an all-zeros row rather than dividing by
+  zero.
+* **Exporting with a captive sink** — no import, so a single pass, but a
+  restricted sink still depletes its source before the flexible ones share it.
+* **A short grid import** — the import cannot cover the sinks anchored to it,
+  so it has to be rationed between them (blocks 1 and 2 below).
+* **A source short of its captives** — more demand is pinned to one PV string
+  than the string produces, so the claims are scaled and the excess falls back
+  (block 3, second state).
+
+The last three groups are **specifications**: they describe the ordering the
+engine is moving to, not what it does today, and currently fail. Each derives
+its expected values so that every source column balances exactly against its
+reading — the property the current implementation violates.
 
 Each ``test_`` method uses the ``@expect_attribute("sink_adapters_source_shares")`` decorator
 (see ``scenario_framework.py``): it returns the hand-written expected map for the
@@ -61,11 +70,10 @@ class TestSourceShares(EngineScenario):
     """Power provenance under the three-tier ``sink_adapters_source_shares`` rule."""
 
     # -----------------------------------------------------------------------
-    # Home base-load tier in isolation. One grid, one PV, one unrestricted
-    # (whole-mix -> grid-capable leftover) battery. Sources are held at grid
-    # 1000 W + pv1 1000 W (a fixed 0.5 / 0.5 availability); only the home load
-    # varies, set by how much of gross the battery leaves unclaimed. As it grows
-    # it eats the local PV first, pushing the battery's provenance to grid.
+    # The degenerate baseline: nothing is restricted, so there is nothing to
+    # ration and every sink mirrors the raw availability. One grid + one PV at
+    # 1000 W each -> a 0.5 / 0.5 mix, and the battery draws all of gross so
+    # there is no home base load either.
     # -----------------------------------------------------------------------
 
     @topology
@@ -73,38 +81,18 @@ class TestSourceShares(EngineScenario):
         return (
             Adapter.grid(),
             Adapter.pv("pv1", exports=True),
-            Adapter.battery("bat"),  # empty charge_from -> whole mix, leftover sink
+            Adapter.battery("bat"),  # empty charge_from -> whole mix
         )
 
     @state
-    def home_none(self):
+    def no_restrictions_no_home_load(self):
         # bat draws all 2000 W of gross -> no unmetered home load.
         return State(grid=1000, pv1=1000, bat=-2000, price=0.30)
 
     @expect_attribute("sink_adapters_source_shares")
-    def test_no_home_load_battery_keeps_half_solar(self):
-        """No home load competes for the PV, so bat mirrors 0.5 / 0.5 availability."""
+    def test_unrestricted_sink_mirrors_availability(self):
+        """Nothing to ration: bat mirrors the 0.5 / 0.5 availability."""
         return {"bat": {"grid": 0.5, "pv1": 0.5}}
-
-    @state
-    def home_moderate(self):
-        # bat draws 1500 W -> 500 W unmetered home load (0.25 of gross).
-        return State(grid=1000, pv1=1000, bat=-1500, price=0.30)
-
-    @expect_attribute("sink_adapters_source_shares")
-    def test_moderate_home_load_shifts_battery_toward_grid(self):
-        """Home eats 0.25 of the 0.5 pv1 share first; bat splits the rest, 2/3 grid."""
-        return {"bat": {"grid": 2 / 3, "pv1": 1 / 3}}
-
-    @state
-    def home_large(self):
-        # bat draws 1000 W -> 1000 W home load (0.5 of gross) eats all the PV.
-        return State(grid=1000, pv1=1000, bat=-1000, price=0.30)
-
-    @expect_attribute("sink_adapters_source_shares")
-    def test_large_home_load_pushes_battery_fully_to_grid(self):
-        """Home load consumes the whole pv1 share; bat falls fully back on grid."""
-        return {"bat": {"grid": 1.0, "pv1": 0.0}}
 
     # -----------------------------------------------------------------------
     # Restricted sinks whose only allowed source is idle. The lone PV is in
@@ -177,9 +165,14 @@ class TestSourceShares(EngineScenario):
         }
 
     # -----------------------------------------------------------------------
-    # Two PV, three batteries (each restricted differently) and a smart-plug
-    # consumer — the full priority / home / leftover split with several
-    # restricted sinks at once while the grid imports.
+    # A short import shared by two grid-anchored sinks with *different*
+    # fallbacks: bat_1 can top up from pv_1, bat_2 from pv_2. Neither is
+    # captive (either PV string could cover its battery on its own), so the
+    # 400 W import is split between them and each covers its deficit from its
+    # own string. The abundant-vs-scarce string asymmetry is the point.
+    #
+    # The everyday case this file used to duplicate -- an import that comfortably
+    # covers every grid-anchored sink -- is pinned by test_full_topology.py.
     # -----------------------------------------------------------------------
 
     @topology
@@ -193,29 +186,6 @@ class TestSourceShares(EngineScenario):
             Adapter.battery("bat_3", charge_from=("pv_1", "pv_2")),
             Adapter.consumer("cons_1", power_from=("pv_1", "pv_2")),
         )
-
-    @state
-    def charging_with_import(self):
-        return State(
-            grid=1200,
-            pv_1=800,
-            pv_2=500,
-            bat_1=-400,
-            bat_2=-400,
-            bat_3=-600,
-            cons_1=-600,
-            price=0.30,
-        )
-
-    @expect_attribute("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
-    def test_charging_with_import(self):
-        """Grid-capable bat_1/bat_2 land on grid; pv-only bat_3/cons_1 take priority PV."""
-        return {
-            "bat_1": {"grid": 1.0, "pv_1": 0.0, "pv_2": 0.0},
-            "bat_2": {"grid": 1.0, "pv_1": 0.0, "pv_2": 0.0},
-            "bat_3": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
-            "cons_1": {"grid": 0.0, "pv_1": 0.615, "pv_2": 0.385},
-        }
 
     @state
     def charging_with_partial_import(self):
@@ -371,20 +341,23 @@ class TestSourceShares(EngineScenario):
         }
 
     # -----------------------------------------------------------------------
-    # Block 3: captive demand on a *local* source. Same shape as block 1, but
-    # now three sinks want pv2 and they are not equally stuck with it:
+    # Block 3: captive demand on a *local* source. Four sinks want pv2 and they
+    # are not equally stuck with it:
     #
-    #   bat_grid_pv2  (grid, pv2)  -- once the import is gone, captive to pv2
-    #   bat_pv2_only  (pv2)        -- captive to pv2 from the start
+    #   bat_grid_pv2  (grid, pv2)  -- captive to pv2 once the import is gone
+    #   bat_pv2_a     (pv2)        -- captive to pv2 from the start
+    #   bat_pv2_b     (pv2)        -- same restriction, different draw
     #   bat_pv1_pv2   (pv1, pv2)   -- can step aside onto pv1
     #
-    # The two captives must be served from pv2 before the sink that has
-    # somewhere else to go, otherwise ``bat_pv2_only`` is starved by a sink
-    # that had an alternative all along. This is the local-source counterpart
-    # of the grid reservation in block 2 -- the same rule, applied to pv2.
+    # The captives must be served from pv2 before the sink that has somewhere
+    # else to go, otherwise the two pv2-only batteries are starved by one that
+    # had an alternative all along. This is the local-source counterpart of the
+    # grid reservation in block 2 -- the same rule, applied to pv2.
     #
-    #   sources  grid 400 + pv1 1200 + pv2 900     -> gross 2500 W
-    #   sinks    700 + 400 + 600 + 300 = 2000 W    -> home base load 500 W
+    # ``bat_pv2_a`` and ``bat_pv2_b`` carry the *same* restriction and
+    # *different* draws on purpose: their claim on pv2 must never depend on
+    # which one is looked at first. Two states run the topology, one either
+    # side of the point where pv2 stops covering them.
     # -----------------------------------------------------------------------
 
     @topology
@@ -394,43 +367,97 @@ class TestSourceShares(EngineScenario):
             Adapter.pv("pv1", exports=True),
             Adapter.pv("pv2", exports=True),
             Adapter.battery("bat_grid_pv2", charge_from=("grid", "pv2")),
-            Adapter.battery("bat_pv2_only", charge_from=("pv2",)),
+            Adapter.battery("bat_pv2_a", charge_from=("pv2",)),
+            Adapter.battery("bat_pv2_b", charge_from=("pv2",)),
             Adapter.battery("bat_pv1_pv2", charge_from=("pv1", "pv2")),
             Adapter.consumer("cons_flex"),
         )
 
+    # pv2 (900 W) covers its captives exactly: 300 + 400 + 200 = 900 W.
+    #   sources  grid 400 + pv1 1200 + pv2 900          -> gross 2500 W
+    #   sinks    700 + 400 + 200 + 600 + 300 = 2200 W   -> home base load 300 W
+
     @state
-    def import_below_draw_with_two_captives(self):
+    def pv2_exactly_covers_its_captives(self):
         return State(
             grid=400,
             pv1=1200,
             pv2=900,
             bat_grid_pv2=-700,
-            bat_pv2_only=-400,
+            bat_pv2_a=-400,
+            bat_pv2_b=-200,
             bat_pv1_pv2=-600,
             cons_flex=-300,
             price=0.30,
         )
 
     @expect_attribute("sink_adapters_source_shares")
-    def test_captive_sinks_get_pv2_before_the_one_that_can_use_pv1(self):
-        """pv2's captives are served first; the pv1/pv2 battery steps onto pv1."""
+    def test_captives_take_pv2_and_displace_the_sink_that_can_use_pv1(self):
+        """The captives absorb pv2 exactly; bat_pv1_pv2 is pushed entirely onto pv1."""
         # Grid phase: bat_grid_pv2 takes the whole 400 W import (4/7 of its
-        # 700 W draw); 300 W deficit, and pv2 is now its only option.
-        # Local phase on pv2 (900 W): captive demand is bat_grid_pv2's 300 W
-        # plus bat_pv2_only's 400 W = 700 W -- neither can be served anywhere
-        # else, so both are covered in full and 200 W of pv2 is left over.
-        # bat_pv1_pv2 is not captive (pv1 alone could cover it), so it draws
-        # its 600 W from what remains, pv1 1200 + pv2 200 -> 6/7 pv1, 1/7 pv2.
-        # Without the captive rule it would claim ~257 W of pv2 on a plain
-        # proportional split and leave bat_pv2_only short.
-        # Flexible: pv1 4800/7 + pv2 800/7 = 800 W for cons_flex 300 + home
-        # 500 -> the same 6/7, 1/7 mix.
-        # Columns: grid 400 | pv1 3600/7 + 4800/7 = 1200 |
-        #          pv2 300 + 400 + 600/7 + 800/7 = 900.
+        # 700 W draw); its 300 W deficit can now only come from pv2.
+        # Local phase on pv2 (900 W): captive demand is 300 (bat_grid_pv2) +
+        # 400 (bat_pv2_a) + 200 (bat_pv2_b) = 900 W. None of it can be served
+        # anywhere else, so it consumes pv2 exactly and nothing is left over.
+        # bat_pv1_pv2 is not captive -- pv1 alone could cover it -- so it is
+        # displaced onto pv1 in full. A plain proportional split would instead
+        # hand it a slice of pv2 and leave a captive short.
+        # Flexible: pv1 600 W left for cons_flex 300 + home 300.
+        # Columns: grid 400 | pv1 600 + 600 = 1200 | pv2 300 + 400 + 200 = 900.
         return {
             "bat_grid_pv2": {"grid": 4 / 7, "pv1": 0.0, "pv2": 3 / 7},
-            "bat_pv2_only": {"grid": 0.0, "pv1": 0.0, "pv2": 1.0},
-            "bat_pv1_pv2": {"grid": 0.0, "pv1": 6 / 7, "pv2": 1 / 7},
-            "cons_flex": {"grid": 0.0, "pv1": 6 / 7, "pv2": 1 / 7},
+            "bat_pv2_a": {"grid": 0.0, "pv1": 0.0, "pv2": 1.0},
+            "bat_pv2_b": {"grid": 0.0, "pv1": 0.0, "pv2": 1.0},
+            "bat_pv1_pv2": {"grid": 0.0, "pv1": 1.0, "pv2": 0.0},
+            "cons_flex": {"grid": 0.0, "pv1": 1.0, "pv2": 0.0},
+        }
+
+    # Same wiring, pv2 now short of its captives: 600 W of pv2 against 900 W
+    # pinned to it. The import covers bat_grid_pv2 outright, so the shortfall
+    # falls on the two pv2-only batteries alone.
+    #   sources  grid 500 + pv1 1500 + pv2 600          -> gross 2600 W
+    #   sinks    500 + 600 + 300 + 400 + 300 = 2100 W   -> home base load 500 W
+
+    @state
+    def pv2_short_of_its_captives(self):
+        return State(
+            grid=500,
+            pv1=1500,
+            pv2=600,
+            bat_grid_pv2=-500,
+            bat_pv2_a=-600,
+            bat_pv2_b=-300,
+            bat_pv1_pv2=-400,
+            cons_flex=-300,
+            price=0.30,
+        )
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_identical_restrictions_split_a_short_source_in_proportion(self):
+        """Same restriction, different draws, identical rows -- and the excess falls back."""
+        # Grid phase: bat_grid_pv2's 500 W draw fits inside the 500 W import,
+        # so it is pure grid and never touches pv2.
+        # Local phase on pv2 (600 W): bat_pv2_a and bat_pv2_b are both fully
+        # captive, claiming 600 + 300 = 900 W against 600 W. The claims scale
+        # by 600/900 = 2/3 -> 400 W and 200 W, in proportion to the draws. The
+        # scaling is what makes their *rows* identical (2/3 pv2, 1/3 pv1)
+        # even though their draws differ 2:1; an implementation that walked the
+        # sinks in some order would serve one in full and starve the other.
+        # bat_pv1_pv2 is not captive and pv2 is gone, so it takes pv1 in full.
+        # Fallback: 200 + 100 = 300 W of captive demand has no allowed source
+        # left. The configuration disagrees with the meter -- those batteries
+        # drew more than pv2 produced -- so the unservable remainder is treated
+        # as unrestricted and joins the flexible pool, which is why a and b show
+        # pv1 at all. Leaving it out instead would break the row sum or the pv1
+        # column.
+        # Flexible: pv1 1100 W for cons_flex 300 + home 500 + the 300 W
+        # fallback -> exactly 1100 W, all pv1.
+        # Columns: grid 500 | pv1 400 + 200 + 100 + 300 + 500 = 1500 |
+        #          pv2 400 + 200 = 600.
+        return {
+            "bat_grid_pv2": {"grid": 1.0, "pv1": 0.0, "pv2": 0.0},
+            "bat_pv2_a": {"grid": 0.0, "pv1": 1 / 3, "pv2": 2 / 3},
+            "bat_pv2_b": {"grid": 0.0, "pv1": 1 / 3, "pv2": 2 / 3},
+            "bat_pv1_pv2": {"grid": 0.0, "pv1": 1.0, "pv2": 0.0},
+            "cons_flex": {"grid": 0.0, "pv1": 1.0, "pv2": 0.0},
         }
