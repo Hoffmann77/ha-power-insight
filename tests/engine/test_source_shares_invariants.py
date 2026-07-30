@@ -73,6 +73,10 @@ class Case:
     #: uid -> the sources it is allowed to draw (already masked to the sources
     #: that are actually providing); empty means unrestricted.
     allowed: dict[str, tuple[str, ...]]
+    #: The sinks that carry a restriction at all. Needed because ``allowed``
+    #: masks a restriction whose every target is idle down to the same empty
+    #: tuple an unrestricted sink has.
+    restricted: frozenset[str]
     #: Gross power minus the metered draw — the unmetered home base load.
     home: int
 
@@ -189,6 +193,7 @@ def _make_case(rng: random.Random) -> Case | None:
         for uid in sinks
     }
     return Case(
+        restricted=frozenset(uid for uid in sinks if uid in restrictions),
         topology=Topology(*adapters),
         state=State(price=0.30, **readings),
         sources=sources,
@@ -316,29 +321,44 @@ def test_no_source_is_overdrawn() -> None:
     )
 
 
-def test_columns_balance_when_there_is_no_home_load() -> None:
-    """With no unmetered remainder, every source column must match its reading."""
+def test_unattributed_power_is_exactly_the_unreportable_draw() -> None:
+    """Whatever the metered rows leave over must be power with nowhere to go.
+
+    Two draws are deliberately absent from the result: the unmetered home base
+    load, which has no adapter, and any sink restricted to sources that are all
+    idle, which collapses to an all-zeros row rather than being forced onto
+    sources the user excluded. Everything else must be accounted for exactly, so
+    the shortfall across all sources equals precisely those two together. This
+    is the strict form of "no source is over-drawn" — it pins the slack instead
+    of only bounding it.
+    """
     failures = []
-    cases = [case for case in _cases() if case.home == 0]
-    assert cases, "generator produced no zero-home-load cases"
+    cases = _cases()
     for case in cases:
         engine = Cell(case.topology, case.state).build_engine()
         rows = engine.sink_adapters_source_shares
+        unattributed = 0.0
         for source_uid, power in case.sources.items():
             drawn = sum(
                 row.get(source_uid, 0.0) * case.sinks[uid]
                 for uid, row in rows.items()
                 if uid in case.sinks
             )
-            if abs(drawn - power) > 1e-6 * max(1.0, power):
-                failures.append(
-                    f"{source_uid} produced {power} W, {drawn:.1f} W attributed; "
-                    f"{case.describe()}"
-                )
+            unattributed += power - drawn
+        stranded = sum(
+            draw for uid, draw in case.sinks.items()
+            if uid in case.restricted and not case.allowed[uid]
+        )
+        expected = case.home + stranded
+        if abs(unattributed - expected) > 1e-6 * max(1.0, expected):
+            failures.append(
+                f"{unattributed:.1f} W unattributed, expected {expected:.1f} W "
+                f"(home {case.home} + stranded {stranded:.0f}); {case.describe()}"
+            )
     _report(
         failures,
         len(cases),
-        "With no home base load the attribution must account for each source exactly.",
+        "Unattributed power must be exactly the home load plus any stranded draw.",
     )
 
 

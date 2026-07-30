@@ -214,10 +214,12 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     # -- Source provenance (three-tier: priority / home / leftover) -------
 
     def test_source_provenance(self, power_insight):
-        # priority: bat2, cons2 (PV-only) share the pv1/pv2 pool;
-        # home base load (1400 W) eats remaining local, grid as fallback;
-        # leftover: bat1 (whole mix), bat3 (grid+pv1), cons1 (unrestricted).
-        assert power_insight.sink_adapters_source_shares == {
+        # bat2/cons2 are captive to the pv1/pv2 pool; bat3 is anchored to the
+        # grid and takes it outright; bat1, cons1 and the home base load share
+        # what is left. Compared row by row with ``pytest.approx``: these are
+        # exact fractions, but the engine reaches them by a different arithmetic
+        # route, so the last bit of the float need not match.
+        expected = {
             "bat1": {
                 "grid": 9/26,
                 "pv1": 17/39,
@@ -244,6 +246,10 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
                 "pv2": 1/3,
             },
         }
+        actual = power_insight.sink_adapters_source_shares
+        assert actual.keys() == expected.keys()
+        for uid, row in expected.items():
+            assert actual[uid] == pytest.approx(row)
 
     def test_source_provenance_rows_sum_to_one(self, power_insight):
         # Invariant: every sink's provenance row sums to 1 (or 0 when its

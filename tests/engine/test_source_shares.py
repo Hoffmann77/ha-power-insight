@@ -154,14 +154,17 @@ class TestSourceShares(EngineScenario):
 
     @expect_attribute("sink_adapters_source_shares")
     def test_export_single_pass_honours_restriction(self):
-        """No import -> one pass at full availability; bat_solar still masked to pv1."""
-        # Grid and the unrestricted bat_flex take the full 2/3 / 1/3 availability;
-        # bat_solar's pv1-only restriction masks it to pv1 even with no priority
-        # tier; the exporting grid is itself a sink sourced from the PV mix.
+        """bat_solar's captive pv1 draw comes off the pool before anyone else shares it."""
+        # bat_solar can only use pv1, so its 500 W is taken from pv1 first.
+        # What is left -- pv1 1500 + pv2 1000 = 2500 W -- is shared by the
+        # exporting grid (1000 W), bat_flex (500 W) and the home load (1000 W),
+        # which is exactly 2500 W, so they all read 1500/2500 pv1, 1000/2500 pv2.
+        # Columns: pv1 500 + 1500 = 2000 | pv2 1000. Sharing the *raw* 2/3 - 1/3
+        # availability instead would attribute 2167 W of a 2000 W pv1 reading.
         return {
-            "grid": {"pv1": 2 / 3, "pv2": 1 / 3},
+            "grid": {"pv1": 0.6, "pv2": 0.4},
             "bat_solar": {"pv1": 1.0, "pv2": 0.0},
-            "bat_flex": {"pv1": 2 / 3, "pv2": 1 / 3},
+            "bat_flex": {"pv1": 0.6, "pv2": 0.4},
         }
 
     # -----------------------------------------------------------------------
@@ -200,17 +203,25 @@ class TestSourceShares(EngineScenario):
             price=0.30,
         )
 
-    @expect_attribute("sink_adapters_source_shares", abs_tol=SHARE_ABS_TOL)
+    @expect_attribute("sink_adapters_source_shares")
     def test_charging_with_partial_import(self):
-        """Abundant pv_1 survives the priority + home tiers, so bat_1 keeps more local."""
-        # pv_1 (1000 W) is more abundant than pv_2 (600 W): after the priority +
-        # home tiers consume local, more pv_1 survives, so bat_1 (on pv_1) keeps
-        # more local than bat_2 (on pv_2).
+        """A short import splits evenly; each battery then tops up from its own string."""
+        # Neither grid-anchored battery is forced onto the grid -- pv_1 alone
+        # could cover bat_1 and pv_2 alone could cover bat_2 -- so neither
+        # reserves any of it, and the 400 W import splits in proportion to their
+        # draws, which are equal: 200 W each. Each covers its remaining 200 W
+        # from its own string, giving both 0.5 / 0.5.
+        # That leaves pv_1 800 + pv_2 400 = 1200 W for bat_3 500 + cons_1 500 +
+        # home 200 = 1200 W, so those read 2/3 pv_1, 1/3 pv_2.
+        # Columns: grid 400 | pv_1 200 + 333.3 + 333.3 + 133.3 = 1000 |
+        #          pv_2 200 + 166.7 + 166.7 + 66.7 = 600.
+        # The asymmetry between the strings is real but lands on *which* string
+        # each battery keeps, not on how the shared import is divided.
         return {
-            "bat_1": {"grid": 0.615, "pv_1": 0.385, "pv_2": 0.0},
-            "bat_2": {"grid": 0.727, "pv_1": 0.0, "pv_2": 0.273},
-            "bat_3": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
-            "cons_1": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
+            "bat_1": {"grid": 0.5, "pv_1": 0.5, "pv_2": 0.0},
+            "bat_2": {"grid": 0.5, "pv_1": 0.0, "pv_2": 0.5},
+            "bat_3": {"grid": 0.0, "pv_1": 2 / 3, "pv_2": 1 / 3},
+            "cons_1": {"grid": 0.0, "pv_1": 2 / 3, "pv_2": 1 / 3},
         }
 
     # -----------------------------------------------------------------------

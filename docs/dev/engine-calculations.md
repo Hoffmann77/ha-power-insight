@@ -46,60 +46,92 @@ zeros instead of dividing by zero.
 ## Source provenance: `sink_adapters_source_shares`
 
 For every drawing adapter, the fraction of its power supplied by each source
-(`{sink_uid: {source_uid: share}}`, each row summing to 1, or all-zeros when the
-sink's allowed sources are all idle). This honours per-device source
-restrictions (`power_source_uids`: a battery's `charge_from_adapters`, a
+(`{sink_uid: {source_uid: share}}`), each row summing to 1 — or to 0 when every
+source the sink is allowed happens to be idle. This honours the per-device
+source restrictions (`power_source_uids`: a battery's `charge_from_adapters`, a
 consumer's `power_from_adapters`).
 
-Attribution runs in **three tiers**, and the tiers exist only while the grid is
-importing — with no import there is nothing to "fall back" to, so every sink
-shares the sources in a single equal-footing pass.
+### It is a transportation problem
 
-1. **Priority tier** — sinks restricted to non-grid sources (a PV-only battery,
-   a smart-plug on excess solar). They get first pick of their allowed sources,
-   weighted by each source's share of gross power, and *consume* what they take
-   from the availability pool.
-2. **Home base-load tier** — the unmetered home load
-   (`home_share = 1 − Σ sink_shares`). It consumes the remaining **local**
-   generation next, with the grid as its fallback.
-3. **Leftover tier** — every flexible sink (unrestricted, or allowed to draw the
-   grid). They split whatever the first two tiers left behind.
+Sources have a fixed output, sinks have a fixed draw, some pairings are
+forbidden, and the totals must match on both sides. Two extra facts shape the
+solve:
 
-!!! note "Decision: the home base load consumes local-first, before flexible grid-capable sinks"
-    A grid-capable sink (a battery that *can* charge from the grid) is flexible;
-    the always-on home base load is not. So the base load has the stronger claim
-    on scarce local generation, and the flexible sinks are the ones pushed onto
-    the grid when local runs out.
+- **The home base load takes part.** Everything consumed without a sensor on it
+  is `gross − Σ metered draws`. It is unrestricted, competes for power like any
+  other sink, and has no adapter — so it shapes every result but never appears
+  in one.
+- **The answer is not unique.** Many allocations satisfy the totals, so the
+  engine has two jobs: find allocations that are valid at all, and pick one.
 
-    Concretely, between the priority and leftover tiers the home load consumes
-    the residual local generation first (grid covers its deficit), depleting
-    **both** the local and grid slices of the availability pool by its actual
-    draw. Only then do the grid-capable leftover sinks share what remains.
+!!! note "Decision: feasibility is decided for *groups*, with max flow"
+    A set of sinks can collectively exhaust the sources it is allowed while no
+    single member is individually stuck. Two batteries each restricted to
+    (east, west) and each drawing 100 W are individually fine — either string
+    could cover either battery — but together they need every watt the two
+    strings make, so a third sink allowed to use east must not touch it.
 
-    Without this tier the flexible sinks over-claimed local generation the base
-    load had really eaten — e.g. a PV-only battery would correctly take the solar
-    while a grid-capable battery still showed a sliver of that same solar.
+    Asking "what must *this* sink take from this source?" one sink at a time
+    cannot see that, and no local patch fixes it: it is Hall's condition, which
+    quantifies over every subset. The engine therefore decides feasibility with
+    max flow, where a minimum cut names the bottleneck group directly.
 
-!!! note "Decision: the split across grid-capable sinks is asymmetric, not equal"
-    When two grid-capable batteries draw from two different PV strings, their
-    grid shares are **not** equal unless the strings are equal — each keeps the
-    local generation of *its* string, and a bigger string leaves more local
-    behind.
+    Two consequences are visible in the code. `_tight_set` finds a group whose
+    draw exactly exhausts every source it may use — such a group has no freedom,
+    so it is split off and solved on its own before anything flexible can take
+    supply it needed. `_exact_reserves` asks the group question per pairing, by
+    deleting one pairing and re-running the flow.
 
-    **Worked example** — grid `+400`, `pv_1 1000`, `pv_2 600` (gross 2000);
-    `bat_3`/`cons_1` charge from PV only (500 W each), `bat_1` from grid+`pv_1`
-    (400 W), `bat_2` from grid+`pv_2` (400 W); home base load 200 W.
+### Choosing among valid allocations
 
-    - Priority: `bat_3` and `cons_1` each take `pv_1 0.625 / pv_2 0.375`
-      (proportional to the 1000 : 600 split).
-    - Home (`home_share = 0.10`) eats the residual local proportionally.
-    - Leftover: because `pv_1` (1000 W) is more abundant than `pv_2` (600 W),
-      more `pv_1` survives, so `bat_1` keeps more local than `bat_2`:
-      `bat_1 → grid 0.615, pv_1 0.385`; `bat_2 → grid 0.727, pv_2 0.273`.
+Feasibility usually leaves freedom. Three rules spend it, in this order:
 
-    An equal `0.5 / 0.5` split would only be correct if the two strings were
-    equal, or if the home load ate the abundant string preferentially to level
-    them (which local-first proportional does not do).
+1. **The grid goes first.** A restricted sink that is allowed the grid draws it
+   before competing for local generation. The grid is the balancing node, not a
+   generator; local generation is the scarce thing worth attributing carefully.
+2. **Scarce sources are split in proportion to draw.** Which is also what makes
+   two sinks with the same restriction come out with the same row whatever their
+   draws — the split is proportional, never sink-by-sink, so there is no
+   ordering for them to diverge on.
+3. **Unrestricted sinks take what is left.** Including the home base load. They
+   can always be served, so they are served last.
+
+!!! note "Decision: feasibility outranks all three"
+    They genuinely conflict. In one snapshot the only valid allocation required
+    a battery to take *more* grid than the proportional split would have given
+    it. When that happens the rules give way — they only ever choose among
+    allocations that already work.
+
+!!! note "Decision: a broken restriction is reported, not hidden"
+    A sink's allowed sources are a statement about how the user believes their
+    energy manager behaves, not a fact about wiring. When the meter disagrees —
+    a "PV only" battery drawing more than PV produced — the restriction is
+    relaxed as a last resort, because the watts came from *somewhere* and
+    leaving them unattributed would break the source totals.
+
+    How much that was is published as `sink_adapters_restriction_deficit`, and
+    surfaced as a `restriction_deficit` attribute on the device's operating-cost
+    sensors. It is the most useful thing an attributional engine can say: *your
+    energy manager is not doing what you configured*. A sink whose allowed
+    sources are **all idle** is the one exception — it collapses to an all-zeros
+    row rather than being forced onto sources the user excluded, and its whole
+    draw is reported as the deficit.
+
+**Worked example** — grid `+400`, `pv_1 1000`, `pv_2 600` (gross 2000);
+`bat_1` on grid+`pv_1` and `bat_2` on grid+`pv_2` drawing 400 W each; `bat_3`
+and `cons_1` on PV only, 500 W each; home base load 200 W.
+
+- Neither `bat_1` nor `bat_2` is forced onto the grid — either string could
+  cover its own battery on its own — so neither reserves any of it, and the
+  400 W import splits in proportion to their (equal) draws: 200 W each.
+- Each covers its remaining 200 W from its own string, so both read
+  `grid 0.5` / own string `0.5`.
+- That leaves `pv_1 800` + `pv_2 400` for `bat_3` 500 + `cons_1` 500 + home 200,
+  which is exactly 1200 W, so those three read `pv_1 2/3`, `pv_2 1/3`.
+- Columns balance to the watt: grid 400, `pv_1` 1000, `pv_2` 600.
+
+The asymmetry between an abundant and a scarce string is real, but it lands on
+*which* string each battery keeps — not on how they divide a shared import.
 
 ## How the tests pin this down
 
