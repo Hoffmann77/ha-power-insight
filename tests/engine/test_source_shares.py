@@ -369,3 +369,68 @@ class TestSourceShares(EngineScenario):
             "bat_grid_only": {"grid": 1.0, "pv1": 0.0, "pv2": 0.0},
             "cons_flex": {"grid": 0.0, "pv1": 5 / 8, "pv2": 3 / 8},
         }
+
+    # -----------------------------------------------------------------------
+    # Block 3: captive demand on a *local* source. Same shape as block 1, but
+    # now three sinks want pv2 and they are not equally stuck with it:
+    #
+    #   bat_grid_pv2  (grid, pv2)  -- once the import is gone, captive to pv2
+    #   bat_pv2_only  (pv2)        -- captive to pv2 from the start
+    #   bat_pv1_pv2   (pv1, pv2)   -- can step aside onto pv1
+    #
+    # The two captives must be served from pv2 before the sink that has
+    # somewhere else to go, otherwise ``bat_pv2_only`` is starved by a sink
+    # that had an alternative all along. This is the local-source counterpart
+    # of the grid reservation in block 2 -- the same rule, applied to pv2.
+    #
+    #   sources  grid 400 + pv1 1200 + pv2 900     -> gross 2500 W
+    #   sinks    700 + 400 + 600 + 300 = 2000 W    -> home base load 500 W
+    # -----------------------------------------------------------------------
+
+    @topology
+    def captive_competition_on_pv2(self):
+        return (
+            Adapter.grid(),
+            Adapter.pv("pv1", exports=True),
+            Adapter.pv("pv2", exports=True),
+            Adapter.battery("bat_grid_pv2", charge_from=("grid", "pv2")),
+            Adapter.battery("bat_pv2_only", charge_from=("pv2",)),
+            Adapter.battery("bat_pv1_pv2", charge_from=("pv1", "pv2")),
+            Adapter.consumer("cons_flex"),
+        )
+
+    @state
+    def import_below_draw_with_two_captives(self):
+        return State(
+            grid=400,
+            pv1=1200,
+            pv2=900,
+            bat_grid_pv2=-700,
+            bat_pv2_only=-400,
+            bat_pv1_pv2=-600,
+            cons_flex=-300,
+            price=0.30,
+        )
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_captive_sinks_get_pv2_before_the_one_that_can_use_pv1(self):
+        """pv2's captives are served first; the pv1/pv2 battery steps onto pv1."""
+        # Grid phase: bat_grid_pv2 takes the whole 400 W import (4/7 of its
+        # 700 W draw); 300 W deficit, and pv2 is now its only option.
+        # Local phase on pv2 (900 W): captive demand is bat_grid_pv2's 300 W
+        # plus bat_pv2_only's 400 W = 700 W -- neither can be served anywhere
+        # else, so both are covered in full and 200 W of pv2 is left over.
+        # bat_pv1_pv2 is not captive (pv1 alone could cover it), so it draws
+        # its 600 W from what remains, pv1 1200 + pv2 200 -> 6/7 pv1, 1/7 pv2.
+        # Without the captive rule it would claim ~257 W of pv2 on a plain
+        # proportional split and leave bat_pv2_only short.
+        # Flexible: pv1 4800/7 + pv2 800/7 = 800 W for cons_flex 300 + home
+        # 500 -> the same 6/7, 1/7 mix.
+        # Columns: grid 400 | pv1 3600/7 + 4800/7 = 1200 |
+        #          pv2 300 + 400 + 600/7 + 800/7 = 900.
+        return {
+            "bat_grid_pv2": {"grid": 4 / 7, "pv1": 0.0, "pv2": 3 / 7},
+            "bat_pv2_only": {"grid": 0.0, "pv1": 0.0, "pv2": 1.0},
+            "bat_pv1_pv2": {"grid": 0.0, "pv1": 6 / 7, "pv2": 1 / 7},
+            "cons_flex": {"grid": 0.0, "pv1": 6 / 7, "pv2": 1 / 7},
+        }
