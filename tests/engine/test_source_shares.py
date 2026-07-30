@@ -242,3 +242,130 @@ class TestSourceShares(EngineScenario):
             "bat_3": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
             "cons_1": {"grid": 0.0, "pv_1": 0.625, "pv_2": 0.375},
         }
+
+    # -----------------------------------------------------------------------
+    # A grid-capable restricted sink drawing MORE than the grid imports.
+    #
+    # The two blocks below pin the behaviour when the grid cannot cover the
+    # sinks that are anchored to it. Both are specifications for the refined
+    # ordering (grid drained first, then the local competition) rather than
+    # descriptions of the current implementation — see the review notes: the
+    # engine's leftover tier normalises each row independently, so it does not
+    # reproduce them yet.
+    #
+    # Ordering used to derive both:
+    #   1. grid phase   — grid-capable restricted sinks claim the import. Each
+    #      first reserves what it *cannot* get elsewhere
+    #      (``max(0, draw - allowed local supply)``); whatever import is left is
+    #      split between them in proportion to their remaining draw.
+    #   2. local phase  — every restricted sink still short (including a
+    #      grid-capable one that has exhausted the import: its residual is now
+    #      an ordinary local demand) competes for the local generation it is
+    #      allowed, most-constrained-first.
+    #   3. flexible     — unrestricted sinks plus the unmetered home load share
+    #      whatever survives.
+    # Each source column must balance exactly against its reading.
+    #
+    # Block 1: one battery on (grid, pv2) drawing 900 W against a 400 W import,
+    # sharing pv2 with a battery that has no other option.
+    #   sources  grid 400 + pv1 1500 + pv2 800     -> gross 2700 W
+    #   sinks    900 + 300 + 600 = 1800 W          -> home base load 900 W
+    # -----------------------------------------------------------------------
+
+    @topology
+    def battery_outdrawing_the_import(self):
+        return (
+            Adapter.grid(),
+            Adapter.pv("pv1", exports=True),
+            Adapter.pv("pv2", exports=True),
+            # Anchored to the grid but allowed to fall back on pv2.
+            Adapter.battery("bat_grid_pv2", charge_from=("grid", "pv2")),
+            # pv2 is its only option -- it has nowhere else to go.
+            Adapter.battery("bat_pv2_only", charge_from=("pv2",)),
+            Adapter.consumer("cons_flex"),  # unrestricted -> flexible tier
+        )
+
+    @state
+    def import_below_battery_draw(self):
+        return State(
+            grid=400,
+            pv1=1500,
+            pv2=800,
+            bat_grid_pv2=-900,
+            bat_pv2_only=-300,
+            cons_flex=-600,
+            price=0.30,
+        )
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_battery_takes_whole_import_then_digs_into_pv2(self):
+        """The 900 W battery empties the 400 W import, then takes 500 W of pv2."""
+        # Grid phase: bat_grid_pv2 is the only grid-capable restricted sink, and
+        # its 900 W draw exceeds the 400 W import, so it takes all of it
+        # -> 400/900 = 4/9. Deficit 500 W.
+        # Local phase: that 500 W deficit is now a plain pv2 demand, competing
+        # with bat_pv2_only's 300 W. 500 + 300 = 800 W against pv2's 800 W, so
+        # both are served in full and pv2 is exactly exhausted -- digging into
+        # pv2 must not starve the sink that has no alternative.
+        # Flexible: pv1 is untouched (1500 W) and cons_flex 600 + home 900 =
+        # 1500 W, so the flexible tier is pure pv1 and sees no grid at all.
+        # Columns: grid 400 | pv1 1500 | pv2 500 + 300 = 800.
+        return {
+            "bat_grid_pv2": {"grid": 4 / 9, "pv1": 0.0, "pv2": 5 / 9},
+            "bat_pv2_only": {"grid": 0.0, "pv1": 0.0, "pv2": 1.0},
+            "cons_flex": {"grid": 0.0, "pv1": 1.0, "pv2": 0.0},
+        }
+
+    # -----------------------------------------------------------------------
+    # Block 2: two grid-capable restricted sinks competing for an import that
+    # cannot cover both -- one of them has no fallback at all.
+    #   sources  grid 600 + pv1 1000 + pv2 900     -> gross 2500 W
+    #   sinks    500 + 400 + 400 = 1300 W          -> home base load 1200 W
+    #   combined grid-anchored draw 900 W > 600 W import
+    # -----------------------------------------------------------------------
+
+    @topology
+    def two_grid_capable_batteries(self):
+        return (
+            Adapter.grid(),
+            Adapter.pv("pv1", exports=True),
+            Adapter.pv("pv2", exports=True),
+            Adapter.battery("bat_grid_pv2", charge_from=("grid", "pv2")),
+            # Grid-only: no fallback, so it must be served from the import first.
+            Adapter.battery("bat_grid_only", charge_from=("grid",)),
+            Adapter.consumer("cons_flex"),
+        )
+
+    @state
+    def import_below_combined_draw(self):
+        return State(
+            grid=600,
+            pv1=1000,
+            pv2=900,
+            bat_grid_pv2=-500,
+            bat_grid_only=-400,
+            cons_flex=-400,
+            price=0.30,
+        )
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_grid_only_battery_is_served_before_the_flexible_one(self):
+        """400 W of the 600 W import is reserved for the battery with no fallback."""
+        # Grid phase: combined draw 900 W > 600 W import. bat_grid_only has no
+        # allowed local source, so its whole 400 W is reserved; bat_grid_pv2 can
+        # fall back on pv2 and reserves nothing, so it gets the remaining 200 W
+        # -> 200/500 = 0.4 grid, 300 W deficit.
+        # A demand-proportional split would instead hand bat_grid_pv2
+        # 600 x 5/9 = 333 W and leave bat_grid_only 133 W short of any source it
+        # is allowed to use -- which is what this case exists to rule out.
+        # Local phase: bat_grid_pv2's 300 W deficit comes off pv2 (900 W
+        # available) -> 0.6; 600 W of pv2 survives.
+        # Flexible: cons_flex 400 + home 1200 = 1600 W against pv1 1000 +
+        # pv2 600 = 1600 W -> 5/8 pv1, 3/8 pv2.
+        # Columns: grid 400 + 200 = 600 | pv1 250 + 750 = 1000 |
+        #          pv2 300 + 150 + 450 = 900.
+        return {
+            "bat_grid_pv2": {"grid": 0.4, "pv1": 0.0, "pv2": 0.6},
+            "bat_grid_only": {"grid": 1.0, "pv1": 0.0, "pv2": 0.0},
+            "cons_flex": {"grid": 0.0, "pv1": 5 / 8, "pv2": 3 / 8},
+        }
