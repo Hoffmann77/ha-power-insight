@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 
-import numpy as np
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -357,8 +356,8 @@ class PowerInsight:
         return max(0.0, gross - export - charging - standby)
 
     @property
-    def source_adapters_power(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(signed power array, uid index)`` for the source adapters.
+    def source_adapters_power(self) -> tuple[list[float], list[str]]:
+        """Return ``(signed power list, uid index)`` for the source adapters.
 
         Source adapters are all currently providing (grid import, producing PV,
         discharging batteries), so every reading is positive. A ``None`` entry
@@ -372,11 +371,11 @@ class PowerInsight:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
-        return np.array(arr), index
+        return arr, index
 
     @property
-    def sink_adapters_power(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(signed power array, uid index)`` for the sink adapters.
+    def sink_adapters_power(self) -> tuple[list[float], list[str]]:
+        """Return ``(signed power list, uid index)`` for the sink adapters.
 
         Sink adapters are all currently drawing (grid export, charging
         batteries, consumer loads, PV standby), so every reading is negative.
@@ -388,7 +387,7 @@ class PowerInsight:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
-        return np.array(arr), index
+        return arr, index
 
     @property
     def gross_power(self) -> float | None:
@@ -404,46 +403,46 @@ class PowerInsight:
                 return None
 
         power_arr, _ = self.source_adapters_power
-        return float(power_arr.sum())
+        return float(sum(power_arr))
 
     @property
-    def source_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(share array, uid index)`` — each source's fraction of gross power.
+    def source_adapters_gross_power_shares(self) -> tuple[list[float], list[str]]:
+        """Return ``(share list, uid index)`` — each source's fraction of gross power.
 
         The shares of the currently-providing adapters (grid import, producing
-        PV, discharging batteries); they sum to 1. Returns an empty array and
+        PV, discharging batteries); they sum to 1. Returns an empty list and
         index when gross power is unavailable. Mirrors ``source_adapters_power``
-        so the numpy pipeline stays composable.
+        so the two stay positionally aligned.
         """
         gross = self.gross_power
         if gross is None:
-            return np.array([]), []
+            return [], []
 
         power_arr, index = self.source_adapters_power
         if gross == 0.0:
-            return np.zeros(len(index)), index
+            return [0.0] * len(index), index
 
-        return power_arr / gross, index
+        return [power / gross for power in power_arr], index
 
     @property
-    def sink_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(share array, uid index)`` — each sink's fraction of gross power.
+    def sink_adapters_gross_power_shares(self) -> tuple[list[float], list[str]]:
+        """Return ``(share list, uid index)`` — each sink's fraction of gross power.
 
         The shares of the currently-drawing adapters (grid export, charging
         batteries, consumer loads, PV standby); the readings are unsigned here.
         Unlike the source shares these need not sum to 1: the remainder up to 1
-        is the unmetered home load. Returns an empty array and index when gross
+        is the unmetered home load. Returns an empty list and index when gross
         power is unavailable.
         """
         gross = self.gross_power
         if gross is None:
-            return np.array([]), []
+            return [], []
 
         power_arr, index = self.sink_adapters_power
         if gross == 0.0:
-            return np.zeros(len(index)), index
+            return [0.0] * len(index), index
 
-        return np.abs(power_arr) / gross, index
+        return [abs(power) / gross for power in power_arr], index
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
@@ -493,16 +492,21 @@ class PowerInsight:
         # exists only then (see docstring).
         grid_importing = grid_uid in index
 
-        def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
+        def restricted_row(sources: list[str], weights: list[float]) -> list[float]:
             """Weights masked to the allowed sources (all sources if unrestricted)."""
             if not sources:
-                return weights.copy()
-            mask = np.array([1.0 if uid in sources else 0.0 for uid in index])
-            return weights * mask
+                return list(weights)
+            return [
+                weight if uid in sources else 0.0
+                for weight, uid in zip(weights, index)
+            ]
 
-        def normalise(row: np.ndarray) -> np.ndarray:
-            total = row.sum()
-            return row / total if total > 0 else np.zeros_like(row)
+        def normalise(row: list[float]) -> list[float]:
+            total = sum(row)
+            if total <= 0:
+                return [0.0] * len(row)
+
+            return [value / total for value in row]
 
         # Partition the sinks. A sink is a priority sink only when the grid is
         # importing and it is restricted to sources that exclude the grid — a
@@ -518,15 +522,18 @@ class PowerInsight:
         result: dict[str, dict[str, float]] = {}
 
         # Priority tier draws from the full availability vector, consuming it.
-        consumed = np.zeros(len(index))
+        consumed = [0.0] * len(index)
         for adapter in priority:
             shares = normalise(restricted_row(adapter.power_source_uids, availability))
             result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
-            consumed += shares * sink_shares[adapter.uid]
+            draw = sink_shares[adapter.uid]
+            consumed = [c + share * draw for c, share in zip(consumed, shares)]
 
         # Leftover tier draws from what the priority tier left behind (the full
         # availability when the priority tier is empty).
-        leftover_availability = np.clip(availability - consumed, 0.0, None)
+        leftover_availability = [
+            max(0.0, avail - used) for avail, used in zip(availability, consumed)
+        ]
 
         # Home base-load tier. The unmetered home load — the gross power no sink
         # accounts for — sits between the priority and the flexible grid-capable
@@ -540,15 +547,18 @@ class PowerInsight:
         if grid_importing:
             home_share = max(0.0, 1.0 - float(sum(sink_shares.values())))
             grid_i = index.index(grid_uid)
-            local_mask = np.array([0.0 if uid == grid_uid else 1.0 for uid in index])
-            local_residual = leftover_availability * local_mask
+            local_residual = [
+                0.0 if uid == grid_uid else avail
+                for avail, uid in zip(leftover_availability, index)
+            ]
             # Local drawn first (capped at what is left), grid covers the rest.
-            local_take = min(home_share, float(local_residual.sum()))
-            home_consumed = normalise(local_residual) * local_take
+            local_take = min(home_share, sum(local_residual))
+            home_consumed = [share * local_take for share in normalise(local_residual)]
             home_consumed[grid_i] += home_share - local_take
-            leftover_availability = np.clip(
-                leftover_availability - home_consumed, 0.0, None
-            )
+            leftover_availability = [
+                max(0.0, avail - used)
+                for avail, used in zip(leftover_availability, home_consumed)
+            ]
 
         for adapter in leftover:
             shares = normalise(

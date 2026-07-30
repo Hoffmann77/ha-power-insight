@@ -174,21 +174,21 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == 4500.0
 
-    def test_source_and_sink_power_arrays(self, power_insight):
+    def test_source_and_sink_power_lists(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_power
         assert src_index == ...
-        assert src_arr.tolist() == ...
+        assert src_arr == ...
         sink_arr, sink_index = power_insight.sink_adapters_power
         assert sink_index == ...
-        assert sink_arr.tolist() == ...
+        assert sink_arr == ...
 
     def test_gross_power_shares(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
         assert src_index == ["grid", "pv1", "pv2"]
-        assert src_arr.tolist() == [1/3, 4/9, 2/9]
+        assert src_arr == [1/3, 4/9, 2/9]
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
         assert sink_index == ["bat1", "bat2", "bat3", "cons1", "cons2"]
-        assert sink_arr.tolist() == [4/45, 2/9, 2/15, 7/45, 1/15]
+        assert sink_arr == [4/45, 2/9, 2/15, 7/45, 1/15]
 
     # -- Gross-power channel ratios (EXP / CON / CHG / STB) ---------------
 
@@ -466,10 +466,10 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_gross_power_shares_export(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
         assert src_index == ...
-        assert src_arr.tolist() == ...
+        assert src_arr == ...
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
         assert sink_index == ...
-        assert sink_arr.tolist() == ...
+        assert sink_arr == ...
 
     # -- Gross-power channel ratios (export + standby non-zero) -----------
 
