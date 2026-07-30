@@ -6,6 +6,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
+from typing import Any, Callable
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -455,6 +456,33 @@ class PowerInsight:
         self.storage_adapters = BatteryAdapters()
         self.consumer_adapters = ConsumerAdapters()
 
+        # Snapshot cache. Results are pure functions of the stored readings and
+        # the registered adapters, so anything derived from them stays valid
+        # until one of those changes. ``_revision`` counts those changes;
+        # ``_snapshot_cached`` memoises against it. See ``set_value``.
+        self._revision = 0
+        self._cache: dict[str, Any] = {}
+        self._cache_revision = -1
+
+    def _snapshot_cached(self, key: str, compute: Callable[[], Any]) -> Any:
+        """Return ``compute()`` for this snapshot, computing it at most once.
+
+        The engine is lazy and holds no state between reads, so every sensor
+        entity that reads a property recomputes the whole chain behind it — and
+        a typical install has dozens of them reading on every event. Anything
+        expensive enough to matter goes through here.
+
+        The cache is dropped whole whenever a reading or the adapter set
+        changes, so a stale entry cannot outlive the snapshot it belongs to.
+        """
+        if self._cache_revision != self._revision:
+            self._cache.clear()
+            self._cache_revision = self._revision
+        if key not in self._cache:
+            self._cache[key] = compute()
+
+        return self._cache[key]
+
     @property
     def entity_mapping(self) -> dict:
         """Return the adapters by it's uid."""
@@ -796,6 +824,10 @@ class PowerInsight:
         unrestricted sink — it competes for power like anything else — but it
         has no adapter, so it never appears in the result.
         """
+        return self._snapshot_cached("source_allocation", self._solve_source_allocation)
+
+    def _solve_source_allocation(self) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+        """Do the work behind ``_source_allocation``; call that, not this."""
         gross = self.gross_power
         if gross is None:
             return {}, {}
@@ -1213,12 +1245,21 @@ class PowerInsight:
         when a source entity fires state_changed but the numeric value is the same.
         """
         adapter = self.get_adapter_by_entity(entity_id)
-        if adapter is not None:
-            return adapter.set_value(entity_id, new_value)
-        return False
+        if adapter is None:
+            return False
+
+        changed = adapter.set_value(entity_id, new_value)
+        if changed:
+            # A new snapshot: everything derived from the old one is stale.
+            self._revision += 1
+
+        return changed
 
     def register_adapter(self, adapter) -> None:
         """Register an adapter."""
+        # The adapter set is an input to every result, so adding one invalidates
+        # the snapshot just as a new reading does.
+        self._revision += 1
         if isinstance(adapter, GridAdapter):
             self.grid_adapter = adapter
             _LOGGER.debug(f"Registered Grid adapter: {adapter}.")

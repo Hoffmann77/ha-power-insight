@@ -1,9 +1,22 @@
-# Open problem: power provenance as a constrained assignment
+# Power provenance as a constrained assignment
 
-Working document. Describes an unsolved design problem in the `PowerInsight`
-engine so it can be handed to a fresh reader for ideas. Nothing here is
-implemented yet; the current engine does something simpler and provably wrong in
-rare cases.
+**Resolved.** This began as a hand-off document for an unsolved problem and is
+kept as the record of how it was settled — the approaches that failed are as
+useful as the one that worked.
+
+`sink_adapters_source_shares` now decides feasibility with max flow: `_tight_set`
+splits off any group of sinks whose draw exactly exhausts the sources it may use,
+and `_exact_reserves` asks the group question per pairing by deleting the pairing
+and re-running the flow. The selection preferences (grid first, proportional
+split, unrestricted last) are unchanged; they now only ever choose among
+allocations that already work. The watts a restriction could not cover are
+published as `sink_adapters_restriction_deficit`.
+
+Over the 250-topology corpus: **0 group-captivity failures** (was 1 in 217),
+source columns balance to the watt, and all six hand-derived scenarios reproduce
+exactly. The unlock was moving the home load and every other unrestricted sink
+to the slack side, which removes the `Σs = Σd` identity that had made every
+minimum cut degenerate.
 
 ## Context
 
@@ -51,9 +64,15 @@ also has to pick *which* one.
 ### Scale
 
 Small. A large install is ~8 sources × ~15 sinks; the common case is 3 × 6.
-Pure Python, no numpy (measured: numpy loses on vectors this short). Recomputed
-per state-change event; a per-snapshot cache is planned but not yet built, so
-today the same solve runs ~50× per event.
+Pure Python, no numpy (measured: numpy loses on vectors this short).
+
+The solve is memoised per snapshot (`PowerInsight._snapshot_cached`, invalidated
+by a revision counter that `set_value` and `register_adapter` bump), because the
+engine is lazy and dozens of sensor entities read through it on every event.
+Measured on a 6-source × 8-sink install: the cold solve costs ~690 µs and every
+further read of the same snapshot ~8 µs, so an event with 50 reads went from
+34.6 ms to 0.42 ms — **83×**. Without it the exact algorithm would not be
+affordable; with it, correctness rather than cost decides the design.
 
 ## Requirements
 
