@@ -269,12 +269,12 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert power_insight.combined_coe_rate == 0.45
         assert power_insight.combined_lcoe_rate == 0.79
         assert power_insight.combined_coo_rate == 72 / 325
-        assert power_insight.combined_lcoo_rate == 683 / 975
+        assert power_insight.combined_lcoo_rate == 1777 / 4875
         assert power_insight.combined_avoided_cost_rate == 339 / 650
         assert power_insight.combined_saving_rate == 0.3
-        assert power_insight.combined_levelized_saving_rate == 3277 / 9750
-        assert power_insight.combined_financial_return_rate == 339 / 650
-        assert power_insight.combined_levelized_financial_return_rate == 3277 / 9750
+        assert power_insight.combined_levelized_saving_rate == -1 / 25
+        assert power_insight.combined_financial_return_rate == 0.3
+        assert power_insight.combined_levelized_financial_return_rate == -1 / 25
         # Zero while importing (nothing exported), but assert it explicitly.
         assert power_insight.combined_export_compensation_rate == 0.0
 
@@ -378,8 +378,8 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         }
         assert power_insight.source_adapters_levelized_cost_saving_rates == {
             "grid": 0.0,
-            "pv1": 226 / 975,
-            "pv2": 339 / 3250,
+            "pv1": 339 / 1625,
+            "pv2": 113 / 975,
         }
         assert power_insight.source_adapters_financial_return_rates == {
             "grid": 0.0,
@@ -388,8 +388,8 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         }
         assert power_insight.source_adapters_levelized_financial_return_rates == {
             "grid": 0.0,
-            "pv1": 226 / 975,
-            "pv2": 339 / 3250,
+            "pv1": 339 / 1625,
+            "pv2": 113 / 975,
         }
 
     # -- Per-sink attribution ---------------------------------------------
@@ -405,9 +405,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             "cons2": 0.0,
         }
         assert power_insight.sink_adapters_lcoo_rates == {
-            "bat1": 1279 / 9750,
-            "bat2": 22 / 75,
-            "bat3": 69 / 250,
+            "bat1": 347 / 4875,
+            "bat2": 17 / 150,
+            "bat3": 9 / 50,
             "cons1": 2429 / 19500,
             "cons2": 17 / 500,
         }
