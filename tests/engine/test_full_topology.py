@@ -128,11 +128,7 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     #   STATE 1 — midday import + charging
     #   grid importing; three-tier provenance active; CHG + CON channels;
     #   export = standby = discharge = 0.
-    #
-    #   gross = grid_import 1500 + pv1 2000 + pv2 1000 = 4500 W
-    #   (source availability: grid 1/3, pv1 4/9, pv2 2/9)
-    #   metered sinks: bat1 500 + bat2 1000 + bat3 600 + cons1 700 + cons2 300
-    #                = 3100 W  ->  home base load 1400 W
+
     # =====================================================================
 
     @state
