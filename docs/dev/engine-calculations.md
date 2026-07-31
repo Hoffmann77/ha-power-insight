@@ -242,11 +242,26 @@ stateless per snapshot, so it cannot know that mix.
 
 ### Two conventions worth stating
 
-!!! note "Decision: `exports_power` is a compensation flag, not a routing restriction"
-    A device with `exports_power=False` can still have exported watts attributed
-    to it — the provenance solver routes physical power and would otherwise be
-    made infeasible by a preference. What the flag controls is whether those
-    watts earn an export compensation; for such a device the rate is `0.0`.
+!!! note "Decision: `exports_power=False` is a hard routing restriction"
+    It is not a preference about compensation — it is a property of the device
+    or its control software. In Germany a home battery generally may not feed
+    the public grid at all, so a battery configured this way physically cannot
+    supply the EXP channel, and attributing exported watts to it would be
+    wrong rather than merely unpaid.
+
+    The exporting grid is therefore a *restricted sink*: its allowed sources
+    are exactly the sources with `exports_power=True`. This reuses the existing
+    restriction machinery rather than adding a parallel one, with one
+    implementation caveat — an empty allowed set normally means "unrestricted",
+    but for the export sink it means "nothing may export". That case has to
+    collapse to a stranded, all-zeros row (whole draw reported as a deficit),
+    not silently reopen the whole mix.
+
+    Like every restriction, it gives way if no allocation can honour it: a
+    house exporting while only non-exporting sources are running relaxes the
+    restriction and reports the amount through
+    `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
+    charging off the grid does.
 
 !!! note "Decision: efficiency is measured at the AC port"
     A battery's configured efficiency describes its AC-side round trip, so
