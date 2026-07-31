@@ -192,8 +192,18 @@ def _make_case(rng: random.Random) -> Case | None:
         if uid in restrictions else ()
         for uid in sinks
     }
+    # The exporting grid carries a restriction nobody configured: it may only
+    # draw sources allowed to feed it. Only the PV systems above are built with
+    # exports=True, so every battery is excluded — and when no PV is producing,
+    # the grid may draw nothing at all and strands like any other sink whose
+    # allowed sources are all idle.
+    restricted_uids = {uid for uid in sinks if uid in restrictions}
+    if "grid" in sinks:
+        allowed["grid"] = tuple(uid for uid in sources if uid in pv_uids)
+        restricted_uids.add("grid")
+
     return Case(
-        restricted=frozenset(uid for uid in sinks if uid in restrictions),
+        restricted=frozenset(restricted_uids),
         topology=Topology(*adapters),
         state=State(price=0.30, **readings),
         sources=sources,
@@ -251,9 +261,19 @@ def _is_feasible(case: Case) -> bool:
     unmetered home load as an unrestricted sink, so it is a genuine independent
     check rather than a re-run of the engine's own reasoning.
     """
-    demand = dict(case.sinks)
-    if case.home > 0:
-        demand["__home__"] = case.home
+    # A sink carrying a restriction whose every target is idle is stranded: the
+    # engine drops it from the solve and the home remainder absorbs its draw.
+    # Feasibility is therefore a question about the sinks that remain — keeping
+    # a stranded sink in would declare the whole case infeasible and silently
+    # cost invariant 4 its most interesting topologies.
+    stranded = {
+        uid for uid in case.sinks
+        if uid in case.restricted and not case.allowed[uid]
+    }
+    demand = {uid: d for uid, d in case.sinks.items() if uid not in stranded}
+    home = case.home + sum(case.sinks[uid] for uid in stranded)
+    if home > 0:
+        demand["__home__"] = home
     capacity: dict[str, dict[str, int]] = {"__src__": {}, "__dst__": {}}
     for uid, power in case.sources.items():
         capacity["__src__"][f"s:{uid}"] = power
