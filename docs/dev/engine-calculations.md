@@ -133,6 +133,135 @@ and `cons_1` on PV only, 500 W each; home base load 200 W.
 The asymmetry between an abundant and a scarce string is real, but it lands on
 *which* string each battery keeps — not on how they divide a shared import.
 
+## The monetary model
+
+Every monetary result in the engine is one of three things, and keeping them
+apart is what makes the numbers add up:
+
+| Ledger | Question it answers | Sign |
+| --- | --- | --- |
+| **Cost** | What did this energy cost me? | always ≥ 0 |
+| **Avoided cost** | What would this energy have cost from the grid? | always ≥ 0 |
+| **Saving** | Cost avoided *minus* cost incurred | either sign |
+
+The first two are gross quantities; only the third is a P&L. They are published
+side by side, and two of them measure the *same* watts from opposite ends — see
+the duality warning below.
+
+### Cost follows the channels
+
+Gross power is partitioned into four channels (EXP / CON / CHG / STB), so the
+cost of gross power partitions the same way. Each channel's cost is the watts
+routed into it, priced at the cost of whichever source supplied them — the
+routing is the provenance allocation, not a proportional guess.
+
+!!! note "Decision: the channel cost buckets are the cost ledger"
+    `combined_consumption_cost_rate`, `combined_charging_cost_rate`,
+    `combined_standby_cost_rate` and `combined_export_cost_rate` (each with a
+    levelized twin) replace the single "total operating cost". They exist
+    because the four channels are the only cost split that conserves:
+
+    **Invariant — cost conservation.** `CON + CHG + STB + EXP == combined_lcoe_rate`,
+    and likewise for the marginal (`coe`) variants. Every watt of gross power
+    is bought once and lands in exactly one channel.
+
+    The pre-existing `combined_total_operating_cost` measured the CHG channel
+    alone while being named as if it covered everything, which is why per-device
+    operating costs never summed to it. It becomes
+    `combined_charging_cost_rate`; CON and STB are new quantities and start
+    from zero.
+
+### Savings are booked per device, at the moment they are realized
+
+!!! note "Decision: a battery's energy cost is booked when it charges"
+    A battery charging is spending money now for a benefit later. The engine
+    books the spend at charge time — the CHG bucket — and then values the
+    discharge at the full grid price it displaces, carrying only the battery's
+    own `LCOS` as the cost of that discharge.
+
+    The alternative (defer the charging cost and net it against the discharge)
+    needs the engine to remember what the stored energy cost, which a snapshot
+    model cannot do. Booking at charge time is exact per snapshot and correct
+    over a full cycle: charge `−(kWh × mix price)`, discharge
+    `+(kWh × (grid − LCOS))`, and round-trip losses show up honestly as the
+    difference between the two energies.
+
+`adapters_saving_rates` is keyed by every PV and battery, in every flow role,
+and a device with nothing to contribute reads `0.0` rather than being absent —
+so a sensor never flips unavailable just because its device went idle:
+
+- **producing / discharging into CON** → `+ delivered × (grid price − own cost)`
+- **charging / drawing standby** → `− drawn × (cost of its source mix)`
+- **exporting** → `+ export compensation`, and levelized, `− exported × own LCOE`
+
+!!! note "Decision: consumers do not get a saving, they get an avoided cost"
+    A consumer running on PV is the *same saved euro* as the PV supplying it. It
+    is published on both sides because both are useful — "which device earned
+    it" and "which device benefited" — but they are two views of one quantity.
+
+    **Invariant — savings additivity.** `Σ adapters_saving_rates == combined_saving_rate`
+    (and the levelized twin). Only the source side is summed; consumers
+    contribute `0.0`.
+
+    **Invariant — avoided-cost duality.** The source side and the sink side of
+    the CON channel come to the same number:
+    `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
+    **Never add the two sides together** — that double counts every saved euro.
+
+### The home base load is a device
+
+Everything consumed without a sensor on it already takes part in the provenance
+solve. It is also the largest single consumer in most homes, so dropping it from
+the results makes the totals look wrong.
+
+!!! note "Decision: the home base load gets its own properties, not a uid"
+    It is surfaced through dedicated `home_base_load_*` properties rather than
+    as an entry in the `sink_adapters_*` dicts. A dict key would need a uid, and
+    any readable uid (`home`, `base_load`) can collide with a user's slugified
+    device name — which is exactly why the solver's internal sentinel is
+    `"\x00home"`. Dedicated properties are collision-proof and make the
+    duality invariant above explicit rather than hidden in a magic key.
+
+### Prices for a discharging battery
+
+A battery discharges energy it charged on some *earlier* mix. The engine is
+stateless per snapshot, so it cannot know that mix.
+
+!!! note "Decision: the dynamic price falls back to the flat LCOS on discharge"
+    `source_adapters_dynamic_coe` / `_dynamic_lcoe` report the live blended mix
+    while a battery is **charging**, and the battery's flat `LCOS` while it is
+    **discharging**. The marginal (`coe`) side reads `0.0` on discharge, because
+    the energy cost was already booked at charge time — charging it again here
+    would double count.
+
+    The legacy implementation looked no better but was worse: it reported the
+    mix the battery *would* charge on right now even while discharging, and left
+    an unrestricted battery undefined entirely. Tracking a true running average
+    cost of stored energy is a stateful feature, deliberately deferred; nothing
+    in the savings ledger depends on it, because discharge is valued at `LCOS`.
+
+### Two conventions worth stating
+
+!!! note "Decision: `exports_power` is a compensation flag, not a routing restriction"
+    A device with `exports_power=False` can still have exported watts attributed
+    to it — the provenance solver routes physical power and would otherwise be
+    made infeasible by a preference. What the flag controls is whether those
+    watts earn an export compensation; for such a device the rate is `0.0`.
+
+!!! note "Decision: efficiency is measured at the AC port"
+    A battery's configured efficiency describes its AC-side round trip, so
+    conversion losses and parasitics are already inside the metered charge and
+    discharge readings. Efficiency therefore never enters the savings
+    arithmetic — it is used only for the dynamic price and the `LCOS`
+    refinement. A DC-coupled meter would need its losses modelled separately;
+    that configuration is not supported.
+
+**Known simplification.** Self-consumption is valued at the import price even in
+a snapshot where the house is exporting, where the true marginal alternative is
+the feed-in tariff. This is the conventional treatment and matches how the docs
+describe self-consumption, but it slightly overstates savings during an export
+surplus.
+
 ## How the tests pin this down
 
 The engine tests use the source-order scenario framework (see
