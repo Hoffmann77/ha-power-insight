@@ -6,8 +6,8 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
+from typing import Any, Callable
 
-import numpy as np
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,6 +102,346 @@ class ConsumerAdapters(AdapterContainer):
     pass
 
 
+
+# --------------------------------------------------------------------------->
+# TRANSPORTATION SOLVE (power provenance)
+#
+# Working out where each drawing adapter's power came from is a transportation
+# problem on a bipartite graph: sources with a fixed output, sinks with a fixed
+# draw, and forbidden pairings coming from the per-device source restrictions.
+# It is normally *underdetermined* — many allocations satisfy the totals — so
+# the solve has two jobs: find allocations that are valid at all (feasibility),
+# and pick one specific allocation out of them (selection).
+#
+# Feasibility is a property of *groups*. A set of sinks can collectively exhaust
+# the sources it is allowed while no single member is individually stuck, so any
+# rule that reasons one sink at a time will eventually hand a source to a sink
+# that had alternatives and strand one that had none. That is why these helpers
+# use max flow: a minimum cut names the bottleneck group directly.
+#
+# They are pure functions over plain dicts, independent of the adapter objects,
+# so the algorithm can be reasoned about on paper. See
+# docs/dev/engine-calculations.md.
+# --------------------------------------------------------------------------->
+
+_EPS = 1e-9
+#: Safety bound on the local-generation loop; it converges in a few passes.
+_MAX_FILL_ROUNDS = 64
+_FLOW_SRC = "\x00source"
+_FLOW_DST = "\x00sink"
+#: The unmetered home base load, as a sink in the solve. Never reported.
+_HOME = "\x00home"
+
+
+def _permits(sources: tuple[str, ...], source_uid: str) -> bool:
+    """Whether a sink restricted to ``sources`` may draw ``source_uid``.
+
+    An empty restriction means unrestricted — the whole mix.
+    """
+    return not sources or source_uid in sources
+
+
+def _max_flow(capacity: dict, source: str, target: str) -> tuple[float, set]:
+    """Edmonds-Karp max flow. Mutates ``capacity`` into the residual graph.
+
+    Returns ``(value, reachable)``, where ``reachable`` is the set of nodes
+    still reachable from ``source`` once no augmenting path is left — the source
+    side of a minimum cut, and therefore the bottleneck the flow ran into.
+    """
+    total = 0.0
+    while True:
+        parent: dict[str, str | None] = {source: None}
+        queue = [source]
+        while queue and target not in parent:
+            node = queue.pop(0)
+            for nxt, cap in capacity.get(node, {}).items():
+                if cap > _EPS and nxt not in parent:
+                    parent[nxt] = node
+                    queue.append(nxt)
+        if target not in parent:
+            return total, set(parent)
+
+        path, node = [], target
+        while parent[node] is not None:
+            path.append((parent[node], node))
+            node = parent[node]
+        added = min(capacity[a][b] for a, b in path)
+        for a, b in path:
+            capacity[a][b] -= added
+            capacity.setdefault(b, {})[a] = capacity.setdefault(b, {}).get(a, 0.0) + added
+        total += added
+
+
+def _flow_network(supply: dict, demand: dict, allowed: dict, skip=None) -> dict:
+    """Build ``super-source -> sources -> sinks -> super-sink``.
+
+    Source-to-sink edges are deliberately *uncapped*. Capping them at the sink's
+    draw does not change the flow value — the sink's own edge already bounds it —
+    but it saturates edges the minimum-cut extraction has to walk, which makes
+    ``_tight_set`` silently report the wrong group.
+    """
+    unbounded = sum(supply.values()) + sum(demand.values()) + 1.0
+    capacity: dict[str, dict[str, float]] = {_FLOW_SRC: {}, _FLOW_DST: {}}
+    for source_uid, power in supply.items():
+        capacity[_FLOW_SRC]["s:" + source_uid] = power
+        capacity.setdefault("s:" + source_uid, {})
+    for uid, draw in demand.items():
+        capacity.setdefault("t:" + uid, {})[_FLOW_DST] = draw
+        for source_uid in supply:
+            if _permits(allowed[uid], source_uid) and (uid, source_uid) != skip:
+                capacity["s:" + source_uid]["t:" + uid] = unbounded
+
+    return capacity
+
+
+def _flow_value(supply: dict, demand: dict, allowed: dict, skip=None) -> float:
+    """Total draw servable from the allowed sources, optionally without one edge."""
+    if not supply or not demand:
+        return 0.0
+
+    return _max_flow(_flow_network(supply, demand, allowed, skip), _FLOW_SRC, _FLOW_DST)[0]
+
+
+def _exact_reserves(supply: dict, demand: dict, allowed: dict) -> dict | None:
+    """Return ``{(sink, source): watts}`` the pairing must carry in *every* plan.
+
+    Deleting one pairing and re-running the flow says how much of the total draw
+    depended on it — Hall's condition asked of every group of sinks at once.
+    The cheap approximation (a sink's draw minus what its *other* sources hold)
+    is the same question asked of one sink at a time, and it cannot see a group
+    that is collectively captive while no member is individually.
+
+    ``None`` when the restrictions cannot all be honoured, so the caller falls
+    back instead of reserving against an impossible plan.
+    """
+    wanted = sum(demand.values())
+    if _flow_value(supply, demand, allowed) + _EPS < wanted:
+        return None
+
+    return {
+        (uid, source_uid): max(
+            0.0, wanted - _flow_value(supply, demand, allowed, (uid, source_uid))
+        )
+        for uid in demand
+        for source_uid in supply
+        if _permits(allowed[uid], source_uid)
+    }
+
+
+def _tight_set(supply: dict, demand: dict, allowed: dict) -> tuple:
+    """Find a group of sinks that exactly exhausts every source it may use.
+
+    Such a group has no freedom left, and no sink outside it may touch those
+    sources, so it can be split off and solved on its own. Read off the minimum
+    cut of a single max flow. Returns ``(None, None)`` when nothing binds.
+    """
+    if not supply or not demand:
+        return None, None
+
+    value, reachable = _max_flow(
+        _flow_network(supply, demand, allowed), _FLOW_SRC, _FLOW_DST
+    )
+    if value + _EPS < sum(demand.values()):
+        return None, None
+
+    group = [uid for uid in demand if "t:" + uid not in reachable]
+    if not group or len(group) == len(demand):
+        return None, None
+
+    sources = [s for s in supply if any(_permits(allowed[u], s) for u in group)]
+    # The reachable set is a tight group only when that cut really is minimum;
+    # verifying costs two sums and is cheaper than proving it.
+    if abs(sum(demand[u] for u in group) - sum(supply[s] for s in sources)) > _EPS:
+        return None, None
+
+    return group, sources
+
+
+def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
+    """Serve restricted sinks from a block: grid first, then local generation.
+
+    Per source, each claimant is first given the reserve it cannot obtain
+    anywhere else; whatever is left over is split in proportion to the draw each
+    claimant still has outstanding. Splitting proportionally (rather than
+    serving claimants one at a time) is what makes two sinks with the same
+    restriction come out with the same row whatever their draws.
+
+    Returns ``(allocation, unused supply, deficit)``.
+    """
+    pool = dict(supply)
+    outstanding = dict(demand)
+    allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
+
+    def local(uid):
+        return [s for s in pool if s != grid_uid and _permits(allowed[uid], s)]
+
+    def reserves():
+        live_demand = {u: n for u, n in outstanding.items() if n > _EPS}
+        live_supply = {s: p for s, p in pool.items() if p > _EPS}
+        if not live_demand or not live_supply:
+            return {}
+        found = _exact_reserves(live_supply, live_demand, allowed)
+        return {} if found is None else found
+
+    def serve(source_uid, claimants, reserved):
+        """Give out one source: reserves first, remainder proportional to draw."""
+        total_reserved = sum(reserved.values())
+        if total_reserved > pool[source_uid]:
+            scale = pool[source_uid] / total_reserved
+            reserved = {u: r * scale for u, r in reserved.items()}
+        spare = pool[source_uid] - sum(reserved.values())
+        rest = {u: outstanding[u] - reserved[u] for u in claimants}
+        total_rest = sum(rest.values())
+        return {
+            u: reserved[u] + (spare * rest[u] / total_rest if total_rest else 0.0)
+            for u in claimants
+        }
+
+    def commit(uid, offers):
+        """Take the offers, scaled down if they exceed what the sink still needs."""
+        wanted = sum(offers.values())
+        if wanted <= _EPS:
+            return False
+        scale = min(1.0, outstanding[uid] / wanted)
+        moved = False
+        for source_uid, offer in offers.items():
+            taken = min(offer * scale, pool[source_uid])
+            if taken <= _EPS:
+                continue
+            allocation[uid][source_uid] += taken
+            pool[source_uid] -= taken
+            outstanding[uid] -= taken
+            moved = True
+
+        return moved
+
+    # The grid is the balancing node rather than a generator, so a restricted
+    # sink that is allowed it draws it before competing for local generation.
+    if pool.get(grid_uid, 0.0) > _EPS:
+        claimants = [
+            uid for uid in demand
+            if allowed[uid] and grid_uid in allowed[uid] and outstanding[uid] > _EPS
+        ]
+        if claimants:
+            found = reserves()
+            reserved = {
+                uid: found.get(
+                    (uid, grid_uid),
+                    max(0.0, outstanding[uid] - sum(pool[s] for s in local(uid))),
+                )
+                for uid in claimants
+            }
+            offers = serve(grid_uid, claimants, reserved)
+            for uid in claimants:
+                commit(uid, {grid_uid: offers[uid]})
+
+    # Local generation. Repeated because a sink capped at its own draw frees up
+    # supply the others can still claim.
+    for _ in range(_MAX_FILL_ROUNDS):
+        active = [
+            uid for uid in demand
+            if allowed[uid] and outstanding[uid] > _EPS
+            and any(pool[s] > _EPS for s in local(uid))
+        ]
+        if not active:
+            break
+
+        found = reserves()
+        offers = {uid: {} for uid in active}
+        for source_uid in supply:
+            if source_uid == grid_uid or pool[source_uid] <= _EPS:
+                continue
+            claimants = [uid for uid in active if source_uid in local(uid)]
+            if not claimants:
+                continue
+            reserved = {
+                uid: found.get(
+                    (uid, source_uid),
+                    max(
+                        0.0,
+                        outstanding[uid]
+                        - sum(pool[s] for s in local(uid) if s != source_uid),
+                    ),
+                )
+                for uid in claimants
+            }
+            for uid, offer in serve(source_uid, claimants, reserved).items():
+                offers[uid][source_uid] = offer
+
+        # Every sink commits; ``any`` over a generator would short-circuit and
+        # silently skip the rest of the round.
+        moved = [commit(uid, offers[uid]) for uid in active]
+        if not any(moved):
+            break
+
+    deficit = {
+        uid: outstanding[uid]
+        for uid in demand
+        if allowed[uid] and outstanding[uid] > _EPS
+    }
+    return allocation, pool, deficit
+
+
+def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
+    """Attribute every sink's draw to sources. Returns ``(allocation, deficit)``.
+
+    Restricted sinks are served first, because they are the ones feasibility can
+    strand; unrestricted sinks (including the home base load) take whatever is
+    left, which they can always do. Before serving a group, any *tight* subset
+    is split off and solved on its own — that group has no freedom, and leaving
+    it in would let a flexible sink take supply the group needed.
+    """
+    restricted = {uid: d for uid, d in demand.items() if allowed[uid]}
+    flexible = {uid: d for uid, d in demand.items() if not allowed[uid]}
+    allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
+    deficit: dict[str, float] = {}
+    unused = []
+
+    blocks = [(dict(supply), restricted)]
+    while blocks:
+        block_supply, block_demand = blocks.pop()
+        if not block_demand:
+            unused.append(block_supply)
+            continue
+
+        group, sources = _tight_set(block_supply, block_demand, allowed)
+        if group is None:
+            served, spare, short = _fill_block(
+                block_supply, block_demand, allowed, grid_uid
+            )
+            for uid, row in served.items():
+                for source_uid, watts in row.items():
+                    allocation[uid][source_uid] += watts
+            deficit.update(short)
+            unused.append(spare)
+            continue
+
+        blocks.append(({s: block_supply[s] for s in sources},
+                       {u: block_demand[u] for u in group}))
+        blocks.append(({s: p for s, p in block_supply.items() if s not in sources},
+                       {u: d for u, d in block_demand.items() if u not in group}))
+
+    remaining = {s: 0.0 for s in supply}
+    for spare in unused:
+        for source_uid, watts in spare.items():
+            remaining[source_uid] += watts
+
+    # Unrestricted sinks share what is left, and so does any restricted draw its
+    # own sources could not cover — the configuration and the meter disagree, so
+    # the restriction is relaxed as a last resort rather than leaving watts
+    # unattributed. ``deficit`` records exactly how much that was.
+    tail = dict(flexible)
+    for uid, watts in deficit.items():
+        tail[uid] = tail.get(uid, 0.0) + watts
+    available = sum(remaining.values())
+    if available > _EPS:
+        for uid, draw in tail.items():
+            for source_uid in supply:
+                allocation[uid][source_uid] += draw * remaining[source_uid] / available
+
+    return allocation, deficit
+
+
 class PowerInsight:
     """Class used for the calculation of the power insights."""
 
@@ -115,6 +455,33 @@ class PowerInsight:
         self.pv_system_adapters = PvSystemAdapters()
         self.storage_adapters = BatteryAdapters()
         self.consumer_adapters = ConsumerAdapters()
+
+        # Snapshot cache. Results are pure functions of the stored readings and
+        # the registered adapters, so anything derived from them stays valid
+        # until one of those changes. ``_revision`` counts those changes;
+        # ``_snapshot_cached`` memoises against it. See ``set_value``.
+        self._revision = 0
+        self._cache: dict[str, Any] = {}
+        self._cache_revision = -1
+
+    def _snapshot_cached(self, key: str, compute: Callable[[], Any]) -> Any:
+        """Return ``compute()`` for this snapshot, computing it at most once.
+
+        The engine is lazy and holds no state between reads, so every sensor
+        entity that reads a property recomputes the whole chain behind it — and
+        a typical install has dozens of them reading on every event. Anything
+        expensive enough to matter goes through here.
+
+        The cache is dropped whole whenever a reading or the adapter set
+        changes, so a stale entry cannot outlive the snapshot it belongs to.
+        """
+        if self._cache_revision != self._revision:
+            self._cache.clear()
+            self._cache_revision = self._revision
+        if key not in self._cache:
+            self._cache[key] = compute()
+
+        return self._cache[key]
 
     @property
     def entity_mapping(self) -> dict:
@@ -357,8 +724,8 @@ class PowerInsight:
         return max(0.0, gross - export - charging - standby)
 
     @property
-    def source_adapters_power(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(signed power array, uid index)`` for the source adapters.
+    def source_adapters_power(self) -> tuple[list[float], list[str]]:
+        """Return ``(signed power list, uid index)`` for the source adapters.
 
         Source adapters are all currently providing (grid import, producing PV,
         discharging batteries), so every reading is positive. A ``None`` entry
@@ -372,11 +739,11 @@ class PowerInsight:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
-        return np.array(arr), index
+        return arr, index
 
     @property
-    def sink_adapters_power(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(signed power array, uid index)`` for the sink adapters.
+    def sink_adapters_power(self) -> tuple[list[float], list[str]]:
+        """Return ``(signed power list, uid index)`` for the sink adapters.
 
         Sink adapters are all currently drawing (grid export, charging
         batteries, consumer loads, PV standby), so every reading is negative.
@@ -388,7 +755,7 @@ class PowerInsight:
             index.append(adapter.uid)
             arr.append(adapter.power)
 
-        return np.array(arr), index
+        return arr, index
 
     @property
     def gross_power(self) -> float | None:
@@ -404,46 +771,106 @@ class PowerInsight:
                 return None
 
         power_arr, _ = self.source_adapters_power
-        return float(power_arr.sum())
+        return float(sum(power_arr))
 
     @property
-    def source_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(share array, uid index)`` — each source's fraction of gross power.
+    def source_adapters_gross_power_shares(self) -> tuple[list[float], list[str]]:
+        """Return ``(share list, uid index)`` — each source's fraction of gross power.
 
         The shares of the currently-providing adapters (grid import, producing
-        PV, discharging batteries); they sum to 1. Returns an empty array and
+        PV, discharging batteries); they sum to 1. Returns an empty list and
         index when gross power is unavailable. Mirrors ``source_adapters_power``
-        so the numpy pipeline stays composable.
+        so the two stay positionally aligned.
         """
         gross = self.gross_power
         if gross is None:
-            return np.array([]), []
+            return [], []
 
         power_arr, index = self.source_adapters_power
         if gross == 0.0:
-            return np.zeros(len(index)), index
+            return [0.0] * len(index), index
 
-        return power_arr / gross, index
+        return [power / gross for power in power_arr], index
 
     @property
-    def sink_adapters_gross_power_shares(self) -> tuple[np.ndarray, list[str]]:
-        """Return ``(share array, uid index)`` — each sink's fraction of gross power.
+    def sink_adapters_gross_power_shares(self) -> tuple[list[float], list[str]]:
+        """Return ``(share list, uid index)`` — each sink's fraction of gross power.
 
         The shares of the currently-drawing adapters (grid export, charging
         batteries, consumer loads, PV standby); the readings are unsigned here.
         Unlike the source shares these need not sum to 1: the remainder up to 1
-        is the unmetered home load. Returns an empty array and index when gross
+        is the unmetered home load. Returns an empty list and index when gross
         power is unavailable.
         """
         gross = self.gross_power
         if gross is None:
-            return np.array([]), []
+            return [], []
 
         power_arr, index = self.sink_adapters_power
         if gross == 0.0:
-            return np.zeros(len(index)), index
+            return [0.0] * len(index), index
 
-        return np.abs(power_arr) / gross, index
+        return [abs(power) / gross for power in power_arr], index
+
+    @property
+    def _source_allocation(self) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+        """Solve this snapshot's provenance once: ``(allocation, deficit)``.
+
+        ``allocation`` is ``{sink_uid: {source_uid: watts}}`` covering every
+        drawing adapter; ``deficit`` is ``{sink_uid: watts}`` for the restricted
+        sinks whose own allowed sources could not cover their draw.
+
+        The unmetered home base load takes part in the solve as an ordinary
+        unrestricted sink — it competes for power like anything else — but it
+        has no adapter, so it never appears in the result.
+        """
+        return self._snapshot_cached("source_allocation", self._solve_source_allocation)
+
+    def _solve_source_allocation(self) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+        """Do the work behind ``_source_allocation``; call that, not this."""
+        gross = self.gross_power
+        if gross is None:
+            return {}, {}
+
+        power_arr, index = self.source_adapters_power
+        if not index:
+            # Nothing is currently providing; provenance is undefined.
+            return {}, {}
+
+        supply = {uid: float(power) for uid, power in zip(index, power_arr)}
+        demand: dict[str, float] = {}
+        allowed: dict[str, tuple[str, ...]] = {}
+        for adapter in self.sink_adapters:
+            demand[adapter.uid] = abs(float(adapter.power))
+            allowed[adapter.uid] = tuple(adapter.power_source_uids)
+
+        # A sink restricted to sources that are all idle has nothing to be
+        # attributed to. It collapses to an all-zeros row rather than being
+        # forced onto sources the user excluded — but its draw still came from
+        # somewhere, so it stays in the home remainder below.
+        demand_by_uid = dict(demand)
+        stranded = [
+            uid for uid, sources in allowed.items()
+            if sources and not any(_permits(sources, s) for s in supply)
+        ]
+        for uid in stranded:
+            del demand[uid]
+            del allowed[uid]
+
+        demand[_HOME] = max(0.0, gross - sum(demand.values()))
+        allowed[_HOME] = ()
+
+        allocation, deficit = _allocate(
+            supply, demand, allowed, self.grid_adapter.uid
+        )
+        allocation.pop(_HOME, None)
+        for uid in stranded:
+            allocation[uid] = {source_uid: 0.0 for source_uid in supply}
+            # Not one watt of it could come from a configured source, so the
+            # whole draw is a deficit even though the row says nothing.
+            deficit[uid] = demand_by_uid[uid]
+
+        return allocation, deficit
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
@@ -451,112 +878,57 @@ class PowerInsight:
 
         For every currently-drawing adapter, the fraction of its power supplied
         by each source adapter (grid import, producing PV, discharging
-        batteries). Each row sums to 1 (a sink whose allowed sources are all
-        idle collapses to all-zeros).
+        batteries). Each row sums to 1, or to 0 when every source the sink is
+        allowed happens to be idle.
 
-        The attribution is three-tier, honouring per-device source restrictions
-        (a battery's ``charge_from_adapters``, a consumer's
-        ``power_from_adapters``, both surfaced as ``power_source_uids``):
+        Two guarantees hold for every snapshot, and are checked over random
+        topologies by ``tests/engine/test_source_shares_invariants.py``:
 
-        * **Priority tier** — sinks restricted to specific non-grid sources
-          (a battery charging on PV only, a smart-plug consumer on excess
-          solar). They get first pick of their allowed sources, weighted by
-          each source's share of gross power. This tier is active **only while
-          the grid is importing**: giving a grid-excluded sink first claim on
-          the scarce local sources is only meaningful when the grid-capable
-          sinks have the grid to fall back on. With no grid import there is
-          nothing to fall back to, so every sink shares the sources in a single
-          pass on equal footing (the tier is empty).
-        * **Home base-load tier** — the unmetered home load (the gross power no
-          sink accounts for). It consumes the remaining *local* generation next,
-          falling back on the grid for its deficit, so a scarce local source can
-          be exhausted before the flexible grid-capable sinks see it. Unmetered,
-          it never appears in the result — it only depletes the pool. Active
-          only while the grid is importing, for the same scarcity reason.
-        * **Leftover tier** — every other sink (unrestricted, or allowed to draw
-          the grid, or *any* sink when the grid is not importing). They split
-          the power the priority and home tiers left behind — the full
-          availability when both are empty — each still respecting its own
-          restriction if it has one.
+        * **Sources balance.** The watts attributed to a source across all sinks
+          equal its reading. No source is over-drawn and none is left over.
+        * **Restrictions hold whenever they can.** A sink is only ever shown a
+          source outside its configured set when *no* allocation could have
+          honoured every restriction at once. How much that was is reported by
+          ``sink_adapters_restriction_deficit``.
 
-        Empty when gross power is unavailable.
+        Beyond those, the allocation is chosen so that a restricted sink allowed
+        the grid draws the grid before local generation (the grid is the
+        balancing node; local generation is the scarce thing worth attributing),
+        and so that sinks competing for the same scarce source split it in
+        proportion to their draw — which means two sinks with the same
+        restriction always get the same row, whatever their draws.
+
+        Empty when gross power is unavailable or nothing is providing. See
+        ``docs/dev/engine-calculations.md`` for the model.
         """
-        availability, index = self.source_adapters_gross_power_shares
-        if not index:
-            # Gross power unavailable, or nothing is currently providing.
-            return {}
+        allocation, _ = self._source_allocation
 
-        sink_share_arr, sink_index = self.sink_adapters_gross_power_shares
-        sink_shares = dict(zip(sink_index, sink_share_arr))
-        grid_uid = self.grid_adapter.uid
-        # The grid is a source only while it is importing; the priority tier
-        # exists only then (see docstring).
-        grid_importing = grid_uid in index
+        shares = {}
+        for uid, row in allocation.items():
+            total = sum(row.values())
+            shares[uid] = {
+                source_uid: (watts / total if total > _EPS else 0.0)
+                for source_uid, watts in row.items()
+            }
 
-        def restricted_row(sources: list[str], weights: np.ndarray) -> np.ndarray:
-            """Weights masked to the allowed sources (all sources if unrestricted)."""
-            if not sources:
-                return weights.copy()
-            mask = np.array([1.0 if uid in sources else 0.0 for uid in index])
-            return weights * mask
+        return shares
 
-        def normalise(row: np.ndarray) -> np.ndarray:
-            total = row.sum()
-            return row / total if total > 0 else np.zeros_like(row)
+    @property
+    def sink_adapters_restriction_deficit(self) -> dict[str, float]:
+        """Return ``{sink_uid: watts}`` drawn from outside a sink's allowed sources.
 
-        # Partition the sinks. A sink is a priority sink only when the grid is
-        # importing and it is restricted to sources that exclude the grid — a
-        # grid-capable (or unrestricted) sink is flexible and waits for leftover.
-        priority, leftover = [], []
-        for adapter in self.sink_adapters:
-            sources = adapter.power_source_uids
-            if grid_importing and sources and grid_uid not in sources:
-                priority.append(adapter)
-            else:
-                leftover.append(adapter)
+        Zero almost always. A non-zero figure is never an engine failure — the
+        configured sources are a statement about how the user believes their
+        energy manager behaves, so it means the meter disagrees with that
+        belief: either the manager did something else this snapshot (a "PV only"
+        battery topping up off the grid under cloud), or the configuration is
+        stale. Reported per sink so the mix it explains sits next to it.
 
-        result: dict[str, dict[str, float]] = {}
+        Only restricted sinks appear; an unrestricted sink cannot have one.
+        """
+        _, deficit = self._source_allocation
 
-        # Priority tier draws from the full availability vector, consuming it.
-        consumed = np.zeros(len(index))
-        for adapter in priority:
-            shares = normalise(restricted_row(adapter.power_source_uids, availability))
-            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
-            consumed += shares * sink_shares[adapter.uid]
-
-        # Leftover tier draws from what the priority tier left behind (the full
-        # availability when the priority tier is empty).
-        leftover_availability = np.clip(availability - consumed, 0.0, None)
-
-        # Home base-load tier. The unmetered home load — the gross power no sink
-        # accounts for — sits between the priority and the flexible grid-capable
-        # sinks: it consumes the remaining *local* generation first (the grid is
-        # its fallback), so the leftover sinks that can draw the grid only claim
-        # the local generation the home load did not eat. Like the priority tier
-        # this scarcity ordering is meaningful only while the grid is importing;
-        # with no import every sink already shares the sources in a single pass.
-        # The load is unmetered, so it never appears in ``result`` — it only
-        # depletes ``leftover_availability``.
-        if grid_importing:
-            home_share = max(0.0, 1.0 - float(sum(sink_shares.values())))
-            grid_i = index.index(grid_uid)
-            local_mask = np.array([0.0 if uid == grid_uid else 1.0 for uid in index])
-            local_residual = leftover_availability * local_mask
-            # Local drawn first (capped at what is left), grid covers the rest.
-            local_take = min(home_share, float(local_residual.sum()))
-            home_consumed = normalise(local_residual) * local_take
-            home_consumed[grid_i] += home_share - local_take
-            leftover_availability = np.clip(
-                leftover_availability - home_consumed, 0.0, None
-            )
-
-        for adapter in leftover:
-            shares = normalise(
-                restricted_row(adapter.power_source_uids, leftover_availability)
-            )
-            result[adapter.uid] = {uid: float(s) for uid, s in zip(index, shares)}
-
-        return result
+        return deficit
 
 
     # -------------------------------------------------------------->
@@ -873,12 +1245,21 @@ class PowerInsight:
         when a source entity fires state_changed but the numeric value is the same.
         """
         adapter = self.get_adapter_by_entity(entity_id)
-        if adapter is not None:
-            return adapter.set_value(entity_id, new_value)
-        return False
+        if adapter is None:
+            return False
+
+        changed = adapter.set_value(entity_id, new_value)
+        if changed:
+            # A new snapshot: everything derived from the old one is stale.
+            self._revision += 1
+
+        return changed
 
     def register_adapter(self, adapter) -> None:
         """Register an adapter."""
+        # The adapter set is an input to every result, so adding one invalidates
+        # the snapshot just as a new reading does.
+        self._revision += 1
         if isinstance(adapter, GridAdapter):
             self.grid_adapter = adapter
             _LOGGER.debug(f"Registered Grid adapter: {adapter}.")

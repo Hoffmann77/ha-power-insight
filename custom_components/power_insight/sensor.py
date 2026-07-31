@@ -70,6 +70,9 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     exists_fn: Callable[..., bool] = lambda _: True
     value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
     transform_fn: Callable[[float], float] = lambda value: value
+    # Optional uid-keyed dict of extra state attributes for a per-adapter
+    # sensor, published alongside the value.
+    attributes_fn: Callable[[PowerInsight], dict[str, float]] | None = None
     # When True, a per-adapter sensor scales its displayed value by the
     # adapter's correction factor (levelized quantities only).
     apply_correction_factor: bool = False
@@ -1253,6 +1256,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.sink_adapters_coo_rates,
+        attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
@@ -1265,6 +1269,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.sink_adapters_lcoo_rates,
+        attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
 )
 
@@ -1904,6 +1909,18 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
             if self.entity_description.apply_correction_factor:
                 value = value * self.device_adapter.correction_factor
         return value
+
+    @property
+    def extra_state_attributes(self) -> dict[str, float] | None:
+        """Return the description's extra attributes for this adapter."""
+        attributes_fn = self.entity_description.attributes_fn
+        if attributes_fn is None or not self.device_adapter.power_source_uids:
+            # Only meaningful for a device restricted to specific sources.
+            return None
+
+        values = attributes_fn(self.power_insight) or {}
+
+        return {"restriction_deficit": round(values.get(self.device_adapter.uid, 0.0), 1)}
 
 
 class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):

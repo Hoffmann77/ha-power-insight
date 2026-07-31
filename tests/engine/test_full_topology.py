@@ -174,21 +174,21 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_gross_power(self, power_insight):
         assert power_insight.gross_power == 4500.0
 
-    def test_source_and_sink_power_arrays(self, power_insight):
+    def test_source_and_sink_power_lists(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_power
         assert src_index == ...
-        assert src_arr.tolist() == ...
+        assert src_arr == ...
         sink_arr, sink_index = power_insight.sink_adapters_power
         assert sink_index == ...
-        assert sink_arr.tolist() == ...
+        assert sink_arr == ...
 
     def test_gross_power_shares(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
         assert src_index == ["grid", "pv1", "pv2"]
-        assert src_arr.tolist() == [1/3, 4/9, 2/9]
+        assert src_arr == [1/3, 4/9, 2/9]
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
         assert sink_index == ["bat1", "bat2", "bat3", "cons1", "cons2"]
-        assert sink_arr.tolist() == [4/45, 2/9, 2/15, 7/45, 1/15]
+        assert sink_arr == [4/45, 2/9, 2/15, 7/45, 1/15]
 
     # -- Gross-power channel ratios (EXP / CON / CHG / STB) ---------------
 
@@ -214,10 +214,12 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     # -- Source provenance (three-tier: priority / home / leftover) -------
 
     def test_source_provenance(self, power_insight):
-        # priority: bat2, cons2 (PV-only) share the pv1/pv2 pool;
-        # home base load (1400 W) eats remaining local, grid as fallback;
-        # leftover: bat1 (whole mix), bat3 (grid+pv1), cons1 (unrestricted).
-        assert power_insight.sink_adapters_source_shares == {
+        # bat2/cons2 are captive to the pv1/pv2 pool; bat3 is anchored to the
+        # grid and takes it outright; bat1, cons1 and the home base load share
+        # what is left. Compared row by row with ``pytest.approx``: these are
+        # exact fractions, but the engine reaches them by a different arithmetic
+        # route, so the last bit of the float need not match.
+        expected = {
             "bat1": {
                 "grid": 9/26,
                 "pv1": 17/39,
@@ -244,6 +246,10 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
                 "pv2": 1/3,
             },
         }
+        actual = power_insight.sink_adapters_source_shares
+        assert actual.keys() == expected.keys()
+        for uid, row in expected.items():
+            assert actual[uid] == pytest.approx(row)
 
     def test_source_provenance_rows_sum_to_one(self, power_insight):
         # Invariant: every sink's provenance row sums to 1 (or 0 when its
@@ -466,10 +472,10 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_gross_power_shares_export(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
         assert src_index == ...
-        assert src_arr.tolist() == ...
+        assert src_arr == ...
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
         assert sink_index == ...
-        assert sink_arr.tolist() == ...
+        assert sink_arr == ...
 
     # -- Gross-power channel ratios (export + standby non-zero) -----------
 

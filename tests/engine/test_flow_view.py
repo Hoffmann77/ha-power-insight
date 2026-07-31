@@ -107,7 +107,7 @@ class TestFlowPartition(EngineScenario):
     def test_source_shares_vector_is_empty(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
         assert index == []
-        assert arr.tolist() == []
+        assert arr == []
 
     def test_source_shares_dict_is_empty(self, power_insight):
         assert power_insight.sink_adapters_source_shares == {}
@@ -138,13 +138,13 @@ class TestGrossPowerShares(EngineScenario):
     def test_source_shares_sum_to_one(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
         assert index == ["grid", "pv1"]
-        assert arr.tolist() == pytest.approx([0.5, 0.5])
-        assert arr.sum() == pytest.approx(1.0)
+        assert arr == pytest.approx([0.5, 0.5])
+        assert sum(arr) == pytest.approx(1.0)
 
     def test_sink_shares_need_not_sum_to_one(self, power_insight):
         arr, index = power_insight.sink_adapters_gross_power_shares
         assert index == ["cons1"]
-        assert arr.tolist() == pytest.approx([0.25])  # remainder is home load
+        assert arr == pytest.approx([0.25])  # remainder is home load
 
     # -----------------------------------------------------------------------
     # Block 2 — pure export: no source provides, so gross power is 0. The share
@@ -167,9 +167,9 @@ class TestGrossPowerShares(EngineScenario):
     def test_zero_gross_sink_share_guards_to_zero(self, power_insight):
         arr, index = power_insight.sink_adapters_gross_power_shares
         assert index == ["grid"]
-        assert arr.tolist() == pytest.approx([0.0])  # guarded, not a ZeroDivision
+        assert arr == pytest.approx([0.0])  # guarded, not a ZeroDivision
 
     def test_zero_gross_source_shares_empty(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
         assert index == []
-        assert arr.tolist() == []
+        assert arr == []
