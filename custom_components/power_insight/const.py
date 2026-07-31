@@ -219,6 +219,9 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
     "consumer": {
         CONF_CALCULATE_COST_RATES,
         CONF_CALCULATE_LEVELIZED_COST_RATES,
+        # A consumer has a saving to report now: the sink-side avoided cost,
+        # what it did not pay the grid because local generation served it.
+        CONF_CALCULATE_COST_SAVING_RATES,
         CONF_ENABLE_DISTRIBUTION_SHARES,
         CONF_ENABLE_POWER_SOURCE_SHARES,
     },

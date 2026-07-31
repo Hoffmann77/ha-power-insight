@@ -262,8 +262,8 @@ POWER_INSIGHT_SENSORS = (
         lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
-        key="combined_operating_cost_rate",
-        name="Operating cost rate",
+        key="combined_charging_cost_rate",
+        name="Charging cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -271,11 +271,11 @@ POWER_INSIGHT_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.combined_coo_rate,
+        value_fn=lambda obj: obj.combined_charging_cost_rate,
     ),
     PowerInsightSensorDescription(
-        key="combined_levelized_operating_cost_rate",
-        name="Levelized operating cost rate",
+        key="combined_levelized_charging_cost_rate",
+        name="Levelized charging cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -284,6 +284,57 @@ POWER_INSIGHT_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.combined_lcoo_rate_corrected,
+        lcoe_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_consumption_cost_rate",
+        name="Consumption cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_consumption_cost_rate,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_levelized_consumption_cost_rate",
+        name="Levelized consumption cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_levelized_consumption_cost_rate,
+        lcoe_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_standby_cost_rate",
+        name="Standby cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_levelized_standby_cost_rate,
+        lcoe_gated=True,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_export_cost_rate",
+        name="Export cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_levelized_export_cost_rate,
         lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
@@ -315,8 +366,8 @@ POWER_INSIGHT_SENSORS = (
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
-        key="combined_total_operating_cost",
-        name="Total operating cost",
+        key="combined_total_charging_cost",
+        name="Total charging cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -324,7 +375,19 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.combined_coo_rate,
+        integration_value_fn=lambda obj: obj.combined_charging_cost_rate,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="combined_total_consumption_cost",
+        name="Total consumption cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.combined_consumption_cost_rate,
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_financial_return",
@@ -1271,6 +1334,18 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.sink_adapters_lcoo_rates,
         attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
+    PowerInsightSensorDescription(
+        key="avoided_cost_rate",
+        name="Avoided cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.sink_adapters_avoided_cost_rates,
+    ),
 )
 
 POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS: tuple[
@@ -1352,14 +1427,19 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "import_cost_rate": CONF_CALCULATE_COST_RATES,                # grid
     "operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_cost_rate": CONF_CALCULATE_COST_RATES,
-    "combined_operating_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_charging_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_consumption_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_price_of_electricity": CONF_CALCULATE_COST_RATES,
     # --- Levelized cost rates ---
     "levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_price_of_electricity": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
-    "combined_levelized_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_charging_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_consumption_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_standby_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_export_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     # --- Cost savings rates ---
+    "avoided_cost_rate": CONF_CALCULATE_COST_SAVING_RATES,
     "cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
     "combined_cost_savings_rate": CONF_CALCULATE_COST_SAVING_RATES,
     # --- Levelized cost savings rates ---
@@ -1374,7 +1454,8 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     # --- Accumulated costs ---
     "total_import_cost": CONF_ACCUMULATE_COST_RATES,              # grid
     "total_operating_cost": CONF_ACCUMULATE_COST_RATES,
-    "combined_total_operating_cost": CONF_ACCUMULATE_COST_RATES,
+    "combined_total_charging_cost": CONF_ACCUMULATE_COST_RATES,
+    "combined_total_consumption_cost": CONF_ACCUMULATE_COST_RATES,
     "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     "combined_total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---

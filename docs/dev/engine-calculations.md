@@ -180,9 +180,11 @@ routing is the provenance allocation, not a proportional guess.
 
     The pre-existing `combined_total_operating_cost` measured the CHG channel
     alone while being named as if it covered everything, which is why per-device
-    operating costs never summed to it. It becomes
-    `combined_charging_cost_rate`; CON and STB are new quantities and start
-    from zero.
+    operating costs never summed to it. It is replaced outright by
+    `combined_total_charging_cost` — a clean break rather than a rename, so the
+    accumulated history does not carry over. The integration is still in
+    development, so no repair issue is raised for it. CON, STB and EXP are new
+    quantities and start from zero.
 
 ### Savings are booked per device, at the moment they are realized
 

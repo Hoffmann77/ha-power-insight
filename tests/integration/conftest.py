@@ -92,6 +92,7 @@ FULL_OPTIONS = {
         ],
         "consumer": [
             "calculate_cost_rates", "calculate_levelized_cost_rates",
+            "calculate_cost_saving_rates",
             "enable_power_source_shares",
         ],
     },
