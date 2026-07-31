@@ -158,7 +158,7 @@ async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> No
     await hass.async_block_till_done()
 
     pi = entry.runtime_data.power_insight
-    base = pi.source_adapters_levelized_cost_saving_rates.get(PV_SUB_ID)
+    base = pi.adapters_levelized_saving_rates.get(PV_SUB_ID)
     state = _pv_state(hass, entry, f"{PV_SUB_ID}_levelized_cost_savings_rate")
     assert state is not None
     assert base is not None
@@ -203,7 +203,7 @@ async def test_combined_ledger_sensor_includes_retired_totals(
     await setup_integration(hass, entry)
 
     ent_reg = er.async_get(hass)
-    uid = f"{entry.entry_id}_combined_total_levelized_operating_cost"
+    uid = f"{entry.entry_id}_combined_total_levelized_device_operating_cost"
     entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
     assert entity_id is not None
     state = hass.states.get(entity_id)

@@ -287,6 +287,31 @@ POWER_INSIGHT_SENSORS = (
         lcoe_gated=True,
     ),
     PowerInsightSensorDescription(
+        key="combined_device_operating_cost_rate",
+        name="Device operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_device_operating_cost_rate,
+    ),
+    PowerInsightSensorDescription(
+        key="combined_levelized_device_operating_cost_rate",
+        name="Levelized device operating cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.combined_levelized_device_operating_cost_rate_corrected,
+        lcoe_gated=True,
+    ),
+    PowerInsightSensorDescription(
         key="combined_consumption_cost_rate",
         name="Consumption cost rate",
         icon="mdi:currency-eur",
@@ -431,7 +456,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
 # Maps each combined ledger sensor key to the per-adapter accumulated key it
 # sums over.
 COMBINED_LEDGER_ADAPTER_KEYS: dict[str, str] = {
-    "combined_total_levelized_operating_cost": "total_levelized_operating_cost",
+    "combined_total_levelized_device_operating_cost": "total_levelized_operating_cost",
     "combined_total_levelized_cost_savings": "total_levelized_cost_savings",
     "combined_total_levelized_financial_return": "total_levelized_financial_return",
 }
@@ -442,8 +467,8 @@ LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
 
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
-        key="combined_total_levelized_operating_cost",
-        name="Total levelized operating cost",
+        key="combined_total_levelized_device_operating_cost",
+        name="Total levelized device operating cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -807,7 +832,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.source_adapters_financial_return_rates,
+        value_fn=lambda obj: obj.adapters_financial_return_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
@@ -820,7 +845,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
+        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -859,7 +884,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
+        value_fn=lambda obj: obj.adapters_saving_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
@@ -872,7 +897,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
+        value_fn=lambda obj: obj.adapters_levelized_saving_rates,
         apply_correction_factor=True,
     ),
 )
@@ -927,7 +952,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.adapters_saving_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
@@ -940,7 +965,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.adapters_levelized_saving_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -953,7 +978,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.source_adapters_financial_return_rates,
+        integration_value_fn=lambda obj: obj.adapters_financial_return_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
@@ -966,7 +991,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
+        integration_value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
 )
@@ -1127,7 +1152,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.source_adapters_financial_return_rates,
+        value_fn=lambda obj: obj.adapters_financial_return_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
@@ -1140,7 +1165,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
+        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
     PowerInsightSensorDescription(
@@ -1179,7 +1204,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
+        value_fn=lambda obj: obj.adapters_saving_rates,
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
@@ -1192,7 +1217,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
+        value_fn=lambda obj: obj.adapters_levelized_saving_rates,
         apply_correction_factor=True,
     ),
 )
@@ -1247,7 +1272,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.source_adapters_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.adapters_saving_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
@@ -1260,7 +1285,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.source_adapters_levelized_cost_saving_rates,
+        integration_value_fn=lambda obj: obj.adapters_levelized_saving_rates,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -1273,7 +1298,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         entities_fn=lambda obj: (
             obj.source_entities_price + obj.source_entities_power
         ),
-        integration_value_fn=lambda obj: obj.source_adapters_financial_return_rates,
+        integration_value_fn=lambda obj: obj.adapters_financial_return_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
@@ -1286,7 +1311,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        integration_value_fn=lambda obj: obj.source_adapters_levelized_financial_return_rates,
+        integration_value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
         apply_correction_factor=True,
     ),
 )
@@ -1428,6 +1453,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_charging_cost_rate": CONF_CALCULATE_COST_RATES,
+    "combined_device_operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_consumption_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_price_of_electricity": CONF_CALCULATE_COST_RATES,
     # --- Levelized cost rates ---
@@ -1435,6 +1461,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "combined_levelized_price_of_electricity": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_charging_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
+    "combined_levelized_device_operating_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_levelized_consumption_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_standby_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
     "combined_export_cost_rate": CONF_CALCULATE_LEVELIZED_COST_RATES,
@@ -1457,7 +1484,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "combined_total_charging_cost": CONF_ACCUMULATE_COST_RATES,
     "combined_total_consumption_cost": CONF_ACCUMULATE_COST_RATES,
     "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
-    "combined_total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+    "combined_total_levelized_device_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---
     "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,

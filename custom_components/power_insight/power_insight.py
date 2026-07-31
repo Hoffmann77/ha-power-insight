@@ -1328,14 +1328,18 @@ class PowerInsight:
             for a in self.sink_adapters
         }
 
-    def _own_draw_cost_rates(self, *, levelized: bool) -> dict:
+    def _own_draw_cost_rates(
+        self, *, levelized: bool, corrected: bool = False,
+    ) -> dict:
         """Return ``{uid: EUR/h}`` for each PV/battery's own draw, 0.0 if none."""
         if self.gross_power is None:
             return {}
 
         return {
             a.uid: (
-                self._sink_cost_rate(a.uid, levelized=levelized)
+                self._sink_cost_rate(
+                    a.uid, levelized=levelized, corrected=corrected,
+                )
                 if a.flow_role is FlowRole.SINK else 0.0
             )
             for a in self.prod_adapters
@@ -1445,6 +1449,30 @@ class PowerInsight:
     def combined_lcoo_rate(self) -> float | None:
         """Combined levelized cost-of-operations rate (EUR/h)."""
         return self.combined_levelized_charging_cost_rate
+
+    @property
+    def combined_device_operating_cost_rate(self) -> float | None:
+        """What running the PV and battery hardware itself costs (EUR/h).
+
+        The *device* view of operating cost: every PV's and battery's own draw
+        — charging plus PV standby — as opposed to the *channel* view in
+        ``combined_charging_cost_rate``, which is charging alone. The two agree
+        whenever nothing is in standby, and this is the one the per-device
+        operating-cost sensors sum to.
+        """
+        return self._sum_rates(self._own_draw_cost_rates(levelized=False))
+
+    @property
+    def combined_levelized_device_operating_cost_rate(self) -> float | None:
+        """Levelized cost of running the PV and battery hardware (EUR/h)."""
+        return self._sum_rates(self._own_draw_cost_rates(levelized=True))
+
+    @property
+    def combined_levelized_device_operating_cost_rate_corrected(self) -> float | None:
+        """Levelized device operating cost with the source corrections applied."""
+        return self._sum_rates(
+            self._own_draw_cost_rates(levelized=True, corrected=True)
+        )
 
     @property
     def combined_saving_rate(self) -> float | None:
