@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from enum import Enum
 from typing import Any, Callable
 
@@ -131,6 +130,16 @@ _FLOW_SRC = "\x00source"
 _FLOW_DST = "\x00sink"
 #: The unmetered home base load, as a sink in the solve. Never reported.
 _HOME = "\x00home"
+#: The four channels gross power is partitioned into. Every watt entering the
+#: system is bought once and lands in exactly one of them, which is what makes
+#: the cost buckets conserve.
+_CHANNEL_CONSUMPTION = "consumption"
+_CHANNEL_CHARGING = "charging"
+_CHANNEL_STANDBY = "standby"
+_CHANNEL_EXPORT = "export"
+_CHANNELS = (
+    _CHANNEL_CONSUMPTION, _CHANNEL_CHARGING, _CHANNEL_STANDBY, _CHANNEL_EXPORT,
+)
 #: A restriction that permits *nothing*. The empty tuple already means the
 #: opposite (unrestricted, the whole mix), so a sink that may draw no source at
 #: all needs a non-empty restriction no real uid can match.
@@ -644,22 +653,48 @@ class PowerInsight:
     @property
     def source_entities(self) -> list[str]:
         """Return every source entity across all adapters."""
-        pass
+        return self._unique(
+            self.source_entities_power
+            + self.source_entities_price
+            + self.source_entities_co2
+        )
 
     @property
     def source_entities_power(self) -> list[str]:
         """Return every entity that affects a power result."""
-        pass
+        return self._unique([
+            entity
+            for adapter in self._all_adapters
+            for entity in adapter.source_entities_power
+        ])
 
     @property
     def source_entities_price(self) -> list[str]:
         """Return every entity that affects a price result."""
-        pass
+        return self._unique([
+            entity
+            for adapter in self._all_adapters
+            for entity in adapter.source_entities_price
+        ])
 
     @property
     def source_entities_co2(self) -> list[str]:
         """Return every entity that affects a CO2 result."""
-        pass
+        return self._unique([
+            entity
+            for adapter in self._all_adapters
+            for entity in adapter.source_entities_co2
+        ])
+
+    @property
+    def _all_adapters(self) -> list:
+        """Every registered adapter, grid first then registration order."""
+        return [self.grid_adapter] + self._non_grid_adapters
+
+    @staticmethod
+    def _unique(entities: list[str]) -> list[str]:
+        """De-duplicate while keeping first-seen order."""
+        return list(dict.fromkeys(entities))
 
     # -------------------------------------------------------------->
     # COMBINED POWER VALUES
@@ -892,7 +927,9 @@ class PowerInsight:
         allocation, deficit = _allocate(
             supply, demand, allowed, self.grid_adapter.uid
         )
-        allocation.pop(_HOME, None)
+        # ``_HOME`` deliberately stays in the allocation: the monetary layer
+        # needs the home base load's own mix, and ``sink_adapters_source_shares``
+        # filters it back out so the public row set is adapters only.
         for uid in stranded:
             allocation[uid] = {source_uid: 0.0 for source_uid in supply}
             # Not one watt of it could come from a configured source, so the
@@ -934,6 +971,8 @@ class PowerInsight:
 
         shares = {}
         for uid, row in allocation.items():
+            if uid == _HOME:
+                continue  # published as home_base_load_source_shares instead
             total = sum(row.values())
             shares[uid] = {
                 source_uid: (watts / total if total > _EPS else 0.0)
@@ -1012,83 +1051,485 @@ class PowerInsight:
         return self._divide(consumption, gross - export - charging)
 
     # -------------------------------------------------------------->
+    # MONETARY CORE
+    #
+    # Everything below this point is priced from two things: the provenance
+    # allocation (which watts came from where) and each source's own price.
+    # Keeping that in one place is what makes the ledgers add up — see
+    # docs/dev/engine-calculations.md for the model and its invariants.
+    # -------------------------------------------------------------->
+
+    def _sink_channel(self, uid: str) -> str:
+        """Return which of the four channels a drawing adapter belongs to."""
+        if uid == _HOME:
+            return _CHANNEL_CONSUMPTION
+        if uid == self.grid_adapter.uid:
+            return _CHANNEL_EXPORT
+        if uid in self.storage_adapters.uid_mapping:
+            return _CHANNEL_CHARGING
+        if uid in self.pv_system_adapters.uid_mapping:
+            return _CHANNEL_STANDBY
+
+        return _CHANNEL_CONSUMPTION
+
+    @property
+    def _channel_source_power(self) -> dict[str, dict[str, float]]:
+        """Return ``{channel: {source_uid: watts}}`` for the four channels.
+
+        The channel split of every source's output, routed through the
+        provenance allocation rather than apportioned by gross share — which is
+        what keeps a source's four channel figures summing back to its reading.
+        The home base load is part of the consumption channel.
+        """
+        def compute() -> dict[str, dict[str, float]]:
+            allocation, _ = self._source_allocation
+            source_uids = [adapter.uid for adapter in self.source_adapters]
+            channels = {
+                channel: dict.fromkeys(source_uids, 0.0)
+                for channel in _CHANNELS
+            }
+            for sink_uid, row in allocation.items():
+                channel = channels[self._sink_channel(sink_uid)]
+                for source_uid, watts in row.items():
+                    if source_uid in channel:
+                        channel[source_uid] += watts
+
+            return channels
+
+        return self._snapshot_cached("channel_source_power", compute)
+
+    def _source_price(
+        self, adapter, *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Return what one kWh from ``adapter`` costs (EUR/kWh).
+
+        Marginal (``levelized=False``) is the grid tariff for the grid and zero
+        for local generation — its fuel is free. Levelized adds the device's own
+        LCOE/LCOS. ``corrected`` applies the device's correction factor, so an
+        edited lifetime cost is reflected.
+        """
+        price = adapter.lcoe if levelized else adapter.coe
+        if price is None:
+            return None
+
+        return price * adapter.correction_factor if corrected else price
+
+    def _priced(
+        self, watts: dict[str, float], *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Price a ``{source_uid: watts}`` mapping at its sources' prices."""
+        total = 0.0
+        for source_uid, value in watts.items():
+            adapter = self.get_adapter_by_uid(source_uid)
+            if adapter is None:
+                return None
+            price = self._source_price(
+                adapter, levelized=levelized, corrected=corrected,
+            )
+            if price is None:
+                return None
+            total += self._to_kilo(value) * price
+
+        return total
+
+    def _channel_cost_rate(
+        self, channel: str, *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Return what the watts routed into ``channel`` cost (EUR/h)."""
+        if self.gross_power is None:
+            return None
+
+        return self._priced(
+            self._channel_source_power[channel],
+            levelized=levelized,
+            corrected=corrected,
+        )
+
+    def _gross_cost_rate(
+        self, *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Return what all the power entering the system costs (EUR/h).
+
+        Priced straight off the source readings, deliberately *not* by summing
+        the channel buckets — that keeps the cost-conservation invariant a real
+        check rather than a tautology.
+        """
+        if self.gross_power is None:
+            return None
+
+        power_arr, index = self.source_adapters_power
+
+        return self._priced(
+            dict(zip(index, power_arr)), levelized=levelized, corrected=corrected,
+        )
+
+    def _per_kwh(self, rate: float | None) -> float | None:
+        """Convert an EUR/h rate into an EUR/kWh price over gross power."""
+        gross = self.gross_power
+        if rate is None or gross is None:
+            return None
+
+        return self._divide(rate, self._to_kilo(gross))
+
+    def _sink_cost_rate(
+        self, uid: str, *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Return what one sink's own draw cost (EUR/h), at its source mix."""
+        allocation, _ = self._source_allocation
+        row = allocation.get(uid)
+        if row is None:
+            return None
+
+        return self._priced(row, levelized=levelized, corrected=corrected)
+
+    def _local_watts(self, uid: str) -> float | None:
+        """Return the watts of a sink's draw that did *not* come from the grid."""
+        allocation, _ = self._source_allocation
+        row = allocation.get(uid)
+        if row is None:
+            return None
+
+        return sum(row.values()) - row.get(self.grid_adapter.uid, 0.0)
+
+    def _avoided_cost_rate(self, uid: str) -> float | None:
+        """Return what a sink did not pay the grid for its draw (EUR/h)."""
+        grid_price = self.grid_adapter.coe
+        local = self._local_watts(uid)
+        if grid_price is None or local is None:
+            return None
+
+        return self._to_kilo(local) * grid_price
+
+    def _source_saving_rate(
+        self, adapter, *, levelized: bool, corrected: bool = False,
+    ) -> float | None:
+        """Return what a source earned by serving load instead of the grid.
+
+        Only the consumption channel earns: exported watts are paid through the
+        export compensation, and charging is a cost booked against the battery.
+        The grid earns nothing — it *is* the alternative being priced against.
+        """
+        grid_price = self.grid_adapter.coe
+        if grid_price is None:
+            return None
+        if adapter is self.grid_adapter:
+            return 0.0
+
+        own = self._source_price(adapter, levelized=levelized, corrected=corrected)
+        if own is None:
+            return None
+
+        watts = self._channel_source_power[_CHANNEL_CONSUMPTION].get(adapter.uid, 0.0)
+
+        return self._to_kilo(watts) * (grid_price - own)
+
+    def _export_compensation_rate(self, adapter) -> float | None:
+        """Return what a source is paid for the watts it exported (EUR/h)."""
+        if not getattr(adapter, "exports_power", False):
+            return 0.0
+
+        watts = self._channel_source_power[_CHANNEL_EXPORT].get(adapter.uid, 0.0)
+
+        return self._to_kilo(watts) * getattr(adapter, "export_compensation", 0.0)
+
+    def _adapter_saving_rates(
+        self, *, levelized: bool, corrected: bool = False,
+    ) -> dict[str, float | None]:
+        """Return ``{uid: EUR/h}`` savings for every PV and battery.
+
+        Every device appears in every flow role: producing or discharging earns,
+        charging or drawing standby costs, and idle reads ``0.0`` rather than
+        going absent — a sensor should not flip unavailable because its device
+        went quiet.
+        """
+        if self.gross_power is None:
+            return {}
+
+        rates: dict[str, float | None] = {}
+        for adapter in self.prod_adapters:
+            if adapter.flow_role is FlowRole.SOURCE:
+                rates[adapter.uid] = self._source_saving_rate(
+                    adapter, levelized=levelized, corrected=corrected,
+                )
+            elif adapter.flow_role is FlowRole.SINK:
+                cost = self._sink_cost_rate(
+                    adapter.uid, levelized=levelized, corrected=corrected,
+                )
+                rates[adapter.uid] = None if cost is None else -cost
+            else:
+                rates[adapter.uid] = 0.0
+
+        return rates
+
+    def _adapter_financial_return_rates(
+        self, *, levelized: bool, corrected: bool = False,
+    ) -> dict[str, float | None]:
+        """Return ``{uid: EUR/h}`` savings plus export earnings, less its cost."""
+        rates: dict[str, float | None] = {}
+        for uid, saving in self._adapter_saving_rates(
+            levelized=levelized, corrected=corrected,
+        ).items():
+            adapter = self.get_adapter_by_uid(uid)
+            compensation = self._export_compensation_rate(adapter)
+            if saving is None or compensation is None:
+                rates[uid] = None
+                continue
+
+            cost = 0.0
+            if levelized:
+                exported = self._channel_source_power[_CHANNEL_EXPORT].get(uid, 0.0)
+                price = self._source_price(
+                    adapter, levelized=True, corrected=corrected,
+                )
+                if price is None:
+                    rates[uid] = None
+                    continue
+                cost = self._to_kilo(exported) * price
+
+            rates[uid] = saving + compensation - cost
+
+        return rates
+
+    def _channel_power(self, channel: str) -> dict:
+        """Return ``{source_uid: watts}`` routed into ``channel``."""
+        if self.gross_power is None:
+            return {}
+
+        return dict(self._channel_source_power[channel])
+
+    def _channel_shares(self, channel: str) -> dict:
+        """Return each source's share of ``channel``'s total watts."""
+        watts = self._channel_power(channel)
+        total = sum(watts.values())
+
+        return {uid: self._divide(value, total) for uid, value in watts.items()}
+
+    def _channel_ratios(self, channel: str) -> dict:
+        """Return the fraction of each source's own output going to ``channel``."""
+        watts = self._channel_power(channel)
+        if not watts:
+            return {}
+
+        power_arr, index = self.source_adapters_power
+        readings = dict(zip(index, power_arr))
+
+        return {
+            uid: self._divide(value, readings.get(uid, 0.0))
+            for uid, value in watts.items()
+        }
+
+    def _sink_cost_rates(self, *, levelized: bool) -> dict:
+        """Return ``{sink_uid: EUR/h}`` for every currently drawing adapter."""
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: self._sink_cost_rate(a.uid, levelized=levelized)
+            for a in self.sink_adapters
+        }
+
+    def _own_draw_cost_rates(self, *, levelized: bool) -> dict:
+        """Return ``{uid: EUR/h}`` for each PV/battery's own draw, 0.0 if none."""
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: (
+                self._sink_cost_rate(a.uid, levelized=levelized)
+                if a.flow_role is FlowRole.SINK else 0.0
+            )
+            for a in self.prod_adapters
+        }
+
+    def _sum_rates(self, rates: dict[str, float | None]) -> float | None:
+        """Sum a rate mapping, propagating ``None`` from any missing member."""
+        total = 0.0
+        for value in rates.values():
+            if value is None:
+                return None
+            total += value
+
+        return total
+
+    # -------------------------------------------------------------->
     # COMBINED MONETARY RATES
     # -------------------------------------------------------------->
 
     @property
     def combined_export_compensation_rate(self) -> float | None:
         """Combined export compensation rate (EUR/h)."""
-        pass
+        if self.gross_power is None:
+            return None
+
+        return self._sum_rates({
+            adapter.uid: self._export_compensation_rate(adapter)
+            for adapter in self.source_adapters
+        })
 
     @property
     def combined_avoided_cost_rate(self) -> float | None:
-        """Combined avoided-cost rate from self-consumption (EUR/h)."""
-        pass
+        """Combined avoided-cost rate from self-consumption (EUR/h).
+
+        What the local generation feeding the house saved against buying the
+        same energy from the grid. Published from both ends — see
+        ``sink_adapters_avoided_cost_rates`` — which measure the same euro, so
+        the two sides must never be added together.
+        """
+        if self.gross_power is None:
+            return None
+
+        return self._sum_rates(self.source_adapters_avoided_cost_rates)
+
+    # -- Channel cost buckets ---------------------------------------------
+
+    @property
+    def combined_consumption_cost_rate(self) -> float | None:
+        """Cost of the watts the house consumed (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_CONSUMPTION, levelized=False)
+
+    @property
+    def combined_charging_cost_rate(self) -> float | None:
+        """Cost of the watts charged into the batteries (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_CHARGING, levelized=False)
+
+    @property
+    def combined_standby_cost_rate(self) -> float | None:
+        """Cost of the watts lost to device standby (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_STANDBY, levelized=False)
+
+    @property
+    def combined_export_cost_rate(self) -> float | None:
+        """Cost of producing the watts that were exported (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_EXPORT, levelized=False)
+
+    @property
+    def combined_levelized_consumption_cost_rate(self) -> float | None:
+        """Levelized cost of the watts the house consumed (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_CONSUMPTION, levelized=True)
+
+    @property
+    def combined_levelized_charging_cost_rate(self) -> float | None:
+        """Levelized cost of the watts charged into the batteries (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_CHARGING, levelized=True)
+
+    @property
+    def combined_levelized_standby_cost_rate(self) -> float | None:
+        """Levelized cost of the watts lost to device standby (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_STANDBY, levelized=True)
+
+    @property
+    def combined_levelized_export_cost_rate(self) -> float | None:
+        """Levelized cost of producing the watts that were exported (EUR/h)."""
+        return self._channel_cost_rate(_CHANNEL_EXPORT, levelized=True)
 
     @property
     def combined_coe_rate(self) -> float | None:
         """Combined cost-of-electricity rate (EUR/h)."""
-        pass
+        return self._gross_cost_rate(levelized=False)
 
     @property
     def combined_lcoe_rate(self) -> float | None:
         """Combined levelized cost-of-electricity rate (EUR/h)."""
-        pass
+        return self._gross_cost_rate(levelized=True)
 
     @property
     def combined_coo_rate(self) -> float | None:
-        """Combined cost-of-operations rate (EUR/h)."""
-        pass
+        """Combined cost-of-operations rate (EUR/h).
+
+        The charging channel: what went into the batteries. Identical to
+        ``combined_charging_cost_rate``, which is the name that says so.
+        """
+        return self.combined_charging_cost_rate
 
     @property
     def combined_lcoo_rate(self) -> float | None:
         """Combined levelized cost-of-operations rate (EUR/h)."""
-        pass
+        return self.combined_levelized_charging_cost_rate
 
     @property
     def combined_saving_rate(self) -> float | None:
         """Combined cost-saving rate (EUR/h)."""
-        pass
+        return self._sum_rates(self._adapter_saving_rates(levelized=False))
 
     @property
     def combined_levelized_saving_rate(self) -> float | None:
         """Combined levelized cost-saving rate (EUR/h)."""
-        pass
+        return self._sum_rates(self._adapter_saving_rates(levelized=True))
 
     @property
     def combined_lcoe_rate_corrected(self) -> float | None:
         """Combined levelized cost rate with per-adapter correction applied."""
-        pass
+        return self._gross_cost_rate(levelized=True, corrected=True)
 
     @property
     def combined_lcoo_rate_corrected(self) -> float | None:
         """Combined levelized operating-cost rate with correction applied."""
-        pass
+        return self._channel_cost_rate(
+            _CHANNEL_CHARGING, levelized=True, corrected=True,
+        )
 
     @property
     def combined_levelized_saving_rate_corrected(self) -> float | None:
         """Combined levelized saving rate with correction applied."""
-        pass
+        return self._sum_rates(
+            self._adapter_saving_rates(levelized=True, corrected=True)
+        )
 
     @property
     def combined_financial_return_rate(self) -> float | None:
         """Combined financial return rate (savings + export compensation)."""
-        pass
+        return self._sum_rates(self._adapter_financial_return_rates(levelized=False))
 
     @property
     def combined_levelized_financial_return_rate(self) -> float | None:
         """Combined levelized financial return rate (base)."""
-        pass
+        return self._sum_rates(self._adapter_financial_return_rates(levelized=True))
 
     @property
     def combined_levelized_financial_return_rate_corrected(self) -> float | None:
         """Combined levelized financial return rate with correction applied."""
-        pass
+        return self._sum_rates(
+            self._adapter_financial_return_rates(levelized=True, corrected=True)
+        )
 
     @property
     def levelized_correction_factors(self) -> dict[str, float]:
         """Return uid -> correction_factor for prod adapters with an LCOE."""
-        pass
+        return {
+            adapter.uid: adapter.correction_factor
+            for adapter in self.prod_adapters
+            if adapter.lcoe is not None
+        }
+
+    # -------------------------------------------------------------->
+    # PER-DEVICE SAVINGS
+    # -------------------------------------------------------------->
+
+    # The P&L, decomposed over the devices that earned or spent it. Keyed by
+    # every PV and battery in every flow role, so these sum to the combined
+    # saving. Consumers are deliberately absent: a load running on PV is the
+    # same saved euro as the PV supplying it, and it is reported there and as
+    # sink_adapters_avoided_cost_rates -- never added to both.
+
+    @property
+    def adapters_saving_rates(self) -> dict:
+        """Cost-saving rate per PV/battery (EUR/h); negative while drawing."""
+        return self._adapter_saving_rates(levelized=False)
+
+    @property
+    def adapters_levelized_saving_rates(self) -> dict:
+        """Levelized cost-saving rate per PV/battery (EUR/h)."""
+        return self._adapter_saving_rates(levelized=True)
+
+    @property
+    def adapters_financial_return_rates(self) -> dict:
+        """Saving plus export earnings per PV/battery (EUR/h)."""
+        return self._adapter_financial_return_rates(levelized=False)
+
+    @property
+    def adapters_levelized_financial_return_rates(self) -> dict:
+        """Levelized saving plus export earnings, less export cost (EUR/h)."""
+        return self._adapter_financial_return_rates(levelized=True)
 
     # -------------------------------------------------------------->
     # COMBINED PRICES
@@ -1097,12 +1538,12 @@ class PowerInsight:
     @property
     def combined_coe(self) -> float | None:
         """Combined cost of electricity (EUR/kWh)."""
-        pass
+        return self._per_kwh(self.combined_coe_rate)
 
     @property
     def combined_lcoe(self) -> float | None:
         """Combined levelized cost of electricity (EUR/kWh)."""
-        pass
+        return self._per_kwh(self.combined_lcoe_rate)
 
     # -------------------------------------------------------------->
     # SOURCE ADAPTERS
@@ -1115,122 +1556,190 @@ class PowerInsight:
     @property
     def source_adapters_export_power(self) -> dict:
         """Watts of each source's output that is exported."""
-        pass
+        return self._channel_power(_CHANNEL_EXPORT)
 
     @property
     def source_adapters_export_shares(self) -> dict:
         """Each source's share of total exported power."""
-        pass
+        return self._channel_shares(_CHANNEL_EXPORT)
 
     @property
     def source_adapters_export_ratios(self) -> dict:
         """Fraction of each source's output that is exported."""
-        pass
+        return self._channel_ratios(_CHANNEL_EXPORT)
 
     @property
     def source_adapters_consumption_power(self) -> dict:
         """Watts of each source's output that is self-consumed."""
-        pass
+        return self._channel_power(_CHANNEL_CONSUMPTION)
 
     @property
     def source_adapters_consumption_shares(self) -> dict:
         """Each source's share of total self-consumption."""
-        pass
+        return self._channel_shares(_CHANNEL_CONSUMPTION)
 
     @property
     def source_adapters_consumption_ratios(self) -> dict:
         """Fraction of each source's output that is self-consumed."""
-        pass
+        return self._channel_ratios(_CHANNEL_CONSUMPTION)
 
     @property
     def source_adapters_charging_power(self) -> dict:
         """Watts of each source's output that goes to battery charging."""
-        pass
+        return self._channel_power(_CHANNEL_CHARGING)
 
     @property
     def source_adapters_charging_shares(self) -> dict:
         """Each source's share of total charging power."""
-        pass
+        return self._channel_shares(_CHANNEL_CHARGING)
 
     @property
     def source_adapters_charging_ratios(self) -> dict:
         """Fraction of each source's output that goes to charging."""
-        pass
+        return self._channel_ratios(_CHANNEL_CHARGING)
 
     @property
     def source_adapters_standby_power(self) -> dict:
         """Watts of each source's output that goes to device standby."""
-        pass
+        return self._channel_power(_CHANNEL_STANDBY)
 
     @property
     def source_adapters_standby_shares(self) -> dict:
         """Each source's share of total standby power."""
-        pass
+        return self._channel_shares(_CHANNEL_STANDBY)
 
     @property
     def source_adapters_standby_ratios(self) -> dict:
         """Fraction of each source's output that goes to standby."""
-        pass
+        return self._channel_ratios(_CHANNEL_STANDBY)
 
     @property
     def source_adapters_coe_rate(self) -> dict:
         """Cost-of-electricity rate per source (EUR/h)."""
-        pass
+        return {a.uid: a.coe_rate for a in self.source_adapters}
 
     @property
     def source_adapters_lcoe_rate(self) -> dict:
         """Levelized cost-of-electricity rate per source (EUR/h)."""
-        pass
+        return {a.uid: a.lcoe_rate for a in self.source_adapters}
 
     @property
     def source_adapters_coo_rates(self) -> dict:
-        """Cost-of-operations rate per source (EUR/h)."""
-        pass
+        """Cost-of-operations rate per source (EUR/h).
+
+        What each PV or battery's *own* draw cost — a battery's charging, a PV
+        system's standby — at the price of the mix that supplied it, and zero
+        for a device that is not currently drawing. Keyed by device rather than
+        by sink so the per-device sensor keeps a value whichever role its device
+        is in this snapshot.
+        """
+        return self._own_draw_cost_rates(levelized=False)
 
     @property
     def source_adapters_lcoo_rates(self) -> dict:
         """Levelized cost-of-operations rate per source (EUR/h)."""
-        pass
+        return self._own_draw_cost_rates(levelized=True)
 
     @property
     def source_adapters_export_compensation_rates(self) -> dict:
-        """Export compensation rate per source (EUR/h)."""
-        pass
+        """Export compensation rate per source (EUR/h).
+
+        Zero for a device that may not export — it is never attributed exported
+        watts in the first place, so there is nothing to be paid for.
+        """
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: self._export_compensation_rate(a) for a in self.source_adapters
+        }
 
     @property
     def source_adapters_avoided_cost_rates(self) -> dict:
-        """Avoided-cost rate per source (EUR/h)."""
-        pass
+        """Avoided-cost rate per source (EUR/h).
+
+        What each source's contribution to the consumption channel saved
+        against importing it. The grid reads zero: it is the alternative.
+        """
+        grid_price = self.grid_adapter.coe
+        if self.gross_power is None or grid_price is None:
+            return {}
+
+        watts = self._channel_source_power[_CHANNEL_CONSUMPTION]
+
+        return {
+            a.uid: (
+                0.0 if a is self.grid_adapter
+                else self._to_kilo(watts.get(a.uid, 0.0)) * grid_price
+            )
+            for a in self.source_adapters
+        }
 
     @property
     def source_adapters_cost_saving_rates(self) -> dict:
         """Cost-saving rate per source (EUR/h)."""
-        pass
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: self._source_saving_rate(a, levelized=False)
+            for a in self.source_adapters
+        }
 
     @property
     def source_adapters_levelized_cost_saving_rates(self) -> dict:
         """Levelized cost-saving rate per source (EUR/h)."""
-        pass
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: self._source_saving_rate(a, levelized=True)
+            for a in self.source_adapters
+        }
 
     @property
     def source_adapters_financial_return_rates(self) -> dict:
         """Financial return rate per source (EUR/h)."""
-        pass
+        if self.gross_power is None:
+            return {}
+
+        rates = self._adapter_financial_return_rates(levelized=False)
+
+        return {
+            a.uid: rates.get(a.uid, self._export_compensation_rate(a))
+            for a in self.source_adapters
+        }
 
     @property
     def source_adapters_levelized_financial_return_rates(self) -> dict:
         """Levelized financial return rate per source (EUR/h)."""
-        pass
+        if self.gross_power is None:
+            return {}
+
+        rates = self._adapter_financial_return_rates(levelized=True)
+
+        return {
+            a.uid: rates.get(a.uid, self._export_compensation_rate(a))
+            for a in self.source_adapters
+        }
 
     @property
     def source_adapters_dynamic_coe(self) -> dict[str, float | None]:
-        """Blended cost of electricity per source (EUR/kWh); batteries use their charge mix."""
-        pass
+        """Blended cost of electricity per source (EUR/kWh); batteries use their charge mix.
+
+        A battery only appears here while *discharging*, and the mix it charged
+        on happened earlier — which a snapshot engine cannot see. It therefore
+        falls back to the battery's own flat price, and the marginal side reads
+        zero because that energy's cost was booked when it was charged. The
+        blended mix a battery is charging on right now is on the sink side, as
+        ``sink_adapters_coo_rates``.
+        """
+        return {a.uid: a.coe for a in self.source_adapters}
 
     @property
     def source_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
         """Blended levelized cost of electricity per source (EUR/kWh)."""
-        pass
+        return {a.uid: a.lcoe for a in self.source_adapters}
 
     # -------------------------------------------------------------->
     # SINK ADAPTERS
@@ -1242,18 +1751,96 @@ class PowerInsight:
 
     @property
     def sink_adapters_consumption_shares(self) -> dict:
-        """Each consuming sink's share of total self-consumption."""
-        pass
+        """Each consuming sink's share of total self-consumption.
+
+        These need not sum to 1: the rest of the channel is the unmetered home
+        base load, which has no adapter (see ``home_base_load_power``).
+        """
+        consumption = self.combined_consumption
+        if consumption is None:
+            return {}
+
+        return {
+            a.uid: self._divide(abs(a.power), consumption)
+            for a in self.sink_adapters
+            if self._sink_channel(a.uid) == _CHANNEL_CONSUMPTION
+        }
 
     @property
     def sink_adapters_coo_rates(self) -> dict:
         """Cost-of-operations rate per sink (EUR/h)."""
-        pass
+        return self._sink_cost_rates(levelized=False)
 
     @property
     def sink_adapters_lcoo_rates(self) -> dict:
         """Levelized cost-of-operations rate per sink (EUR/h)."""
-        pass
+        return self._sink_cost_rates(levelized=True)
+
+    @property
+    def sink_adapters_avoided_cost_rates(self) -> dict:
+        """Avoided-cost rate per consuming sink (EUR/h).
+
+        The sink-side view of the euro ``source_adapters_avoided_cost_rates``
+        reports from the other end: what this load did not pay the grid. Only
+        the consumption channel qualifies — a charging battery has not saved
+        anything yet, and exported watts are paid for rather than avoided. Add
+        ``home_base_load_avoided_cost_rate`` for the whole channel, and never
+        add the source side to the sink side.
+        """
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: self._avoided_cost_rate(a.uid)
+            for a in self.sink_adapters
+            if self._sink_channel(a.uid) == _CHANNEL_CONSUMPTION
+        }
+
+    # -------------------------------------------------------------->
+    # HOME BASE LOAD
+    # -------------------------------------------------------------->
+
+    # Everything consumed without a sensor on it. It takes part in the solve as
+    # an ordinary unrestricted sink, and is surfaced through its own properties
+    # rather than as a row in the sink families — a dict key would need a uid,
+    # and any readable one can collide with a user's slugified device name.
+
+    @property
+    def home_base_load_power(self) -> float | None:
+        """Watts consumed with no sensor on them (gross minus metered draw)."""
+        if self.gross_power is None:
+            return None
+
+        allocation, _ = self._source_allocation
+
+        return sum(allocation.get(_HOME, {}).values())
+
+    @property
+    def home_base_load_source_shares(self) -> dict:
+        """The home base load's own provenance row (``{source_uid: share}``)."""
+        allocation, _ = self._source_allocation
+        row = allocation.get(_HOME)
+        if not row:
+            return {}
+
+        total = sum(row.values())
+
+        return {
+            source_uid: (watts / total if total > _EPS else 0.0)
+            for source_uid, watts in row.items()
+        }
+
+    @property
+    def home_base_load_avoided_cost_rate(self) -> float | None:
+        """What the home base load did not pay the grid (EUR/h)."""
+        if self.gross_power is None:
+            return None
+
+        allocation, _ = self._source_allocation
+        if _HOME not in allocation:
+            return 0.0
+
+        return self._avoided_cost_rate(_HOME)
 
     #
     # Utility methods
@@ -1458,6 +2045,21 @@ class BasePowerAdapter(AbstractBaseAdapter):
     def source_entities_power(self) -> list[str]:
         """Return the source price entities for this adapter."""
         return [self._power_entity]
+
+    @property
+    def source_entities_price(self) -> list[str]:
+        """Return the source price entities for this adapter.
+
+        Empty by default so every adapter answers all three questions —
+        consumers have no price of their own. Overridden by the adapters that
+        carry one.
+        """
+        return []
+
+    @property
+    def source_entities_co2(self) -> list[str]:
+        """Return the source CO2 entities for this adapter (none by default)."""
+        return []
 
     @property
     def power(self) -> float | None:
