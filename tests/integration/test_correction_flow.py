@@ -158,7 +158,7 @@ async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> No
     await hass.async_block_till_done()
 
     pi = entry.runtime_data.power_insight
-    base = pi.prod_adapters_levelized_cost_saving_rates.get(PV_SUB_ID)
+    base = pi.source_adapters_levelized_cost_saving_rates.get(PV_SUB_ID)
     state = _pv_state(hass, entry, f"{PV_SUB_ID}_levelized_cost_savings_rate")
     assert state is not None
     assert base is not None
