@@ -131,6 +131,10 @@ _FLOW_SRC = "\x00source"
 _FLOW_DST = "\x00sink"
 #: The unmetered home base load, as a sink in the solve. Never reported.
 _HOME = "\x00home"
+#: A restriction that permits *nothing*. The empty tuple already means the
+#: opposite (unrestricted, the whole mix), so a sink that may draw no source at
+#: all needs a non-empty restriction no real uid can match.
+_NOTHING = ("\x00nothing",)
 
 
 def _permits(sources: tuple[str, ...], source_uid: str) -> bool:
@@ -826,6 +830,31 @@ class PowerInsight:
         """
         return self._snapshot_cached("source_allocation", self._solve_source_allocation)
 
+    def _allowed_source_uids(self, adapter) -> tuple[str, ...]:
+        """Return the source uids ``adapter`` may draw from as a sink.
+
+        For an ordinary sink this is its configured restriction (a battery's
+        ``charge_from_adapters``, a consumer's ``power_from_adapters``), empty
+        meaning unrestricted.
+
+        The exporting grid is the exception: it may only draw the sources that
+        are allowed to feed it. ``exports_power`` is a property of the device or
+        its control software — a German home battery generally may not feed the
+        public grid at all — not a preference about who gets compensated, so a
+        device that cannot export cannot supply the EXP channel either. When
+        nothing at all may export, the restriction becomes ``_NOTHING`` rather
+        than the empty tuple, which would read as "unrestricted" and reopen the
+        whole mix.
+        """
+        if adapter is not self.grid_adapter:
+            return tuple(adapter.power_source_uids)
+
+        exporters = tuple(
+            source.uid for source in self.source_adapters
+            if getattr(source, "exports_power", False)
+        )
+        return exporters or _NOTHING
+
     def _solve_source_allocation(self) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
         """Do the work behind ``_source_allocation``; call that, not this."""
         gross = self.gross_power
@@ -842,7 +871,7 @@ class PowerInsight:
         allowed: dict[str, tuple[str, ...]] = {}
         for adapter in self.sink_adapters:
             demand[adapter.uid] = abs(float(adapter.power))
-            allowed[adapter.uid] = tuple(adapter.power_source_uids)
+            allowed[adapter.uid] = self._allowed_source_uids(adapter)
 
         # A sink restricted to sources that are all idle has nothing to be
         # attributed to. It collapses to an all-zeros row rather than being

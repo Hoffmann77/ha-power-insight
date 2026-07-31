@@ -96,6 +96,19 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
+!!! note "Decision: a sink splits over what is *left*, not over total output"
+    When a restricted sink spreads its draw across the several sources it is
+    allowed, the weights are those sources' **remaining** power — what tighter
+    restrictions have not already claimed — not their full readings.
+
+    It matters whenever restrictions nest. With `pv_1 3000` and `bat_1 400`
+    available, a consumer captive to `pv_1` drawing 250 W, and an export of
+    1200 W allowed both sources: the consumer is served first, so the export
+    splits `2750 : 400` and reads `pv_1 55/63`, not the `15/17` that total
+    output would give. Weighting by total output would let a flexible sink
+    take supply a captive one still needed, which is the same starvation
+    `_tight_set` exists to prevent.
+
 !!! note "Decision: feasibility outranks all three"
     They genuinely conflict. In one snapshot the only valid allocation required
     a battery to take *more* grid than the proportional split would have given
