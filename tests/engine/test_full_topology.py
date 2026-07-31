@@ -565,6 +565,54 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert source_side == pytest.approx(sink_side)
         assert source_side == pytest.approx(power_insight.combined_avoided_cost_rate)
 
+    # -- Levelized component decomposition (exact retroactive correction) --
+
+    def test_levelized_components_decompose_exactly(self, power_insight):
+        # Invariant: each levelized per-device rate splits into parts keyed by
+        # whose correction factor scales them. The parts must sum to the base
+        # rate, and scaling each by its own key's factor must give the
+        # corrected rate — that identity is what lets an accumulated total be
+        # re-corrected long after the fact, per contributing device.
+        factors = dict(power_insight.levelized_correction_factors)
+        factors[power_insight.grid_adapter.uid] = (
+            power_insight.grid_adapter.correction_factor
+        )
+        families = (
+            (
+                power_insight.source_adapters_lcoo_rate_components,
+                power_insight.source_adapters_lcoo_rates,
+                power_insight.source_adapters_lcoo_rates_corrected,
+            ),
+            (
+                power_insight.adapters_levelized_saving_rate_components,
+                power_insight.adapters_levelized_saving_rates,
+                power_insight.adapters_levelized_saving_rates_corrected,
+            ),
+            (
+                power_insight.adapters_levelized_financial_return_rate_components,
+                power_insight.adapters_levelized_financial_return_rates,
+                power_insight.adapters_levelized_financial_return_rates_corrected,
+            ),
+        )
+        for components, base, corrected in families:
+            assert components, "every family must publish a breakdown"
+            for uid, parts in components.items():
+                assert sum(parts.values()) == pytest.approx(base[uid])
+                assert sum(
+                    value * factors.get(key, 1.0) for key, value in parts.items()
+                ) == pytest.approx(corrected[uid])
+
+    def test_operating_cost_is_keyed_by_its_sources(self, power_insight):
+        # bat1 charges off the whole mix, so its operating cost is keyed by the
+        # three sources that supplied it — never by bat1 itself. Correcting it
+        # by the battery's own factor, as the sensor layer used to, would scale
+        # a number that has nothing to do with the battery's own cost.
+        components = power_insight.source_adapters_lcoo_rate_components
+        assert set(components["bat1"]) == {"grid", "pv1", "pv2"}
+        assert "bat1" not in components["bat1"]
+        # bat2 charges on PV only, so the grid never appears in its bill.
+        assert components["bat2"]["grid"] == 0.0
+
     # -- Source entities (enumeration, state-independent) -----------------
 
     def test_source_entities(self, power_insight):

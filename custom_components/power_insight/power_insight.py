@@ -1345,6 +1345,85 @@ class PowerInsight:
             for a in self.prod_adapters
         }
 
+    def _sink_cost_components(self, uid: str) -> dict[str, float] | None:
+        """Return ``{correction target: EUR/h}`` for one sink's levelized draw.
+
+        The levelized operating cost of a sink is a blend of the *source*
+        devices' prices, so each part of it scales with a different device's
+        correction factor. Splitting it here is what lets an accumulated total
+        be corrected exactly, long after the fact, when one of those devices
+        has its lifetime cost edited.
+        """
+        allocation, _ = self._source_allocation
+        row = allocation.get(uid)
+        if row is None:
+            return None
+
+        components: dict[str, float] = {}
+        for source_uid, watts in row.items():
+            adapter = self.get_adapter_by_uid(source_uid)
+            if adapter is None or adapter.lcoe is None:
+                return None
+            components[source_uid] = self._to_kilo(watts) * adapter.lcoe
+
+        return components
+
+    def _adapter_levelized_components(
+        self, *, financial_return: bool,
+    ) -> dict[str, dict[str, float] | None]:
+        """Return ``{device: {correction target: EUR/h}}`` for the P&L families.
+
+        A producing device's saving splits into the grid price it displaced
+        (which never scales — the grid's correction factor is 1.0) and its own
+        levelized cost (which does). A drawing device's is the negated blend of
+        whatever supplied it. Each component sums back to the base rate, and
+        multiplying each by its own key's factor gives the corrected one.
+        """
+        if self.gross_power is None:
+            return {}
+
+        grid_uid = self.grid_adapter.uid
+        grid_price = self.grid_adapter.coe
+        consumption = self._channel_source_power[_CHANNEL_CONSUMPTION]
+        exported = self._channel_source_power[_CHANNEL_EXPORT]
+
+        out: dict[str, dict[str, float] | None] = {}
+        for adapter in self.prod_adapters:
+            uid = adapter.uid
+            if adapter.flow_role is FlowRole.SINK:
+                own = self._sink_cost_components(uid)
+                components = (
+                    None if own is None
+                    else {key: -value for key, value in own.items()}
+                )
+            elif adapter.flow_role is FlowRole.SOURCE:
+                if grid_price is None or adapter.lcoe is None:
+                    components = None
+                else:
+                    served = self._to_kilo(consumption.get(uid, 0.0))
+                    components = {
+                        grid_uid: served * grid_price,
+                        uid: -served * adapter.lcoe,
+                    }
+            else:
+                components = {}
+
+            if components is not None and financial_return:
+                compensation = self._export_compensation_rate(adapter)
+                price = adapter.lcoe
+                if compensation is None or price is None:
+                    components = None
+                else:
+                    sold = self._to_kilo(exported.get(uid, 0.0))
+                    components[grid_uid] = (
+                        components.get(grid_uid, 0.0) + compensation
+                    )
+                    components[uid] = components.get(uid, 0.0) - sold * price
+
+            out[uid] = components
+
+        return out
+
     def _sum_rates(self, rates: dict[str, float | None]) -> float | None:
         """Sum a rate mapping, propagating ``None`` from any missing member."""
         total = 0.0
@@ -1550,6 +1629,26 @@ class PowerInsight:
         return self._adapter_saving_rates(levelized=True)
 
     @property
+    def adapters_levelized_saving_rate_components(self) -> dict:
+        """Per-device savings split by which correction factor scales them."""
+        return self._adapter_levelized_components(financial_return=False)
+
+    @property
+    def adapters_levelized_financial_return_rate_components(self) -> dict:
+        """Per-device financial return split by correction factor."""
+        return self._adapter_levelized_components(financial_return=True)
+
+    @property
+    def adapters_levelized_saving_rates_corrected(self) -> dict:
+        """Levelized saving per PV/battery, at the corrected lifetime costs."""
+        return self._adapter_saving_rates(levelized=True, corrected=True)
+
+    @property
+    def adapters_levelized_financial_return_rates_corrected(self) -> dict:
+        """Levelized financial return per PV/battery, corrected."""
+        return self._adapter_financial_return_rates(levelized=True, corrected=True)
+
+    @property
     def adapters_financial_return_rates(self) -> dict:
         """Saving plus export earnings per PV/battery (EUR/h)."""
         return self._adapter_financial_return_rates(levelized=False)
@@ -1667,6 +1766,25 @@ class PowerInsight:
     def source_adapters_lcoo_rates(self) -> dict:
         """Levelized cost-of-operations rate per source (EUR/h)."""
         return self._own_draw_cost_rates(levelized=True)
+
+    @property
+    def source_adapters_lcoo_rates_corrected(self) -> dict:
+        """Levelized cost-of-operations per device, at the corrected costs."""
+        return self._own_draw_cost_rates(levelized=True, corrected=True)
+
+    @property
+    def source_adapters_lcoo_rate_components(self) -> dict:
+        """Per-device operating cost split by which correction factor applies."""
+        if self.gross_power is None:
+            return {}
+
+        return {
+            a.uid: (
+                self._sink_cost_components(a.uid)
+                if a.flow_role is FlowRole.SINK else {}
+            )
+            for a in self.prod_adapters
+        }
 
     @property
     def source_adapters_export_compensation_rates(self) -> dict:
