@@ -618,3 +618,75 @@ async def test_consumer_avoided_cost_sensor(hass: HomeAssistant) -> None:
     sink_side = sum(avoided.values()) + pi.home_base_load_avoided_cost_rate
     source_side = sum(pi.source_adapters_avoided_cost_rates.values())
     assert sink_side == pytest.approx(source_side)
+
+
+async def test_device_operating_cost_matches_its_per_device_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """The device view sums the per-device operating costs, exactly.
+
+    This is the pairing that was missing: the ledger total is derived from the
+    per-device totals, so the rate it belongs to has to be the per-device sum —
+    not the charging channel, which excludes PV standby.
+    """
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    prefix = f"{entry.entry_id}_"
+    assert f"{prefix}combined_device_operating_cost_rate" in keys
+    assert f"{prefix}combined_levelized_device_operating_cost_rate" in keys
+    assert f"{prefix}combined_total_levelized_device_operating_cost" in keys
+
+    per_device = pi.source_adapters_lcoo_rates
+    assert sum(per_device.values()) == pytest.approx(
+        pi.combined_levelized_device_operating_cost_rate
+    )
+
+
+async def test_device_view_and_channel_view_diverge_on_standby(
+    hass: HomeAssistant,
+) -> None:
+    """With PV in standby and nothing charging, the two views must differ.
+
+    The charging channel is empty, but the hardware is still costing money —
+    which is exactly the case the single old name hid.
+    """
+    entry = await _setup_full_house(hass)
+
+    # Night: no PV output, PV drawing standby, battery idle, grid covering.
+    hass.states.async_set("sensor.pv_power", "-50", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+    await hass.async_block_till_done()
+
+    pi = entry.runtime_data.power_insight
+    assert pi.combined_standby_power == pytest.approx(50.0)
+    assert pi.combined_charging_power == pytest.approx(0.0)
+
+    # Channel view: nothing charged, so nothing in the CHG bucket.
+    assert pi.combined_levelized_charging_cost_rate == pytest.approx(0.0)
+    # Device view: the standby draw still costs, and it is the standby bucket.
+    device = pi.combined_levelized_device_operating_cost_rate
+    assert device > 0.0
+    assert device == pytest.approx(pi.combined_levelized_standby_cost_rate)
+
+
+async def test_per_device_savings_sum_to_the_combined_saving(
+    hass: HomeAssistant,
+) -> None:
+    """Savings additivity, at the sensor layer.
+
+    The per-device sensors read the every-role family, so a device drawing
+    (a PV in standby) contributes its negative share and the totals reconcile.
+    """
+    entry = await _setup_full_house(hass)
+    hass.states.async_set("sensor.pv_power", "-50", {"unit_of_measurement": "W"})
+    await hass.async_block_till_done()
+
+    pi = entry.runtime_data.power_insight
+    assert sum(pi.adapters_levelized_saving_rates.values()) == pytest.approx(
+        pi.combined_levelized_saving_rate
+    )
+    assert sum(pi.adapters_saving_rates.values()) == pytest.approx(
+        pi.combined_saving_rate
+    )

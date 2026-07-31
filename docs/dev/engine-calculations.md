@@ -178,6 +178,30 @@ routing is the provenance allocation, not a proportional guess.
     and likewise for the marginal (`coe`) variants. Every watt of gross power
     is bought once and lands in exactly one channel.
 
+!!! note "Decision: operating cost has a channel view and a device view"
+    They are different questions and both are worth answering, so both exist
+    under names that say which is which:
+
+    * **Channel** — `combined_charging_cost_rate` is the CHG channel alone:
+      what went *into the batteries*. It is one of the four buckets above, so
+      it takes part in cost conservation.
+    * **Device** — `combined_device_operating_cost_rate` is every PV's and
+      battery's own draw, so battery charging **plus PV standby** (CHG + STB).
+      It answers "what does running my hardware cost", and it is what the
+      per-device operating-cost sensors sum to.
+
+    They agree exactly whenever nothing is in standby, which is most of the
+    daylight hours anyone watches a dashboard — which is why a single name
+    covering both went unnoticed. Overnight it inverts: charging is zero while
+    standby is not, so the channel figure reads `0.00` while the device total
+    keeps climbing.
+
+    The accumulating `combined_total_levelized_device_operating_cost` belongs
+    to the device view. It is deliberately *not* an integrated combined rate:
+    it is derived from the per-device totals plus the retired-adapter ledger,
+    which is what makes lifetime-cost corrections retroactive and stops a
+    removed device dropping its history.
+
     The pre-existing `combined_total_operating_cost` measured the CHG channel
     alone while being named as if it covered everything, which is why per-device
     operating costs never summed to it. It is replaced outright by
