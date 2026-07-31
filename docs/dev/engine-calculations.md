@@ -247,6 +247,38 @@ so a sensor never flips unavailable just because its device went idle:
     `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
     **Never add the two sides together** — that double counts every saved euro.
 
+### Corrections apply to prices, not to results
+
+A device's correction factor is `current_lcoe / default_lcoe` — it restates
+what that device's energy costs after its lifetime figures are edited.
+
+!!! note "Decision: the factor multiplies the lcoe, never the finished number"
+    A saving is `served × (tariff − lcoe)`. Scaling that *product* by the
+    factor moves it the wrong way: doubling a PV's lifetime cost would double
+    its reported saving, when dearer energy can only save less. The factor
+    belongs on the `lcoe` inside the bracket, which is where the engine's
+    `*_corrected` families put it.
+
+    The same applies to an operating cost, and worse: a battery's charging
+    cost is a blend of the *source* devices' prices, so the battery's own
+    factor is not merely misplaced there, it is unrelated.
+
+!!! note "Decision: accumulated totals persist their price breakdown"
+    A running total mixes prices from several devices, so it cannot be
+    re-corrected from a single scalar. The `*_rate_components` families split
+    each rate by *which adapter's factor scales that part*, and the sensor
+    layer accumulates the parts alongside the total. Editing one device's
+    lifetime cost then rescales exactly the share of history that came from
+    it, however long afterwards.
+
+    Terms that must never scale — the import tariff, an export compensation —
+    are keyed to the grid, whose correction factor is always `1.0`. That keeps
+    every component keyed by a real adapter instead of needing a sentinel.
+
+    Totals accumulated before the breakdown existed restore without one. They
+    are carried through unscaled: there is no attribution left to correct them
+    by, and inventing one would be worse than leaving them at face value.
+
 ### The home base load is a device
 
 Everything consumed without a sensor on it already takes part in the provenance

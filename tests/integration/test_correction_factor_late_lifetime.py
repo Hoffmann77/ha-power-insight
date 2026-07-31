@@ -125,4 +125,10 @@ async def test_lifetime_added_via_reconfigure_then_edited(hass: HomeAssistant) -
 
     second = _levelized_state(hass, entry, sub_id)
     assert second is not None
-    assert float(second.state) == pytest.approx(base_value * 1.5, rel=1e-6)
+    pi = entry.runtime_data.power_insight
+    corrected = pi.adapters_levelized_saving_rates_corrected.get(sub_id)
+    assert corrected is not None
+    assert float(second.state) == pytest.approx(corrected, rel=1e-6)
+    # The lifetime cost rose, so the levelized saving must fall. Scaling the
+    # finished saving by 1.5 (the old behaviour) moved it the other way.
+    assert float(second.state) < base_value

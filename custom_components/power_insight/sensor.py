@@ -95,9 +95,16 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     entities_fn: Callable[[PowerInsight], list[str]]
     exists_fn: Callable[..., bool] = lambda _: True
     integration_value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
+    # Splits integration_value_fn by which adapter's correction factor scales
+    # each part, so the accumulated total can be re-corrected exactly. Without
+    # it the total is corrected by the owning adapter's factor alone, which is
+    # only right when the rate depends on that adapter's price and no other.
+    integration_components_fn: Callable[
+        [PowerInsight], dict[str, dict[str, float] | None]
+    ] | None = None
     transform_fn: Callable[[float], float] = lambda value: value
     # When True, the per-adapter integration sensor accumulates the base rate
-    # but displays the running total scaled by the adapter's correction factor.
+    # but displays the running total corrected for edited lifetime costs.
     apply_correction_factor: bool = False
 
 
@@ -845,8 +852,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates_corrected,
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
@@ -871,8 +877,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_lcoo_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.source_adapters_lcoo_rates_corrected,
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
@@ -897,8 +902,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.adapters_levelized_saving_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.adapters_levelized_saving_rates_corrected,
     ),
 )
 
@@ -940,6 +944,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
+        integration_components_fn=lambda obj: obj.source_adapters_lcoo_rate_components,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -966,6 +971,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.adapters_levelized_saving_rates,
+        integration_components_fn=lambda obj: obj.adapters_levelized_saving_rate_components,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -992,6 +998,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
+        integration_components_fn=lambda obj: obj.adapters_levelized_financial_return_rate_components,
         apply_correction_factor=True,
     ),
 )
@@ -1165,8 +1172,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.adapters_levelized_financial_return_rates_corrected,
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
@@ -1191,8 +1197,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.source_adapters_lcoo_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.source_adapters_lcoo_rates_corrected,
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
@@ -1217,8 +1222,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
-        value_fn=lambda obj: obj.adapters_levelized_saving_rates,
-        apply_correction_factor=True,
+        value_fn=lambda obj: obj.adapters_levelized_saving_rates_corrected,
     ),
 )
 
@@ -1260,6 +1264,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
+        integration_components_fn=lambda obj: obj.source_adapters_lcoo_rate_components,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -1286,6 +1291,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.adapters_levelized_saving_rates,
+        integration_components_fn=lambda obj: obj.adapters_levelized_saving_rate_components,
         apply_correction_factor=True,
     ),
     PowerInsightIntegrationSensorDescription(
@@ -1312,6 +1318,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         integration_value_fn=lambda obj: obj.adapters_levelized_financial_return_rates,
+        integration_components_fn=lambda obj: obj.adapters_levelized_financial_return_rate_components,
         apply_correction_factor=True,
     ),
 )
@@ -2171,12 +2178,38 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         return value
 
     @property
+    def integration_components(self) -> dict[str, float] | None:
+        """Return this device's rate split by which correction factor applies."""
+        components_fn = self.entity_description.integration_components_fn
+        if components_fn is None:
+            return None
+
+        return get_value(self.device_adapter.uid, components_fn(self.power_insight))
+
+    @property
     def native_value(self) -> Decimal | None:
-        """Return the accumulated base total, scaled for display if requested."""
+        """Return the accumulated base total, corrected for display if requested.
+
+        Each accumulated component is scaled by *its own* adapter's correction
+        factor, so editing one device's lifetime cost rescales exactly the
+        share of history that came from it. Anything accumulated before the
+        breakdown existed has no attribution left to correct by, so it is
+        carried through unscaled rather than guessed at.
+        """
         base = self._state
-        if base is not None and self.entity_description.apply_correction_factor:
+        if base is None or not self.entity_description.apply_correction_factor:
+            return base
+
+        if not self._component_totals:
             return base * Decimal(str(self.device_adapter.correction_factor))
-        return base
+
+        factors = self.power_insight.levelized_correction_factors
+        corrected = Decimal(0)
+        for uid, total in self._component_totals.items():
+            corrected += total * Decimal(str(factors.get(uid, 1.0)))
+
+        # Whatever predates the breakdown stays as it was recorded.
+        return corrected + (base - sum(self._component_totals.values()))
 
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:
@@ -2185,6 +2218,7 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
             self._state,
             self.native_unit_of_measurement,
             self._last_valid_state,
+            dict(self._component_totals) or None,
         )
 
     async def async_will_remove_from_hass(self) -> None:
