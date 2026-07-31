@@ -266,6 +266,37 @@ Median 2 iterations; only the degenerate cases hit the 200-iteration cap.
    non-physical rule in the model and the hardest to carry through any exact
    method. Dropping it makes scarcity pricing considerably better behaved.
 
+## Deferred: extract the solve into its own module
+
+The flow helpers (`_permits` through `_allocate`, ~340 lines) are pure functions
+over plain dicts and have no dependency on the adapter objects, so they belong in
+`custom_components/power_insight/allocation.py`. `power_insight.py` would keep
+`_solve_source_allocation`, which is the adapter-to-dict translation and does
+belong with the engine. The payoff is unit tests directly on dicts: two of the
+three bugs found while building this (source-to-sink edges capped at the sink's
+draw, and an unverified tight set) would have been caught in seconds that way,
+instead of surfacing as a wrong share several layers up.
+
+**The one obstacle, and its fix.** `tests/engine/scenario_framework.py:110` loads
+`power_insight.py` standalone via `spec_from_file_location`, with no package
+context, so a relative `from .allocation import ...` raises *"attempted relative
+import with no known parent package"*. An absolute import is no good either: it
+would execute the real `__init__.py`, which imports Home Assistant and defeats
+the whole engine tier.
+
+The fix is a synthetic package in the loader — verified working against a package
+whose `__init__.py` raises on import:
+
+```python
+pkg = types.ModuleType("pi_engine")
+pkg.__path__ = [str(COMPONENT_DIR)]
+sys.modules["pi_engine"] = pkg
+# then load each submodule as "pi_engine.<name>"; relative imports resolve
+# against the synthetic parent and the real __init__.py never runs
+```
+
+That loader is the only one in the test suite, so it is a single-site change.
+
 ## Files
 
 - `custom_components/power_insight/power_insight.py` — `sink_adapters_source_shares`
