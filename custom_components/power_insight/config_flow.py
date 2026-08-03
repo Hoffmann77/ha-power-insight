@@ -51,6 +51,7 @@ from .const import (
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
     CONF_ENABLE_DISTRIBUTION_SHARES,
+    CONF_ENABLE_HOME_BASE_LOAD,
     CONF_ENABLE_CHARGING_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
@@ -653,6 +654,10 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
         power_fields[vol.Required(
             "distribution_shares", default=defaults.get("distribution_shares", False)
         )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_HOME_BASE_LOAD in supported:
+        power_fields[vol.Required(
+            "home_base_load", default=defaults.get("home_base_load", False)
+        )] = BOOLEAN_SELECTOR
     if CONF_ENABLE_CHARGING_SOURCE_SHARES in supported:
         power_fields[vol.Required(
             "charging_source_shares", default=defaults.get("charging_source_shares", False)
@@ -770,6 +775,8 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
         enabled.add(CONF_ENABLE_DISTRIBUTION_RATIOS)
     if user_input.get("distribution_shares"):
         enabled.add(CONF_ENABLE_DISTRIBUTION_SHARES)
+    if user_input.get("home_base_load"):
+        enabled.add(CONF_ENABLE_HOME_BASE_LOAD)
     if user_input.get("charging_source_shares"):
         enabled.add(CONF_ENABLE_CHARGING_SOURCE_SHARES)
     if user_input.get("power_source_shares"):
@@ -822,6 +829,7 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
         "distribution_power": CONF_ENABLE_DISTRIBUTION_POWER in leaves,
         "distribution_ratios": CONF_ENABLE_DISTRIBUTION_RATIOS in leaves,
         "distribution_shares": CONF_ENABLE_DISTRIBUTION_SHARES in leaves,
+        "home_base_load": CONF_ENABLE_HOME_BASE_LOAD in leaves,
         "charging_source_shares": CONF_ENABLE_CHARGING_SOURCE_SHARES in leaves,
         "power_source_shares": CONF_ENABLE_POWER_SOURCE_SHARES in leaves,
         "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,

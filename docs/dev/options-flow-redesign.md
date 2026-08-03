@@ -193,6 +193,8 @@ to the option gate.
 | combined_charging_ratio | enable_distribution_ratios |
 | combined_standby_ratio | enable_distribution_ratios |
 | combined_cost_rate | calculate_cost_rates |
+| home_base_load_power | enable_home_base_load |
+| home_base_load_avoided_cost_rate | enable_home_base_load |
 | combined_charging_cost_rate | calculate_cost_rates |
 | combined_device_operating_cost_rate | calculate_cost_rates |
 | combined_consumption_cost_rate | calculate_cost_rates |

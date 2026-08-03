@@ -65,6 +65,7 @@ FULL_OPTIONS = {
             "accumulate_cost_rates", "accumulate_levelized_cost_rates",
             "accumulate_cost_saving_rates", "accumulate_levelized_cost_saving_rates",
             "enable_distribution_power", "enable_distribution_ratios",
+            "enable_home_base_load",
         ],
         "grid": [
             "calculate_cost_rates", "accumulate_cost_rates",
