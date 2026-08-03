@@ -305,11 +305,14 @@ def calculate_lcos(
 ) -> float | None:
     """Calculate Levelized Cost of Storage (EUR/kWh).
 
-    NOTE: LCOS is currently computed identically to LCOE (lifetime cost /
-    lifetime throughput). A storage-specific formula (accounting for
-    round-trip efficiency and charge/discharge losses) is a planned
-    refinement; the two are kept as separate functions so that change can be
-    made without touching the LCOE path.
+    Deliberately the same arithmetic as LCOE: lifetime cost over lifetime
+    throughput. It needs no round-trip efficiency term, because the throughput
+    is the energy the battery *discharges*, not the energy put into it —
+    charging and conversion losses are already netted out of the figure the
+    user enters. Dividing by efficiency here would count them twice.
+
+    Kept as its own function so storage can diverge from generation later
+    without disturbing the LCOE path.
     """
     costs = fields.get(CONF_LIFETIME_COST)
     production = fields.get(CONF_LIFETIME_PRODUCTION)
