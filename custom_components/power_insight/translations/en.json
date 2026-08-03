@@ -349,7 +349,7 @@
             "co2_intensity_entity": "Sensor reporting the current grid CO₂ intensity in g/kWh (for example from the Electricity Maps integration). Required when CO₂ sensors are enabled.",
             "exports_power": "Turn on if this device can feed surplus power back to the grid. Enables export-compensation tracking when the corresponding option is active.",
             "export_compensation": "The amount you are paid per kWh of power exported to the grid, in your currency. Required when export-compensation or savings sensors are enabled.",
-            "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Used to correctly attribute charging losses to their source.",
+            "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Measured at the battery's AC connection, so conversion and standby losses are already inside your power readings. It is reserved for the levelized cost of storage and does not affect power attribution, which follows the meter.",
             "source_mode": "How to attribute this device's power. **Whole mix** shares it across every source by availability. **Specific devices** restricts it to the sources you pick below — useful for a battery that only charges from solar, or a smart plug set to run on excess PV.",
             "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources this battery may charge from (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
             "power_from_adapters": "Only used with the **Specific devices** source mode: which sources power this consumer (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
@@ -370,7 +370,8 @@
             "charge_from_adapters": "Charges from",
             "power_from_adapters": "Powered from",
             "lifetime_production": "Lifetime production",
-            "lifetime_cost": "Total lifetime cost"
+            "lifetime_cost": "Total lifetime cost",
+            "battery_efficiency": "Round-trip efficiency"
           },
           "data_description": {
             "power_entity": "Sensor that reports this device's power in W, kW or MW.",
@@ -381,7 +382,8 @@
             "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) this battery charges from.",
             "power_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) power this consumer.",
             "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this value rescales the device's already-recorded levelized values.",
-            "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values."
+            "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values.",
+            "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Measured at the battery's AC connection, so conversion and standby losses are already inside your power readings. It is reserved for the levelized cost of storage and does not affect power attribution, which follows the meter."
           }
         }
       },

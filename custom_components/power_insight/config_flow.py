@@ -1110,7 +1110,9 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         required=True,
         default=95,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        # Editable after setup: it is a figure people refine once they have
+        # real cycle data, exactly like the lifetime values next to it.
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_EXPORTS_POWER: AdapterField(
