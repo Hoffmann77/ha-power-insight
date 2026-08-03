@@ -80,6 +80,17 @@
               "savings_method": "Cost savings measure how much money you avoid spending on grid electricity by self-consuming locally-produced power.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price. Requires a price entity on the grid adapter.\n**Levelized** — savings calculated using each device's LCOE as the baseline. Requires lifetime values per device.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. The total is stored in Home Assistant's recorder and survives restarts."
             }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "The financial return combines what you saved by using your own generation with what you earned exporting the surplus, across every device.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of what the energy cost to produce, using each device's lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
+            }
           }
         }
       },
@@ -173,6 +184,17 @@
               "savings_method": "Savings represent the money you avoid spending on grid electricity by self-consuming PV power.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price. Requires a price entity on the grid adapter.\n**Levelized** — savings calculated using the PV system's LCOE as the baseline cost. Requires lifetime values.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. Stored in the recorder and survives restarts."
             }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "What this PV system earned: the grid electricity it displaced, plus the compensation for anything it exported.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of the system's own LCOE, so it shows profit rather than turnover. Requires lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
+            }
           }
         }
       },
@@ -227,6 +249,17 @@
               "savings_method": "Savings represent the money you avoid spending on grid electricity by discharging the battery instead.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price.\n**Levelized** — savings calculated using the battery's LCOS as the baseline. Requires lifetime values.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. Stored in the recorder and survives restarts."
             }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "What this battery earned: the grid electricity its discharge displaced, plus any export compensation, less what charging it cost.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of the battery's own LCOS. Requires lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
+            }
           }
         }
       },
@@ -237,10 +270,12 @@
           "power_sensors": {
             "name": "Power source tracking",
             "data": {
-              "power_source_shares": "Power source shares (%)"
+              "power_source_shares": "Power source shares (%)",
+              "distribution_shares": "Power distribution shares (%)"
             },
             "data_description": {
-              "power_source_shares": "Creates sensors showing what fraction of this consumer's power currently comes from each source in your home (grid, solar, battery). For example: \"the heat pump is currently running 55 % on solar power.\" Power Insight infers the source mix from the real-time state of all your adapters."
+              "power_source_shares": "Creates sensors showing what fraction of this consumer's power currently comes from each source in your home (grid, solar, battery). For example: \"the heat pump is currently running 55 % on solar power.\" Power Insight infers the source mix from the real-time state of all your adapters.",
+              "distribution_shares": "Creates sensors showing how much of the home's total power flow this consumer accounts for."
             }
           },
           "costs": {
@@ -250,6 +285,15 @@
             },
             "data_description": {
               "cost_method": "**None** — no cost sensors for this consumer.\n**Standard** — cost calculated using the live grid price, weighted by the source mix. Requires a price entity on the grid adapter.\n**Levelized** — cost calculated using the levelized cost per kWh of each source in the mix. Requires lifetime values on each generating device.\n**Both** — creates sensors for both methods."
+            }
+          },
+          "savings": {
+            "name": "Cost savings",
+            "data": {
+              "savings_method": "Savings calculation method"
+            },
+            "data_description": {
+              "savings_method": "Savings represent the money this consumer avoided spending on grid electricity, because local generation supplied it instead. It is the same saved money the producing device reports from its own end — the two are two views of one figure, so do not add them together.\n\n**None** — no savings sensors.\n**Standard** — the avoided cost, valued at the live grid price."
             }
           }
         }
