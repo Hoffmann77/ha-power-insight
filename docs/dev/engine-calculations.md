@@ -347,9 +347,9 @@ stateless per snapshot, so it cannot know that mix.
     flat `LCOS` while discharging (above), so it does not need efficiency
     either.
 
-    That leaves the configured value with no consumer at all. It is retained
-    and documented rather than silently ignored — but nothing reads it, and
-    the field says so.
+    That left the configured value with no consumer at all, so the field is
+    gone: asking for a number nothing reads is worse than not asking. Existing
+    entries have the stored key dropped by a migration.
 
 **Known simplification.** Self-consumption is valued at the import price even in
 a snapshot where the house is exporting, where the true marginal alternative is

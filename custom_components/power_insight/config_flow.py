@@ -40,7 +40,6 @@ from .const import (
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
     CONF_EXPORT_COMPENSATION,
-    CONF_BAT_EFFICIENCY,
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_POWER_FROM_ADAPTERS,
     CONF_SOURCE_MODE,
@@ -1108,16 +1107,6 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
-    CONF_BAT_EFFICIENCY: AdapterField(
-        selector=PERCENT_SELECTOR,
-        required=True,
-        default=95,
-        in_config_flow=True,
-        # Editable after setup: it is a figure people refine once they have
-        # real cycle data, exactly like the lifetime values next to it.
-        in_reconfigure_flow=True,
-        store_in_adapter_config=True,
-    ),
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
@@ -1606,7 +1595,7 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         self._title: str = ""
