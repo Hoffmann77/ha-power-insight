@@ -334,13 +334,22 @@ stateless per snapshot, so it cannot know that mix.
     `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
     charging off the grid does.
 
-!!! note "Decision: efficiency is measured at the AC port"
-    A battery's configured efficiency describes its AC-side round trip, so
-    conversion losses and parasitics are already inside the metered charge and
-    discharge readings. Efficiency therefore never enters the savings
-    arithmetic — it is used only for the dynamic price and the `LCOS`
-    refinement. A DC-coupled meter would need its losses modelled separately;
+!!! note "Decision: efficiency is measured at the AC port, and nothing needs it"
+    A battery's efficiency describes its AC-side round trip, so conversion
+    losses and parasitics are already inside the metered charge and discharge
+    readings. A DC-coupled meter would need its losses modelled separately;
     that configuration is not supported.
+
+    Efficiency therefore never enters the savings arithmetic. It does not
+    enter `LCOS` either: a battery's lifetime throughput is the energy it
+    **discharges**, so the losses are already netted out of it and dividing by
+    efficiency would count them twice. And the dynamic price falls back to the
+    flat `LCOS` while discharging (above), so it does not need efficiency
+    either.
+
+    That leaves the configured value with no consumer at all. It is retained
+    and documented rather than silently ignored — but nothing reads it, and
+    the field says so.
 
 **Known simplification.** Self-consumption is valued at the import price even in
 a snapshot where the house is exporting, where the true marginal alternative is
