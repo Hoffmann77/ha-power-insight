@@ -55,7 +55,6 @@ CONF_EXPORTS_POWER = "exports_power"
 CONF_EXPORT_COMPENSATION = "export_compensation"
 
 # Battery specific (stored in adapter.config)
-CONF_BAT_EFFICIENCY = "battery_efficiency"
 CONF_CHARGE_FROM_ADAPTERS = "charge_from_adapters"
 
 # Consumer specific (stored in adapter.config) — the sources a consumer draws
@@ -96,6 +95,7 @@ CONF_ENABLE_DISTRIBUTION_POWER = "enable_distribution_power"      # watt split
 CONF_ENABLE_DISTRIBUTION_RATIOS = "enable_distribution_ratios"    # *_ratio %
 CONF_ENABLE_DISTRIBUTION_SHARES = "enable_distribution_shares"    # *_share %
 CONF_ENABLE_CHARGING_SOURCE_SHARES = "enable_charging_source_shares"  # battery
+CONF_ENABLE_HOME_BASE_LOAD = "enable_home_base_load"
 CONF_ENABLE_POWER_SOURCE_SHARES = "enable_power_source_shares"        # consumer
 
 # Export compensation (split out of the cost-rate / accumulate-cost keys)
@@ -167,6 +167,8 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
         CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
         CONF_ENABLE_DISTRIBUTION_POWER,
         CONF_ENABLE_DISTRIBUTION_RATIOS,
+        # The unmetered remainder, surfaced as a device of its own.
+        CONF_ENABLE_HOME_BASE_LOAD,
     },
     "grid": {
         CONF_CALCULATE_COST_RATES,
@@ -219,6 +221,9 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
     "consumer": {
         CONF_CALCULATE_COST_RATES,
         CONF_CALCULATE_LEVELIZED_COST_RATES,
+        # A consumer has a saving to report now: the sink-side avoided cost,
+        # what it did not pay the grid because local generation served it.
+        CONF_CALCULATE_COST_SAVING_RATES,
         CONF_ENABLE_DISTRIBUTION_SHARES,
         CONF_ENABLE_POWER_SOURCE_SHARES,
     },

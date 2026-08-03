@@ -47,7 +47,8 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
-    assert entry.minor_version == 2
+    # Both migration steps run, so the entry lands on the current minor version.
+    assert entry.minor_version == 3
     assert entry.options["schema"] == 2
     grid = set(entry.options["scopes"]["grid"])
     # Cost rate + its accumulation carried over to the grid scope.
@@ -203,3 +204,36 @@ async def test_valid_battery_charge_source_no_repair_issue(
     assert issue_reg.async_get_issue(
         DOMAIN, f"reconfigure_battery_{BAT_SUB_ID}"
     ) is None
+
+
+async def test_migrate_drops_stored_battery_efficiency(hass: HomeAssistant) -> None:
+    """The retired round-trip efficiency is stripped from battery subentries.
+
+    Nothing ever read it, so leaving the key behind would keep implying it
+    feeds a calculation somewhere.
+    """
+    import copy
+
+    from .conftest import BAT_SUB_ID, make_battery_subentry_data
+
+    battery = copy.deepcopy(make_battery_subentry_data())
+    battery["data"]["adapter"]["config"]["battery_efficiency"] = 95
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=2,
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), battery],
+    )
+    for name in ("grid_power", "battery_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    config = entry.subentries[BAT_SUB_ID].data["adapter"]["config"]
+    assert "battery_efficiency" not in config
+    # Everything else the battery was configured with survives untouched.
+    assert config["default_lcos"] == 0.15
+    assert config["charge_from_adapters"] == []
+    assert entry.minor_version == 3

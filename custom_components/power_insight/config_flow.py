@@ -40,7 +40,6 @@ from .const import (
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
     CONF_EXPORT_COMPENSATION,
-    CONF_BAT_EFFICIENCY,
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_POWER_FROM_ADAPTERS,
     CONF_SOURCE_MODE,
@@ -51,6 +50,7 @@ from .const import (
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
     CONF_ENABLE_DISTRIBUTION_SHARES,
+    CONF_ENABLE_HOME_BASE_LOAD,
     CONF_ENABLE_CHARGING_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
@@ -304,11 +304,14 @@ def calculate_lcos(
 ) -> float | None:
     """Calculate Levelized Cost of Storage (EUR/kWh).
 
-    NOTE: LCOS is currently computed identically to LCOE (lifetime cost /
-    lifetime throughput). A storage-specific formula (accounting for
-    round-trip efficiency and charge/discharge losses) is a planned
-    refinement; the two are kept as separate functions so that change can be
-    made without touching the LCOE path.
+    Deliberately the same arithmetic as LCOE: lifetime cost over lifetime
+    throughput. It needs no round-trip efficiency term, because the throughput
+    is the energy the battery *discharges*, not the energy put into it —
+    charging and conversion losses are already netted out of the figure the
+    user enters. Dividing by efficiency here would count them twice.
+
+    Kept as its own function so storage can diverge from generation later
+    without disturbing the LCOE path.
     """
     costs = fields.get(CONF_LIFETIME_COST)
     production = fields.get(CONF_LIFETIME_PRODUCTION)
@@ -653,6 +656,10 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
         power_fields[vol.Required(
             "distribution_shares", default=defaults.get("distribution_shares", False)
         )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_HOME_BASE_LOAD in supported:
+        power_fields[vol.Required(
+            "home_base_load", default=defaults.get("home_base_load", False)
+        )] = BOOLEAN_SELECTOR
     if CONF_ENABLE_CHARGING_SOURCE_SHARES in supported:
         power_fields[vol.Required(
             "charging_source_shares", default=defaults.get("charging_source_shares", False)
@@ -770,6 +777,8 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
         enabled.add(CONF_ENABLE_DISTRIBUTION_RATIOS)
     if user_input.get("distribution_shares"):
         enabled.add(CONF_ENABLE_DISTRIBUTION_SHARES)
+    if user_input.get("home_base_load"):
+        enabled.add(CONF_ENABLE_HOME_BASE_LOAD)
     if user_input.get("charging_source_shares"):
         enabled.add(CONF_ENABLE_CHARGING_SOURCE_SHARES)
     if user_input.get("power_source_shares"):
@@ -822,6 +831,7 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
         "distribution_power": CONF_ENABLE_DISTRIBUTION_POWER in leaves,
         "distribution_ratios": CONF_ENABLE_DISTRIBUTION_RATIOS in leaves,
         "distribution_shares": CONF_ENABLE_DISTRIBUTION_SHARES in leaves,
+        "home_base_load": CONF_ENABLE_HOME_BASE_LOAD in leaves,
         "charging_source_shares": CONF_ENABLE_CHARGING_SOURCE_SHARES in leaves,
         "power_source_shares": CONF_ENABLE_POWER_SOURCE_SHARES in leaves,
         "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,
@@ -1095,14 +1105,6 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         default=False,
         in_config_flow=True,
         in_reconfigure_flow=True,
-        store_in_adapter_config=True,
-    ),
-    CONF_BAT_EFFICIENCY: AdapterField(
-        selector=PERCENT_SELECTOR,
-        required=True,
-        default=95,
-        in_config_flow=True,
-        in_reconfigure_flow=False,
         store_in_adapter_config=True,
     ),
     CONF_EXPORTS_POWER: AdapterField(
@@ -1593,7 +1595,7 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         self._title: str = ""

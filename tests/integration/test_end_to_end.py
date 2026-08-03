@@ -201,7 +201,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     )
     assert per_adapter == pytest.approx(0.03, abs=1e-3)
     # The derived combined sensor equals the sum of active per-adapter totals.
-    combined = _float(hass, entry, "combined_total_levelized_operating_cost")
+    combined = _float(hass, entry, "combined_total_levelized_device_operating_cost")
     assert combined == pytest.approx(per_adapter, abs=1e-6)
 
     # Remove the PV device. HA clears its entities, whose teardown snapshots
@@ -222,7 +222,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     # device is gone. Re-report a source entity to refresh the derived sensor.
     _set(hass, "sensor.grid_power", 1000)
     await _settle(hass)
-    combined_after = _float(hass, entry, "combined_total_levelized_operating_cost")
+    combined_after = _float(hass, entry, "combined_total_levelized_device_operating_cost")
     assert combined_after == pytest.approx(per_adapter, abs=1e-6)
 
     # Reload again: no double-count.
@@ -231,6 +231,6 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     _set(hass, "sensor.grid_power", 1000)
     await _settle(hass)
     combined_reloaded = _float(
-        hass, entry, "combined_total_levelized_operating_cost"
+        hass, entry, "combined_total_levelized_device_operating_cost"
     )
     assert combined_reloaded == pytest.approx(per_adapter, abs=1e-6)

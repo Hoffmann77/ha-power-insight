@@ -96,6 +96,19 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
+!!! note "Decision: a sink splits over what is *left*, not over total output"
+    When a restricted sink spreads its draw across the several sources it is
+    allowed, the weights are those sources' **remaining** power — what tighter
+    restrictions have not already claimed — not their full readings.
+
+    It matters whenever restrictions nest. With `pv_1 3000` and `bat_1 400`
+    available, a consumer captive to `pv_1` drawing 250 W, and an export of
+    1200 W allowed both sources: the consumer is served first, so the export
+    splits `2750 : 400` and reads `pv_1 55/63`, not the `15/17` that total
+    output would give. Weighting by total output would let a flexible sink
+    take supply a captive one still needed, which is the same starvation
+    `_tight_set` exists to prevent.
+
 !!! note "Decision: feasibility outranks all three"
     They genuinely conflict. In one snapshot the only valid allocation required
     a battery to take *more* grid than the proportional split would have given
@@ -165,11 +178,37 @@ routing is the provenance allocation, not a proportional guess.
     and likewise for the marginal (`coe`) variants. Every watt of gross power
     is bought once and lands in exactly one channel.
 
+!!! note "Decision: operating cost has a channel view and a device view"
+    They are different questions and both are worth answering, so both exist
+    under names that say which is which:
+
+    * **Channel** — `combined_charging_cost_rate` is the CHG channel alone:
+      what went *into the batteries*. It is one of the four buckets above, so
+      it takes part in cost conservation.
+    * **Device** — `combined_device_operating_cost_rate` is every PV's and
+      battery's own draw, so battery charging **plus PV standby** (CHG + STB).
+      It answers "what does running my hardware cost", and it is what the
+      per-device operating-cost sensors sum to.
+
+    They agree exactly whenever nothing is in standby, which is most of the
+    daylight hours anyone watches a dashboard — which is why a single name
+    covering both went unnoticed. Overnight it inverts: charging is zero while
+    standby is not, so the channel figure reads `0.00` while the device total
+    keeps climbing.
+
+    The accumulating `combined_total_levelized_device_operating_cost` belongs
+    to the device view. It is deliberately *not* an integrated combined rate:
+    it is derived from the per-device totals plus the retired-adapter ledger,
+    which is what makes lifetime-cost corrections retroactive and stops a
+    removed device dropping its history.
+
     The pre-existing `combined_total_operating_cost` measured the CHG channel
     alone while being named as if it covered everything, which is why per-device
-    operating costs never summed to it. It becomes
-    `combined_charging_cost_rate`; CON and STB are new quantities and start
-    from zero.
+    operating costs never summed to it. It is replaced outright by
+    `combined_total_charging_cost` — a clean break rather than a rename, so the
+    accumulated history does not carry over. The integration is still in
+    development, so no repair issue is raised for it. CON, STB and EXP are new
+    quantities and start from zero.
 
 ### Savings are booked per device, at the moment they are realized
 
@@ -207,6 +246,38 @@ so a sensor never flips unavailable just because its device went idle:
     the CON channel come to the same number:
     `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
     **Never add the two sides together** — that double counts every saved euro.
+
+### Corrections apply to prices, not to results
+
+A device's correction factor is `current_lcoe / default_lcoe` — it restates
+what that device's energy costs after its lifetime figures are edited.
+
+!!! note "Decision: the factor multiplies the lcoe, never the finished number"
+    A saving is `served × (tariff − lcoe)`. Scaling that *product* by the
+    factor moves it the wrong way: doubling a PV's lifetime cost would double
+    its reported saving, when dearer energy can only save less. The factor
+    belongs on the `lcoe` inside the bracket, which is where the engine's
+    `*_corrected` families put it.
+
+    The same applies to an operating cost, and worse: a battery's charging
+    cost is a blend of the *source* devices' prices, so the battery's own
+    factor is not merely misplaced there, it is unrelated.
+
+!!! note "Decision: accumulated totals persist their price breakdown"
+    A running total mixes prices from several devices, so it cannot be
+    re-corrected from a single scalar. The `*_rate_components` families split
+    each rate by *which adapter's factor scales that part*, and the sensor
+    layer accumulates the parts alongside the total. Editing one device's
+    lifetime cost then rescales exactly the share of history that came from
+    it, however long afterwards.
+
+    Terms that must never scale — the import tariff, an export compensation —
+    are keyed to the grid, whose correction factor is always `1.0`. That keeps
+    every component keyed by a real adapter instead of needing a sentinel.
+
+    Totals accumulated before the breakdown existed restore without one. They
+    are carried through unscaled: there is no attribution left to correct them
+    by, and inventing one would be worse than leaving them at face value.
 
 ### The home base load is a device
 
@@ -263,13 +334,22 @@ stateless per snapshot, so it cannot know that mix.
     `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
     charging off the grid does.
 
-!!! note "Decision: efficiency is measured at the AC port"
-    A battery's configured efficiency describes its AC-side round trip, so
-    conversion losses and parasitics are already inside the metered charge and
-    discharge readings. Efficiency therefore never enters the savings
-    arithmetic — it is used only for the dynamic price and the `LCOS`
-    refinement. A DC-coupled meter would need its losses modelled separately;
+!!! note "Decision: efficiency is measured at the AC port, and nothing needs it"
+    A battery's efficiency describes its AC-side round trip, so conversion
+    losses and parasitics are already inside the metered charge and discharge
+    readings. A DC-coupled meter would need its losses modelled separately;
     that configuration is not supported.
+
+    Efficiency therefore never enters the savings arithmetic. It does not
+    enter `LCOS` either: a battery's lifetime throughput is the energy it
+    **discharges**, so the losses are already netted out of it and dividing by
+    efficiency would count them twice. And the dynamic price falls back to the
+    flat `LCOS` while discharging (above), so it does not need efficiency
+    either.
+
+    That left the configured value with no consumer at all, so the field is
+    gone: asking for a number nothing reads is worse than not asking. Existing
+    entries have the stored key dropped by a migration.
 
 **Known simplification.** Self-consumption is valued at the import price even in
 a snapshot where the house is exporting, where the true marginal alternative is
