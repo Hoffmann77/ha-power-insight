@@ -40,6 +40,7 @@ from .const import (
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
     CONF_ENABLE_DISTRIBUTION_SHARES,
+    CONF_ENABLE_HOME_BASE_LOAD,
     CONF_ENABLE_CHARGING_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
@@ -395,6 +396,43 @@ POWER_INSIGHT_SENSORS = (
         lcoe_gated=True,
     ),
 )
+
+# ---------------------------------------------------------------------------
+# Home base load
+#
+# Everything consumed without a sensor on it. It already competes for power in
+# the provenance solve, and in most homes it is the single largest consumer —
+# so leaving it out of the results makes the per-device figures fail to add up
+# to the totals. It has no config subentry: the device is synthesised here.
+# ---------------------------------------------------------------------------
+
+POWER_INSIGHT_HOME_BASE_LOAD_SENSORS = (
+    PowerInsightSensorDescription(
+        key="home_base_load_power",
+        name="Power",
+        icon="mdi:home-lightning-bolt-outline",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.home_base_load_power,
+        attributes_fn=lambda obj: obj.home_base_load_source_shares,
+    ),
+    PowerInsightSensorDescription(
+        key="home_base_load_avoided_cost_rate",
+        name="Avoided cost rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.home_base_load_avoided_cost_rate,
+    ),
+)
+
 
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
@@ -1459,6 +1497,8 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "import_cost_rate": CONF_CALCULATE_COST_RATES,                # grid
     "operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_cost_rate": CONF_CALCULATE_COST_RATES,
+    "home_base_load_power": CONF_ENABLE_HOME_BASE_LOAD,
+    "home_base_load_avoided_cost_rate": CONF_ENABLE_HOME_BASE_LOAD,
     "combined_charging_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_device_operating_cost_rate": CONF_CALCULATE_COST_RATES,
     "combined_consumption_cost_rate": CONF_CALCULATE_COST_RATES,
@@ -1627,6 +1667,16 @@ async def async_setup_entry(
         if description.lcoe_gated and not _prod_lcoe_available:
             continue
         entities.append(PowerInsightSensor(
+            description=description,
+            config_entry=entry,
+            source_entities=description.entities_fn(power_insight),
+            power_insight=power_insight,
+        ))
+
+    for description in POWER_INSIGHT_HOME_BASE_LOAD_SENSORS:
+        if _option_gated_out(description, options_wrapped, SCOPE_COMBINED):
+            continue
+        entities.append(PowerInsightHomeBaseLoadSensor(
             description=description,
             config_entry=entry,
             source_entities=description.entities_fn(power_insight),
@@ -1943,6 +1993,52 @@ class PowerInsightSensor(BasePowerInsightSensor):
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+
+class PowerInsightHomeBaseLoadSensor(BasePowerInsightSensor):
+    """A sensor on the synthetic home base load device.
+
+    The home base load has no adapter and no config subentry — it is the
+    residual the solve leaves behind — so its device is created here rather
+    than from a subentry. It is kept as a device of its own, and never as a
+    row in the per-adapter results, because a dict key would need a uid and
+    any readable one can collide with a user's slugified device name.
+    """
+
+    def __init__(
+            self,
+            description: PowerInsightSensorDescription,
+            config_entry: ConfigEntry,
+            source_entities: list[str],
+            power_insight: PowerInsight,
+    ) -> None:
+        """Initialize sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
+        self._attr_unique_id = (
+            f"{self.config_entry.entry_id}_{self.entity_description.key}"
+        )
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, f"{self.config_entry.entry_id}_home_base_load")},
+            name=f"{self.config_entry.title or 'PowerInsight'} Home base load",
+        )
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        value = self.entity_description.value_fn(self.power_insight)
+        if value is not None:
+            value = self.entity_description.transform_fn(value)
+        return value
+
+    @property
+    def extra_state_attributes(self) -> dict[str, float] | None:
+        """Expose where the unmetered load's power came from."""
+        attributes_fn = self.entity_description.attributes_fn
+        if attributes_fn is None:
+            return None
+
+        return attributes_fn(self.power_insight) or None
 
 
 class PowerInsightCombinedLedgerSensor(PowerInsightSensor):

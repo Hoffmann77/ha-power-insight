@@ -690,3 +690,64 @@ async def test_per_device_savings_sum_to_the_combined_saving(
     assert sum(pi.adapters_saving_rates.values()) == pytest.approx(
         pi.combined_saving_rate
     )
+
+
+# ---------------------------------------------------------------------------
+# Home base load — a device for the unmetered remainder
+# ---------------------------------------------------------------------------
+
+
+async def test_home_base_load_device_and_sensors(hass: HomeAssistant) -> None:
+    """The residual gets a device of its own, gated on the option."""
+    from homeassistant.helpers import device_registry as dr
+
+    entry = await _setup_full_house(hass)
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    prefix = f"{entry.entry_id}_"
+
+    assert f"{prefix}home_base_load_power" in keys
+    assert f"{prefix}home_base_load_avoided_cost_rate" in keys
+
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_device(
+        identifiers={(DOMAIN, f"{entry.entry_id}_home_base_load")}
+    )
+    assert device is not None, "the home base load should have its own device"
+    assert "Home base load" in device.name
+
+
+async def test_home_base_load_absent_when_not_enabled(hass: HomeAssistant) -> None:
+    """Without the option the device is never created."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), make_consumer_subentry_data()],
+    )
+    for name in ("grid_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    assert f"{entry.entry_id}_home_base_load_power" not in keys
+
+
+async def test_home_base_load_reports_the_residual_and_its_mix(
+    hass: HomeAssistant,
+) -> None:
+    """Its power is gross minus every metered draw, and it says where it came from."""
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    # gross 3000 (grid 1000 + pv 2000); metered draws: battery 800 + consumer 400.
+    assert pi.gross_power == pytest.approx(3000.0)
+    assert pi.home_base_load_power == pytest.approx(3000.0 - 800.0 - 400.0)
+
+    state = get_sensor_state(hass, entry, f"{entry.entry_id}_home_base_load_power")
+    assert state is not None
+    assert float(state.state) == pytest.approx(1800.0)
+
+    # The provenance row rides along as attributes, and it is a real mix.
+    shares = pi.home_base_load_source_shares
+    assert sum(shares.values()) == pytest.approx(1.0)
+    assert set(shares) == {GRID_SUB_ID, PV_SUB_ID}

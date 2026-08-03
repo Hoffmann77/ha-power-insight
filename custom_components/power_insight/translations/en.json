@@ -52,11 +52,13 @@
             "name": "Power sensors",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "distribution_ratios": "Power distribution ratios (%)"
+              "distribution_ratios": "Power distribution ratios (%)",
+              "home_base_load": "Home base load"
             },
             "data_description": {
               "distribution_power": "Creates one sensor per power flow type (self-consumption, grid import, grid export, etc.) showing the current power in Watts. These are the fundamental building blocks — other sensors are derived from them.",
-              "distribution_ratios": "Creates percentage sensors that show each power flow as a share of total home power. For example: \"currently 65 % of my home load comes from solar.\" Useful for dashboards."
+              "distribution_ratios": "Creates percentage sensors that show each power flow as a share of total home power. For example: \"currently 65 % of my home load comes from solar.\" Useful for dashboards.",
+              "home_base_load": "Creates a device for everything consumed without a sensor on it — gross power minus every metered draw. In most homes it is the single largest consumer, and without it the per-device figures never add up to the totals. It reports its power, where that power came from, and what it avoided paying the grid."
             }
           },
           "costs": {
