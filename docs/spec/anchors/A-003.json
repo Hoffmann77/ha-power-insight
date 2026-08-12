@@ -209,7 +209,7 @@
     },
     {
       "id": "unsatisfiable_overlap",
-      "note": "bat_c now draws 100 W and is captive to east alone. Captive demand (300 W) exceeds local supply (200 W): someone must be deficited. OPEN QUESTION - see the handoff.",
+      "note": "bat_c now draws 100 W and is captive to east alone. Captive demand (300 W) exceeds local supply (200 W): someone must be deficited.",
       "readings": {
         "grid": "200",
         "east": "100",
@@ -339,7 +339,8 @@
             "status": "unverified"
           }
         }
-      ]
+      ],
+      "open_question": "The engine serves bat_c in full and pushes a 50 W deficit onto each of bat_a and bat_b. Defensible - bat_c has no alternative source and the pair do - but the calculation docs describe the opposite priority, and which sink yields is undecided."
     }
   ]
 }

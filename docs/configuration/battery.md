@@ -56,10 +56,13 @@ Default: `0.0`.
 This drives the battery's blended charging cost and its **charging-source-share**
 sensors. Batteries are never selectable as a charge source for another battery.
 
-!!! note "Reconfigure prompt"
-    When you add or remove a grid or PV device, Power Insight raises a repair
-    issue asking you to **reconfigure** each battery so its charge-source list
-    stays correct.
+:::note[Reconfigure prompt]
+
+When you add or remove a grid or PV device, Power Insight raises a repair
+issue asking you to **reconfigure** each battery so its charge-source list
+stays correct.
+
+:::
 
 ### Lifetime production / Total lifetime cost / CO₂ footprint
 
@@ -68,8 +71,11 @@ These behave exactly as for a [PV system](pv.md#lifetime-production). Together,
 [**LCOS**](../concepts.md#lcos-levelized-cost-of-storage). Changing them later
 applies a [correction factor](../concepts.md#the-correction-factor).
 
-!!! note
-    CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
+:::note
+
+CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
+
+:::
 
 ## Sensors this device can create
 
@@ -86,7 +92,10 @@ sources you selected in **Charges from** appear.
 
 See the [Entity reference](../entities.md#battery) for the full list.
 
-!!! info "Why is my battery's savings negative while charging?"
-    Batteries always cost money to charge, so their savings go negative while
-    charging and positive while discharging. This is expected — see the
-    [FAQ](../faq.md#why-does-my-battery-have-negative-savings).
+:::info[Why is my battery's savings negative while charging?]
+
+Batteries always cost money to charge, so their savings go negative while
+charging and positive while discharging. This is expected — see the
+[FAQ](../faq.md#why-does-my-battery-have-negative-cost-savings).
+
+:::

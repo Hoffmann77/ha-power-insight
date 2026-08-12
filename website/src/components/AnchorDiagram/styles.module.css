@@ -1,0 +1,574 @@
+/* Anchor-case diagram — the "plain" skin from the design, resolved.
+ *
+ * The design fixed a light palette; everything below keeps those values for
+ * light mode and defines a dark counterpart, so the component tracks the
+ * Docusaurus theme toggle purely in CSS. No JavaScript reads the theme, which
+ * keeps the whole diagram server-renderable with no hydration mismatch.
+ *
+ * Device colours are custom properties (--ad-c-*) because the SVG strokes and
+ * the ledger bars both need them, and both flip with the theme for free. */
+
+.root {
+  --ad-bg: #ffffff;
+  --ad-fg: #24292f;
+  --ad-mut: #6a737d;
+  --ad-line: #d8dde3;
+  --ad-card: #f6f8fa;
+  --ad-amber: #c77e12;
+  --ad-ok: #4a9e5c;
+  --ad-c-grid: #3d6b9e;
+  --ad-c-pv: #b3861e;
+  --ad-c-battery: #b05577;
+  --ad-c-consumer: #38897c;
+  --ad-c-home: #7a8290;
+
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ad-fg);
+  background: var(--ad-bg);
+  border: 1px solid var(--ad-line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+:global([data-theme='dark']) .root {
+  --ad-bg: #1b1f27;
+  --ad-fg: #e6e9ef;
+  --ad-mut: #99a1b0;
+  --ad-line: #363d4a;
+  --ad-card: #232833;
+  --ad-amber: #e0a44a;
+  --ad-ok: #5fbf74;
+  --ad-c-grid: #6f9fd4;
+  --ad-c-pv: #d4a63f;
+  --ad-c-battery: #d17e9d;
+  --ad-c-consumer: #5aab9e;
+  --ad-c-home: #99a1af;
+}
+
+.root * {
+  box-sizing: border-box;
+}
+
+.root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---- case index ------------------------------------------------------- */
+
+.idx {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding: 14px 18px 11px;
+  border-bottom: 1px solid var(--ad-line);
+}
+
+.caseBtn {
+  font-size: 12.5px;
+  color: var(--ad-mut);
+  padding: 2px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.caseBtn b {
+  font-weight: 600;
+  margin-right: 7px;
+  opacity: 0.6;
+  letter-spacing: 0.02em;
+}
+
+.caseBtn.on {
+  color: var(--ad-fg);
+  border-bottom-color: var(--ad-fg);
+}
+
+.caseBtn.on b {
+  color: var(--ad-fg);
+  opacity: 1;
+}
+
+/* ---- state cards ------------------------------------------------------ */
+
+.scards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 18px 4px;
+  align-items: stretch;
+}
+
+/* The design was drawn against a two-state case. A-004 has four, and at four
+ * across the titles wrap to a word per line — so the cards wrap into rows
+ * instead of squeezing, keeping the intended proportions at any count. */
+.scard {
+  flex: 1 1 200px;
+  min-width: 200px;
+  text-align: left;
+  border: 1px solid var(--ad-line);
+  border-radius: 3px;
+  padding: 10px 13px;
+  background: var(--ad-bg);
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.scard:hover {
+  border-color: var(--ad-mut);
+}
+
+.scard.on {
+  border-color: var(--ad-fg);
+  box-shadow: 0 1px 0 rgba(36, 41, 47, 0.08);
+}
+
+.scard.on::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: var(--ad-fg);
+}
+
+.sctitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ad-mut);
+}
+
+.scard.on .sctitle {
+  color: var(--ad-fg);
+}
+
+.scnum {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+}
+
+.scard.on .scnum {
+  color: var(--ad-fg);
+  opacity: 1;
+}
+
+.scnote {
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ad-mut);
+  margin-top: 4px;
+  opacity: 0.75;
+}
+
+.scq {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ad-amber);
+}
+
+.scqlab {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ad-amber);
+}
+
+@media (max-width: 640px) {
+  .scards {
+    flex-direction: column;
+  }
+}
+
+/* ---- metric selector -------------------------------------------------- */
+
+.metricrow {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 18px;
+  padding: 16px 14px 2px;
+}
+
+.mlab {
+  font-size: 11px;
+  color: var(--ad-mut);
+  opacity: 0.65;
+}
+
+.metric {
+  font-size: 12px;
+  padding: 2px 0;
+  color: var(--ad-mut);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+.metric.on {
+  color: var(--ad-fg);
+  border-bottom-color: var(--ad-fg);
+  font-weight: 600;
+}
+
+/* ---- supply / demand ledger ------------------------------------------- */
+
+.ledger {
+  max-width: 600px;
+  margin: 14px auto 0;
+  padding: 12px 16px 0;
+  border-top: 1px solid var(--ad-line);
+}
+
+.lrow {
+  margin: 8px 0;
+}
+
+.lhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ad-mut);
+  margin-bottom: 4px;
+}
+
+.lhead b {
+  color: var(--ad-fg);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 12.5px;
+}
+
+.lbar {
+  display: flex;
+  height: 24px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--ad-card);
+}
+
+.lbar i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-width: 2px;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+.lbar i + i {
+  border-left: 1.5px solid var(--ad-bg);
+}
+
+.lbar i span {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  padding: 0 4px;
+}
+
+.lleg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  font-size: 11px;
+  color: var(--ad-mut);
+  margin-top: 4px;
+}
+
+.lleg b {
+  color: var(--ad-fg);
+  font-weight: 600;
+}
+
+.ldot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.lempty {
+  font-size: 11.5px;
+  color: var(--ad-mut);
+  font-style: italic;
+}
+
+/* ---- diagram ---------------------------------------------------------- */
+
+.svgwrap {
+  padding: 22px 8px 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.node {
+  cursor: pointer;
+  outline: none;
+}
+
+.node:focus-visible .ring {
+  stroke-width: 3.5;
+}
+
+.node.sel .ring {
+  stroke-width: 4;
+}
+
+.node.dim {
+  opacity: 0.32;
+}
+
+.node.bg {
+  opacity: 0.18;
+}
+
+.edge {
+  fill: none;
+  opacity: 0.75;
+}
+
+.edge.flow {
+  stroke-dasharray: 7 9;
+  animation: drift 1.1s linear infinite;
+}
+
+.edge.bg {
+  opacity: 0.06;
+  animation: none;
+}
+
+@keyframes drift {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+/* Moving dashes are decoration; never impose them on someone who opted out. */
+@media (prefers-reduced-motion: reduce) {
+  .edge.flow {
+    animation: none;
+  }
+}
+
+.elabel {
+  font-size: 10.5px;
+  font-weight: 600;
+  fill: var(--ad-mut);
+  paint-order: stroke;
+  stroke: var(--ad-bg);
+  stroke-width: 3px;
+}
+
+.pot {
+  fill: none;
+  stroke: var(--ad-mut);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+  opacity: 0.4;
+}
+
+/* ---- detail panel ----------------------------------------------------- */
+
+.panel {
+  margin: 10px 14px 2px;
+  border: 1px solid var(--ad-line);
+  border-radius: 3px;
+  background: var(--ad-card);
+  overflow: hidden;
+}
+
+.ph {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--ad-line);
+}
+
+.uid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.kindlab {
+  font-size: 12px;
+  color: var(--ad-mut);
+}
+
+.role {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 3px;
+  padding: 2px 7px;
+  color: #fff;
+}
+
+.px {
+  margin-left: auto;
+  color: var(--ad-mut);
+  font-size: 16px;
+  padding: 2px 6px;
+}
+
+.pb {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+}
+
+.pcol {
+  padding: 10px 12px;
+}
+
+.pcol + .pcol {
+  border-left: 1px solid var(--ad-line);
+}
+
+@media (max-width: 560px) {
+  .pb {
+    grid-template-columns: 1fr;
+  }
+
+  .pcol + .pcol {
+    border-left: none;
+    border-top: 1px solid var(--ad-line);
+  }
+}
+
+.ptitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ad-mut);
+  margin: 0 0 7px;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  padding: 2.5px 0;
+}
+
+.kv i {
+  color: var(--ad-mut);
+  font-style: normal;
+}
+
+.kv b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.frac {
+  color: var(--ad-mut);
+  font-weight: 400;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-left: 5px;
+}
+
+.flowrow {
+  padding: 4px 0;
+  font-size: 12.5px;
+}
+
+.fl {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fl b {
+  font-weight: 600;
+}
+
+.bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ad-line);
+  margin-top: 3px;
+  overflow: hidden;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+}
+
+.alert {
+  margin-top: 9px;
+  border: 1px solid var(--ad-amber);
+  border-radius: 5px;
+  padding: 7px 9px;
+  font-size: 12px;
+  color: var(--ad-amber);
+  background: transparent;
+}
+
+/* ---- legend ----------------------------------------------------------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 6px 16px;
+  align-items: center;
+  padding: 8px 14px 12px;
+  font-size: 11px;
+  color: var(--ad-mut);
+}
+
+.cert {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.4px solid var(--ad-mut);
+  opacity: 0.75;
+  vertical-align: middle;
+}
+
+.cert.v {
+  background: var(--ad-ok);
+  border-color: var(--ad-ok);
+  opacity: 1;
+}

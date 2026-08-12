@@ -63,8 +63,11 @@ Together, *lifetime cost ÷ lifetime production* gives this system's
 > derive a levelized CO₂ intensity per kWh produced. Required when any levelized
 > CO₂ sensor is enabled.
 
-!!! note
-    CO₂ sensors are **not implemented yet**; this field currently has no effect.
+:::note
+
+CO₂ sensors are **not implemented yet**; this field currently has no effect.
+
+:::
 
 ## Changing lifetime values later
 

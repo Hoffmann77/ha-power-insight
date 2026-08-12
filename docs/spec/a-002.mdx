@@ -1,0 +1,52 @@
+---
+title: A-002 — Captive battery
+---
+
+import ANCHOR_CASES, {anchorCase} from './anchors/all';
+
+export const CASE = anchorCase('A-002');
+
+# A-002 — Captive battery
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-002" />
+
+## The snapshots
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+One restriction, two opposite consequences — which is why both snapshots share a
+wiring.
+
+When the captive battery's allowed source is producing, the battery **depletes
+it first**: it takes all of `pv1`, and the unrestricted consumer is left with
+the grid. A naive implementation that shared each source proportionally would
+hand the battery a slice of grid power it is not allowed to touch, so this
+snapshot separates the two implementations immediately.
+
+When that same source drops into standby it stops being a source at all. The
+battery now has nowhere legal to draw from, and rather than dividing by zero the
+row collapses to zeros and the shortfall is reported as a **restriction
+deficit**.

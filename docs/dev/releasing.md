@@ -1,67 +1,82 @@
-# Docs versioning & release process
+# Docs publishing
 
-The documentation site is **versioned** with
-[`mike`](https://github.com/jimporter/mike). `mike` builds each version of the
-site into its own subdirectory of the `gh-pages` branch, maintains a
-`versions.json`, and renders the version selector in the site header.
+The documentation site is a [Docusaurus](https://docusaurus.io/) site. The
+prose lives at the repository root in `docs/`, next to the code it documents;
+`website/` holds only the site machinery (config, React components, styles), so
+the Python project root stays free of Node tooling.
 
-## How versions are published
+## How it is published
 
 Everything is driven by the [`docs.yaml`](https://github.com/Hoffmann77/ha-power-insight/blob/main/.github/workflows/docs.yaml)
 workflow:
 
-| Trigger | What gets deployed |
+| Trigger | What happens |
 |---|---|
-| Push to `main` | The **`dev`** version — in-development docs for the next release. |
-| Push a release tag (e.g. `0.1.0-beta.3`) | A version named after the tag's **`MAJOR.MINOR`** (e.g. `0.1`), with the **`latest`** alias moved onto it and made the site default. |
-| Manual *Run workflow* | Whatever `version` / `alias` you enter (escape hatch). |
+| Pull request touching `docs/` or `website/` | Type-check and build only — a broken link or a bad MDX page fails the PR. |
+| Push to `main` | Build and publish to GitHub Pages. |
+| Manual *Run workflow* | Same as a push to `main`. |
 
-The site root always redirects to a real version: `latest` once a release
-exists, otherwise `dev`.
+Publishing uses the **GitHub Actions Pages source**, so there is no `gh-pages`
+branch and no bot commits in the history. The artifact the build produces is
+handed straight to `actions/deploy-pages`.
 
-!!! info "Grouping by MAJOR.MINOR"
-    Patch and beta releases within a minor series (e.g. `0.1.0-beta.1`,
-    `0.1.0-beta.2`, `0.1.0`) all publish to the same `0.1` version, so the
-    selector stays short. When `0.2` or `1.0` ships, `latest` moves to it and
-    the older series stays browsable.
+:::info[One-time Pages setting]
 
-## Cutting a release
+**Settings → Pages → Build and deployment → Source: _GitHub Actions_.**
 
-1. Merge all doc changes for the release into `main` (they land under `dev`).
-2. Tag the release and push the tag:
+This replaced the old *Deploy from a branch → `gh-pages`* setting, which the
+previous MkDocs + `mike` setup required.
 
-    ```bash
-    git tag 0.1.0-beta.4
-    git push origin 0.1.0-beta.4
-    ```
+:::
 
-3. The workflow deploys `0.1` + `latest` and sets it as the default. Done.
-
-## Deploying manually
-
-From **Actions → Docs → Run workflow**, or locally with a push:
+## Working on the docs locally
 
 ```bash
-pip install -r docs/requirements.txt
-
-# Deploy/refresh a version and alias:
-mike deploy --push --update-aliases 0.1 latest
-
-# Choose what the site root points at:
-mike set-default --push latest
-
-# Inspect / remove versions:
-mike list
-mike delete --push <version>
+cd website
+npm install
+npm start          # dev server with hot reload on http://localhost:3000
 ```
 
-## GitHub Pages setup (one-time)
+Two checks worth running before pushing, because CI runs both:
 
-Because `mike` owns the `gh-pages` branch, Pages must serve **from that
-branch**:
+```bash
+npm run typecheck  # the anchor-diagram component and the case data
+npm run build      # catches broken links and broken heading anchors
+```
 
-**Settings → Pages → Build and deployment → Source: _Deploy from a branch_ →
-Branch: `gh-pages` / `/ (root)`**.
+The build treats broken internal links and broken anchors as **errors**, not
+warnings. That is deliberate: the anchor-case pages are a specification, and a
+link that silently rots undermines the point.
 
-The workflow only needs `contents: write` permission (to push to `gh-pages`);
-it does not use the "GitHub Actions" Pages source.
+## Markdown vs MDX
+
+`markdown.format` is set to `detect`:
+
+- **`.md`** is parsed as plain CommonMark. Braces and angle brackets in prose
+  and code spans are left alone, which is what most pages want.
+- **`.mdx`** is parsed as MDX and can import and render React components.
+
+Only pages that actually embed a component — the anchor-case pages, and the
+landing page — need to be `.mdx`. Prefer `.md` for everything else.
+
+## Versioning
+
+The site currently publishes a **single version**. The MkDocs site was versioned
+with `mike`; that history stays browsable on the old `gh-pages` branch but is no
+longer updated.
+
+Docusaurus versions by snapshotting: `npm run docusaurus docs:version 1.0` copies
+the current `docs/` into `website/versioned_docs/version-1.0/`. Worth turning on
+when the integration hits 1.0 and the docs need to describe more than one
+supported release — before that it mostly adds ceremony.
+
+:::warning[If you do enable versioning]
+
+The anchor-case JSON lives under `docs/spec/anchors/` precisely so it gets
+snapshotted with the prose. The component that renders it lives in
+`website/src/` and is **shared across all versions**, which is why every page
+passes its case data in as a prop rather than letting the component import it.
+Keep that split, or an old version's page will start rendering with today's
+data.
+
+:::

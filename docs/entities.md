@@ -4,24 +4,33 @@ This is the full list of sensors Power Insight can create, grouped by scope.
 Which sensors actually appear depends on the options you enable — see
 [Sensors, presets & options](configuration/options-and-presets.md).
 
-!!! info "Currency units"
-    Sensors are documented in `EUR` for brevity. At runtime the `EUR` unit is
-    replaced with **your Home Assistant currency** (e.g. `$/h`, `£/kWh`).
+:::info[Currency units]
 
-!!! warning "Entity names may change"
-    Power Insight is in beta; entity names may change until 1.0.
+Sensors are documented in `EUR` for brevity. At runtime the `EUR` unit is
+replaced with **your Home Assistant currency** (e.g. `$/h`, `£/kWh`).
 
-!!! abstract "`ratio` vs. `share` — they are not the same"
-    Every percentage sensor is one or the other, and the denominator differs:
+:::
 
-    - **`… ratio`** — a fraction of the **scope's own power**: for a device, its
-      own production/throughput (e.g. *Export ratio* = the fraction of *this PV
-      system's production* that is exported); for the whole home, gross power.
-    - **`… share`** — this device's slice of a **home-wide total** (e.g. *Export
-      share* = this system's exports ÷ *all power exported by the home*).
+:::warning[Entity names may change]
 
-    See [Power distribution → ratio vs. share](concepts.md#the-four-channels)
-    for the full definition.
+Power Insight is in beta; entity names may change until 1.0.
+
+:::
+
+:::info[`ratio` vs. `share` — they are not the same]
+
+Every percentage sensor is one or the other, and the denominator differs:
+
+- **`… ratio`** — a fraction of the **scope's own power**: for a device, its
+  own production/throughput (e.g. *Export ratio* = the fraction of *this PV
+  system's production* that is exported); for the whole home, gross power.
+- **`… share`** — this device's slice of a **home-wide total** (e.g. *Export
+  share* = this system's exports ÷ *all power exported by the home*).
+
+See [Power distribution → ratio vs. share](concepts.md#the-four-channels)
+for the full definition.
+
+:::
 
 Legend for the **Enabled by** column — the option/category (and where relevant
 the device capability) that must be on for the sensor to exist:
@@ -73,11 +82,14 @@ devices into a single number per metric.
 | Combined total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return |
 | Combined total levelized financial return | EUR | Levelized financial return totalled across all devices (retro-corrected). | Accumulate levelized financial return |
 
-!!! note "Combined levelized totals are derived, not integrated"
-    The *levelized* totals are computed as the sum of each device's own
-    levelized total (scaled by its [correction factor](concepts.md#the-correction-factor))
-    plus a ledger of removed devices — so editing lifetime values is retroactive
-    and removing a device never drops its historical contribution.
+:::note[Combined levelized totals are derived, not integrated]
+
+The *levelized* totals are computed as the sum of each device's own
+levelized total (scaled by its [correction factor](concepts.md#the-correction-factor))
+plus a ledger of removed devices — so editing lifetime values is retroactive
+and removing a device never drops its historical contribution.
+
+:::
 
 ---
 

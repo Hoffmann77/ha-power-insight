@@ -3,10 +3,13 @@
 Setting up Power Insight has three parts: create the hub, add your devices, and
 choose which sensors to create. This page walks through all three.
 
-!!! tip "Terminology"
-    Power Insight is a **hub** integration. One config entry represents one
-    **energy mix** (one home / one grid connection). Inside it you add one
-    **device** per grid connection, PV system, battery, and consumer.
+:::tip[Terminology]
+
+Power Insight is a **hub** integration. One config entry represents one
+**energy mix** (one home / one grid connection). Inside it you add one
+**device** per grid connection, PV system, battery, and consumer.
+
+:::
 
 ## 1. Create the hub
 
@@ -29,10 +32,13 @@ on the previous one — you can always change this later in the integration's
 | **Recommended** | Adds distribution power (W), charging-source attribution, and running totals for export compensation, costs and savings. The sweet spot for most installations. |
 | **Extended** | Also adds real-time cost, savings and export-compensation rate sensors (€/h or $/h) plus levelized cost sensors. Cost sensors need a live price entity on your grid adapter; levelized sensors need lifetime production and cost values per device. |
 
-!!! note
-    Not sure which to pick? **Recommended** is a great starting point for most
-    homes: it covers the sensors people use most without adding complexity you
-    may not need yet.
+:::note
+
+Not sure which to pick? **Recommended** is a great starting point for most
+homes: it covers the sensors people use most without adding complexity you
+may not need yet.
+
+:::
 
 ## 2. Add your devices
 
@@ -46,10 +52,13 @@ to add each part of your energy mix. Four device types are available:
 - **Battery** — a home battery / storage system.
 - **Electrical consumer** — an appliance, EV charger, heat pump, etc.
 
-!!! important "Add the grid first"
-    Without a grid connection Power Insight cannot calculate anything, and it
-    will raise a repair issue asking you to add one. Add your **grid connection**
-    before (or right after) your other devices.
+:::warning[Add the grid first]
+
+Without a grid connection Power Insight cannot calculate anything, and it
+will raise a repair issue asking you to add one. Add your **grid connection**
+before (or right after) your other devices.
+
+:::
 
 Each device asks for a **power entity** and a few type-specific fields. Which
 fields are *required* depends on the sensors you enabled — for example, cost
@@ -61,11 +70,14 @@ per-device pages:
 - [Battery](configuration/battery.md)
 - [Consumer](configuration/consumer.md)
 
-!!! warning "Mind the sign convention"
-    Power Insight expects: **Grid** — positive = import, negative = export;
-    **PV / battery** — positive = producing/discharging, negative =
-    consuming/charging. If your sensor uses the opposite sign, turn on **Invert
-    power direction**. See [Sign conventions](concepts.md#sign-conventions).
+:::warning[Mind the sign convention]
+
+Power Insight expects: **Grid** — positive = import, negative = export;
+**PV / battery** — positive = producing/discharging, negative =
+consuming/charging. If your sensor uses the opposite sign, turn on **Invert
+power direction**. See [Sign conventions](concepts.md#sign-conventions).
+
+:::
 
 ## 3. Fine-tune the sensors (options)
 

@@ -72,14 +72,17 @@ per instance.
 Categories are the user‑facing groupings; each maps to one or more leaf option
 keys (the values actually stored and checked).
 
-!!! note "Post-implementation addition"
-    Four financial-return option keys were added to `combined`, `pv_system`, and
-    `battery` scopes after this spec was written:
-    `calculate_financial_return_rate`, `calculate_levelized_financial_return_rate`,
-    `accumulate_financial_return`, `accumulate_levelized_financial_return`.
-    The `self_consumption_cost_savings_*` sensor family was removed (cost savings
-    now means avoided import only; financial return = cost savings + export
-    compensation). The sensor-key tables in section 5 reflect the current state.
+:::note[Post-implementation addition]
+
+Four financial-return option keys were added to `combined`, `pv_system`, and
+`battery` scopes after this spec was written:
+`calculate_financial_return_rate`, `calculate_levelized_financial_return_rate`,
+`accumulate_financial_return`, `accumulate_levelized_financial_return`.
+The `self_consumption_cost_savings_*` sensor family was removed (cost savings
+now means avoided import only; financial return = cost savings + export
+compensation). The sensor-key tables in section 5 reflect the current state.
+
+:::
 
 ### Money categories
 

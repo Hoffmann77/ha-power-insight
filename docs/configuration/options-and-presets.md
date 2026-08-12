@@ -5,9 +5,12 @@ exactly which ones exist — for the whole home and per device type.
 
 Open it from **Settings → Devices & services → Power Insight → Configure**.
 
-!!! tip "Turning a sensor off never loses data"
-    Any sensors you turn off are **disabled** in Home Assistant, not deleted, so
-    historical data is preserved. You can re-enable them at any time.
+:::tip[Turning a sensor off never loses data]
+
+Any sensors you turn off are **disabled** in Home Assistant, not deleted, so
+historical data is preserved. You can re-enable them at any time.
+
+:::
 
 ## Presets
 
@@ -78,9 +81,12 @@ created:
 - **Accumulate costs** — adds sensors that sum cost over time (running total,
   stored in the recorder, survives restarts).
 
-!!! info
-    Grid electricity has no levelized cost — the **Grid** scope only offers the
-    **Standard** method.
+:::info
+
+Grid electricity has no levelized cost — the **Grid** scope only offers the
+**Standard** method.
+
+:::
 
 ### Cost savings
 
@@ -91,7 +97,7 @@ importing.
 The **Savings calculation method** select works the same way (None / Standard /
 Levelized / Both), and **Accumulate savings** adds running-total sensors. Savings
 is not offered on the grid scope. See
-[How savings are calculated](../concepts.md#how-savings-are-calculated).
+[How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
 
 ## Which scope offers which categories
 

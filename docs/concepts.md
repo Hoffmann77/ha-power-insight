@@ -112,11 +112,14 @@ that have these values.
 spread across the energy it stores/delivers over its life. A battery's levelized
 sensors use its LCOS in place of an LCOE.
 
-!!! note
-    Today LCOS is computed with the same `cost / throughput` formula as LCOE. A
-    round-trip-efficiency-aware refinement is planned; the **Round-trip
-    efficiency** field is already collected and used for charging-source
-    attribution.
+:::note
+
+Today LCOS is computed with the same `cost / throughput` formula as LCOE. A
+round-trip-efficiency-aware refinement is planned; the **Round-trip
+efficiency** field is already collected and used for charging-source
+attribution.
+
+:::
 
 ## The correction factor
 
@@ -240,10 +243,13 @@ devices drawing power at the same instant can show different source mixes:
 The **round-trip efficiency** is used to account for the energy lost in a
 charge/discharge cycle when attributing these costs.
 
-!!! info "The exact rules"
-    The precise allocation — the three tiers above and their edge cases — is
-    written up for contributors in
-    [Engine calculation decisions](dev/engine-calculations.md).
+:::info[The exact rules]
+
+The precise allocation — the three tiers above and their edge cases — is
+written up for contributors in
+[Engine calculation decisions](dev/engine-calculations.md).
+
+:::
 
 ## Scopes
 

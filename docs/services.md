@@ -28,7 +28,10 @@ data:
   value: 42.0
 ```
 
-!!! tip
-    From then on the sensor keeps integrating its rate on top of the value you
-    set — so pick the value that reflects the true running total at the moment
-    you call the service.
+:::tip
+
+From then on the sensor keeps integrating its rate on top of the value you
+set — so pick the value that reflects the true running total at the moment
+you call the service.
+
+:::

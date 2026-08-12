@@ -5,10 +5,13 @@ etc. Power Insight tracks how much power it draws and where that power comes fro
 
 Add it with **Add device → Electrical consumer**.
 
-!!! warning "Under development"
-    Consumer support is still being built out. Today a consumer produces
-    operating-cost sensors and (with the option enabled) power-source-share
-    sensors. More consumer sensors are planned.
+:::warning[Under development]
+
+Consumer support is still being built out. Today a consumer produces
+operating-cost sensors and (with the option enabled) power-source-share
+sensors. More consumer sensors are planned.
+
+:::
 
 ## Fields
 

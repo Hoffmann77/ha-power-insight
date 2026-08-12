@@ -41,9 +41,12 @@ value at every calculation, dynamic tariffs are fully supported.
 > [Electricity Maps](https://www.home-assistant.io/integrations/co2signal/)
 > integration). Required when CO₂ sensors are enabled.
 
-!!! note
-    CO₂ sensors are **not implemented yet**, so this field currently has no
-    effect. It is safe to leave empty.
+:::note
+
+CO₂ sensors are **not implemented yet**, so this field currently has no
+effect. It is safe to leave empty.
+
+:::
 
 ## Sensors this device can create
 
@@ -65,7 +68,10 @@ See the [Entity reference](../entities.md#grid-connection) for exactly what each
 sensor means, and [Sensors, presets & options](options-and-presets.md) for how to
 enable them.
 
-!!! info "Grid electricity has no levelized cost"
-    The levelized (LCOE/LCOS) concept applies only to devices you own, like solar
-    panels and batteries — so the grid scope only offers the **Standard** cost
-    method.
+:::info[Grid electricity has no levelized cost]
+
+The levelized (LCOE/LCOS) concept applies only to devices you own, like solar
+panels and batteries — so the grid scope only offers the **Standard** cost
+method.
+
+:::

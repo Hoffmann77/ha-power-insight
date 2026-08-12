@@ -134,14 +134,15 @@ uv run pytest
 Preview the documentation locally:
 
 ```bash
-pip install -r docs/requirements.txt
-mkdocs serve
+cd website
+npm install
+npm start
 ```
 
-The docs are **versioned** with [`mike`](https://github.com/jimporter/mike) and
-published to the `gh-pages` branch: pushes to `main` update the `dev` docs, and
-release tags publish a `MAJOR.MINOR` version behind the `latest` alias. See
-[the docs release process](https://hoffmann77.github.io/ha-power-insight/dev/releasing/).
+The docs are a [Docusaurus](https://docusaurus.io/) site: the prose lives in
+`docs/` and the site machinery in `website/`. Pushes to `main` publish to GitHub
+Pages via the Actions Pages source. See
+[the docs publishing process](https://hoffmann77.github.io/ha-power-insight/dev/releasing).
 
 ## 📄 License
 

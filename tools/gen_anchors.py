@@ -145,6 +145,12 @@ CASES = [
                 "readings": dict(grid=1000, pv1=-20, bat1=-400, cons1=-100),
                 "price": 0.30,
                 "focus": [],
+                "open_question": (
+                    "home_base_load_power includes the 400 W bat1 drew but could "
+                    "not legally be attributed, so the 'unmetered' load contains a "
+                    "device that has a meter on it. Its docstring says gross minus "
+                    "metered draw, which would be 580 W rather than 980 W."
+                ),
             },
         ],
     },
@@ -187,11 +193,17 @@ CASES = [
                 "note": (
                     "bat_c now draws 100 W and is captive to east alone. Captive "
                     "demand (300 W) exceeds local supply (200 W): someone must be "
-                    "deficited. OPEN QUESTION - see the handoff."
+                    "deficited."
                 ),
                 "readings": dict(grid=200, east=100, west=100, bat_a=-100, bat_b=-100, bat_c=-100),
                 "price": 0.30,
                 "focus": [],
+                "open_question": (
+                    "The engine serves bat_c in full and pushes a 50 W deficit onto "
+                    "each of bat_a and bat_b. Defensible - bat_c has no alternative "
+                    "source and the pair do - but the calculation docs describe the "
+                    "opposite priority, and which sink yields is undecided."
+                ),
             },
         ],
     },
@@ -291,15 +303,16 @@ def build(case):
                     "certification": {"status": "unverified"},
                 }
             )
-        out["states"].append(
-            {
-                "id": st["id"],
-                "note": st["note"],
-                "readings": {k: rat(v) for k, v in st["readings"].items()},
-                "price": rat(st["price"]),
-                "expectations": expectations,
-            }
-        )
+        entry = {
+            "id": st["id"],
+            "note": st["note"],
+            "readings": {k: rat(v) for k, v in st["readings"].items()},
+            "price": rat(st["price"]),
+            "expectations": expectations,
+        }
+        if st.get("open_question"):
+            entry["open_question"] = st["open_question"]
+        out["states"].append(entry)
     return out
 
 

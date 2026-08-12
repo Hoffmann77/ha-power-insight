@@ -134,38 +134,37 @@ dominate.
 **Not every property appears in every state.** The set varies by what each
 state is there to demonstrate. Render what is present; don't assume a fixed list.
 
-## Embedding
+## Embedding — as built
 
-MkDocs Material 9.5, versioned with `mike`, deployed to GitHub Pages. Some hard
-constraints from that:
+The site moved from MkDocs Material to **Docusaurus 3** while this component was
+being designed, so the constraints below are the ones that actually applied. The
+implementation lives in `website/src/components/AnchorDiagram/`.
 
-- **No build step and no npm.** The docs CI installs `mkdocs-material` and
-  `mike`, nothing else. Ship vanilla JS + CSS as static assets under
-  `docs/assets/`, wired up with `extra_javascript` / `extra_css` in
-  `mkdocs.yml`. No bundler, no framework.
-- **No CDN.** Everything self-contained; the site should work offline.
-- **`navigation.instant` is enabled.** Pages swap via XHR with no full reload,
-  so `DOMContentLoaded` fires once for the whole session and your component
-  will silently fail on the second visit. Initialise inside Material's
-  `document$.subscribe(...)` observable (globally available) and make setup
-  idempotent — tear down any previous instance first.
-- **Light and dark are both live**, with an in-page toggle (`default` /
-  `slate`, primary colour light blue). Read Material's CSS custom properties
-  (`--md-default-fg-color`, `--md-default-bg-color`, `--md-primary-fg-color`,
-  `--md-accent-fg-color`, `--md-typeset-color`) rather than hard-coding
-  anything. The toggle switches without a reload, so any JS that reads computed
-  colours must re-read on change.
-- **`mike` puts the site under a version prefix** (`/ha-power-insight/dev/…`).
-  Do **not** fetch `/spec/anchors/A-003.json` from an absolute path — resolve it
-  relative to the executing script's own URL, or it will 404 on every published
-  version.
-- `attr_list`, `md_in_html` and `pymdownx.superfences` are enabled, so a page
-  can drop in `<div class="anchor-diagram" data-case="A-003"></div>` and let the
-  script hydrate it.
-- Inline **SVG** is almost certainly the right medium: crisp at any zoom,
-  themeable through CSS variables, stylable per element, and accessible in a way
-  canvas is not.
-- These docs get read on phones. It needs to reflow, not just scale down.
+- **Build-time JSON imports, never `fetch`.** A page imports its case data and
+  passes it in as a prop. That removes the base-path problem entirely (the site
+  is served under `/ha-power-insight/`, so any absolute fetch would 404), makes a
+  missing or malformed case a *build* failure rather than a runtime one, and lets
+  the whole diagram server-render into the static HTML.
+- **Data is passed in, not imported by the component.** `docs/` is what
+  Docusaurus snapshots when a version is cut; `website/src/` is shared across
+  every version. Keeping the case data on the `docs/` side and threading it
+  through a prop is what stops an old version's page from rendering with today's
+  numbers.
+- **Server-rendering, so no `window` at render time.** State comes from props
+  and `useState`; the URL is read in a mount effect, never during render, so the
+  server markup and the first client render agree. `<BrowserOnly>` is
+  deliberately *not* used — it would opt out of the SSR that makes the diagram
+  visible without JavaScript.
+- **Theming is pure CSS.** Colours are custom properties on the component root,
+  redefined under `:global([data-theme='dark'])`. No JavaScript reads the theme,
+  so the Docusaurus toggle just works and there is nothing to hydrate.
+- **Inline SVG**, one `viewBox`, `width: 100%` — crisp at any zoom, themeable
+  through the same variables, and focusable per node in a way canvas is not.
+- **Deep links.** The selected case and state are mirrored into the query
+  string (`?case=A-003&state=hall_tight_pair`), so an issue report can point at
+  exactly the snapshot it means.
+- These docs get read on phones: the state cards wrap, the detail panel collapses
+  to one column, and the SVG scales with its container.
 
 ## Out of scope
 
