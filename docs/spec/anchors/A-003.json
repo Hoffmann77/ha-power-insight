@@ -1,0 +1,345 @@
+{
+  "$schema": "../anchor-case.schema.json",
+  "id": "A-003",
+  "title": "Group captivity (Hall's condition)",
+  "summary": "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for.",
+  "decides": [
+    "Feasibility is a property of groups of sinks, not of single sinks.",
+    "A flexible sink must not take local power a tight group needs.",
+    "When two captive groups contend and the configuration cannot be satisfied, which one yields."
+  ],
+  "topology": [
+    {
+      "uid": "grid",
+      "kind": "grid",
+      "config": {
+        "has_price_entity": true
+      }
+    },
+    {
+      "uid": "east",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "west",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "bat_a",
+      "kind": "battery",
+      "config": {
+        "lcos": "3/20",
+        "lco2_intensity": "100",
+        "exports_power": false,
+        "export_compensation": "0",
+        "charge_from_adapters": [
+          "east",
+          "west"
+        ]
+      }
+    },
+    {
+      "uid": "bat_b",
+      "kind": "battery",
+      "config": {
+        "lcos": "3/20",
+        "lco2_intensity": "100",
+        "exports_power": false,
+        "export_compensation": "0",
+        "charge_from_adapters": [
+          "east",
+          "west"
+        ]
+      }
+    },
+    {
+      "uid": "bat_c",
+      "kind": "battery",
+      "config": {
+        "lcos": "3/20",
+        "lco2_intensity": "100",
+        "exports_power": false,
+        "export_compensation": "0",
+        "charge_from_adapters": [
+          "east"
+        ]
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "hall_tight_pair",
+      "note": "bat_c idle. {bat_a, bat_b} exactly exhaust east+west, so the 200 W home load must be served entirely from the grid.",
+      "readings": {
+        "grid": "200",
+        "east": "100",
+        "west": "100",
+        "bat_a": "-100",
+        "bat_b": "-100",
+        "bat_c": "0"
+      },
+      "price": "3/10",
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "400",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_production",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_consumption",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "bat_a": {
+              "grid": "0",
+              "east": "1/2",
+              "west": "1/2"
+            },
+            "bat_b": {
+              "grid": "0",
+              "east": "1/2",
+              "west": "1/2"
+            }
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "grid": "1",
+            "east": "0",
+            "west": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_restriction_deficit",
+          "value": {},
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unsatisfiable_overlap",
+      "note": "bat_c now draws 100 W and is captive to east alone. Captive demand (300 W) exceeds local supply (200 W): someone must be deficited. OPEN QUESTION - see the handoff.",
+      "readings": {
+        "grid": "200",
+        "east": "100",
+        "west": "100",
+        "bat_a": "-100",
+        "bat_b": "-100",
+        "bat_c": "-100"
+      },
+      "price": "3/10",
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "400",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_production",
+          "value": "200",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "300",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_consumption",
+          "value": "100",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "100",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "bat_a": {
+              "grid": "1/2",
+              "east": "0",
+              "west": "1/2"
+            },
+            "bat_b": {
+              "grid": "1/2",
+              "east": "0",
+              "west": "1/2"
+            },
+            "bat_c": {
+              "grid": "0",
+              "east": "1",
+              "west": "0"
+            }
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "grid": "1",
+            "east": "0",
+            "west": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_restriction_deficit",
+          "value": {
+            "bat_a": "50",
+            "bat_b": "50"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    }
+  ]
+}
