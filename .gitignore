@@ -175,3 +175,6 @@ cython_debug/
 /website/build
 /website/.docusaurus
 /website/.cache-loader
+
+# Generated certification worksheets (regenerate with tools/worksheet.py)
+/worksheets/
