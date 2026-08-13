@@ -59,6 +59,19 @@ jobs:
       - name: Build
         run: npm run build
 
+      # GitHub Pages allows exactly one deployment per repository, so a pull
+      # request cannot get its own URL without giving up the Actions publishing
+      # source. Instead the built site is attached to the run: download it,
+      # unpack it over `website/build`, and `npm run serve` renders it at the
+      # real base path.
+      - name: Upload reviewable build
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-pr-${{ github.event.number }}
+          path: website/build
+          retention-days: 14
+
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3

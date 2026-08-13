@@ -20,6 +20,25 @@ Publishing uses the **GitHub Actions Pages source**, so there is no `gh-pages`
 branch and no bot commits in the history. The artifact the build produces is
 handed straight to `actions/deploy-pages`.
 
+## Reviewing a pull request's docs
+
+GitHub Pages allows exactly **one** deployment per repository, so a pull request
+cannot have its own preview URL without giving up the Actions publishing source
+and going back to a `gh-pages` branch. Instead, every PR build attaches the
+finished site to the workflow run:
+
+1. Open the PR's **Docs** check → *Summary* → **Artifacts** →
+   `docs-site-pr-<number>`.
+2. Unpack it over `website/build`.
+3. `cd website && npm run serve`.
+
+Use `npm run serve` rather than a generic static server: the site is published
+under `/ha-power-insight/`, and a server rooted elsewhere will 404 every asset.
+
+If preview URLs ever become worth the setup, an external host (Cloudflare Pages,
+Netlify) is the way to get them — it builds fork PRs in its own sandbox, which
+is the part that is genuinely awkward to do safely from this repository.
+
 :::info[One-time Pages setting]
 
 **Settings → Pages → Build and deployment → Source: _GitHub Actions_.**
