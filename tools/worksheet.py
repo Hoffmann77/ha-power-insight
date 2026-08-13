@@ -316,9 +316,29 @@ def render(blocks: list[dict], sheet_id: str, limit: int | None) -> tuple[str, l
 CATALOG_CACHE: dict = {}
 
 
+def find_chrome() -> str | None:
+    """Any Chromium that can print to PDF — local, CI runner, or developer box."""
+    explicit = os.environ.get("CHROME_PATH")
+    if explicit and pathlib.Path(explicit).exists():
+        return explicit
+    import shutil
+
+    for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable"):
+        found = shutil.which(name)
+        if found:
+            return found
+    for pattern in (
+        "/opt/pw-browsers/chromium-*/chrome-linux/chrome",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ):
+        for candidate in sorted(glob.glob(pattern)):
+            if "headless" not in candidate:
+                return candidate
+    return None
+
+
 def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path) -> bool:
-    candidates = sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"))
-    chrome = next((c for c in candidates if "headless" not in c), None)
+    chrome = find_chrome()
     if not chrome:
         return False
     subprocess.run(

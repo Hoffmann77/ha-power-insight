@@ -278,8 +278,37 @@ CASES = [
 ]
 
 
+def existing_certifications(case_id):
+    """Certifications and derivations already recorded for this case.
+
+    Regenerating must never destroy hand-certification work: those are
+    mornings of somebody's derivation, keyed by (state, property) rather than
+    by file position so they survive the case being reshaped around them. A
+    certification whose *value* has changed is dropped deliberately -- it was a
+    claim about the old number and no longer holds.
+    """
+    path = os.path.join(OUT, f"{case_id}.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path) as fh:
+        prior = json.load(fh)
+    kept = {}
+    for state in prior.get("states", []):
+        for exp in state.get("expectations", []):
+            cert = exp.get("certification", {})
+            if cert.get("status") == "unverified" and not exp.get("derivation"):
+                continue
+            kept[(state["id"], exp["property"])] = (
+                exp.get("value"),
+                exp.get("derivation", []),
+                cert,
+            )
+    return kept
+
+
 def build(case):
     topo = Topology(*case["topology"])
+    prior = existing_certifications(case["id"])
     out = {
         "$schema": "../anchor-case.schema.json",
         "id": case["id"],
@@ -295,12 +324,24 @@ def build(case):
         props = CORE + [p for p in st["focus"] if p not in CORE]
         expectations = []
         for name in props:
+            value = encode(getattr(engine, name))
+            derivation, certification = [], {"status": "unverified"}
+            kept = prior.get((st["id"], name))
+            if kept is not None:
+                old_value, old_derivation, old_certification = kept
+                if old_value == value:
+                    derivation, certification = old_derivation, old_certification
+                else:
+                    print(
+                        f"  ! {case['id']}/{st['id']}/{name}: value changed, "
+                        f"dropping a {old_certification.get('status')} certification"
+                    )
             expectations.append(
                 {
                     "property": name,
-                    "value": encode(getattr(engine, name)),
-                    "derivation": [],
-                    "certification": {"status": "unverified"},
+                    "value": value,
+                    "derivation": derivation,
+                    "certification": certification,
                 }
             )
         entry = {
