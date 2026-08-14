@@ -1,6 +1,6 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
-// Mirrors the nav the MkDocs site had, plus the anchor-case specification.
+// Mirrors the nav the MkDocs site had, plus the reference-case specification.
 const sidebars: SidebarsConfig = {
   docs: [
     'index',
@@ -24,9 +24,14 @@ const sidebars: SidebarsConfig = {
     'faq',
     {
       type: 'category',
-      label: 'Anchor cases',
+      label: 'Reference cases',
       link: {type: 'doc', id: 'spec/index'},
-      items: ['spec/a-001', 'spec/a-002', 'spec/a-003', 'spec/a-004'],
+      items: [
+        'spec/baseline-mix',
+        'spec/captive-battery',
+        'spec/group-captivity',
+        'spec/grid-export',
+      ],
     },
     {
       type: 'category',
@@ -37,7 +42,7 @@ const sidebars: SidebarsConfig = {
         'dev/entity-naming',
         'dev/releasing',
         'dev/options-flow-redesign',
-        'dev/anchor-diagram-handoff',
+        'dev/case-diagram-handoff',
       ],
     },
   ],

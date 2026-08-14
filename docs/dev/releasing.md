@@ -59,12 +59,12 @@ npm start          # dev server with hot reload on http://localhost:3000
 Two checks worth running before pushing, because CI runs both:
 
 ```bash
-npm run typecheck  # the anchor-diagram component and the case data
+npm run typecheck  # the case-diagram component and the case data
 npm run build      # catches broken links and broken heading anchors
 ```
 
 The build treats broken internal links and broken anchors as **errors**, not
-warnings. That is deliberate: the anchor-case pages are a specification, and a
+warnings. That is deliberate: the reference-case pages are a specification, and a
 link that silently rots undermines the point.
 
 ## Markdown vs MDX
@@ -75,7 +75,7 @@ link that silently rots undermines the point.
   and code spans are left alone, which is what most pages want.
 - **`.mdx`** is parsed as MDX and can import and render React components.
 
-Only pages that actually embed a component — the anchor-case pages, and the
+Only pages that actually embed a component — the reference-case pages, and the
 landing page — need to be `.mdx`. Prefer `.md` for everything else.
 
 ## Versioning
@@ -89,7 +89,7 @@ under `/next`, with a version selector in the navbar.
 | `website/versioned_docs/version-2026.7/` | the site root — what visitors get by default |
 
 Docusaurus versions by **snapshotting source**, not built output. Cutting a
-version copies the whole of `docs/` — markdown, the anchor-case JSON, all of it —
+version copies the whole of `docs/` — markdown, the reference-case JSON, all of it —
 into `website/versioned_docs/`, and that copy is then frozen. Day-to-day work
 happens in `docs/` and lands under `/next`; nothing you write there changes what
 a visitor sees until the next version is cut.
@@ -109,11 +109,11 @@ Old versions stay browsable and are still *rebuilt* on every deploy, because
 Docusaurus versions source rather than output — so a theme fix reaches every
 version at once.
 
-:::warning[Why anchor-case data is passed in as a prop]
+:::warning[Why reference-case data is passed in as a prop]
 
 That last point cuts both ways. `docs/` is snapshotted; `website/src/` is
-**shared across every version**. So the anchor-case JSON lives under
-`docs/spec/anchors/` to be frozen with the prose around it, while the component
+**shared across every version**. So the reference-case JSON lives under
+`docs/spec/cases/` to be frozen with the prose around it, while the component
 that draws it is shared — which is why each page imports its own case data and
 passes it in rather than letting the component reach for it.
 

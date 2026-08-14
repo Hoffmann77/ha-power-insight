@@ -1,4 +1,4 @@
-"""Generate the anchor-case JSON files from topology/state definitions.
+"""Generate the reference-case JSON files from topology/state definitions.
 
 Values are read from the engine and written with ``status: unverified``.
 Derivations are deliberately NOT written: they are the author's own work,
@@ -10,29 +10,23 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import sys
 from fractions import Fraction
 
-sys.path.insert(0, "/home/user/ha-power-insight")
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from tests.engine.scenario_framework import Adapter, Cell, State, Topology  # noqa: E402
 
-OUT = "/home/user/ha-power-insight/docs/spec/anchors"
+OUT = str(ROOT / "docs" / "spec" / "cases")
+CATALOG = ROOT / "docs" / "spec" / "properties.json"
 
-CORE = [
-    "gross_power",
-    "combined_grid_import",
-    "combined_grid_export",
-    "combined_production",
-    "combined_charging_power",
-    "combined_discharging_power",
-    "combined_standby_power",
-    "combined_consumption",
-    "home_base_load_power",
-    "sink_adapters_source_shares",
-    "home_base_load_source_shares",
-    "sink_adapters_restriction_deficit",
-]
+# Every property the catalog documents, in catalog order — which is dependency
+# order, so a state's expectations read from readings up to the monetary model.
+# The docs render the whole set: a property the engine answers but the corpus
+# never publishes is a metric the reader simply cannot check.
+PROPERTIES = list(json.loads(CATALOG.read_text())["properties"])
 
 
 def rat(x):
@@ -69,8 +63,8 @@ def adapter_json(a: Adapter) -> dict:
 
 CASES = [
     {
-        "id": "A-001",
-        "title": "Baseline mix, no restrictions",
+        "id": "baseline-mix",
+        "title": "Baseline mix",
         "summary": (
             "The degenerate baseline every other case is read against. Nothing is "
             "restricted, so each sink simply mirrors the raw availability of the "
@@ -95,24 +89,17 @@ CASES = [
                 "note": "Grid importing alongside PV; battery charging, one load.",
                 "readings": dict(grid=800, pv1=600, bat1=-600, cons1=-500),
                 "price": 0.30,
-                "focus": [
-                    "combined_coe_rate",
-                    "combined_lcoe_rate",
-                    "combined_avoided_cost_rate",
-                    "combined_saving_rate",
-                ],
             },
             {
                 "id": "standby_and_idle",
                 "note": "pv1 draws standby (a sink); cons1 sits at 0 W (neither group).",
                 "readings": dict(grid=1000, pv1=-20, bat1=-400, cons1=0),
                 "price": 0.30,
-                "focus": ["gross_power_standby_ratio", "gross_power_charging_ratio"],
             },
         ],
     },
     {
-        "id": "A-002",
+        "id": "captive-battery",
         "title": "Captive battery",
         "summary": (
             "bat1 may only charge from pv1. That single restriction changes the "
@@ -137,14 +124,12 @@ CASES = [
                 "note": "pv1 produces exactly what bat1 draws, so bat1 takes all of it.",
                 "readings": dict(grid=500, pv1=400, bat1=-400, cons1=-200),
                 "price": 0.30,
-                "focus": [],
             },
             {
                 "id": "source_in_standby",
                 "note": "pv1 is drawing standby, so it is a sink; bat1's only allowed source does not exist.",
                 "readings": dict(grid=1000, pv1=-20, bat1=-400, cons1=-100),
                 "price": 0.30,
-                "focus": [],
                 "open_question": (
                     "home_base_load_power includes the 400 W bat1 drew but could "
                     "not legally be attributed, so the 'unmetered' load contains a "
@@ -155,8 +140,8 @@ CASES = [
         ],
     },
     {
-        "id": "A-003",
-        "title": "Group captivity (Hall's condition)",
+        "id": "group-captivity",
+        "title": "Group captivity",
         "summary": (
             "Two batteries are each allowed both strings, and neither is "
             "individually stuck — but together they need every watt the two "
@@ -187,7 +172,6 @@ CASES = [
                 ),
                 "readings": dict(grid=200, east=100, west=100, bat_a=-100, bat_b=-100, bat_c=0),
                 "price": 0.30,
-                "focus": [],
             },
             {
                 "id": "unsatisfiable_overlap",
@@ -198,13 +182,12 @@ CASES = [
                 ),
                 "readings": dict(grid=200, east=100, west=100, bat_a=-100, bat_b=-100, bat_c=-100),
                 "price": 0.30,
-                "focus": [],
             },
         ],
     },
     {
-        "id": "A-004",
-        "title": "Export",
+        "id": "grid-export",
+        "title": "Grid export",
         "summary": (
             "With the grid exporting it stops being a source and becomes a sink "
             "- and a restricted one, because only devices configured to export "
@@ -232,41 +215,24 @@ CASES = [
                 "note": "bat2 discharges but may not feed the grid, so the export mix excludes it.",
                 "readings": dict(grid=-600, pv1=800, pv2=0, bat1=200, bat2=200, cons1=-400),
                 "price": 0.25,
-                "focus": [
-                    "source_adapters_export_power",
-                    "source_adapters_export_shares",
-                    "combined_export_compensation_rate",
-                    "gross_power_export_ratio",
-                ],
             },
             {
                 "id": "export_with_standby",
                 "note": "pv2 in standby while the house exports; standby competes in the allocation.",
                 "readings": dict(grid=-600, pv1=800, pv2=-50, bat1=200, bat2=200, cons1=-400),
                 "price": 0.25,
-                "focus": [
-                    "source_adapters_standby_power",
-                    "gross_power_standby_ratio",
-                    "gross_power_applicable_consumption_ratio",
-                ],
             },
             {
                 "id": "discharge_dynamic_prices",
                 "note": "Both batteries discharging; the mix they charged on is in the past.",
                 "readings": dict(grid=-300, pv1=0, pv2=-50, bat1=400, bat2=400, cons1=-400),
                 "price": 0.25,
-                "focus": [
-                    "source_adapters_dynamic_coe",
-                    "source_adapters_dynamic_lcoe",
-                    "combined_export_compensation_rate",
-                ],
             },
             {
                 "id": "pure_export_zero_gross",
                 "note": "Nothing is producing and the grid is exporting: gross power is exactly 0.",
                 "readings": dict(grid=-500, pv1=0, pv2=0, bat1=0, bat2=0, cons1=0),
                 "price": 0.25,
-                "focus": ["gross_power_export_ratio", "gross_power_consumption_ratio"],
             },
         ],
     },
@@ -305,7 +271,7 @@ def build(case):
     topo = Topology(*case["topology"])
     prior = existing_certifications(case["id"])
     out = {
-        "$schema": "../anchor-case.schema.json",
+        "$schema": "../reference-case.schema.json",
         "id": case["id"],
         "title": case["title"],
         "summary": case["summary"],
@@ -316,10 +282,14 @@ def build(case):
     for st in case["states"]:
         state = State(price=st["price"], **st["readings"])
         engine = Cell(topo, state).build_engine()
-        props = CORE + [p for p in st["focus"] if p not in CORE]
         expectations = []
-        for name in props:
+        for name in PROPERTIES:
             value = encode(getattr(engine, name))
+            # A property the engine cannot answer this snapshot is left out
+            # rather than published as null: the corpus states what the engine
+            # computes, and "nothing" is not a value anyone can certify.
+            if value is None:
+                continue
             derivation, certification = [], {"status": "unverified"}
             kept = prior.get((st["id"], name))
             if kept is not None:

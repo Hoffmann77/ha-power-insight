@@ -1,37 +1,38 @@
 ---
-title: Anchor cases
+title: Reference cases
 description: Worked examples that pin down how the Power Insight engine attributes power.
 ---
 
-import ANCHOR_CASES from './anchors/all';
+import DocCardList from '@theme/DocCardList';
 
-# Anchor cases
+# Reference cases
 
 Some of what the engine reports is plain arithmetic. Some of it is a **modelling
 choice** — a place where more than one answer is defensible, and Power Insight
 picks one.
 
-Those choices are what this section is for. Each **anchor case** is a small,
+Those choices are what this section is for. Each **reference case** is a small,
 deliberately-chosen wiring whose every value is published here, so you can
 disagree with the *model* without reading a line of Python.
 
 The values on these pages are generated from the engine, so they are always a
 true record of what it currently computes. Asserting them back against the
-engine in CI — so that a change to the code which contradicts this page fails
+engine in CI — so that a change to the code which contradicts these pages fails
 the build — is the next step, and not yet in place.
 
-<AnchorDiagram
-  cases={ANCHOR_CASES}
-  initialCase="A-003"
-  initialState="hall_tight_pair"
-/>
+## The cases
 
-## How to read the diagram
+Each case has its own page, with its own diagram and the prose that explains
+what that wiring is there to settle.
+
+<DocCardList />
+
+## How to read a diagram
 
 Devices sit on the side their **reading's sign** puts them on this snapshot —
 sources on the left, sinks on the right. That is not decoration: a grid that is
 importing is a *source*, and the same grid exporting is a *restricted sink*. The
-sides move as you step through the states.
+sides move as you step through the snapshots.
 
 Edge width is proportional to watts, and each edge takes the colour of the
 source it comes from. The dashed circle is the **home base load**: everything
@@ -41,6 +42,24 @@ like any other sink, and is derived rather than measured.
 Click any device to focus it. Everything it does not exchange power with fades
 back, and a grey dashed line appears for any source it is *allowed* to use but
 currently is not — which is usually the most interesting thing on the page.
+Click it again, or anywhere else on the diagram, to step back out.
+
+### The four layers
+
+The engine computes in layers, and the tab row steps through them. Each one
+re-labels the same picture and lists every value the engine published for that
+snapshot underneath, with the exact fraction beside the figure.
+
+| Layer | The question it answers |
+| --- | --- |
+| **Totals** | What did each meter read, and what do those readings add up to? |
+| **Provenance** | For each sink, where did its power come from? |
+| **Channels** | What was the gross power *used for* — export, self-consumption, charging, standby? |
+| **Money** | What did that cost, what did it avoid, and what is each source priced at? |
+
+Any row in the value table with a caret next to it will explain itself: the
+engine's own definition of the property, and the formula where one has been
+checked against a real value.
 
 ## Certification
 
@@ -55,23 +74,14 @@ today. That is honest rather than embarrassing — you can see exactly how far t
 hand-checking has got, and a value nobody has certified is one worth arguing
 with.
 
-## The cases
-
-| Case | What it pins down |
-| --- | --- |
-| **[A-001 — Baseline mix](a-001.mdx)** | The unrestricted degenerate case every other case is read against. |
-| **[A-002 — Captive battery](a-002.mdx)** | One sink restricted to a single source, with that source producing and then in standby. |
-| **[A-003 — Group captivity](a-003.mdx)** | Two sinks that are jointly stuck while individually fine — the case the solver exists for. |
-| **[A-004 — Export](a-004.mdx)** | The grid reversed into a restricted sink, plus standby routing and discharge pricing. |
-
 ## Open questions
 
-A state carrying an **open question** is one where the engine produces an answer
-but which answer is *right* has not been settled. They are marked with an amber
-dot in the state cards above, and spelled out on the case page. If you have a
+A snapshot carrying an **open question** is one where the engine produces an
+answer but which answer is *right* has not been settled. They are marked with an
+amber dot in the snapshot cards, and spelled out on the case page. If you have a
 view, the issue tracker is the place for it — that is exactly what publishing
 these cases is meant to invite.
 
-One is outstanding: [`A-002 / source_in_standby`](a-002.mdx), where the unmetered
-home load absorbs a draw that could not be attributed to the battery that
-actually made it.
+One is outstanding: [`captive-battery / source_in_standby`](captive-battery.mdx),
+where the unmetered home load absorbs a draw that could not be attributed to the
+battery that actually made it.

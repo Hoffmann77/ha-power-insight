@@ -4,32 +4,45 @@ import clsx from 'clsx';
 
 import styles from './styles.module.css';
 import FlowSvg from './FlowSvg';
+import CertDot from './CertDot';
+import ValueLedger from './ValueLedger';
+import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
-import {fmtEur, fmtShare, fmtW, humanize, rat} from './rational';
-import {
-  buildModel,
-  certCounts,
-  costOf,
-  isVerified,
-  roleText,
-} from './model';
+import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
+import {costOf, buildModel, isVerified, roleText} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
-import type {AdapterConfig, AnchorCase, Metric} from './types';
+import type {
+  AdapterConfig,
+  LayerId,
+  PropertyCatalog,
+  ReferenceCase,
+} from './types';
 
-export interface AnchorDiagramProps {
-  /** Every case the index should offer. Pass them all; the navbar switches. */
-  cases: AnchorCase[];
-  /** Which case to open on. Defaults to the first. */
-  initialCase?: string;
-  /** Which state to open on. Defaults to the case's first. */
+export interface CaseDiagramProps {
+  /**
+   * The one case this diagram draws. Cases are not switched inside the
+   * component: each gets its own docs page, where the prose around it can say
+   * what the wiring is for.
+   */
+  case: ReferenceCase;
+  /** The property catalog, for titles, units and definitions in the table. */
+  properties?: PropertyCatalog;
+  /** Which snapshot to open on. Defaults to the case's first. */
   initialState?: string;
+  /** Which layer to open on. Defaults to the readings. */
+  initialLayer?: LayerId;
 }
 
-const METRICS: [Metric, string][] = [
-  ['power', 'Power W'],
-  ['shares', 'Shares'],
-  ['cost', 'Cost €/h'],
-];
+/**
+ * Whether a stacked-bar segment can carry its label inside itself.
+ *
+ * A flat percentage threshold is not enough: the same 17% segment holds
+ * "home · 200 W" and clips "home · 0.028 €/h". The bar is ~536 px at full
+ * width, so a percent buys a little under one character.
+ */
+function fitsInline(label: string, pct: number): boolean {
+  return pct >= 16 && label.length <= pct * 0.84;
+}
 
 /** How each config key is presented in the detail panel. */
 function configRows(config: AdapterConfig): [string, string, string | null][] {
@@ -87,37 +100,22 @@ function configRows(config: AdapterConfig): [string, string, string | null][] {
   return rows;
 }
 
-function CertDot({verified}: {verified: boolean}): React.ReactElement {
-  return (
-    <span
-      className={clsx(styles.cert, verified && styles.v)}
-      title={verified ? 'hand-certified' : 'engine-generated, not yet certified'}
-    />
-  );
-}
-
-export default function AnchorDiagram({
-  cases,
-  initialCase,
+export default function CaseDiagram({
+  case: refCase,
+  properties,
   initialState,
-}: AnchorDiagramProps): React.ReactElement | null {
+  initialLayer = '1',
+}: CaseDiagramProps): React.ReactElement | null {
   const history = useHistory();
   const location = useLocation();
 
-  const firstCase = cases[0];
-  const [caseId, setCaseId] = useState(
-    () => (initialCase && cases.some((c) => c.id === initialCase) ? initialCase : firstCase?.id) ?? '',
-  );
-  const activeCase = cases.find((c) => c.id === caseId) ?? firstCase;
-
   const [stateId, setStateId] = useState(
     () =>
-      (initialState &&
-      activeCase?.states.some((s) => s.id === initialState)
+      (initialState && refCase.states.some((s) => s.id === initialState)
         ? initialState
-        : activeCase?.states[0]?.id) ?? '',
+        : refCase.states[0]?.id) ?? '',
   );
-  const [metric, setMetric] = useState<Metric>('power');
+  const [layer, setLayer] = useState<LayerId>(initialLayer);
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [urlApplied, setUrlApplied] = useState(false);
 
@@ -126,19 +124,9 @@ export default function AnchorDiagram({
   // reader can link someone at exactly the snapshot they mean.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const wantCase = params.get('case');
     const wantState = params.get('state');
-    const target = cases.find((c) => c.id === wantCase);
-    if (target) {
-      setCaseId(target.id);
-      const st = target.states.find((s) => s.id === wantState);
-      setStateId(st ? st.id : target.states[0].id);
-    } else if (wantState) {
-      const owner = cases.find((c) => c.states.some((s) => s.id === wantState));
-      if (owner) {
-        setCaseId(owner.id);
-        setStateId(wantState);
-      }
+    if (wantState && refCase.states.some((s) => s.id === wantState)) {
+      setStateId(wantState);
     }
     setUrlApplied(true);
     // Mount only: later changes are pushed out by the effect below.
@@ -146,42 +134,32 @@ export default function AnchorDiagram({
   }, []);
 
   useEffect(() => {
-    if (!urlApplied || !caseId || !stateId) {
+    if (!urlApplied || !stateId) {
       return;
     }
     const params = new URLSearchParams(window.location.search);
-    if (params.get('case') === caseId && params.get('state') === stateId) {
+    if (params.get('state') === stateId) {
       return;
     }
-    params.set('case', caseId);
     params.set('state', stateId);
     history.replace({...location, search: `?${params.toString()}`});
     // `location` intentionally omitted: including it re-fires on our own write.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId, stateId, urlApplied, history]);
+  }, [stateId, urlApplied, history]);
 
   const activeState = useMemo(
-    () =>
-      activeCase?.states.find((s) => s.id === stateId) ?? activeCase?.states[0],
-    [activeCase, stateId],
+    () => refCase.states.find((s) => s.id === stateId) ?? refCase.states[0],
+    [refCase, stateId],
   );
 
   const model: FlowModel | null = useMemo(
-    () => (activeCase && activeState ? buildModel(activeCase, activeState) : null),
-    [activeCase, activeState],
+    () => (activeState ? buildModel(refCase, activeState) : null),
+    [refCase, activeState],
   );
 
-  const pickCase = useCallback(
-    (id: string) => {
-      const target = cases.find((c) => c.id === id);
-      if (!target) {
-        return;
-      }
-      setCaseId(target.id);
-      setStateId(target.states[0].id);
-      setSelectedUid(null);
-    },
-    [cases],
+  const byLayer = useMemo(
+    () => (activeState ? groupByLayer(activeState.expectations, properties) : null),
+    [activeState, properties],
   );
 
   const pickState = useCallback((id: string) => {
@@ -189,6 +167,9 @@ export default function AnchorDiagram({
     setSelectedUid(null);
   }, []);
 
+  const clearSelection = useCallback(() => setSelectedUid(null), []);
+
+  // Clicking the focused device unfocuses it; clicking another moves the focus.
   const toggleNode = useCallback((uid: string) => {
     setSelectedUid((current) => (current === uid ? null : uid));
   }, []);
@@ -203,14 +184,18 @@ export default function AnchorDiagram({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!activeCase || !activeState || !model) {
+  if (!activeState || !model || !byLayer) {
     return null;
   }
 
   const selected: FlowNode | null =
     model.nodes.find((n) => n.uid === selectedUid) ?? null;
-  const [verified, total] = certCounts(activeCase);
 
+  const stateCertified = activeState.expectations.filter(
+    (e) => e.certification.status === 'verified',
+  ).length;
+
+  /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
     const totalW = list.reduce((a, n) => a + Math.abs(n.reading), 0);
     if (!totalW) {
@@ -224,18 +209,20 @@ export default function AnchorDiagram({
       );
     }
     const segValue = (n: FlowNode) =>
-      metric === 'cost'
+      layer === '4'
         ? fmtEur(costOf(model, n))
-        : metric === 'shares'
-          ? (Math.round((Math.abs(n.reading) / totalW) * 100) / 100).toFixed(2)
+        : layer === '2'
+          ? fmtPct(Math.abs(n.reading) / totalW)
           : fmtW(Math.abs(n.reading));
     const totalLabel =
-      metric === 'cost'
+      layer === '4'
         ? fmtEur(list.reduce((a, n) => a + costOf(model, n), 0))
-        : metric === 'shares'
-          ? '1.00'
+        : layer === '2'
+          ? '100%'
           : fmtW(totalW);
-    const smalls = list.filter((n) => (Math.abs(n.reading) / totalW) * 100 < 16);
+    const segLabel = (n: FlowNode) => `${n.uid} · ${segValue(n)}`;
+    const pctOf = (n: FlowNode) => (Math.abs(n.reading) / totalW) * 100;
+    const smalls = list.filter((n) => !fitsInline(segLabel(n), pctOf(n)));
     return (
       <div className={styles.lrow} key={title}>
         <div className={styles.lhead}>
@@ -244,14 +231,14 @@ export default function AnchorDiagram({
         </div>
         <div className={styles.lbar}>
           {list.map((n) => {
-            const pct = (Math.abs(n.reading) / totalW) * 100;
+            const pct = pctOf(n);
             return (
               <i
                 key={n.uid}
                 style={{width: `${pct}%`, background: kindColor(n.kind)}}
-                title={`${n.uid} · ${segValue(n)}`}
+                title={segLabel(n)}
               >
-                {pct >= 16 && <span>{`${n.uid} · ${segValue(n)}`}</span>}
+                {fitsInline(segLabel(n), pct) && <span>{segLabel(n)}</span>}
               </i>
             );
           })}
@@ -269,6 +256,60 @@ export default function AnchorDiagram({
             ))}
           </div>
         )}
+      </div>
+    );
+  };
+
+  /** Layer 3's headline: where the gross power actually went. */
+  const channelRow = () => {
+    if (!model.channels.length) {
+      return (
+        <div className={styles.lrow}>
+          <div className={styles.lhead}>
+            <span>Channel split</span>
+            <b>{fmtW(model.gross)} gross</b>
+          </div>
+          <div className={styles.lempty}>
+            Gross power is zero, so there is nothing to split.
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.lrow}>
+        <div className={styles.lhead}>
+          <span>Channel split of gross power</span>
+          <b>{fmtW(model.gross)}</b>
+        </div>
+        <div className={styles.lbar}>
+          {model.channels.map((c) => {
+            const label = `${c.label} · ${fmtPct(c.value)}`;
+            return (
+              <i
+                key={c.channel}
+                className={styles[`ch_${c.channel}`]}
+                style={{width: `${c.value * 100}%`}}
+                title={`${label} = ${c.ratio}`}
+              >
+                {fitsInline(label, c.value * 100) && <span>{label}</span>}
+              </i>
+            );
+          })}
+        </div>
+        <div className={styles.lleg}>
+          {model.channels
+            .filter(
+              (c) => !fitsInline(`${c.label} · ${fmtPct(c.value)}`, c.value * 100),
+            )
+            .map((c) => (
+              <span key={c.channel}>
+                <span
+                  className={clsx(styles.ldot, styles[`ch_${c.channel}`])}
+                />
+                {c.label} <b>{fmtPct(c.value)}</b>
+              </span>
+            ))}
+        </div>
       </div>
     );
   };
@@ -327,22 +368,8 @@ export default function AnchorDiagram({
 
   return (
     <div className={styles.root}>
-      <div className={styles.idx}>
-        {cases.map((c) => (
-          <button
-            type="button"
-            key={c.id}
-            className={clsx(styles.caseBtn, c.id === activeCase.id && styles.on)}
-            onClick={() => pickCase(c.id)}
-          >
-            <b>{c.id}</b>
-            {c.title}
-          </button>
-        ))}
-      </div>
-
       <div className={styles.scards}>
-        {activeCase.states.map((s, i) => {
+        {refCase.states.map((s, i) => {
           const open = Boolean(s.open_question);
           return (
             <button
@@ -363,38 +390,37 @@ export default function AnchorDiagram({
         })}
       </div>
 
-      <div className={styles.metricrow} role="tablist" aria-label="Value category">
-        <span className={styles.mlab}>view</span>
-        {METRICS.map(([id, label]) => (
+      <div className={styles.metricrow} role="tablist" aria-label="Engine layer">
+        {LAYERS.map((l) => (
           <button
             type="button"
-            key={id}
+            key={l.id}
             role="tab"
-            aria-selected={metric === id}
-            className={clsx(styles.metric, metric === id && styles.on)}
-            onClick={() => setMetric(id)}
+            aria-selected={layer === l.id}
+            title={layerTitle(l.id, properties)}
+            className={clsx(styles.metric, layer === l.id && styles.on)}
+            onClick={() => setLayer(l.id)}
           >
-            {label}
+            {l.short}
           </button>
         ))}
       </div>
 
       <div className={styles.ledger}>
-        {ledgerRow(
-          'Supply',
-          model.nodes.filter((n) => n.role === 'source'),
-        )}
-        {ledgerRow(
-          'Demand',
-          model.nodes.filter((n) => n.role === 'sink'),
-        )}
+        {layer === '3'
+          ? channelRow()
+          : [
+              ledgerRow('Supply', model.nodes.filter((n) => n.role === 'source')),
+              ledgerRow('Demand', model.nodes.filter((n) => n.role === 'sink')),
+            ]}
       </div>
 
       <FlowSvg
         model={model}
-        metric={metric}
+        layer={layer}
         selected={selected}
         onSelect={toggleNode}
+        onClear={clearSelection}
       />
 
       {selected && (
@@ -410,7 +436,7 @@ export default function AnchorDiagram({
               className={styles.role}
               style={{
                 background:
-                  selected.role === 'idle' ? 'var(--ad-mut)' : kindColor(selected.kind),
+                  selected.role === 'idle' ? 'var(--cd-mut)' : kindColor(selected.kind),
               }}
             >
               {roleText(selected)}
@@ -418,7 +444,7 @@ export default function AnchorDiagram({
             <button
               type="button"
               className={styles.px}
-              onClick={() => setSelectedUid(null)}
+              onClick={clearSelection}
               aria-label="Close device detail"
             >
               ×
@@ -466,12 +492,19 @@ export default function AnchorDiagram({
                 <i>Role</i>
                 <b>{roleText(selected)}</b>
               </div>
+              {selected.channel && (
+                <div className={styles.kv}>
+                  <i>Channel</i>
+                  <b>{selected.channel}</b>
+                </div>
+              )}
             </div>
             <div className={styles.pcol}>
               {selected.role === 'sink' && (
                 <>
                   <p className={styles.ptitle}>
-                    Where its power came from <CertDot verified={sharesVerified} />
+                    Where its power came from{' '}
+                    <CertDot status={sharesVerified ? 'verified' : 'unverified'} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.to === selected.uid),
@@ -483,7 +516,8 @@ export default function AnchorDiagram({
               {selected.role === 'source' && (
                 <>
                   <p className={styles.ptitle}>
-                    Where its output went <CertDot verified={sharesVerified} />
+                    Where its output went{' '}
+                    <CertDot status={sharesVerified ? 'verified' : 'unverified'} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.from === selected.uid),
@@ -518,20 +552,16 @@ export default function AnchorDiagram({
         </div>
       )}
 
-      <div className={styles.legend}>
-        <span>
-          click a device to focus · focused view shows the power exchanged with it
-          · grey dash = allowed but unused source
-        </span>
-        <span>edge width ∝ watts · colour = source</span>
-        <span>dashed ring = virtual node</span>
-        <span>
-          <CertDot verified={false} /> unverified · <CertDot verified /> verified
-        </span>
-        <span>
-          {verified} of {total} values certified
-        </span>
-      </div>
+      <ValueLedger
+        title={`${layer} · ${layerTitle(layer, properties)}`}
+        expectations={byLayer[layer]}
+        catalog={properties}
+      />
+
+      <p className={styles.certline}>
+        {stateCertified} of {activeState.expectations.length} values in this
+        snapshot hand-certified
+      </p>
     </div>
   );
 }

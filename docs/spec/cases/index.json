@@ -1,42 +1,42 @@
 {
   "cases": [
     {
-      "id": "A-001",
-      "title": "Baseline mix, no restrictions",
-      "file": "A-001.json",
+      "id": "baseline-mix",
+      "title": "Baseline mix",
+      "file": "baseline-mix.json",
       "states": [
         "import_mix",
         "standby_and_idle"
       ],
       "certified": 0,
-      "total": 30
+      "total": 54
     },
     {
-      "id": "A-002",
+      "id": "captive-battery",
       "title": "Captive battery",
-      "file": "A-002.json",
+      "file": "captive-battery.json",
       "states": [
         "captive_depletes_first",
         "source_in_standby"
       ],
       "certified": 0,
-      "total": 24
+      "total": 54
     },
     {
-      "id": "A-003",
-      "title": "Group captivity (Hall's condition)",
-      "file": "A-003.json",
+      "id": "group-captivity",
+      "title": "Group captivity",
+      "file": "group-captivity.json",
       "states": [
         "hall_tight_pair",
         "unsatisfiable_overlap"
       ],
       "certified": 0,
-      "total": 24
+      "total": 54
     },
     {
-      "id": "A-004",
-      "title": "Export",
-      "file": "A-004.json",
+      "id": "grid-export",
+      "title": "Grid export",
+      "file": "grid-export.json",
       "states": [
         "export_non_exporting_battery",
         "export_with_standby",
@@ -44,7 +44,7 @@
         "pure_export_zero_gross"
       ],
       "certified": 0,
-      "total": 60
+      "total": 108
     }
   ]
 }

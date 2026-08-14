@@ -45,7 +45,7 @@ const PATHS: {[k in NodeKind]: React.ReactNode} = {
 
 /** The CSS custom property carrying this device kind's colour. */
 export function kindColor(kind: NodeKind): string {
-  return `var(--ad-c-${kind})`;
+  return `var(--cd-c-${kind})`;
 }
 
 export const KIND_LABEL: {[k in NodeKind]: string} = {

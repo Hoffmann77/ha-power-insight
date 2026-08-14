@@ -83,7 +83,7 @@ const config: Config = {
       title: 'Power Insight',
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
-        {to: '/spec', label: 'Anchor cases', position: 'left'},
+        {to: '/spec', label: 'Reference cases', position: 'left'},
         {type: 'docsVersionDropdown', position: 'right'},
         {
           href: 'https://github.com/Hoffmann77/ha-power-insight',
@@ -107,7 +107,7 @@ const config: Config = {
           title: 'Reference',
           items: [
             {label: 'Entity reference', to: '/entities'},
-            {label: 'Anchor cases', to: '/spec'},
+            {label: 'Reference cases', to: '/spec'},
             {label: 'Engine decisions', to: '/dev/engine-calculations'},
           ],
         },

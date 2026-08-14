@@ -2,10 +2,10 @@ import React from 'react';
 import clsx from 'clsx';
 import styles from './styles.module.css';
 import {DeviceGlyph, kindColor} from './icons';
-import {fmtEur, fmtShare, fmtW, rat} from './rational';
-import {costOf, nodeValueLabel, roleText} from './model';
+import {fmtShare, fmtW, rat} from './rational';
+import {CHANNEL_LABEL, edgeSetLabel, nodeValueLabel, roleText} from './model';
 import type {FlowModel, FlowNode} from './model';
-import type {Metric} from './types';
+import type {LayerId} from './types';
 
 /* Geometry, as designed: two columns, one row per device, edge width ∝ watts. */
 const W = 660;
@@ -22,16 +22,20 @@ interface Point {
 
 export interface FlowSvgProps {
   model: FlowModel;
-  metric: Metric;
+  layer: LayerId;
   selected: FlowNode | null;
+  /** Focus a device. */
   onSelect: (uid: string) => void;
+  /** Clear the focus — clicking the diagram anywhere but a device. */
+  onClear: () => void;
 }
 
 export default function FlowSvg({
   model,
-  metric,
+  layer,
   selected,
   onSelect,
+  onClear,
 }: FlowSvgProps): React.ReactElement {
   const left = model.nodes.filter((n) => n.side === 'L');
   const right = model.nodes.filter((n) => n.side === 'R');
@@ -78,7 +82,9 @@ export default function FlowSvg({
   }
 
   return (
-    <div className={styles.svgwrap}>
+    // Clicking the diagram anywhere but a device clears the focus. The devices
+    // stop the event, so a click on one moves the focus instead of ending it.
+    <div className={styles.svgwrap} onClick={onClear}>
       <svg
         className={styles.svg}
         viewBox={`0 0 ${W} ${height}`}
@@ -91,7 +97,7 @@ export default function FlowSvg({
           textAnchor="middle"
           fontSize="10"
           letterSpacing=".08em"
-          fill="var(--ad-mut)"
+          fill="var(--cd-mut)"
         >
           SOURCES
         </text>
@@ -101,7 +107,7 @@ export default function FlowSvg({
           textAnchor="middle"
           fontSize="10"
           letterSpacing=".08em"
-          fill="var(--ad-mut)"
+          fill="var(--cd-mut)"
         >
           SINKS
         </text>
@@ -128,7 +134,7 @@ export default function FlowSvg({
               stroke={color}
               strokeWidth={(1.5 + 8.5 * (e.w / maxFlow)).toFixed(1)}
             >
-              <title>{`${e.from} → ${e.to}: ${fmtW(e.w)}`}</title>
+              <title>{`${e.from} → ${e.to}: ${fmtW(e.w)} (${fmtShare(e.share).dec} of ${e.to})`}</title>
             </path>
           );
         })}
@@ -168,7 +174,7 @@ export default function FlowSvg({
             return null;
           }
           const color = kindColor(n.kind);
-          let valueText = nodeValueLabel(model, n, metric, fmtW, fmtEur);
+          let valueText = nodeValueLabel(model, n, layer);
           let ownText: string | null = null;
 
           // A related node shows what it exchanges *with the selection*, with
@@ -180,21 +186,13 @@ export default function FlowSvg({
                 (e.from === selected.uid && e.to === n.uid),
             );
             ownText = `of ${valueText}`;
-            if (metric === 'shares') {
-              valueText = conn
-                .reduce((acc, e) => acc + rat(e.share), 0)
-                .toFixed(2);
-            } else if (metric === 'cost') {
-              valueText = fmtEur(
-                conn.reduce(
-                  (acc, e) => acc + (e.w / 1000) * (model.rates[e.from] ?? 0),
-                  0,
-                ),
-              );
-            } else {
-              valueText = fmtW(conn.reduce((acc, e) => acc + e.w, 0));
-            }
+            valueText = edgeSetLabel(model, conn, layer);
           }
+
+          // The channel split is what layer 3 is about, so a sink says which
+          // channel it is rather than repeating its uid's watts.
+          const caption =
+            layer === '3' && n.channel ? CHANNEL_LABEL[n.channel] : null;
 
           const deficit = model.deficits[n.uid];
           return (
@@ -211,10 +209,14 @@ export default function FlowSvg({
               role="button"
               aria-pressed={selected?.uid === n.uid}
               aria-label={`${n.uid}, ${roleText(n)}, ${fmtW(Math.abs(n.reading))}`}
-              onClick={() => onSelect(n.uid)}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onSelect(n.uid);
+              }}
               onKeyDown={(ev) => {
                 if (ev.key === 'Enter' || ev.key === ' ') {
                   ev.preventDefault();
+                  ev.stopPropagation();
                   onSelect(n.uid);
                 }
               }}
@@ -222,7 +224,7 @@ export default function FlowSvg({
               <circle
                 className={styles.ring}
                 r={NODE_R}
-                fill="var(--ad-bg)"
+                fill="var(--cd-bg)"
                 stroke={color}
                 strokeWidth="2.5"
                 strokeDasharray={n.virtual ? '5 4' : undefined}
@@ -235,7 +237,7 @@ export default function FlowSvg({
                 textAnchor="middle"
                 fontSize="12"
                 fontWeight="600"
-                fill="var(--ad-fg)"
+                fill="var(--cd-fg)"
                 fontFamily="inherit"
               >
                 {valueText}
@@ -245,7 +247,7 @@ export default function FlowSvg({
                   y={29}
                   textAnchor="middle"
                   fontSize="9"
-                  fill="var(--ad-mut)"
+                  fill="var(--cd-mut)"
                   fontFamily="inherit"
                 >
                   {ownText}
@@ -256,13 +258,26 @@ export default function FlowSvg({
                 textAnchor="middle"
                 fontSize="11.5"
                 fontFamily="ui-monospace, Menlo, monospace"
-                fill="var(--ad-mut)"
+                fill="var(--cd-mut)"
               >
                 {n.uid}
               </text>
+              {caption && (
+                <text
+                  y={NODE_R + 30}
+                  textAnchor="middle"
+                  fontSize="9.5"
+                  letterSpacing=".05em"
+                  fill="var(--cd-mut)"
+                  fontFamily="inherit"
+                  opacity="0.8"
+                >
+                  {caption}
+                </text>
+              )}
               {deficit && (
                 <g transform={`translate(${NODE_R - 10} ${-NODE_R + 10})`}>
-                  <circle r="8.5" fill="var(--ad-amber)" />
+                  <circle r="8.5" fill="var(--cd-amber)" />
                   <text
                     y="3.5"
                     textAnchor="middle"
@@ -282,6 +297,3 @@ export default function FlowSvg({
     </div>
   );
 }
-
-/** Exported for the panel, which shows the same share both ways. */
-export {fmtShare, costOf};

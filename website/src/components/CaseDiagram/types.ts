@@ -1,5 +1,5 @@
 /**
- * The anchor-case JSON contract (see docs/spec/anchor-case.schema.json).
+ * The reference-case JSON contract (see docs/spec/reference-case.schema.json).
  *
  * Every number in a case file is an *exact rational string* — "400", "-600",
  * "8/15", "3/20" — never a JSON float. That is the whole point of the format:
@@ -44,7 +44,7 @@ export interface DerivationStep {
 }
 
 export interface Certification {
-  status: 'verified' | 'unverified';
+  status: 'verified' | 'unverified' | 'disputed';
   by?: string;
   date?: string;
   method?: string;
@@ -58,7 +58,7 @@ export interface Expectation {
   certification: Certification;
 }
 
-export interface AnchorState {
+export interface CaseState {
   id: string;
   note: string;
   /** Set when the engine's answer here is an unresolved modelling choice. */
@@ -68,18 +68,51 @@ export interface AnchorState {
   expectations: Expectation[];
 }
 
-export interface AnchorCase {
+export interface ReferenceCase {
   id: string;
   title: string;
   summary: string;
   /** The modelling choices this case pins down. */
   decides: string[];
   topology: Adapter[];
-  states: AnchorState[];
+  states: CaseState[];
 }
 
-/** Which value family the diagram is currently labelled with. */
-export type Metric = 'power' | 'shares' | 'cost';
+/**
+ * The property catalog (`docs/spec/properties.json`): what each published
+ * property means, what unit it is in, and which layer of the engine it belongs
+ * to. Passed in as a prop for the same reason the cases are — it is versioned
+ * documentation, and an old docs version must keep rendering its own copy.
+ */
+export interface PropertyDoc {
+  title: string;
+  unit: Unit;
+  layer: number;
+  definition: string;
+  formula?: string;
+  depends_on?: string[];
+  answer_shape?: string;
+  worksheet_steps?: string[];
+  note?: string;
+}
+
+export interface PropertyCatalog {
+  layers?: {[id: string]: string};
+  properties: {[name: string]: PropertyDoc};
+}
+
+/** The units the catalog quotes. Drives how a value is rendered. */
+export type Unit = 'W' | 'share' | 'ratio' | 'EUR/h' | 'EUR/kWh';
+
+/**
+ * Which layer of the engine the diagram is currently showing. These are the
+ * catalog's own layers, so the tab row and the property table always agree
+ * about what belongs where.
+ */
+export type LayerId = '1' | '2' | '3' | '4';
 
 /** A node's role this snapshot, derived from the sign of its reading. */
 export type Role = 'source' | 'sink' | 'idle';
+
+/** Which channel of the gross-power split a sink belongs to. */
+export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
