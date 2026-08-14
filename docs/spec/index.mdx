@@ -128,10 +128,11 @@ checked against a real value.
 
 ## How a value gets here
 
-A slot starts empty. `tools/worksheet.py` issues a printable sheet of pending
-slots — the wiring, the readings, and a blank — and nothing else, because the
-engine's answer is not in the corpus for the sheet to leak. You work the value
-out from the model. `tools/certify.py` then takes your answer, asks the engine
+A slot starts empty. `tools/worksheet.py` issues a printable sheet per snapshot
+— the wiring and the readings on the front, then one page per pending slot with
+a blank on it, ordered so nothing is asked before the figures it is built on —
+and nothing else, because the engine's answer is not in the corpus for the sheet
+to leak. You work the value out from the model. `tools/certify.py` then takes your answer, asks the engine
 live, and records one of two outcomes:
 
 - **verified** — the engine agreed. The value is published with your derivation

@@ -4,11 +4,20 @@ A worksheet states the problem and withholds the answer. That is the whole
 point: a value you derived independently, without the engine's number in front
 of you, is evidence. A value you nodded along to is not.
 
-So three things are deliberately *not* printed:
+One worksheet is **one snapshot** — one case's topology under one set of
+readings. It opens with the wiring and the readings, then gives every pending
+property a page of its own, in an order where nothing is asked before the
+figures it is built on. It closes with a transcription page you copy your
+answers onto before typing them into ``tools/certify.py``.
+
+So four things are deliberately *not* printed:
 
 * **The expectation being derived.** Obviously.
 * **The flows between devices.** They are the answer to the provenance
-  properties, so the wiring diagram shows devices and restrictions only.
+  properties, so the wiring picture shows devices and restrictions only.
+* **Any total over the readings.** The supply column's total *is*
+  ``gross_power``, which is the first problem on the sheet. Segments yes,
+  sums no.
 * **The state's ``note``.** Those read like "{bat_a, bat_b} exactly exhaust
   east+west, so the 200 W home load must be served entirely from the grid" —
   which is the conclusion. Good documentation, ruinous exam paper.
@@ -17,25 +26,23 @@ What *is* printed: the topology and its static config, the readings, and any
 expectation already certified — because a derivation that can lean on trusted
 numbers is minutes rather than an evening.
 
-Problems are issued in dependency order (from ``properties.json``), so by the
-time a sheet asks for a cost rate the channel watts underneath it are already
-given.
-
 Usage::
 
-    uv run python tools/worksheet.py                     # next 6 pending
-    uv run python tools/worksheet.py --count 12
-    uv run python tools/worksheet.py --case group-captivity --all
-    uv run python tools/worksheet.py --pdf               # also render a PDF
+    uv run python tools/worksheet.py                       # every pending snapshot
+    uv run python tools/worksheet.py --case pv-export      # one case's snapshots
+    uv run python tools/worksheet.py --case pv-export --state export_all
+    uv run python tools/worksheet.py --pdf                 # also render PDFs
 
-Answers are entered later against the manifest each run writes, so a sheet
-worked on paper on Tuesday can be typed up on Friday.
+Each snapshot writes ``sheet-<case>-<state>.{html,pdf,json}``. Answers are
+entered later against the manifest, so a sheet worked on paper on Tuesday can
+be typed up on Friday::
+
+    uv run python tools/certify.py --sheet <case>-<state>
 """
 
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import glob
 import html
 import json
@@ -43,27 +50,157 @@ import os
 import pathlib
 import subprocess
 import sys
+from fractions import Fraction
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CASES = ROOT / "docs" / "spec" / "cases"
 CATALOG = ROOT / "docs" / "spec" / "properties.json"
 OUT_DIR = ROOT / "worksheets"
 
+#: The virtual sink. It is not a device and has no sensor: it is whatever the
+#: house consumed that nothing measured, which is why it appears on the wiring
+#: picture with a blank where every other node carries a reading.
+HOME = "home"
+
+#: Page numbers are fixed before anything is rendered, because the dependency
+#: strip on each problem page points at the page its inputs were derived on.
+PAGE_SNAPSHOT = 1
+PAGE_CONTENTS = 2
+PAGE_FIRST_PROBLEM = 3
+
 # Config keys worth printing on a sheet, in the order they read best.
 CONFIG_LABELS = [
-    ("has_price_entity", "price entity"),
-    ("lcoe", "LCOE"),
-    ("lcos", "LCOS"),
-    ("exports_power", "may export"),
-    ("export_compensation", "export comp."),
-    ("correction_factor", "correction"),
-    ("charge_from_adapters", "may charge from"),
-    ("power_from_adapters", "may draw from"),
+    ("has_price_entity", "price ent.", None),
+    ("lcoe", "LCOE", "EUR/kWh"),
+    ("lcos", "LCOS", "EUR/kWh"),
+    ("lco2_intensity", "LCO₂", "g/kWh"),
+    ("exports_power", "exports", None),
+    ("export_compensation", "export comp.", "EUR/kWh"),
+    ("correction_factor", "correction", None),
+    ("charge_from_adapters", "charges from", None),
+    ("power_from_adapters", "draws from", None),
 ]
+
+KIND_LABEL = {
+    "grid": "Grid",
+    "pv": "PV string",
+    "battery": "Battery",
+    "consumer": "Consumer",
+    HOME: "Home base load",
+}
+
+# The diagram's light palette, copied from the website component so a printed
+# sheet and the docs page colour the same device the same way.
+KIND_COLOR = {
+    "grid": "#3d6b9e",
+    "pv": "#b3861e",
+    "battery": "#b05577",
+    "consumer": "#38897c",
+    HOME: "#7a8290",
+}
+
+# Device glyphs on a -11..11 box, from the website's icon set.
+GLYPHS = {
+    "grid": (
+        '<path d="M-5.5 9 L0 -9 L5.5 9 M-8 -2.5 L8 -2.5 M-6 -6 L6 -6 '
+        'M-8 -2.5 L-3 3 M8 -2.5 L3 3" fill="none" stroke-width="1.6"/>'
+    ),
+    "pv": (
+        '<g fill="none" stroke-width="1.6">'
+        '<rect x="-9" y="-8" width="18" height="11" rx="1"/>'
+        '<path d="M-3 -8 V3 M3 -8 V3 M-9 -2.5 H9 M0 3 V8 M-4 8 H4"/></g>'
+    ),
+    "battery": (
+        '<g fill="none" stroke-width="1.6">'
+        '<rect x="-5" y="-6.5" width="10" height="15" rx="1.5"/>'
+        '<path d="M-2 -8.5 H2"/>'
+        '<path d="M-2.5 5 H2.5 M-2.5 1.5 H2.5" stroke-width="1.4"/></g>'
+    ),
+    "consumer": (
+        '<path d="M2.5 -9 L-6 1.5 L-1 1.5 L-2.5 9 L6 -1.5 L1 -1.5 Z" '
+        'fill="currentColor" stroke="none"/>'
+    ),
+    HOME: (
+        '<g fill="none" stroke-width="1.6">'
+        '<path d="M-9 0.5 L0 -8 L9 0.5"/>'
+        '<path d="M-6.5 -1.5 V8 H6.5 V-1.5"/></g>'
+    ),
+}
+
+#: How close a hand-derived answer has to be, by unit — certify.py's own table,
+#: printed on the sheet so nobody carries a share to eight decimals that will be
+#: accepted at three.
+TOLERANCE_NOTE = {
+    "W": "exact",
+    "share": "3 decimals",
+    "ratio": "3 decimals",
+    "EUR/h": "4 decimals",
+    "EUR/kWh": "4 decimals",
+}
+
+
+# ---------------------------------------------------------------------------
+# Exact rationals, formatted the way the docs diagram formats them
+# ---------------------------------------------------------------------------
+
+
+def rat(stored: str | int | None) -> Fraction | None:
+    """Parse a stored rational — ``"400"``, ``"-600"``, ``"8/15"``."""
+    if stored is None:
+        return None
+    text = str(stored).strip()
+    if "/" in text:
+        num, _, den = text.partition("/")
+        return Fraction(int(num), int(den))
+    return Fraction(text)
+
+
+def fmt_unit(stored, unit: str | None) -> tuple[str, str | None]:
+    """One stored scalar in its catalog unit, plus its exact fraction.
+
+    Both forms, for the reason the website gives: the fraction is what someone
+    checks a derivation against, the decimal is what they read off the page.
+    """
+    value = rat(stored)
+    if value is None:
+        return "—", None
+    frac = str(stored) if "/" in str(stored) else None
+    if unit == "W":
+        text = f"{value} W" if value.denominator == 1 else f"{float(value):.1f} W"
+    elif unit in ("share", "ratio"):
+        pct = float(value) * 100
+        text = f"{pct:g}%"
+    elif unit == "EUR/h":
+        text = f"{round(float(value), 3):g} €/h"
+    elif unit == "EUR/kWh":
+        text = f"{float(value):.4f} €/kWh"
+    elif unit == "g/kWh":
+        text = f"{float(value):g} g/kWh"
+    else:
+        text = f"{round(float(value), 3):g}"
+    return text, frac
+
+
+def fmt_config(key: str, value, unit: str | None) -> tuple[str, str | None]:
+    if isinstance(value, bool):
+        return ("yes" if value else "no"), None
+    if isinstance(value, list):
+        return (", ".join(value) if value else "unrestricted"), None
+    return fmt_unit(value, unit)
+
+
+def humanize(ident: str) -> str:
+    text = ident.replace("_", " ").replace("-", " ")
+    return text[:1].upper() + text[1:]
+
+
+# ---------------------------------------------------------------------------
+# The corpus
+# ---------------------------------------------------------------------------
 
 
 def load_catalog() -> dict:
-    return json.loads(CATALOG.read_text())["properties"]
+    return json.loads(CATALOG.read_text())
 
 
 def load_cases() -> list[dict]:
@@ -91,12 +228,59 @@ def dependency_rank(catalog: dict) -> dict[str, int]:
     return rank
 
 
-def fmt_config(value) -> str:
-    if isinstance(value, bool):
-        return "yes" if value else "no"
-    if isinstance(value, list):
-        return ", ".join(value) if value else "unrestricted"
-    return str(value)
+def problem_order(props: list[str], catalog: dict) -> list[str]:
+    """Pending properties in the order they are asked.
+
+    Layer first, dependency rank within it: the layers are the vocabulary the
+    rest of the spec uses, and grouping by them makes a thirty-page sheet read
+    as four stretches rather than one undifferentiated run. That only works
+    because the catalog's layers happen to be monotone over its dependencies —
+    which the rail below checks rather than assumes, since a future property
+    that depends upwards would silently start asking questions out of order.
+    """
+    rank = dependency_rank(catalog)
+    key = lambda p: (catalog[p]["layer"], rank.get(p, 10_000))  # noqa: E731
+    for prop in props:
+        for dep in catalog[prop]["depends_on"]:
+            if dep in catalog and key(dep) >= key(prop):
+                raise ValueError(
+                    f"{prop} would be asked before its input {dep}: layer "
+                    f"{catalog[dep]['layer']} depends on layer {catalog[prop]['layer']}"
+                )
+    return sorted(props, key=key)
+
+
+def collect(cases: list[dict], catalog: dict, case_id: str | None, state_id: str | None):
+    """One worksheet per snapshot that still has something to derive."""
+    sheets = []
+    for case in cases:
+        if case_id and case["id"] != case_id:
+            continue
+        for state in case["states"]:
+            if state_id and state["id"] != state_id:
+                continue
+            pending, given = [], []
+            for exp in state["expectations"]:
+                if exp["property"] not in catalog:
+                    continue
+                # "Given" means somebody has already derived it, whether or
+                # not the engine agreed — a disputed value is still a value
+                # this snapshot's later derivations may lean on.
+                answered = exp["certification"]["status"] in ("verified", "disputed")
+                (given if answered else pending).append(exp)
+            if not pending:
+                continue
+            order = problem_order([e["property"] for e in pending], catalog)
+            by_prop = {e["property"]: e for e in pending}
+            sheets.append(
+                {
+                    "case": case,
+                    "state": state,
+                    "pending": [by_prop[p] for p in order],
+                    "given": {e["property"]: e for e in given},
+                }
+            )
+    return sheets
 
 
 # ---------------------------------------------------------------------------
@@ -108,72 +292,64 @@ def blank(width: str = "5.5em") -> str:
     return f'<span class="blank" style="min-width:{width}"></span>'
 
 
-def answer_field(shape: str, unit: str) -> str:
+def roster(prop: str, uids: list[str]) -> list[str]:
+    """The candidate keys a map-valued answer may use — not its key set.
+
+    Printing the engine's keys would give away half of several questions:
+    whether a battery that may not export appears in the export attribution at
+    all is exactly what ``mixed-export-house`` is asking. Printing every device
+    in the snapshot gives away nothing — that roster is on page 1 already — and
+    turns four anonymous ruled lines into a table you can strike rows out of.
+
+    Only the home base load needs deciding: it is a sink and never a source, so
+    it joins the roster for the sink-keyed properties and stays off the rest.
+    """
+    if prop.startswith("sink_adapters"):
+        return uids + [HOME]
+    return list(uids)
+
+
+def answer_field(meta: dict, uids: list[str]) -> str:
     """Render blanks shaped like the answer, revealing nothing about it.
 
-    There is nothing to reveal any more — the corpus holds no engine value for
-    this slot — but the layout still changes with the shape, because a sheet
-    that gives you a grid to fill for a nested map is far easier to work than
-    one blank line.
-
-    Keys are left blank throughout. Which sinks appear in a provenance table,
-    and whether a source belongs in an export attribution at all, are part of
-    what is being derived; an earlier version of this sheet printed the keys
-    from the engine's answer, which quietly gave away half of several
-    questions.
+    Laid out as the docs diagram lays out a published value — key on the left,
+    figure on the right, one hairline per entry — so a number you wrote here
+    and a number you carry onto the next page's input strip look alike.
     """
-    suffix = f' <span class="unit">{html.escape(unit)}</span>' if unit else ""
+    shape, unit = meta["answer_shape"], meta["unit"]
+    suffix = f'<span class="unit">{html.escape(unit)}</span>' if unit else ""
 
     if shape in ("map_derived_keys", "map_fixed_keys"):
+        hint = (
+            "Every device in this snapshot is listed. Strike out the rows that "
+            "do not belong — which keys the answer has is part of what you are "
+            "deriving, and there may be none at all."
+        )
         rows = "".join(
-            f'<div class="arow">{blank("9em")} = {blank()}{suffix}</div>' for _ in range(4)
+            f'<div class="arow"><i class="akey">{html.escape(uid)}</i>'
+            f"{blank()}{suffix}</div>"
+            for uid in roster(meta["property"], uids)
         )
-        return (
-            '<div class="answer"><p class="hint">List only the entries that '
-            f'apply — there may be none.</p>{rows}</div>'
+    elif shape == "nested_map_fixed_keys":
+        hint = (
+            "One row per candidate sink, filled as <code>source = value, source "
+            f"= value</code> in {html.escape(unit)}s. Strike out the rows that "
+            "are not sinks this snapshot — a sink with no attributable supply is "
+            "a row of zeroes, which is not the same thing."
         )
-
-    if shape == "nested_map_fixed_keys":
         rows = "".join(
-            f'<div class="arow">{blank("7em")} : {blank("16em")}{suffix}</div>'
-            for _ in range(4)
+            f'<div class="arow"><i class="akey">{html.escape(uid)}</i>{blank()}</div>'
+            for uid in roster(meta["property"], uids)
         )
-        return (
-            '<div class="answer"><p class="hint">One line per sink, as '
-            '<code>sink : source = value, source = value</code>. There may be '
-            f'none.</p>{rows}</div>'
+    else:
+        hint = ""
+        rows = (
+            f'<div class="arow"><i class="akey">{html.escape(meta["title"])}</i>'
+            f"{blank()}{suffix}</div>"
         )
 
-    return f'<div class="answer"><div class="arow">{blank("7em")}{suffix}</div></div>'
-
-
-# ---------------------------------------------------------------------------
-# Selection
-# ---------------------------------------------------------------------------
-
-
-def collect(cases: list[dict], catalog: dict, case_filter: str | None) -> list[dict]:
-    """Pending problems, grouped per (case, state), in dependency order."""
-    rank = dependency_rank(catalog)
-    blocks = []
-    for case in cases:
-        if case_filter and case["id"] != case_filter:
-            continue
-        for state in case["states"]:
-            pending, given = [], []
-            for exp in state["expectations"]:
-                if exp["property"] not in catalog:
-                    continue
-                # "Given" means somebody has already derived it, whether or
-                # not the engine agreed — a disputed value is still a value
-                # this snapshot's later derivations may lean on.
-                answered = exp["certification"]["status"] in ("verified", "disputed")
-                (given if answered else pending).append(exp)
-            pending.sort(key=lambda e: rank.get(e["property"], 10_000))
-            given.sort(key=lambda e: rank.get(e["property"], 10_000))
-            if pending:
-                blocks.append({"case": case, "state": state, "pending": pending, "given": given})
-    return blocks
+    hint_html = f'<p class="hint">{hint}</p>' if hint else ""
+    return f'{hint_html}<div class="answer">{rows}</div>'
 
 
 # ---------------------------------------------------------------------------
@@ -181,136 +357,623 @@ def collect(cases: list[dict], catalog: dict, case_filter: str | None) -> list[d
 # ---------------------------------------------------------------------------
 
 CSS = """
-@page { size: A4; margin: 14mm 13mm 12mm; }
+@page { size: A4; margin: 13mm 12mm 10mm; }
 * { box-sizing: border-box; }
-body { font: 10.5pt/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif; color: #111; margin: 0; }
-h1 { font-size: 15pt; margin: 0 0 2mm; }
-.sheetmeta { font: 8.5pt ui-monospace, Menlo, monospace; color: #555; margin-bottom: 5mm; }
-.state { page-break-after: always; }
-.state:last-child { page-break-after: auto; }
-.statehead { border-bottom: 1.5pt solid #111; padding-bottom: 2mm; margin-bottom: 3mm; }
-.statehead h2 { font-size: 12.5pt; margin: 0; }
-.statehead .ids { font: 9pt ui-monospace, Menlo, monospace; color: #555; }
-table.devices { width: 100%; border-collapse: collapse; margin-bottom: 4mm; font-size: 9pt; }
-table.devices th, table.devices td { border: 0.5pt solid #bbb; padding: 1.2mm 2mm; text-align: left; vertical-align: top; }
-table.devices th { background: #f0f0f0; font-weight: 600; }
-table.devices td.num { font-family: ui-monospace, Menlo, monospace; text-align: right; white-space: nowrap; }
-.given { border: 0.5pt solid #999; background: #f7f7f7; padding: 2mm 3mm; margin-bottom: 4mm; font-size: 9pt; }
-.given h3, .problem h3 { font-size: 8.5pt; letter-spacing: .08em; text-transform: uppercase; color: #444; margin: 0 0 1.5mm; }
+html, body { margin: 0; padding: 0; }
+body {
+  font: 10.5pt/1.45 "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #24292f;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+/* One .page is one printed side: fixed height, column layout, and whichever
+   child is marked .grow eats the slack. That is the whole point of a page per
+   property — the working space is however much of the sheet the question did
+   not need. */
+.page { height: 272mm; display: flex; flex-direction: column; page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.grow { flex: 1 1 auto; min-height: 0; }
+
+.crumb {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font: 8pt ui-monospace, Menlo, monospace; color: #6a737d;
+  border-bottom: 0.5pt solid #d8dde3; padding-bottom: 1.5mm; margin-bottom: 3mm;
+  letter-spacing: .04em;
+}
+.crumb .layer { text-transform: uppercase; letter-spacing: .1em; }
+.foot {
+  margin-top: 2.5mm; padding-top: 1.5mm; border-top: 0.5pt solid #d8dde3;
+  font: 7.5pt ui-monospace, Menlo, monospace; color: #8b949e;
+  display: flex; justify-content: space-between;
+}
+
+h1 { font-size: 16pt; margin: 0 0 1mm; letter-spacing: -.01em; }
+h2 { font-size: 13pt; margin: 0 0 2mm; }
+.sub { font: 9pt ui-monospace, Menlo, monospace; color: #6a737d; margin: 0 0 4mm; }
+.shead { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase;
+         color: #6a737d; margin: 0 0 2mm; }
+
+/* ---- page 1: the snapshot ------------------------------------------- */
+.diag { display: flex; gap: 0; margin-bottom: 5mm; }
+.col { flex: 1 1 0; min-width: 0; }
+.colhead { font: 8pt ui-monospace, Menlo, monospace; letter-spacing: .12em;
+           color: #6a737d; text-align: center; margin: 0 0 2.5mm; }
+.spine { width: 22mm; flex: none; position: relative; }
+.spine::before {
+  content: ""; position: absolute; left: 50%; top: 6mm; bottom: 2mm;
+  border-left: 0.8pt dashed #c3c9d1;
+}
+/* Under the columns rather than along the spine: a snapshot with one device
+   leaves the gap too short to hold a rotated caption, and it spilled over the
+   rows above and below it. */
+.withheld { text-align: center; font-size: 7.5pt; color: #9aa1ab;
+            margin: 0 0 4mm; letter-spacing: .03em; }
+.card {
+  border: 0.8pt solid #d8dde3; border-left: 2.2pt solid var(--c);
+  border-radius: 1.2mm; padding: 2mm 2.5mm; margin-bottom: 2.5mm;
+  display: grid; grid-template-columns: 8mm 1fr auto; column-gap: 2mm;
+  align-items: center;
+}
+.card.virt { border-style: dashed; border-left-style: solid; }
+.card .gly { width: 7mm; height: 7mm; grid-row: span 2; color: var(--c); }
+.card .uid { font: 600 11pt ui-monospace, Menlo, monospace; }
+.card .kind { font-size: 8pt; color: #6a737d; }
+.card .read { font: 700 13pt ui-monospace, Menlo, monospace; text-align: right;
+              white-space: nowrap; }
+.card .read.na { color: #c77e12; font-size: 9.5pt; font-weight: 400; }
+.card .role { grid-column: 2 / 4; font-size: 8pt; color: #6a737d; margin-top: .6mm; }
+.idlerow { border: 0.5pt dashed #d8dde3; border-radius: 1.2mm; padding: 2mm 2.5mm;
+           font-size: 8.5pt; color: #6a737d; margin-bottom: 4mm; }
+.idlerow b { font-family: ui-monospace, Menlo, monospace; color: #24292f; }
+.band { margin-bottom: 4mm; }
+.bandrow { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 22mm; }
+.bandrow .card { opacity: .85; }
+
+table.cfg { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+table.cfg th, table.cfg td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.3mm 2mm;
+                             text-align: left; vertical-align: top; }
+table.cfg thead th { background: #f6f8fa; border-bottom: 0.8pt solid #d8dde3;
+                     font-weight: 600; color: #444d56; white-space: nowrap; }
+table.cfg td.num, table.cfg th.num { text-align: right;
+                                     font-family: ui-monospace, Menlo, monospace;
+                                     white-space: nowrap; }
+table.cfg td.uid { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
+table.cfg td.kind { white-space: nowrap; }
+.frac { color: #8b949e; font-size: 7.5pt; margin-left: .6em; }
+
+.given { border: 0.5pt solid #cfd6dd; background: #f6f8fa; border-radius: 1.2mm;
+         padding: 2mm 3mm; margin-top: 4mm; font-size: 9pt; }
 .given .g { font-family: ui-monospace, Menlo, monospace; }
-.problem { border: 0.8pt solid #111; padding: 3mm; margin-bottom: 4mm; page-break-inside: avoid; }
-.problem .ptitle { font-size: 11pt; font-weight: 700; margin: 0 0 1mm; }
-.problem .pid { font: 8.5pt ui-monospace, Menlo, monospace; color: #666; float: right; }
-.problem .def { font-size: 9pt; margin: 0 0 2mm; }
-.problem .formula { font: 9pt ui-monospace, Menlo, monospace; background: #f2f2f2; padding: 1.5mm 2mm; margin-bottom: 2mm; }
-.problem ol { margin: 0 0 2.5mm; padding-left: 5mm; font-size: 9pt; }
-.problem ol li { margin-bottom: 0.8mm; }
-.note { font-size: 8.5pt; font-style: italic; color: #444; border-left: 1.5pt solid #999; padding-left: 2mm; margin: 0 0 2.5mm; }
-.answer { margin: 2mm 0 0; }
-.arow { margin-bottom: 2mm; font-family: ui-monospace, Menlo, monospace; font-size: 9.5pt; }
-.arow .key { display: inline-block; min-width: 6em; }
-.blank { display: inline-block; border-bottom: 0.8pt solid #111; height: 1.15em; vertical-align: -0.2em; }
-.unit { font-size: 8.5pt; color: #555; }
-table.grid { border-collapse: collapse; font-size: 9.5pt; }
-table.grid th { font: 9pt ui-monospace, Menlo, monospace; padding: 1mm 3mm 1mm 0; text-align: left; color: #333; }
-table.grid td { padding: 1mm 3mm 1mm 0; }
-.hint { font-size: 8.5pt; color: #555; margin: 0 0 1.5mm; }
-.working { border: 0.5pt dashed #999; height: 30mm; margin-top: 2mm; }
-.working span { font-size: 8pt; color: #888; padding: 1mm 2mm; display: block; }
+.tariff { display: flex; gap: 6mm; font-size: 9pt; margin: 0 0 3mm; }
+.tariff b { font-family: ui-monospace, Menlo, monospace; }
+
+/* ---- page 2: contents and conventions -------------------------------- */
+.toc { column-count: 2; column-gap: 8mm; font-size: 9pt; }
+.toc .lay { break-inside: avoid; margin-bottom: 3mm; }
+.toc .layname { font-size: 8pt; letter-spacing: .08em; text-transform: uppercase;
+                color: #6a737d; border-bottom: 0.5pt solid #e6e9ee;
+                padding-bottom: .8mm; margin-bottom: 1.2mm; }
+.toc .row { display: flex; justify-content: space-between; gap: 2mm;
+            break-inside: avoid; padding: .4mm 0; }
+.toc .row i { font-style: normal; }
+.toc .row b { font: 400 8.5pt ui-monospace, Menlo, monospace; color: #6a737d; }
+.rules { display: flex; gap: 5mm; margin-top: 5mm; }
+.rules > div { flex: 1 1 0; border: 0.5pt solid #d8dde3; border-radius: 1.2mm;
+               padding: 2.5mm 3mm; font-size: 8.5pt; }
+.rules ul { margin: 0; padding-left: 4mm; }
+.rules li { margin-bottom: 1mm; }
+.rules dl { margin: 0; display: grid; grid-template-columns: auto 1fr;
+            gap: .6mm 3mm; font-size: 8.5pt; }
+.rules dt { font-family: ui-monospace, Menlo, monospace; }
+.rules dd { margin: 0; color: #444d56; }
+
+/* ---- problem pages ---------------------------------------------------- */
+.ptitle { font-size: 14pt; font-weight: 700; margin: 0 0 1mm; }
+.pname { font: 9.5pt ui-monospace, Menlo, monospace; color: #24292f;
+         background: #f0f2f5; padding: .6mm 1.6mm; border-radius: .8mm; }
+.punit { font-size: 8.5pt; color: #6a737d; margin-left: 2mm; }
+.def { font-size: 9.5pt; margin: 2.5mm 0 3mm; color: #24292f; }
+.formula { font: 9pt ui-monospace, Menlo, monospace; background: #f6f8fa;
+           border-left: 2pt solid #d8dde3; padding: 2mm 2.5mm; margin: 0 0 3mm;
+           word-break: break-word; }
+.note { font-size: 8.5pt; font-style: italic; color: #444d56;
+        border-left: 1.5pt solid #d8dde3; padding-left: 2.5mm; margin: 0 0 3mm; }
+.inputs { border: 0.5pt solid #d8dde3; border-radius: 1.2mm; padding: 2mm 3mm;
+          margin: 0 0 3mm; }
+.inputs .irow { display: flex; align-items: baseline; gap: 2.5mm;
+                font-size: 9pt; padding: .8mm 0; }
+.inputs .iname { flex: none; font-family: ui-monospace, Menlo, monospace;
+                 font-size: 8.5pt; }
+.inputs .ititle { flex: 1 1 auto; font-size: 8pt; color: #8b949e; }
+.inputs .ival { font-family: ui-monospace, Menlo, monospace; white-space: nowrap;
+                min-width: 7em; text-align: right; }
+.inputs .blank { min-width: 7em; }
+.inputs .from { flex: none; width: 13mm; text-align: right;
+                font: 7.5pt ui-monospace, Menlo, monospace; color: #8b949e;
+                white-space: nowrap; }
+.inputs .none { font-size: 8.5pt; color: #6a737d; }
+ol.steps { margin: 0 0 3mm; padding-left: 5mm; font-size: 9pt; }
+ol.steps li { margin-bottom: 1mm; }
+.answer { margin: 1.5mm 0 0; border: 0.5pt solid #d8dde3; border-radius: 1.2mm;
+          padding: 0 3mm; }
+.arow { display: flex; align-items: baseline; gap: 3mm; padding: 2mm 0;
+        border-bottom: 0.4pt solid #eef1f4;
+        font-family: ui-monospace, Menlo, monospace; font-size: 10pt; }
+.arow:last-child { border-bottom: 0; }
+.arow .blank { flex: 1 1 auto; }
+.akey { flex: none; min-width: 8em; font-style: normal; color: #444d56; }
+.blank { display: inline-block; border-bottom: 0.8pt solid #24292f; height: 1.2em; }
+.unit { font-size: 8pt; color: #6a737d; }
+.hint { font-size: 8pt; color: #6a737d; margin: 0 0 1.5mm; }
+/* Faint rules rather than a dot grid: arithmetic is written on lines, and a
+   5 mm dot lattice costs a few thousand vector circles a page — which turned a
+   thirty-page sheet into a five-megabyte PDF. */
+.work { border: 0.5pt dashed #c3c9d1; border-radius: 1.2mm; margin-top: 2.5mm;
+        position: relative;
+        background-image: repeating-linear-gradient(
+          to bottom, #f0f3f6 0 0.2mm, transparent 0.2mm 7mm); }
+.work span { position: absolute; top: 1mm; right: 2mm; font-size: 7pt;
+             color: #aab1b9; letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---- transcription --------------------------------------------------- */
+table.tx { width: 100%; border-collapse: collapse; font-size: 9pt; }
+table.tx th, table.tx td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.6mm 2mm;
+                           text-align: left; }
+table.tx thead th { background: #f6f8fa; border-bottom: 0.8pt solid #d8dde3;
+                    font-size: 8pt; letter-spacing: .06em; text-transform: uppercase;
+                    color: #444d56; }
+table.tx td.p { font: 8.5pt ui-monospace, Menlo, monospace; color: #6a737d;
+                width: 10mm; }
+table.tx td.n { font: 8.5pt ui-monospace, Menlo, monospace; width: 62mm; }
+table.tx td.v { border-bottom: 0.8pt solid #24292f; width: 38mm; }
+table.tx td.ref { width: 38mm; font: 8pt ui-monospace, Menlo, monospace;
+                  color: #8b949e; }
 """
 
 
-def render(blocks: list[dict], sheet_id: str, limit: int | None) -> tuple[str, list[dict]]:
-    manifest: list[dict] = []
-    issued = 0
+def esc(text) -> str:
+    return html.escape(str(text))
+
+
+def device_card(uid: str, kind: str, reading, role: str, virtual: bool = False) -> str:
+    text, _ = fmt_unit(reading, "W")
+    if virtual:
+        value = f'<span class="read na">{blank("4.5em")}</span>'
+    elif reading is None:
+        value = '<span class="read na">sensor unavailable</span>'
+    else:
+        value = f'<span class="read">{esc(text)}</span>'
+    return (
+        f'<div class="card{" virt" if virtual else ""}" style="--c:{KIND_COLOR[kind]}">'
+        f'<svg class="gly" viewBox="-11 -11 22 22" stroke="currentColor" '
+        f'stroke-linecap="round" stroke-linejoin="round">{GLYPHS[kind]}</svg>'
+        f'<span class="uid">{esc(uid)}</span>{value}'
+        f'<span class="kind">{esc(KIND_LABEL[kind])}</span>'
+        f'<span class="role">{esc(role)}</span></div>'
+    )
+
+
+def role_text(kind: str, reading: Fraction | None) -> str:
+    """What the sign of a reading means for this kind of device.
+
+    Nothing derived here: the reading is printed alongside, so naming its sign
+    only saves the reader translating a convention they will otherwise have to
+    keep in their head for thirty pages.
+    """
+    if reading is None:
+        return "unavailable — this snapshot has no value for it"
+    if reading == 0:
+        return "idle — neither source nor sink"
+    positive = reading > 0
+    if kind == "grid":
+        return "importing → source" if positive else "exporting → restricted sink"
+    if kind == "pv":
+        return "producing → source" if positive else "standby draw → sink"
+    if kind == "battery":
+        return "discharging → source" if positive else "charging → sink"
+    return "feeding → source" if positive else "load → sink"
+
+
+def crumb(left: str, middle: str, right: str) -> str:
+    return (
+        f'<div class="crumb"><span class="layer">{esc(left)}</span>'
+        f"<span>{esc(middle)}</span><span>{esc(right)}</span></div>"
+    )
+
+
+def foot(sheet_id: str, page: int, total: int) -> str:
+    return (
+        f'<div class="foot"><span>{esc(sheet_id)}</span>'
+        f"<span>page {page} of {total}</span></div>"
+    )
+
+
+def given_text(value, unit: str) -> str:
+    """A certified value, as it reads on a sheet.
+
+    A certified null is not an empty slot: it is somebody having derived that
+    the engine should publish no value at all here. It prints as *nothing*,
+    which is also the word ``certify.py`` accepts for it — JSON's ``null``
+    reads as an absence, which is the opposite of what it means.
+    """
+    if value is None:
+        return "nothing"
+    if isinstance(value, dict):
+        return json.dumps(value)
+    text, frac = fmt_unit(value, unit)
+    return f"{text} = {frac}" if frac else text
+
+
+def render_snapshot_page(sheet: dict, props: dict, sheet_id: str, total: int) -> str:
+    """Page 1 — the wiring and the readings, and nothing derived from them.
+
+    The devices sit in two columns the way they do on the docs diagram, but the
+    flows between them are not drawn and neither column carries a total: the
+    supply total is ``gross_power``, which is the first thing the sheet asks.
+    """
+    case, state = sheet["case"], sheet["state"]
+    sources, sinks, neither = [], [], []
+    idle = unavailable = False
+    for adapter in case["topology"]:
+        uid, kind = adapter["uid"], adapter["kind"]
+        reading = rat(state["readings"].get(uid))
+        card = device_card(uid, kind, state["readings"].get(uid), role_text(kind, reading))
+        if reading is None:
+            unavailable = True
+            neither.append(card)
+        elif reading > 0:
+            sources.append(card)
+        elif reading < 0:
+            sinks.append(card)
+        else:
+            # Every device keeps its card, whichever band it lands in: the page
+            # is the topology, and a device that dropped off it because it read
+            # zero is one the deriver has to remember unaided.
+            idle = True
+            neither.append(card)
+
+    # The home base load is a sink on every snapshot, and its size is a derived
+    # property in its own right — hence a card with a blank where the others
+    # carry a reading.
+    sinks.append(
+        device_card(HOME, HOME, None, "unmetered remainder — derive it", virtual=True)
+    )
+
     parts = [
-        "<!doctype html><meta charset='utf-8'>",
-        f"<title>Certification sheet {html.escape(sheet_id)}</title>",
-        f"<style>{CSS}</style>",
-        f"<h1>Power Insight — certification sheet</h1>",
-        f"<p class='sheetmeta'>{html.escape(sheet_id)} · derive each value without looking at the engine, "
-        f"then enter answers with <code>tools/certify.py --sheet {html.escape(sheet_id)}</code></p>",
+        '<section class="page">',
+        crumb("the snapshot", f"{case['id']} / {state['id']}", "readings — given"),
+        f"<h1>{esc(case['title'])}</h1>",
+        f'<p class="sub">{esc(case["id"])} / {esc(state["id"])} · '
+        f"{len(sheet['pending'])} values to derive</p>",
+        '<div class="diag">',
+        '<div class="col"><p class="colhead">SOURCES</p>'
+        + ("".join(sources) or '<div class="idlerow">No source this snapshot.</div>')
+        + "</div>",
+        '<div class="spine"></div>',
+        '<div class="col"><p class="colhead">SINKS</p>' + "".join(sinks) + "</div>",
+        "</div>",
     ]
 
-    for block in blocks:
-        if limit is not None and issued >= limit:
-            break
-        case, state = block["case"], block["state"]
-        take = block["pending"] if limit is None else block["pending"][: limit - issued]
-        if not take:
+    if neither:
+        caveats = []
+        if idle:
+            caveats.append("A reading of exactly zero is neither a source nor a sink")
+        if unavailable:
+            caveats.append(
+                "no reading at all is not a reading of zero, and whether it makes "
+                "a value unavailable or merely absent is part of what several of "
+                "these properties decide"
+            )
+        parts.append(
+            '<div class="band"><p class="colhead">NEITHER</p>'
+            f'<div class="bandrow">{"".join(neither)}</div>'
+            f'<p class="hint">{esc("; ".join(caveats))}.</p></div>'
+        )
+
+    parts.append(
+        '<p class="withheld">Flows between these devices are not drawn — '
+        "which source served which sink is what you are deriving.</p>"
+    )
+
+    # Static configuration — the numbers a reading alone does not carry.
+    used = [
+        (key, label, unit)
+        for key, label, unit in CONFIG_LABELS
+        if any(key in a.get("config", {}) for a in case["topology"])
+    ]
+    head = "".join(
+        f'<th class="{"num" if unit else ""}">{esc(label)}</th>' for _, label, unit in used
+    )
+    rows = []
+    for adapter in case["topology"]:
+        cfg = adapter.get("config", {})
+        cells = []
+        for key, _, unit in used:
+            if key not in cfg:
+                cells.append(f'<td class="{"num" if unit else ""}">·</td>')
+                continue
+            text, frac = fmt_config(key, cfg[key], unit)
+            extra = f'<span class="frac">= {esc(frac)}</span>' if frac else ""
+            cells.append(f'<td class="{"num" if unit else ""}">{esc(text)}{extra}</td>')
+        rows.append(
+            f'<tr><td class="uid">{esc(adapter["uid"])}</td>'
+            f'<td class="kind">{esc(KIND_LABEL[adapter["kind"]])}</td>'
+            f"{''.join(cells)}</tr>"
+        )
+
+    price_text, price_frac = fmt_unit(state["price"], "EUR/kWh")
+    parts.append('<p class="shead">Configuration and tariffs</p>')
+    parts.append(
+        f'<p class="tariff"><span>Grid price <b>{esc(price_text)}</b>'
+        + (f'<span class="frac">= {esc(price_frac)}</span>' if price_frac else "")
+        + "</span></p>"
+    )
+    parts.append(
+        '<table class="cfg"><thead><tr><th>device</th><th>kind</th>'
+        f"{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+    )
+
+    if sheet["given"]:
+        entries = "".join(
+            f'<div class="g">{esc(prop)} = '
+            f"{esc(given_text(exp['value'], props[prop]['unit']))}</div>"
+            for prop, exp in sheet["given"].items()
+        )
+        parts.append(
+            '<div class="given"><p class="shead">Given — already certified</p>'
+            f"{entries}</div>"
+        )
+
+    # Whatever the snapshot did not need is working space, on the one page the
+    # deriver keeps flipping back to. Sums over the readings get re-derived on
+    # half the pages that follow; they may as well live here.
+    parts.append('<div class="work grow"><span>scratch</span></div>')
+    parts.append(foot(sheet_id, PAGE_SNAPSHOT, total))
+    parts.append("</section>")
+    return "".join(parts)
+
+
+def render_contents_page(
+    sheet: dict, sheet_id: str, catalog: dict, layers: dict, pages: dict, total: int
+) -> str:
+    props = catalog["properties"]
+    groups: dict[int, list[str]] = {}
+    for exp in sheet["pending"]:
+        groups.setdefault(props[exp["property"]]["layer"], []).append(exp["property"])
+
+    blocks = []
+    for layer in sorted(groups):
+        rows = "".join(
+            f'<div class="row"><i>{esc(props[p]["title"])}</i>'
+            f"<b>{pages[p]}</b></div>"
+            for p in groups[layer]
+        )
+        blocks.append(
+            f'<div class="lay"><p class="layname">{layer} · '
+            f'{esc(layers.get(str(layer), f"Layer {layer}"))}</p>{rows}</div>'
+        )
+
+    units = sorted({props[e["property"]]["unit"] for e in sheet["pending"]})
+    tolerances = "".join(
+        f"<dt>{esc(unit)}</dt><dd>{esc(TOLERANCE_NOTE.get(unit, 'exact'))}</dd>"
+        for unit in units
+    )
+
+    return "".join(
+        [
+            '<section class="page">',
+            crumb(
+                "how to work this sheet",
+                f"{sheet['case']['id']} / {sheet['state']['id']}",
+                "conventions",
+            ),
+            "<h2>Contents</h2>",
+            '<p class="sub">One property per page, in an order where nothing is '
+            "asked before the figures it is built on.</p>",
+            f'<div class="toc">{"".join(blocks)}</div>',
+            '<div class="rules">',
+            "<div><p class='shead'>Sign convention</p><ul>"
+            "<li><b>Grid</b> — positive is importing, negative is exporting.</li>"
+            "<li><b>PV and battery</b> — positive is producing or discharging, "
+            "negative is standby draw or charging.</li>"
+            "<li><b>Consumer</b> — negative is a load.</li>"
+            "<li>Exactly zero is idle: neither source nor sink.</li>"
+            "<li>No reading at all is not zero.</li></ul></div>",
+            "<div><p class='shead'>Recording an answer</p><ul>"
+            "<li>Exact rationals are welcome — <code>8/15</code> is a better "
+            "answer than <code>0.533</code>.</li>"
+            "<li><b>nothing</b> is an answer: the engine should publish no value "
+            "here. It is not the same as zero.</li>"
+            "<li>Copy each result onto the last page as you go, then type that "
+            f"page in with <code>tools/certify.py --sheet {esc(sheet_id)}</code>."
+            "</li></ul></div>",
+            f"<div class='grow'><p class='shead'>Accepted precision</p>"
+            f"<dl>{tolerances}</dl>"
+            "<p style='margin:2.5mm 0 0;color:#6a737d'>Carrying a share past "
+            "three decimals buys nothing — that is where certification stops "
+            "caring.</p></div>",
+            "</div>",
+            '<div class="grow"></div>',
+            foot(sheet_id, PAGE_CONTENTS, total),
+            "</section>",
+        ]
+    )
+
+
+def render_problem_page(
+    exp: dict,
+    sheet: dict,
+    sheet_id: str,
+    catalog: dict,
+    layers: dict,
+    pages: dict,
+    page: int,
+    total: int,
+    uids: list[str],
+) -> str:
+    props = catalog["properties"]
+    prop = exp["property"]
+    meta = dict(props[prop], property=prop)
+    layer = meta["layer"]
+
+    steps = "".join(f"<li>{esc(s)}</li>" for s in meta["worksheet_steps"])
+    formula = (
+        f'<div class="formula">{esc(meta["formula"])}</div>' if meta.get("formula") else ""
+    )
+    note = f'<p class="note">{esc(meta["note"])}</p>' if meta.get("note") else ""
+
+    # The dependency strip. Certified inputs arrive filled in; the rest point at
+    # the page you derived them on, so carrying a value forward is a glance
+    # rather than a hunt back through thirty sheets.
+    rows = []
+    for dep in meta["depends_on"]:
+        if dep not in props:
             continue
-
-        parts.append("<section class='state'>")
-        parts.append(
-            f"<div class='statehead'><h2>{html.escape(case['title'])}</h2>"
-            f"<div class='ids'>{html.escape(case['id'])} / {html.escape(state['id'])}"
-            f" &nbsp;·&nbsp; grid price {html.escape(str(state['price']))} EUR/kWh</div></div>"
+        title = props[dep]["title"]
+        given = sheet["given"].get(dep)
+        if given is not None and not isinstance(given["value"], dict):
+            text = given_text(given["value"], props[dep]["unit"])
+            value = f'<span class="ival">{esc(text)}</span>'
+            source = "given, p.1"
+        elif given is not None:
+            value = '<span class="ival">see p.1</span>'
+            source = "given, p.1"
+        elif dep in pages:
+            value = blank("7em")
+            source = f"your p.{pages[dep]}"
+        else:
+            value = blank("7em")
+            source = ""
+        rows.append(
+            f'<div class="irow"><span class="iname">{esc(dep)}</span>'
+            f'<span class="ititle">{esc(title)}</span>{value}'
+            f'<span class="from">{esc(source)}</span></div>'
         )
+    inputs = (
+        f'<div class="inputs"><p class="shead">Inputs</p>{"".join(rows)}</div>'
+        if rows
+        else '<div class="inputs"><p class="shead">Inputs</p>'
+        '<p class="none">None derived — this one comes straight off the '
+        "readings on page 1.</p></div>"
+    )
 
-        # Wiring and readings. No flows, no note: both are the answer.
-        rows = []
-        for adapter in case["topology"]:
-            cfg = adapter.get("config", {})
-            bits = [
-                f"{label} {fmt_config(cfg[key])}"
-                for key, label in CONFIG_LABELS
-                if key in cfg
-            ]
-            reading = state["readings"].get(adapter["uid"])
-            rows.append(
-                f"<tr><td><b>{html.escape(adapter['uid'])}</b></td>"
-                f"<td>{html.escape(adapter['kind'])}</td>"
-                f"<td class='num'>{html.escape('—' if reading is None else str(reading))}</td>"
-                f"<td>{html.escape('; '.join(bits))}</td></tr>"
-            )
-        parts.append(
-            "<table class='devices'><tr><th>device</th><th>kind</th><th>reading (W)</th>"
-            "<th>configuration</th></tr>" + "".join(rows) + "</table>"
+    return "".join(
+        [
+            '<section class="page">',
+            crumb(
+                f"layer {layer} · {layers.get(str(layer), '')}",
+                f"{sheet['case']['id']} / {sheet['state']['id']}",
+                f"{page - PAGE_FIRST_PROBLEM + 1} of {len(sheet['pending'])}",
+            ),
+            f'<p class="ptitle">{esc(meta["title"])}</p>',
+            f'<p style="margin:0 0 1mm"><span class="pname">{esc(prop)}</span>'
+            f'<span class="punit">answers in {esc(meta["unit"])}</span></p>',
+            f'<p class="def">{esc(meta["definition"])}</p>',
+            formula,
+            inputs,
+            f'<p class="shead">Steps</p><ol class="steps">{steps}</ol>',
+            note,
+            '<p class="shead">Answer</p>',
+            answer_field(meta, uids),
+            '<div class="work grow"><span>working</span></div>',
+            foot(sheet_id, page, total),
+            "</section>",
+        ]
+    )
+
+
+def render_transcription_page(
+    sheet: dict, sheet_id: str, catalog: dict, pages: dict, total: int
+) -> str:
+    props = catalog["properties"]
+    cells = []
+    for exp in sheet["pending"]:
+        prop = exp["property"]
+        # A map does not fit on a line and pretending otherwise would invite a
+        # half-copied answer. It stays on its own page and gets typed in from
+        # there; the column is for the scalars, where a value that contradicts
+        # one above it is the whole reason this page exists.
+        value = (
+            '<td class="v"></td>'
+            if props[prop]["answer_shape"] == "scalar"
+            else f'<td class="ref">read off p.{pages[prop]}</td>'
         )
-
-        if block["given"]:
-            gs = "".join(
-                f"<div class='g'>{html.escape(e['property'])} = {html.escape(json.dumps(e['value']))}</div>"
-                for e in block["given"]
-            )
-            parts.append(f"<div class='given'><h3>Given — already certified</h3>{gs}</div>")
-
-        for exp in take:
-            prop = exp["property"]
-            meta = block_meta = CATALOG_CACHE[prop]
-            issued += 1
-            pid = f"{case['id']}/{state['id']}/{prop}"
-            manifest.append(
-                {"n": issued, "case": case["id"], "state": state["id"], "property": prop}
-            )
-            steps = "".join(f"<li>{html.escape(s)}</li>" for s in meta["worksheet_steps"])
-            formula = (
-                f"<div class='formula'>{html.escape(meta['formula'])}</div>"
-                if meta.get("formula")
-                else ""
-            )
-            note = (
-                f"<p class='note'>{html.escape(meta['note'])}</p>" if meta.get("note") else ""
-            )
-            parts.append(
-                f"<div class='problem'>"
-                f"<span class='pid'>{issued:02d} · {html.escape(pid)}</span>"
-                f"<p class='ptitle'>{html.escape(meta['title'])}</p>"
-                f"<p class='def'>{html.escape(meta['definition'])}</p>"
-                f"{formula}{note}"
-                f"<h3>Steps</h3><ol>{steps}</ol>"
-                f"<h3>Answer &nbsp;<span style='font-weight:400;text-transform:none;letter-spacing:0'>"
-                f"({html.escape(meta['unit'])})</span></h3>"
-                f"{answer_field(meta['answer_shape'], meta['unit'])}"
-                f"<div class='working'><span>working</span></div>"
-                f"</div>"
-            )
-        parts.append("</section>")
-
-    return "\n".join(parts), manifest
+        cells.append(
+            f'<tr><td class="p">p.{pages[prop]}</td>'
+            f'<td>{esc(props[prop]["title"])}</td>'
+            f'<td class="n">{esc(prop)}</td>{value}</tr>'
+        )
+    rows = "".join(cells)
+    return "".join(
+        [
+            '<section class="page">',
+            crumb("transcription", f"{sheet['case']['id']} / {sheet['state']['id']}", ""),
+            "<h2>Answers</h2>",
+            '<p class="sub">Copy each result here as you finish its page. This is '
+            "the page you type in, and the one place the whole snapshot is "
+            "visible at once — an answer that contradicts one above it is "
+            "much easier to spot in a column than thirty pages apart.</p>",
+            '<table class="tx"><thead><tr><th>page</th><th>property</th>'
+            "<th>name</th><th>value</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>",
+            '<div class="grow"></div>',
+            foot(sheet_id, total, total),
+            "</section>",
+        ]
+    )
 
 
-CATALOG_CACHE: dict = {}
+def render(sheet: dict, catalog: dict) -> tuple[str, str, dict]:
+    """One snapshot as one document, plus the manifest certify.py replays."""
+    case, state = sheet["case"], sheet["state"]
+    sheet_id = f"{case['id']}-{state['id']}"
+    layers = catalog.get("layers", {})
+    uids = [a["uid"] for a in case["topology"]]
+
+    pages = {
+        exp["property"]: PAGE_FIRST_PROBLEM + i for i, exp in enumerate(sheet["pending"])
+    }
+    # Snapshot, contents, one page each, transcription last — so the last page
+    # number and the page count are the same number.
+    total = PAGE_FIRST_PROBLEM + len(sheet["pending"])
+
+    parts = [
+        "<!doctype html><meta charset='utf-8'>",
+        f"<title>Certification sheet {esc(sheet_id)}</title>",
+        f"<style>{CSS}</style>",
+        render_snapshot_page(sheet, catalog["properties"], sheet_id, total),
+        render_contents_page(sheet, sheet_id, catalog, layers, pages, total),
+    ]
+    manifest = []
+    for n, exp in enumerate(sheet["pending"], start=1):
+        page = pages[exp["property"]]
+        parts.append(
+            render_problem_page(
+                exp, sheet, sheet_id, catalog, layers, pages, page, total, uids
+            )
+        )
+        manifest.append(
+            {
+                "n": n,
+                "case": case["id"],
+                "state": state["id"],
+                "property": exp["property"],
+                "page": page,
+            }
+        )
+    parts.append(render_transcription_page(sheet, sheet_id, catalog, pages, total))
+
+    return (
+        sheet_id,
+        "\n".join(parts),
+        {"id": sheet_id, "case": case["id"], "state": state["id"], "problems": manifest},
+    )
+
+
+# ---------------------------------------------------------------------------
+# PDF
+# ---------------------------------------------------------------------------
 
 
 def find_chrome() -> str | None:
@@ -326,6 +989,7 @@ def find_chrome() -> str | None:
             return found
     for pattern in (
         "/opt/pw-browsers/chromium-*/chrome-linux/chrome",
+        "/opt/pw-browsers/chromium/chrome",
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     ):
         for candidate in sorted(glob.glob(pattern)):
@@ -334,10 +998,7 @@ def find_chrome() -> str | None:
     return None
 
 
-def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path) -> bool:
-    chrome = find_chrome()
-    if not chrome:
-        return False
+def to_pdf(chrome: str, html_path: pathlib.Path, pdf_path: pathlib.Path) -> bool:
     subprocess.run(
         [
             chrome,
@@ -354,43 +1015,42 @@ def to_pdf(html_path: pathlib.Path, pdf_path: pathlib.Path) -> bool:
     return pdf_path.exists()
 
 
+# ---------------------------------------------------------------------------
+
+
 def main() -> int:
-    global CATALOG_CACHE
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--count", type=int, default=6, help="problems to issue (default 6)")
-    parser.add_argument("--all", action="store_true", help="issue every pending problem")
     parser.add_argument("--case", help="restrict to one case id, e.g. group-captivity")
-    parser.add_argument("--pdf", action="store_true", help="also render a PDF")
+    parser.add_argument("--state", help="restrict to one snapshot id within the case")
+    parser.add_argument("--pdf", action="store_true", help="also render a PDF per sheet")
     parser.add_argument("--out", default=str(OUT_DIR), help="output directory")
-    parser.add_argument("--id", help="sheet id (default: today's date)")
     args = parser.parse_args()
 
-    CATALOG_CACHE = load_catalog()
-    blocks = collect(load_cases(), CATALOG_CACHE, args.case)
-    total = sum(len(b["pending"]) for b in blocks)
-    if not total:
+    catalog = load_catalog()
+    sheets = collect(load_cases(), catalog["properties"], args.case, args.state)
+    if not sheets:
         print("Nothing pending — every catalogued expectation is certified.")
         return 0
 
-    sheet_id = args.id or dt.date.today().isoformat()
-    limit = None if args.all else args.count
-    document, manifest = render(blocks, sheet_id, limit)
+    chrome = find_chrome() if args.pdf else None
+    if args.pdf and not chrome:
+        print("No Chromium found; open the HTML and print from the browser.", file=sys.stderr)
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    html_path = out / f"sheet-{sheet_id}.html"
-    html_path.write_text(document)
-    (out / f"sheet-{sheet_id}.json").write_text(
-        json.dumps({"id": sheet_id, "problems": manifest}, indent=2) + "\n"
-    )
+    for sheet in sheets:
+        sheet_id, document, manifest = render(sheet, catalog)
+        html_path = out / f"sheet-{sheet_id}.html"
+        html_path.write_text(document)
+        (out / f"sheet-{sheet_id}.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        pages = PAGE_FIRST_PROBLEM + len(sheet["pending"])
+        line = f"{sheet_id}: {len(manifest['problems'])} problem(s), {pages} pages"
+        if chrome and to_pdf(chrome, html_path, out / f"sheet-{sheet_id}.pdf"):
+            line += " → pdf"
+        print(line)
 
-    print(f"{len(manifest)} problem(s) issued of {total} pending → {html_path}")
-    if args.pdf:
-        pdf_path = out / f"sheet-{sheet_id}.pdf"
-        if to_pdf(html_path, pdf_path):
-            print(f"PDF → {pdf_path}")
-        else:
-            print("No Chromium found; open the HTML and print from the browser.", file=sys.stderr)
+    print(f"\n{len(sheets)} worksheet(s) in {out}")
+    print("Enter answers with: uv run python tools/certify.py --sheet <case>-<state>")
     return 0
 
 
