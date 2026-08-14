@@ -53,10 +53,6 @@ TOLERANCE = {
     "W": 1e-6,
 }
 
-#: A derived answer of "the engine should report nothing here". Distinct from
-#: a null value, which means nobody has derived this slot at all.
-UNAVAILABLE = "unavailable"
-
 
 def load_corpus() -> list[dict]:
     index = json.loads((CASES / "index.json").read_text())["cases"]
@@ -64,9 +60,14 @@ def load_corpus() -> list[dict]:
 
 
 def agrees(derived, actual, unit: str) -> bool:
-    """Whether the engine's answer matches a hand-derived one, by unit."""
-    if derived == UNAVAILABLE or actual is None:
-        return derived == UNAVAILABLE and actual is None
+    """Whether the engine's answer matches a hand-derived one, by unit.
+
+    Expectation values are literal, so a null derived value means the model
+    says there is no value here — and the engine must agree by returning
+    nothing at all.
+    """
+    if derived is None or actual is None:
+        return derived is None and actual is None
     if isinstance(derived, dict):
         if not isinstance(actual, dict) or set(derived) != set(actual):
             return False
@@ -149,28 +150,40 @@ def test_every_slot_is_catalogued():
                 )
 
 
-def test_no_value_without_a_derivation_status():
-    """A filled value must carry a status that says a human put it there."""
+def test_derivation_status_is_wellformed():
+    """Only the status says whether a human filled a slot in.
+
+    Not the value. Expectation values are literal, so a derived answer of
+    "there is no value here" is a plain null and looks exactly like an empty
+    slot — the two are told apart by their status and by nothing else. That
+    overlap is why this checks the certification record is complete: a
+    derivation that failed to write its value cannot be caught by looking at
+    the value, but a derived slot missing its attribution can.
+
+    The ambiguity is temporary. It disappears once every slot is derived,
+    because then there are no empty ones left to confuse with.
+    """
     for case in load_corpus():
         for state in case["states"]:
             for exp in state["expectations"]:
-                status = exp["certification"]["status"]
+                where = f"{case['id']}/{state['id']}/{exp['property']}"
+                cert = exp["certification"]
+                status = cert["status"]
                 assert status in ("pending", "verified", "disputed"), (
-                    f"{case['id']}/{state['id']}/{exp['property']}: unknown "
-                    f"certification status {status!r}"
+                    f"{where}: unknown certification status {status!r}"
                 )
                 if status == "pending":
                     assert exp["value"] is None, (
-                        f"{case['id']}/{state['id']}/{exp['property']}: a "
-                        f"pending slot must not carry a value — every value in "
-                        f"the corpus is hand-derived, and a pending one is by "
-                        f"definition nobody's derivation"
+                        f"{where}: a pending slot must not carry a value — "
+                        f"every value in the corpus is hand-derived, and a "
+                        f"pending one is by definition nobody's derivation"
+                    )
+                    assert not exp["derivation"], (
+                        f"{where}: a pending slot must not carry a derivation"
                     )
                 else:
-                    assert exp["value"] is not None, (
-                        f"{case['id']}/{state['id']}/{exp['property']}: marked "
-                        f"{status} but has no value. A derivation that concluded "
-                        f"the engine should report nothing is written as "
-                        f"{UNAVAILABLE!r}, not as null — null is reserved for "
-                        f"slots nobody has worked out yet"
+                    assert cert.get("by") and cert.get("date"), (
+                        f"{where}: marked {status} but records no deriver or "
+                        f"date — a value in this corpus is somebody's work and "
+                        f"has to say whose"
                     )

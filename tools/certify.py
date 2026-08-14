@@ -30,6 +30,10 @@ Map-valued properties are entered free-form, as ``key = value`` lines. Which
 keys belong in the answer is part of what you are deriving — whether a grid
 that is importing appears in the export attribution at all, say — so the tool
 does not hand you the key set to fill in.
+
+``nothing`` is an answer, and a common one: it derives that the engine should
+report no value at all here, and is stored as a literal null. An empty line is
+not that — it skips the problem and leaves the slot pending.
 """
 
 from __future__ import annotations
@@ -63,18 +67,21 @@ TOLERANCE = {
 }
 
 
-#: A derived answer of "the engine should report nothing here". Distinct from
-#: an empty slot: null means nobody has worked this out, whereas this means
-#: somebody worked it out and *nothing* is the answer — which for a snapshot
-#: with an unavailable sensor is the whole point of the exercise.
-UNAVAILABLE = "unavailable"
+#: A derived answer of "nothing" — the model says the engine should report no
+#: value here. Stored as a literal JSON null, because expectation values are
+#: literal: there is no in-band marker standing in for one.
+#:
+#: This tool needs its own sentinel only because an empty line at the prompt
+#: already means "skip this problem, leave the slot alone", which is a
+#: different thing from answering. It never reaches the corpus.
+NOTHING = object()
 
 
-def rat(text: str) -> Fraction | str:
-    """Parse an exact rational, a decimal, or the unavailable marker."""
+def rat(text: str):
+    """Parse an exact rational, a decimal, or an answer of nothing."""
     text = text.strip()
-    if text.lower() in (UNAVAILABLE, "none", "nothing"):
-        return UNAVAILABLE
+    if text.lower() in ("none", "nothing", "null", "unavailable"):
+        return NOTHING
     if "/" in text:
         num, _, den = text.partition("/")
         return Fraction(int(num.strip()), int(den.strip()))
@@ -126,7 +133,7 @@ def collect_answer(shape: str, unit: str):
     sink. Returns nested Fractions, or ``None`` to skip.
     """
     if shape == "scalar":
-        raw = ask(f"    answer ({unit}, or `unavailable`): ")
+        raw = ask(f"    answer ({unit}, or `nothing`): ")
         return None if not raw.strip() else rat(raw)
 
     if shape in ("map_derived_keys", "map_fixed_keys"):
@@ -174,8 +181,8 @@ def collect_answer(shape: str, unit: str):
 
 def matches(mine, actual, unit: str) -> bool:
     """Compare a hand-derived answer against the engine's live answer."""
-    if mine == UNAVAILABLE or actual is None:
-        return mine == UNAVAILABLE and actual is None
+    if mine is NOTHING or actual is None:
+        return mine is NOTHING and actual is None
     if isinstance(actual, dict):
         if not isinstance(mine, dict) or set(mine) != set(actual):
             return False
@@ -197,14 +204,20 @@ def encode(value):
 
 
 def store(mine):
-    """A hand-derived answer in the corpus's shape: exact rational strings."""
+    """A hand-derived answer in the corpus's shape.
+
+    Exact rational strings, maps of them, or a literal ``null`` where the
+    derived answer is that there is no value.
+    """
+    if mine is NOTHING:
+        return None
     if isinstance(mine, dict):
         return {k: store(v) for k, v in mine.items()}
     return str(mine)
 
 
 def render_engine(actual) -> str:
-    return UNAVAILABLE if actual is None else render(encode(actual))
+    return "nothing" if actual is None else render(encode(actual))
 
 
 def render(value) -> str:
@@ -212,6 +225,8 @@ def render(value) -> str:
 
 
 def render_answer(mine) -> str:
+    if mine is NOTHING:
+        return "nothing"
     if isinstance(mine, Fraction):
         return str(mine)
     if isinstance(mine, dict):

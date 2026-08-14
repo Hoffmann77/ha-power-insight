@@ -145,9 +145,16 @@ than broken.
 
 The other two statuses both mean a human derived it: `"verified"` (the engine
 agreed) and `"disputed"` (it did not, and the derivation stands). `derivation`
-is a list of `{text, detail?, math?, result?}` steps. A value of the string
-`"unavailable"` is a derived answer too — it means the model says the engine
-should report nothing here, which is not the same as the slot being empty.
+is a list of `{text, detail?, math?, result?}` steps.
+
+**Read the status, never the value, to tell an empty slot from a derived one.**
+Expectation values are literal — there is no in-band marker standing in for
+"nothing" — so a slot derived as having no value is a plain `null` and looks
+identical to one nobody has touched. `"pending"` means not derived; a `null`
+under either other status means the model says the engine should report nothing
+here. The two want different words on screen. That ambiguity goes away once
+every slot is derived, because there will be no empty ones left.
+
 The design should surface those distinctions honestly — a reader deserves to
 know which numbers a human has checked. A small badge is enough; please don't let it
 dominate.

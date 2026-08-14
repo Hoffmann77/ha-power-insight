@@ -10,13 +10,6 @@
 /** An exact rational, as stored. `null` models an unavailable reading. */
 export type Rat = string | null;
 
-/**
- * A derived value of "the engine should report nothing here". Stored in place
- * of a number, and distinct from a `null` value, which means the slot is
- * pending and nobody has derived anything.
- */
-export const UNAVAILABLE = 'unavailable';
-
 /** A stored expectation value: a scalar, or a (possibly nested) map of them. */
 export type ValueTree = Rat | {[key: string]: ValueTree};
 
@@ -51,12 +44,14 @@ export interface DerivationStep {
 }
 
 /**
- * How a slot came to hold what it holds.
+ * How a slot came to hold what it holds — and the only thing that says whether
+ * a human has filled it in.
  *
- * `pending` is the default and, for now, almost everything: the corpus is
- * hand-derived, so a slot stays empty until somebody works it out. It is not
- * the same as a value of `"unavailable"`, which is somebody having worked it
- * out and concluded the engine should report nothing.
+ * Expectation values are literal, so a derived answer of "there is no value
+ * here" is a plain `null` and is indistinguishable from an empty slot by its
+ * value alone. Read the status, never the value, to decide which you have.
+ *
+ * `pending` is the default and, for now, almost everything.
  */
 export interface Certification {
   status: 'pending' | 'verified' | 'disputed';

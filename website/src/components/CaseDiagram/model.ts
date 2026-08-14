@@ -11,7 +11,6 @@
  *     the provenance matrix rather than duplicated in the data.
  */
 import {fmtEur, fmtPct, fmtW, rat} from './rational';
-import {UNAVAILABLE} from './types';
 import type {
   Certification,
   Channel,
@@ -142,20 +141,17 @@ export function valueOf(
 /**
  * A scalar property as a number, or `null` when the corpus has no answer.
  *
- * Null covers both nothings — a pending slot and a derived `"unavailable"` —
- * and the distinction does not matter here, because in either case the corpus
- * is not telling us a number and the diagram must not invent one. Returning 0
- * would draw an idle node reading "0 W", which is a claim nobody made.
+ * Null covers both nothings — a slot nobody has derived, and one derived as
+ * having no value — and the distinction does not matter to a diagram, because
+ * in either case there is no number to draw and it must not invent one.
+ * Returning 0 would draw an idle node reading "0 W", a claim nobody made.
  */
 export function scalar(
   byProperty: Map<string, Expectation>,
   property: string,
 ): number | null {
   const v = valueOf(byProperty, property);
-  if (typeof v !== 'string' || v === UNAVAILABLE) {
-    return null;
-  }
-  return rat(v);
+  return typeof v === 'string' ? rat(v) : null;
 }
 
 export function certificationOf(
