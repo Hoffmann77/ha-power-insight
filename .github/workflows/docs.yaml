@@ -1,118 +1,97 @@
 name: Docs
 
-# Versioned documentation, published with `mike` to the gh-pages branch.
+# Builds the Docusaurus site in `website/` and publishes it with the GitHub
+# Pages "GitHub Actions" source — no gh-pages branch, no bot commits.
 #
-#   - push to main        -> updates the `dev` (in-development) docs
-#   - push a release tag  -> deploys that release as MAJOR.MINOR, moves the
-#                            `latest` alias, and makes `latest` the default
-#   - manual dispatch     -> deploy any version/alias by hand
-#
-# NOTE: GitHub Pages must be configured to serve from the `gh-pages` branch
-# (Settings -> Pages -> Build and deployment -> Source: "Deploy from a branch",
-# Branch: gh-pages / root), because `mike` manages that branch.
+# NOTE: GitHub Pages must be set to Settings -> Pages -> Build and deployment
+# -> Source: "GitHub Actions" (it was previously "Deploy from a branch",
+# pointing at gh-pages, which `mike` managed).
 on:
   push:
     branches:
       - main
-    tags:
-      - "*"
+      # Integration branch: built and type-checked, never published. Without
+      # it the docs are unverified until they reach main, which is far too
+      # late to find a broken link or a bad MDX page.
+      - feature/refactor-engine
+    paths:
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/docs.yaml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/docs.yaml'
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version label to deploy (e.g. 0.2). Blank = derive from the ref."
-        required: false
-        default: ""
-      alias:
-        description: "Alias to move to this version (e.g. latest). Blank = none."
-        required: false
-        default: ""
-      set_default:
-        description: "Make this alias/version the site default"
-        type: boolean
-        default: false
 
-# `mike` pushes the built site to the gh-pages branch.
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
-# Serialise deployments so concurrent runs never race on the gh-pages branch.
+# One deployment at a time; never cancel a run that is mid-publish.
 concurrency:
   group: docs-deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
     steps:
       - uses: actions/checkout@v4
         with:
+          # `showLastUpdateTime` reads git history, so a shallow clone would
+          # leave every page without a date.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.13"
-          cache: pip
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
 
       - name: Install dependencies
-        run: pip install -r docs/requirements.txt
+        run: npm ci
 
-      - name: Configure git identity
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Type-check
+        run: npm run typecheck
 
-      - name: Fetch existing docs versions
-        run: git fetch origin gh-pages --depth=1 || echo "gh-pages does not exist yet"
+      - name: Build
+        run: npm run build
 
-      - name: Determine version and alias
-        id: cfg
-        run: |
-          set -euo pipefail
-          VERSION="${{ github.event.inputs.version }}"
-          ALIAS="${{ github.event.inputs.alias }}"
-          SET_DEFAULT="${{ github.event.inputs.set_default }}"
+      # GitHub Pages allows exactly one deployment per repository, so a pull
+      # request cannot get its own URL without giving up the Actions publishing
+      # source. Instead the built site is attached to the run: download it,
+      # unpack it over `website/build`, and `npm run serve` renders it at the
+      # real base path.
+      - name: Upload reviewable build
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-${{ github.event.number || github.sha }}
+          path: website/build
+          retention-days: 14
 
-          if [ -z "$VERSION" ]; then
-            if [ "${{ github.ref_type }}" = "tag" ]; then
-              # Release tag -> group by MAJOR.MINOR (e.g. 0.1.0-beta.3 -> 0.1),
-              # publish under `latest`, and make it the default.
-              raw="${{ github.ref_name }}"
-              raw="${raw#v}"
-              VERSION="$(printf '%s' "$raw" | cut -d. -f1-2)"
-              ALIAS="latest"
-              SET_DEFAULT="true"
-            else
-              # Push to main -> the in-development docs.
-              VERSION="dev"
-              ALIAS=""
-            fi
-          fi
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/build
 
-          echo "version=$VERSION"        >> "$GITHUB_OUTPUT"
-          echo "alias=$ALIAS"            >> "$GITHUB_OUTPUT"
-          echo "set_default=$SET_DEFAULT" >> "$GITHUB_OUTPUT"
-          echo "Deploying version='$VERSION' alias='$ALIAS' set_default='$SET_DEFAULT'"
-
-      - name: Deploy with mike
-        env:
-          VERSION: ${{ steps.cfg.outputs.version }}
-          ALIAS: ${{ steps.cfg.outputs.alias }}
-          SET_DEFAULT: ${{ steps.cfg.outputs.set_default }}
-        run: |
-          set -euo pipefail
-
-          if [ -n "$ALIAS" ]; then
-            mike deploy --push --update-aliases "$VERSION" "$ALIAS"
-          else
-            mike deploy --push "$VERSION"
-          fi
-
-          # Keep the site root resolvable: prefer `latest` once a release
-          # exists, otherwise fall back to whatever we just deployed (dev).
-          if [ "$SET_DEFAULT" = "true" ] && [ -n "$ALIAS" ]; then
-            mike set-default --push "$ALIAS"
-          elif mike list 2>/dev/null | grep -q "\[latest\]"; then
-            mike set-default --push latest
-          else
-            mike set-default --push "$VERSION"
-          fi
+  deploy:
+    # Only main publishes. Gated on the ref rather than "not a pull request",
+    # so adding a branch to the push triggers above can never silently start
+    # deploying it to the live site.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,339 @@
+{
+  "$schema": "../anchor-case.schema.json",
+  "id": "A-001",
+  "title": "Baseline mix, no restrictions",
+  "summary": "The degenerate baseline every other case is read against. Nothing is restricted, so each sink simply mirrors the raw availability of the sources, and the unmetered home load competes for power like any other sink.",
+  "decides": [
+    "An unrestricted sink's provenance row is the raw source mix.",
+    "The unmetered home base load participates in the allocation.",
+    "PV standby is a sink, not negative production.",
+    "An adapter reading exactly 0 W belongs to neither flow group."
+  ],
+  "topology": [
+    {
+      "uid": "grid",
+      "kind": "grid",
+      "config": {
+        "has_price_entity": true
+      }
+    },
+    {
+      "uid": "pv1",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "bat1",
+      "kind": "battery",
+      "config": {
+        "lcos": "3/20",
+        "lco2_intensity": "100",
+        "exports_power": false,
+        "export_compensation": "0",
+        "charge_from_adapters": []
+      }
+    },
+    {
+      "uid": "cons1",
+      "kind": "consumer",
+      "config": {
+        "power_from_adapters": []
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "import_mix",
+      "note": "Grid importing alongside PV; battery charging, one load.",
+      "readings": {
+        "grid": "800",
+        "pv1": "600",
+        "bat1": "-600",
+        "cons1": "-500"
+      },
+      "price": "3/10",
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "1400",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "800",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_production",
+          "value": "600",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "600",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_consumption",
+          "value": "800",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "300",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "bat1": {
+              "grid": "4/7",
+              "pv1": "3/7"
+            },
+            "cons1": {
+              "grid": "4/7",
+              "pv1": "3/7"
+            }
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "grid": "4/7",
+            "pv1": "3/7"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_restriction_deficit",
+          "value": {},
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "6/25",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "3/10",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "18/175",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "standby_and_idle",
+      "note": "pv1 draws standby (a sink); cons1 sits at 0 W (neither group).",
+      "readings": {
+        "grid": "1000",
+        "pv1": "-20",
+        "bat1": "-400",
+        "cons1": "0"
+      },
+      "price": "3/10",
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "1000",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "1000",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_production",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "400",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "20",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_consumption",
+          "value": "580",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "580",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "pv1": {
+              "grid": "1"
+            },
+            "bat1": {
+              "grid": "1"
+            }
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "grid": "1"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "sink_adapters_restriction_deficit",
+          "value": {},
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "1/50",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "2/5",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -169,3 +169,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Docusaurus documentation site
+/website/node_modules
+/website/build
+/website/.docusaurus
+/website/.cache-loader
+
+# Generated certification worksheets (regenerate with tools/worksheet.py)
+/worksheets/

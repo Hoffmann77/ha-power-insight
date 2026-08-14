@@ -1,0 +1,48 @@
+---
+title: A-001 — Baseline mix
+---
+
+import ANCHOR_CASES, {anchorCase} from './anchors/all';
+
+export const CASE = anchorCase('A-001');
+
+# A-001 — Baseline mix
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-001" />
+
+## The snapshots
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+Every other anchor case is a departure from this one. Nothing here is
+restricted: each battery and consumer may draw from the whole mix, so each
+sink's provenance row is simply the raw availability of the sources. If the
+tiered logic in the solver is working, this is what it must collapse to when
+there is nothing to tier.
+
+It is also where the **home base load** is easiest to see. The metered devices
+do not account for all the power entering the house; the remainder is drawn as a
+dashed circle and competes for power exactly like a real device.

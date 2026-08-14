@@ -1,0 +1,53 @@
+---
+title: A-004 — Export
+---
+
+import ANCHOR_CASES, {anchorCase} from './anchors/all';
+
+export const CASE = anchorCase('A-004');
+
+# A-004 — Export
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-004" />
+
+## The snapshots
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+Reversing the grid changes its *kind*, not just its sign. An exporting grid is
+no longer a source at all — it becomes a **sink**, and a restricted one, because
+only devices configured to export may feed it. Watch `bat2`: it is discharging
+happily into the house, but it contributes exactly zero to the export, because
+it may not.
+
+That single reversal switches on three families at once, which is why this case
+carries four snapshots rather than two: the export channel and its compensation,
+standby draw being routed through the allocation like any other sink rather than
+by gross share, and the pricing rule for a discharging battery — whose charge
+mix happened in the past, where a snapshot engine cannot see it.
+
+The last snapshot is a degenerate guard: nothing is producing and the grid is
+exporting, so gross power is exactly zero and every ratio has to survive it.

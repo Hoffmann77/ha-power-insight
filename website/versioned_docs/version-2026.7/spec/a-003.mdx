@@ -1,0 +1,55 @@
+---
+title: A-003 — Group captivity
+---
+
+import ANCHOR_CASES, {anchorCase} from './anchors/all';
+
+export const CASE = anchorCase('A-003');
+
+# A-003 — Group captivity
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-003" />
+
+## The snapshots
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+This is the case the max-flow solver exists for, and it is worth walking
+through slowly.
+
+`bat_a` and `bat_b` may each charge from either string. Neither is individually
+stuck — either string could cover either battery. But together they draw exactly
+what the two strings make, so as a *pair* they need every local watt. Any
+allocation that gives local power to somebody else leaves one of them short.
+
+Asking "what must **this** sink take from this source?" one sink at a time
+cannot see that. It is Hall's condition, which quantifies over every *subset* of
+sinks, and no per-sink patch reproduces it. Watch the home base load in the
+first snapshot: it is unrestricted and could physically take solar, but it is
+served entirely from the grid because the pair have first claim.
+
+The second snapshot then overloads the same wiring deliberately, and that is
+where the model runs out of settled answers.
