@@ -10,6 +10,10 @@ on:
   push:
     branches:
       - main
+      # Integration branch: built and type-checked, never published. Without
+      # it the docs are unverified until they reach main, which is far too
+      # late to find a broken link or a bad MDX page.
+      - feature/refactor-engine
     paths:
       - 'docs/**'
       - 'website/**'
@@ -65,22 +69,24 @@ jobs:
       # unpack it over `website/build`, and `npm run serve` renders it at the
       # real base path.
       - name: Upload reviewable build
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: docs-site-pr-${{ github.event.number }}
+          name: docs-site-${{ github.event.number || github.sha }}
           path: website/build
           retention-days: 14
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: website/build
 
   deploy:
-    # Pull requests build and type-check above, but only main publishes.
-    if: github.event_name != 'pull_request'
+    # Only main publishes. Gated on the ref rather than "not a pull request",
+    # so adding a branch to the push triggers above can never silently start
+    # deploying it to the live site.
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
