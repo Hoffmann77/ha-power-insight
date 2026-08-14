@@ -1,0 +1,66 @@
+---
+title: Captive load
+description: "The same three devices, with the consumer now restricted to the string. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('captive-load');
+
+# Captive load
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every property the corpus carries a slot for is listed
+underneath. A slot nobody has derived yet reads *not yet derived*, and a
+snapshot whose provenance is still pending has no flows to draw.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+Three adapters is the smallest wiring in which a restriction can be honoured,
+and — one reading later — the smallest in which one can fail. Both belong here
+rather than further up the ladder, because a deficit derived by hand across
+three devices is a napkin and the same rule across six is an afternoon.
+
+When the string covers the captive load, the rule is visible in one line:
+`cons1` runs on solar alone, and the *unrestricted* base load is pushed onto the
+grid to make room. A naive implementation that shared each source in proportion
+would hand `cons1` a slice of grid power it is not permitted to touch, and give
+the base load solar it has no priority claim to. The two implementations
+separate immediately.
+
+The second snapshot asks what happens when the restriction is simply not true.
+`cons1` draws 500 W and its only permitted source makes 300 W. The engine does
+not refuse to answer and does not silently pretend the extra 200 W was solar —
+it attributes the draw as the meters actually show it and reports the 200 W as
+a **restriction deficit**. That figure is not an engine failure. It is the
+engine saying the meters disagree with how you told it your energy manager
+behaves.

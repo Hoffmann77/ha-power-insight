@@ -20,9 +20,19 @@ import type {Expectation, PropertyCatalog, PropertyDoc, ValueTree} from './types
 function scalarCell(
   stored: string | null,
   doc: PropertyDoc | undefined,
+  pending: boolean,
 ): React.ReactElement {
+  // Two different nothings, told apart by the status rather than the value:
+  // expectation values are literal, so a derived "no value here" is a plain
+  // null and looks exactly like a slot nobody has touched. Conflating them
+  // would be a lie in both directions — one is the corpus asserting the engine
+  // should report nothing, the other is it saying nothing at all.
   if (stored === null) {
-    return <b className={styles.vunavail}>unavailable</b>;
+    return pending ? (
+      <b className={styles.vpending}>not yet derived</b>
+    ) : (
+      <b className={styles.vunavail}>unavailable</b>
+    );
   }
   const {text, frac} = fmtUnit(stored, doc?.unit);
   return (
@@ -37,6 +47,7 @@ function scalarCell(
 function breakdown(
   value: ValueTree,
   doc: PropertyDoc | undefined,
+  pending: boolean,
 ): React.ReactElement {
   const entries = Object.entries(value as {[k: string]: ValueTree});
   if (!entries.length) {
@@ -48,12 +59,12 @@ function breakdown(
         inner !== null && typeof inner === 'object' ? (
           <div className={styles.vgroup} key={key}>
             <span className={styles.vkey}>{key}</span>
-            {breakdown(inner, doc)}
+            {breakdown(inner, doc, pending)}
           </div>
         ) : (
           <div className={styles.vrow} key={key}>
             <i>{key}</i>
-            {scalarCell(inner as string | null, doc)}
+            {scalarCell(inner as string | null, doc, pending)}
           </div>
         ),
       )}
@@ -71,6 +82,7 @@ function Row({
   const [open, setOpen] = useState(false);
   const {property, value, certification} = expectation;
   const isMap = value !== null && typeof value === 'object';
+  const pending = certification.status === 'pending';
   const explainable = Boolean(doc?.definition);
 
   return (
@@ -86,10 +98,10 @@ function Row({
           {explainable && <span className={styles.pchev} aria-hidden="true" />}
           {doc?.title ?? humanize(property)}
         </span>
-        {!isMap && scalarCell(value as string | null, doc)}
+        {!isMap && scalarCell(value as string | null, doc, pending)}
         <CertDot status={certification.status} />
       </button>
-      {isMap && breakdown(value, doc)}
+      {isMap && breakdown(value, doc, pending)}
       {open && doc && (
         <div className={styles.pdef}>
           <p>{doc.definition}</p>

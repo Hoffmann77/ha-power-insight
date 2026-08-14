@@ -23,7 +23,12 @@ export function rat(s: string | null | undefined): number {
 }
 
 /** Watts, at the precision a reader can act on. */
-export function fmtW(v: number): string {
+export function fmtW(v: number | null): string {
+  // An em dash, not "0 W". The corpus is silent about this figure, and a zero
+  // would read as a derivation nobody made.
+  if (v === null) {
+    return '—';
+  }
   const a = Math.abs(v);
   if (a >= 10000) {
     return `${(v / 1000).toFixed(1)} kW`;

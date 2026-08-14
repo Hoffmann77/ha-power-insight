@@ -707,6 +707,16 @@
   font-weight: 400;
 }
 
+/* A slot nobody has derived yet. Deliberately quieter than an unavailable
+   value: one is the corpus saying nothing, the other is it saying something. */
+.vpending {
+  color: var(--cd-mut);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 11.5px;
+  opacity: 0.75;
+}
+
 .certline {
   margin: 10px 14px 12px;
   font-size: 11px;

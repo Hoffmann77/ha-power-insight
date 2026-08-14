@@ -43,8 +43,18 @@ export interface DerivationStep {
   result?: string;
 }
 
+/**
+ * How a slot came to hold what it holds — and the only thing that says whether
+ * a human has filled it in.
+ *
+ * Expectation values are literal, so a derived answer of "there is no value
+ * here" is a plain `null` and is indistinguishable from an empty slot by its
+ * value alone. Read the status, never the value, to decide which you have.
+ *
+ * `pending` is the default and, for now, almost everything.
+ */
 export interface Certification {
-  status: 'verified' | 'unverified' | 'disputed';
+  status: 'pending' | 'verified' | 'disputed';
   by?: string;
   date?: string;
   method?: string;
@@ -116,3 +126,47 @@ export type Role = 'source' | 'sink' | 'idle';
 
 /** Which channel of the gross-power split a sink belongs to. */
 export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
+
+/**
+ * The generated coverage table (`docs/spec/cases/coverage.json`): which rungs
+ * of the ladder each property is actually settled by, and which modelling
+ * decision each case carries.
+ *
+ * `settledBy` is the load-bearing field, and it is deliberately not a count of
+ * appearances. Almost every property has *some* value on the first rung, so
+ * "where does it first appear" says nothing; the rungs listed here are the
+ * ones that each published a value no earlier rung had.
+ */
+export interface PropertyCoverage {
+  title: string;
+  layer: number;
+  /** Slots this property has across the corpus — one per snapshot. */
+  slots: number;
+  /** Slots a human has filled in, disputed ones included. */
+  derived: number;
+  disputed: number;
+  /** Cases where at least one slot has been derived. */
+  derived_in: string[];
+}
+
+export interface CaseCoverage {
+  case: string;
+  case_title: string;
+  decides: string[];
+  slots: number;
+  derived: number;
+}
+
+export interface Coverage {
+  /** Case ids in ladder order. */
+  order: string[];
+  decisions: CaseCoverage[];
+  properties: {[name: string]: PropertyCoverage};
+  totals: {
+    slots: number;
+    derived: number;
+    disputed: number;
+    /** Properties with no derived value anywhere yet. */
+    untouched: string[];
+  };
+}

@@ -1,12 +1,12 @@
 {
   "$schema": "../reference-case.schema.json",
-  "id": "group-captivity",
-  "title": "Group captivity",
-  "summary": "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for.",
+  "id": "captive-load",
+  "title": "Captive load",
+  "summary": "The same three devices, with the consumer now restricted to the string. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published.",
   "decides": [
-    "Feasibility is a property of groups of sinks, not of single sinks.",
-    "A flexible sink must not take local power a tight group needs.",
-    "When restrictions cannot all be honoured, the sink with the fewest permitted alternatives is served first and the deficit falls on the sinks that had somewhere else to go."
+    "A restricted sink is served from its allowed sources before anything unrestricted shares them.",
+    "Serving the captive sink first pushes the unrestricted base load onto the grid.",
+    "A draw the allowed sources cannot cover is still attributed, and the shortfall is reported as a restriction deficit."
   ],
   "topology": [
     {
@@ -17,81 +17,35 @@
       }
     },
     {
-      "uid": "east",
+      "uid": "pv1",
       "kind": "pv",
       "config": {
         "lcoe": "1/10",
         "lco2_intensity": "50",
-        "exports_power": true,
+        "exports_power": false,
         "export_compensation": "0",
         "correction_factor": "1"
       }
     },
     {
-      "uid": "west",
-      "kind": "pv",
+      "uid": "cons1",
+      "kind": "consumer",
       "config": {
-        "lcoe": "1/10",
-        "lco2_intensity": "50",
-        "exports_power": true,
-        "export_compensation": "0",
-        "correction_factor": "1"
-      }
-    },
-    {
-      "uid": "bat_a",
-      "kind": "battery",
-      "config": {
-        "lcos": "3/20",
-        "lco2_intensity": "100",
-        "exports_power": false,
-        "export_compensation": "0",
-        "charge_from_adapters": [
-          "east",
-          "west"
-        ]
-      }
-    },
-    {
-      "uid": "bat_b",
-      "kind": "battery",
-      "config": {
-        "lcos": "3/20",
-        "lco2_intensity": "100",
-        "exports_power": false,
-        "export_compensation": "0",
-        "charge_from_adapters": [
-          "east",
-          "west"
-        ]
-      }
-    },
-    {
-      "uid": "bat_c",
-      "kind": "battery",
-      "config": {
-        "lcos": "3/20",
-        "lco2_intensity": "100",
-        "exports_power": false,
-        "export_compensation": "0",
-        "charge_from_adapters": [
-          "east"
+        "power_from_adapters": [
+          "pv1"
         ]
       }
     }
   ],
   "states": [
     {
-      "id": "hall_tight_pair",
-      "note": "bat_c idle. {bat_a, bat_b} exactly exhaust east+west, so the 200 W home load must be served entirely from the grid.",
-      "asks": "9b2ba0b639818813",
+      "id": "captive_load",
+      "note": "pv1 makes more than cons1 draws, so cons1 runs on solar alone and the base load is pushed onto the grid.",
+      "asks": "70f381f3aa2a521f",
       "readings": {
-        "grid": "200",
-        "east": "100",
-        "west": "100",
-        "bat_a": "-100",
-        "bat_b": "-100",
-        "bat_c": "0"
+        "grid": "800",
+        "pv1": "600",
+        "cons1": "-500"
       },
       "price": "3/10",
       "expectations": [
@@ -314,16 +268,13 @@
       ]
     },
     {
-      "id": "unsatisfiable_overlap",
-      "note": "bat_c now draws 100 W and is captive to east alone. Captive demand (300 W) exceeds local supply (200 W): someone must be deficited.",
-      "asks": "59920e7f83fd6abd",
+      "id": "load_exceeds",
+      "note": "cons1 draws 500 W but pv1 makes only 300 W: the missing 200 W came from a source it is not allowed to use.",
+      "asks": "1cabd9769ec9ca1a",
       "readings": {
-        "grid": "200",
-        "east": "100",
-        "west": "100",
-        "bat_a": "-100",
-        "bat_b": "-100",
-        "bat_c": "-100"
+        "grid": "800",
+        "pv1": "300",
+        "cons1": "-500"
       },
       "price": "3/10",
       "expectations": [

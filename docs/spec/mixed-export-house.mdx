@@ -1,0 +1,62 @@
+---
+title: Mixed export house
+description: "Every device class at once, with the export permissions deliberately unequal: one battery may feed the grid and the other may not. Nothing here is settled for the first time \u2014 this is the case that checks the rules of the lower rungs still hold when they all apply together."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('mixed-export-house');
+
+# Mixed export house
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every property the corpus carries a slot for is listed
+underneath. A slot nobody has derived yet reads *not yet derived*, and a
+snapshot whose provenance is still pending has no flows to draw.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+Every device class at once, and nothing settled here for the first time. That
+is deliberate: this rung is a net rather than a lesson. Each rule below it was
+pinned in the smallest wiring that could express it, and this case asks whether
+those rules still hold when they all apply to the same snapshot.
+
+What it does add is **disagreement between devices of the same kind**. `bat1`
+may feed the grid and `bat2` may not, and they are otherwise alike — both
+discharging, both supplying the house. Watch `bat2` in the first snapshot: it
+is contributing happily to consumption and contributes exactly zero to the
+export, because it is not allowed to. A model that computed the export mix from
+gross shares could not produce that.
+
+The batteries also differ in what their storage costs, which is the only place
+in the corpus where a levelized price is a genuine blend of two different
+figures rather than a single source's number carried through.

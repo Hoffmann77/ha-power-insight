@@ -197,7 +197,11 @@ export default function CaseDiagram({
 
   /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
-    const totalW = list.reduce((a, n) => a + Math.abs(n.reading), 0);
+    // A node with no reading contributes nothing to the bar rather than a
+    // zero-width segment: the home base load has no derived size yet on most
+    // snapshots, and it must not be drawn as though it were measured at zero.
+    const watts = (n: FlowNode) => (n.reading === null ? 0 : Math.abs(n.reading));
+    const totalW = list.reduce((a, n) => a + watts(n), 0);
     if (!totalW) {
       return (
         <div className={styles.lrow} key={title}>
@@ -212,8 +216,8 @@ export default function CaseDiagram({
       layer === '4'
         ? fmtEur(costOf(model, n))
         : layer === '2'
-          ? fmtPct(Math.abs(n.reading) / totalW)
-          : fmtW(Math.abs(n.reading));
+          ? fmtPct(watts(n) / totalW)
+          : fmtW(n.reading === null ? null : Math.abs(n.reading));
     const totalLabel =
       layer === '4'
         ? fmtEur(list.reduce((a, n) => a + costOf(model, n), 0))
@@ -221,7 +225,7 @@ export default function CaseDiagram({
           ? '100%'
           : fmtW(totalW);
     const segLabel = (n: FlowNode) => `${n.uid} · ${segValue(n)}`;
-    const pctOf = (n: FlowNode) => (Math.abs(n.reading) / totalW) * 100;
+    const pctOf = (n: FlowNode) => (watts(n) / totalW) * 100;
     const smalls = list.filter((n) => !fitsInline(segLabel(n), pctOf(n)));
     return (
       <div className={styles.lrow} key={title}>
@@ -484,7 +488,11 @@ export default function CaseDiagram({
                 <i>Reading</i>
                 <b>
                   {selected.virtual
-                    ? `${fmtW(Math.abs(selected.reading))} (derived)`
+                    ? `${fmtW(
+                        selected.reading === null
+                          ? null
+                          : Math.abs(selected.reading),
+                      )} (derived)`
                     : fmtW(selected.reading)}
                 </b>
               </div>
@@ -504,12 +512,12 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'unverified'} />
+                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.to === selected.uid),
                     'from',
-                    Math.abs(selected.reading),
+                    selected.reading === null ? 0 : Math.abs(selected.reading),
                   )}
                 </>
               )}
@@ -517,12 +525,12 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its output went{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'unverified'} />
+                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.from === selected.uid),
                     'to',
-                    selected.reading,
+                    selected.reading ?? 0,
                   )}
                 </>
               )}

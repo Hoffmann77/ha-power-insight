@@ -22,7 +22,8 @@ The goal is that a user who thinks the engine is wrong can argue with the
 cases are legible, which is where this graphic comes in: a wall of JSON and
 fractions is not something anyone will argue with.
 
-There are 4 reference cases and 10 snapshots today, in `docs/spec/cases/`.
+There are 9 reference cases and 24 snapshots today, in `docs/spec/cases/`,
+ordered as a ladder from a one-meter house upward.
 
 ## What to build
 
@@ -45,10 +46,10 @@ An interactive diagram that renders one reference case, embedded in a docs page.
 A second navbar selecting which **value category** is displayed. It landed as
 the engine's own four layers, taken from `docs/spec/properties.json`: the
 readings and totals, source provenance, the channel split, and the monetary
-model. Each re-labels the same topology and lists every value the engine
-published for that snapshot underneath — because the graph can only ever
-re-label its nodes, and most of what the integration computes has nowhere to
-live on the picture.
+model. Each re-labels the same topology and lists every property the corpus
+carries a slot for underneath — because the graph can only ever re-label its
+nodes, and most of what the integration computes has nowhere to live on the
+picture.
 
 ## The one thing that will bite you
 
@@ -61,8 +62,9 @@ each snapshot from the *sign* of its power reading:
 | negative | exporting → **sink** | standby draw → **sink** | charging → **sink** | load → **sink** |
 | exactly 0 | idle — in neither group | idle | idle | idle |
 
-So in `grid-export/export_non_exporting_battery` the grid is a **sink** being fed by
-the house, while in `baseline-mix/import_mix` the same grid is the largest **source**.
+So in `pv-export/export_surplus` the grid is a **sink** being fed by the house,
+while in `pv-self-consumption/sunny_partial` the same grid is the largest
+**source**.
 A layout that hard-codes "grid on the left, loads on the right" will break on
 half the cases. The sides have to be derived from the data.
 
@@ -74,9 +76,14 @@ drawn, and visibly distinguished from real devices.
 
 ## Data contract
 
-One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them.
-Read `group-captivity.json` and `grid-export.json` first — between them they
-exercise every shape.
+One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them in
+ladder order and `coverage.json` recording how far the derivation programme has
+got. The diagram component needs neither of the latter two — they drive the
+tables on the section index — but `index.json` is the authority on case order.
+
+Read `group-captivity.json` and `mixed-export-house.json` first — between them
+they exercise every shape. `grid-only.json` is the other end of the range: a
+single adapter, and still a slot for every property.
 
 ```jsonc
 {
@@ -100,10 +107,11 @@ exercise every shape.
       "price": "3/10",
       "expectations": [
         { "property": "gross_power", "value": "400",
-          "derivation": [], "certification": { "status": "unverified" } },
+          "derivation": [{ "text": "sum of the positive readings" }],
+          "certification": { "status": "verified", "by": "…", "date": "…" } },
         { "property": "sink_adapters_source_shares",
-          "value": { "bat_a": { "grid": "0", "east": "1/2", "west": "1/2" } },
-          "derivation": [], "certification": { "status": "unverified" } }
+          "value": null,
+          "derivation": [], "certification": { "status": "pending" } }
       ]
     }
   ]
@@ -126,17 +134,34 @@ flow(source → sink) = sink_adapters_source_shares[sink][source] × |readings[s
 flow(source → home) = home_base_load_source_shares[source]      × home_base_load_power
 ```
 
-**`derivation` is empty and `certification.status` is `"unverified"` today.**
-Values are currently engine-generated placeholders; the maintainer certifies
-them by hand over the coming weeks, filling in `derivation` (a list of
-`{text, detail?, math?, result?}` steps) and flipping status to `"verified"`.
-The design should surface that distinction honestly — a reader deserves to know
-which numbers a human has checked. A small badge is enough; please don't let it
+**Most slots are empty, and will be for a long time.** No value in the corpus
+comes from the engine: each is derived by hand and entered through
+`tools/certify.py`, so a slot stays `"value": null` with
+`certification.status` of `"pending"` until somebody works it out. Expect the
+overwhelming majority of what you render to be pending, including the share
+matrices the diagram needs — **a snapshot with no derived provenance has no
+edges to draw**, and the design has to look deliberate in that state rather
+than broken.
+
+The other two statuses both mean a human derived it: `"verified"` (the engine
+agreed) and `"disputed"` (it did not, and the derivation stands). `derivation`
+is a list of `{text, detail?, math?, result?}` steps.
+
+**Read the status, never the value, to tell an empty slot from a derived one.**
+Expectation values are literal — there is no in-band marker standing in for
+"nothing" — so a slot derived as having no value is a plain `null` and looks
+identical to one nobody has touched. `"pending"` means not derived; a `null`
+under either other status means the model says the engine should report nothing
+here. The two want different words on screen. That ambiguity goes away once
+every slot is derived, because there will be no empty ones left.
+
+The design should surface those distinctions honestly — a reader deserves to
+know which numbers a human has checked. A small badge is enough; please don't let it
 dominate.
 
-**Don't assume a fixed property list.** Every state publishes the whole
-catalog today, but a property the engine cannot answer for a snapshot is left
-out rather than written as null — so render what is present.
+**Don't assume a fixed property list.** Every state carries a slot for the
+whole catalog today, but that is a property of the current scaffold rather than
+a guarantee — so render what is present.
 
 ## Embedding — as built
 

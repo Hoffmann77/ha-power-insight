@@ -27,8 +27,13 @@ export interface FlowNode {
   uid: string;
   kind: NodeKind;
   config: ReferenceCase['topology'][number]['config'] | null;
-  /** Signed watts as read (the virtual home node is stored negative). */
-  reading: number;
+  /**
+   * Signed watts as read (the virtual home node is stored negative). Null on
+   * the home node when its size has not been derived — a real device always
+   * has a reading, because readings are inputs to the corpus rather than
+   * answers in it.
+   */
+  reading: number | null;
   role: Role;
   /** Left column for sources, right for sinks. */
   side: 'L' | 'R';
@@ -66,7 +71,8 @@ export interface FlowModel {
    * so a browser-side cost never contradicts a published number.
    */
   rates: {[uid: string]: number};
-  gross: number;
+  /** Null until somebody derives it. */
+  gross: number | null;
   channels: ChannelSlice[];
   byProperty: Map<string, Expectation>;
 }
@@ -132,12 +138,20 @@ export function valueOf(
   return byProperty.get(property)?.value;
 }
 
+/**
+ * A scalar property as a number, or `null` when the corpus has no answer.
+ *
+ * Null covers both nothings — a slot nobody has derived, and one derived as
+ * having no value — and the distinction does not matter to a diagram, because
+ * in either case there is no number to draw and it must not invent one.
+ * Returning 0 would draw an idle node reading "0 W", a claim nobody made.
+ */
 export function scalar(
   byProperty: Map<string, Expectation>,
   property: string,
-): number {
+): number | null {
   const v = valueOf(byProperty, property);
-  return typeof v === 'string' ? rat(v) : 0;
+  return typeof v === 'string' ? rat(v) : null;
 }
 
 export function certificationOf(
@@ -211,16 +225,18 @@ export function buildModel(c: ReferenceCase, st: CaseState): FlowModel {
 
   // The unmetered home base load competes for power like any other sink, but
   // has no adapter — it exists only in its own properties.
+  // Structural, so it is drawn whether or not anyone has derived its size —
+  // but with no reading until they have, rather than a fabricated zero.
   const hbl = scalar(byProperty, 'home_base_load_power');
   nodes.push({
     uid: 'home',
     kind: 'home',
     config: null,
-    reading: -hbl,
-    role: hbl > 0 ? 'sink' : 'idle',
+    reading: hbl === null ? null : -hbl,
+    role: hbl !== null && hbl > 0 ? 'sink' : 'idle',
     side: 'R',
     virtual: true,
-    channel: hbl > 0 ? 'consumption' : null,
+    channel: hbl !== null && hbl > 0 ? 'consumption' : null,
   });
 
   for (const n of nodes) {
@@ -241,7 +257,7 @@ export function buildModel(c: ReferenceCase, st: CaseState): FlowModel {
   const homeShares = asMap(valueOf(byProperty, 'home_base_load_source_shares'));
   for (const [src, share] of Object.entries(homeShares)) {
     const value = rat(share);
-    if (value > 0) {
+    if (value > 0 && hbl !== null) {
       edges.push({from: src, to: 'home', w: value * hbl, share});
     }
   }
@@ -312,7 +328,7 @@ export function roleText(n: FlowNode): string {
 /** €/h a node accounts for: its own output priced, or its intake priced. */
 export function costOf(m: FlowModel, n: FlowNode): number {
   if (n.role === 'source') {
-    return (Math.abs(n.reading) / 1000) * (m.rates[n.uid] ?? 0);
+    return ((n.reading === null ? 0 : Math.abs(n.reading)) / 1000) * (m.rates[n.uid] ?? 0);
   }
   return m.edges
     .filter((e) => e.to === n.uid)
@@ -333,11 +349,13 @@ export function nodeValueLabel(
 ): string {
   switch (layer) {
     case '2':
-      return m.gross ? fmtPct(Math.abs(n.reading) / m.gross) : '—';
+      return m.gross && n.reading !== null
+        ? fmtPct(Math.abs(n.reading) / m.gross)
+        : '—';
     case '4':
       return fmtEur(costOf(m, n));
     default:
-      return fmtW(Math.abs(n.reading));
+      return fmtW(n.reading === null ? null : Math.abs(n.reading));
   }
 }
 
