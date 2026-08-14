@@ -1,6 +1,6 @@
 name: Worksheet
 
-# Issues a certification worksheet from the anchor cases and attaches it to the
+# Issues a certification worksheet from the reference cases and attaches it to the
 # run, so a sheet can be printed from anywhere without a local checkout.
 #
 # Run it from Actions -> Worksheet -> Run workflow. The PDF appears under the
@@ -19,7 +19,7 @@ on:
         required: false
         default: "6"
       case:
-        description: "Restrict to one case id (e.g. A-003). Blank = all."
+        description: "Restrict to one case id (e.g. captive-load). Blank = all."
         required: false
         default: ""
       all:
