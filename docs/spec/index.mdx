@@ -13,9 +13,12 @@ picks one.
 
 Those choices are what this section is for. Each **anchor case** is a small,
 deliberately-chosen wiring whose every value is published here, so you can
-disagree with the *model* without reading a line of Python. The engine is
-checked against these pages in CI: if the code and this page ever disagree, the
-build fails.
+disagree with the *model* without reading a line of Python.
+
+The values on these pages are generated from the engine, so they are always a
+true record of what it currently computes. Asserting them back against the
+engine in CI — so that a change to the code which contradicts this page fails
+the build — is the next step, and not yet in place.
 
 <AnchorDiagram
   cases={ANCHOR_CASES}
@@ -63,8 +66,12 @@ with.
 
 ## Open questions
 
-Two states carry an **open question**: the engine produces an answer, but which
-answer is *right* has not been settled. They are marked with an amber dot in the
-state cards above, and spelled out on the case pages. If you have a view on
-either, the issue tracker is the place for it — that is exactly what publishing
+A state carrying an **open question** is one where the engine produces an answer
+but which answer is *right* has not been settled. They are marked with an amber
+dot in the state cards above, and spelled out on the case page. If you have a
+view, the issue tracker is the place for it — that is exactly what publishing
 these cases is meant to invite.
+
+One is outstanding: [`A-002 / source_in_standby`](a-002.mdx), where the unmetered
+home load absorbs a draw that could not be attributed to the battery that
+actually made it.

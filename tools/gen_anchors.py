@@ -166,8 +166,9 @@ CASES = [
         "decides": [
             "Feasibility is a property of groups of sinks, not of single sinks.",
             "A flexible sink must not take local power a tight group needs.",
-            "When two captive groups contend and the configuration cannot be "
-            "satisfied, which one yields.",
+            "When restrictions cannot all be honoured, the sink with the fewest "
+            "permitted alternatives is served first and the deficit falls on the "
+            "sinks that had somewhere else to go.",
         ],
         "topology": [
             Adapter.grid(),
@@ -198,12 +199,6 @@ CASES = [
                 "readings": dict(grid=200, east=100, west=100, bat_a=-100, bat_b=-100, bat_c=-100),
                 "price": 0.30,
                 "focus": [],
-                "open_question": (
-                    "The engine serves bat_c in full and pushes a 50 W deficit onto "
-                    "each of bat_a and bat_b. Defensible - bat_c has no alternative "
-                    "source and the pair do - but the calculation docs describe the "
-                    "opposite priority, and which sink yields is undecided."
-                ),
             },
         ],
     },

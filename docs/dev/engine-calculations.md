@@ -145,6 +145,36 @@ draw is reported as the deficit.
 
 :::
 
+:::note[Decision: the sink with somewhere else to go is the one that yields]
+
+Restrictions can conflict badly enough that *no* allocation honours them all,
+and then more than one way of breaking them costs the same. Two strings of
+100 W each; `bat_a` and `bat_b` allowed both and drawing 100 W each; `bat_c`
+allowed only the east string and drawing 100 W. Captive demand is 300 W
+against 200 W of local supply, so 100 W of restriction must break — but it
+could break on `bat_c` alone, or 50 W each on `bat_a` and `bat_b`, and both
+come to the same total.
+
+The engine serves the **most constrained sink first**: `bat_c` takes the east
+string outright and the deficit falls on `bat_a` and `bat_b`, evenly.
+
+Two reasons. It tells the more plausible story — a device with exactly one
+permitted source, and that source producing, is almost certainly using it,
+while a device with two permitted sources that are jointly exhausted is the
+one that must have gone elsewhere. And it is continuous: as `bat_c`'s draw
+rises from 0 to 100 W the deficit grows smoothly from nothing to 50 W a side,
+with no jump. These numbers drive live sensors, and a share that snaps between
+0 and 1 as a battery ramps would be worse than one that slides.
+
+Note this is a *different* question from the one above. There, a tight group
+holds off a **flexible** sink that could have taken local power. Here every
+contender is captive and the configuration is simply unsatisfiable, so the
+question is not who is served but who is blamed.
+
+Pinned by [`A-003 / unsatisfiable_overlap`](../spec/a-003.mdx).
+
+:::
+
 **Worked example** — grid `+400`, `pv_1 1000`, `pv_2 600` (gross 2000);
 `bat_1` on grid+`pv_1` and `bat_2` on grid+`pv_2` drawing 400 W each; `bat_3`
 and `cons_1` on PV only, 500 W each; home base load 200 W.
