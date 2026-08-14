@@ -1,0 +1,63 @@
+---
+title: PV self-consumption
+description: "One string added to the grid, and nothing restricted. Two sources are enough for the raw proportional mix, for the divergence between what power costs now and what it costs levelized, and for a string that is drawing rather than producing."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('pv-self-consumption');
+
+# PV self-consumption
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every value the engine published for that snapshot is listed
+underneath.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+This is the first case with a *choice* in it. Two sources are supplying one
+sink, and the engine has to say in what proportion — the answer being the raw
+availability of the sources, with no restriction anywhere to complicate it.
+Every restricted case later in the ladder is a departure from exactly this, and
+if the tiered logic in the solver is working, this is what it must collapse to
+when there is nothing to tier.
+
+Two sources are also the minimum for the money layer to say anything
+interesting. With the grid alone, what power costs now and what it costs
+levelized are the same number. Add a string and they come apart: `coe` falls as
+the free fuel displaces the tariff, while `lcoe` carries the string's capital
+cost whether or not the sun is out.
+
+The standby snapshot is the sharpest thing here. A string drawing 20 W is not
+producing −20 W — it is a **sink**, and it is served from the grid like any
+other. Which means the saving rate goes *negative*: at that instant the solar
+installation is costing its owner money.

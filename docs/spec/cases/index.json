@@ -1,15 +1,75 @@
 {
   "cases": [
     {
-      "id": "baseline-mix",
-      "title": "Baseline mix",
-      "file": "baseline-mix.json",
+      "id": "grid-only",
+      "title": "Grid only",
+      "file": "grid-only.json",
       "states": [
-        "import_mix",
-        "standby_and_idle"
+        "import_only",
+        "grid_idle",
+        "grid_unavailable"
+      ],
+      "certified": 0,
+      "total": 67
+    },
+    {
+      "id": "pv-self-consumption",
+      "title": "PV self-consumption",
+      "file": "pv-self-consumption.json",
+      "states": [
+        "sunny_partial",
+        "pv_covers_all",
+        "pv_standby",
+        "pv_unavailable"
+      ],
+      "certified": 0,
+      "total": 94
+    },
+    {
+      "id": "pv-export",
+      "title": "PV export",
+      "file": "pv-export.json",
+      "states": [
+        "export_surplus",
+        "export_all",
+        "zero_gross"
+      ],
+      "certified": 0,
+      "total": 81
+    },
+    {
+      "id": "metered-load",
+      "title": "Metered load",
+      "file": "metered-load.json",
+      "states": [
+        "load_and_base",
+        "over_metered"
       ],
       "certified": 0,
       "total": 54
+    },
+    {
+      "id": "captive-load",
+      "title": "Captive load",
+      "file": "captive-load.json",
+      "states": [
+        "captive_load",
+        "load_exceeds"
+      ],
+      "certified": 0,
+      "total": 54
+    },
+    {
+      "id": "battery-basics",
+      "title": "Battery basics",
+      "file": "battery-basics.json",
+      "states": [
+        "charging",
+        "discharging",
+        "idle"
+      ],
+      "certified": 0,
+      "total": 81
     },
     {
       "id": "captive-battery",
@@ -34,17 +94,16 @@
       "total": 54
     },
     {
-      "id": "grid-export",
-      "title": "Grid export",
-      "file": "grid-export.json",
+      "id": "mixed-export-house",
+      "title": "Mixed export house",
+      "file": "mixed-export-house.json",
       "states": [
         "export_non_exporting_battery",
         "export_with_standby",
-        "discharge_dynamic_prices",
-        "pure_export_zero_gross"
+        "discharge_dynamic_prices"
       ],
       "certified": 0,
-      "total": 108
+      "total": 81
     }
   ]
 }

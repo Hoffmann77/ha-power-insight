@@ -1,0 +1,61 @@
+---
+title: Metered load
+description: "A consumer with a meter on it, next to the unmetered remainder. The base load stops being the whole house and becomes what is left after the metered draw \u2014 including when the meters disagree and there is nothing left."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('metered-load');
+
+# Metered load
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every value the engine published for that snapshot is listed
+underneath.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+Up to this rung the home base load *was* the house. Putting a meter on one
+device splits it in two, and the interesting half is the one nobody measured:
+the base load is not read from anything, it is what is left when the metered
+draw is taken off the total.
+
+Being derived is what makes it fragile, and the second snapshot is where it
+breaks. `cons1` reports drawing 400 W while the sources between them supply
+only 300 W. No arrangement of real electrons does that — it is two sensors
+disagreeing, a scaling factor set wrong, or readings from different instants —
+and the engine has to publish *something*. It clamps: the base load floors at
+zero rather than going negative, and still publishes a share row, of zeros.
+
+Whether a zero row is the right answer there, as against publishing nothing at
+all the way an unavailable sensor does, is a fair thing to disagree with. It is
+recorded here so the disagreement has somewhere to point.

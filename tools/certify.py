@@ -208,8 +208,12 @@ def find_expectation(case: dict, state_id: str, prop: str) -> dict | None:
 
 def cmd_status() -> int:
     total = verified = disputed = 0
-    print(f"{'case':17s} {'certified':>12s} {'disputed':>9s}")
-    for entry in json.loads((CASES / "index.json").read_text())["cases"]:
+    index = json.loads((CASES / "index.json").read_text())["cases"]
+    # Wide enough for the longest case id in the corpus, so the ladder's longer
+    # names do not shove the columns out of line.
+    w = max((len(e["id"]) for e in index), default=17)
+    print(f"{'case':{w}s} {'certified':>12s} {'disputed':>9s}")
+    for entry in index:
         case = json.loads((CASES / entry["file"]).read_text())
         c_total = c_ver = c_dis = 0
         for state in case["states"]:
@@ -219,7 +223,7 @@ def cmd_status() -> int:
                 c_ver += status == "verified"
                 c_dis += status == "disputed"
         total, verified, disputed = total + c_total, verified + c_ver, disputed + c_dis
-        print(f"{case['id']:17s} {f'{c_ver}/{c_total}':>12s} {c_dis:>9d}   {case['title']}")
+        print(f"{case['id']:{w}s} {f'{c_ver}/{c_total}':>12s} {c_dis:>9d}   {case['title']}")
     pct = 100 * verified / total if total else 0
     print(f"\n{verified} of {total} certified ({pct:.0f}%), {disputed} disputed")
     return 0

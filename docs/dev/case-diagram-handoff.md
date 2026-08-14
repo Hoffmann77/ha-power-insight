@@ -61,8 +61,9 @@ each snapshot from the *sign* of its power reading:
 | negative | exporting → **sink** | standby draw → **sink** | charging → **sink** | load → **sink** |
 | exactly 0 | idle — in neither group | idle | idle | idle |
 
-So in `grid-export/export_non_exporting_battery` the grid is a **sink** being fed by
-the house, while in `baseline-mix/import_mix` the same grid is the largest **source**.
+So in `pv-export/export_surplus` the grid is a **sink** being fed by the house,
+while in `pv-self-consumption/sunny_partial` the same grid is the largest
+**source**.
 A layout that hard-codes "grid on the left, loads on the right" will break on
 half the cases. The sides have to be derived from the data.
 
@@ -74,9 +75,14 @@ drawn, and visibly distinguished from real devices.
 
 ## Data contract
 
-One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them.
-Read `group-captivity.json` and `grid-export.json` first — between them they
-exercise every shape.
+One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them in
+ladder order and `coverage.json` recording which rungs each property is settled
+by. The diagram component needs neither of the latter two — they drive the
+tables on the section index — but `index.json` is the authority on case order.
+
+Read `group-captivity.json` and `mixed-export-house.json` first — between them
+they exercise every shape. `grid-only.json` is the other end of the range: one
+adapter, and still a value for every property.
 
 ```jsonc
 {

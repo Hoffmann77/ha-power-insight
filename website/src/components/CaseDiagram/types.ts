@@ -116,3 +116,44 @@ export type Role = 'source' | 'sink' | 'idle';
 
 /** Which channel of the gross-power split a sink belongs to. */
 export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
+
+/**
+ * The generated coverage table (`docs/spec/cases/coverage.json`): which rungs
+ * of the ladder each property is actually settled by, and which modelling
+ * decision each case carries.
+ *
+ * `settledBy` is the load-bearing field, and it is deliberately not a count of
+ * appearances. Almost every property has *some* value on the first rung, so
+ * "where does it first appear" says nothing; the rungs listed here are the
+ * ones that each published a value no earlier rung had.
+ */
+export interface PropertyCoverage {
+  title: string;
+  layer: number;
+  first_case: string | null;
+  first_case_title: string | null;
+  first_state: string | null;
+  published: number;
+  verified: number;
+  distinct: number;
+  settled_by: string[];
+}
+
+export interface CaseDecisions {
+  case: string;
+  case_title: string;
+  decides: string[];
+}
+
+export interface Coverage {
+  /** Case ids in ladder order. */
+  order: string[];
+  decisions: CaseDecisions[];
+  properties: {[name: string]: PropertyCoverage};
+  totals: {
+    published: number;
+    verified: number;
+    /** Catalogued properties the corpus never publishes — holes, if any. */
+    unpublished: string[];
+  };
+}

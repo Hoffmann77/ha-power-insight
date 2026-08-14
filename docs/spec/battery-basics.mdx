@@ -1,0 +1,63 @@
+---
+title: Battery basics
+description: "An unrestricted battery, which is the only device that changes which side of the diagram it sits on. Charging it is a sink like any other; discharging it is a source whose energy was paid for in the past, and a snapshot engine has to price that somehow."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('battery-basics');
+
+# Battery basics
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every value the engine published for that snapshot is listed
+underneath.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+A battery is the only device that changes which side of the diagram it is on.
+Everything else has a fixed role — a string produces, a load consumes — and the
+engine can lean on that. A battery is a sink on one snapshot and a source on
+the next, and both have to work without special-casing it.
+
+Charging is the easy half: it is a sink, and an unrestricted one, so it takes
+the same raw mix as the metered load beside it. Discharging is where the
+snapshot model runs into its own limits. The energy coming out of `bat1` was
+paid for at some earlier time, at some earlier mix, and an engine that only
+knows about *now* cannot see any of that. So it does the only defensible thing:
+prices the discharge at the battery's flat levelized cost of storage, and
+reports its **marginal** price as zero, because at this instant nothing is being
+bought to produce it.
+
+The idle snapshot is a smaller point but a real one. `bat1` reads exactly 0 W,
+which makes it neither a source nor a sink. It appears in neither flow group
+rather than being counted as a zero-watt member of both.
