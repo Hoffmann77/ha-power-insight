@@ -12,11 +12,18 @@ import A002 from './A-002.json';
 import A003 from './A-003.json';
 import A004 from './A-004.json';
 
-import type {AnchorCase} from '@site/src/components/AnchorDiagram/types';
+import CATALOG from '../properties.json';
 
-export const ANCHOR_CASES = [A001, A002, A003, A004] as unknown as AnchorCase[];
+import type {
+  PropertyCatalog,
+  ReferenceCase,
+} from '@site/src/components/CaseDiagram/types';
 
-export function anchorCase(id: string): AnchorCase {
+export const ANCHOR_CASES = [A001, A002, A003, A004] as unknown as ReferenceCase[];
+
+export const PROPERTIES = CATALOG as unknown as PropertyCatalog;
+
+export function anchorCase(id: string): ReferenceCase {
   const found = ANCHOR_CASES.find((c) => c.id === id);
   if (!found) {
     throw new Error(`unknown anchor case ${id}`);

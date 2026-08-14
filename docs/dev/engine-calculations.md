@@ -171,7 +171,7 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Pinned by [`A-003 / unsatisfiable_overlap`](../spec/a-003.mdx).
+Pinned by [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 
 :::
 

@@ -1,4 +1,4 @@
-# Handoff: interactive anchor-case diagram
+# Handoff: interactive reference-case diagram
 
 A design brief for an interactive power-flow graphic to embed in these docs.
 
@@ -12,40 +12,43 @@ batteries, consumers and the unmetered base load — honouring per-device rules
 like *"this battery may only charge from solar"*.
 
 Several answers the engine gives are **modelling choices, not arithmetic**: more
-than one result is defensible. So we are building a set of **anchor cases** — a
+than one result is defensible. So we are building a set of **reference cases** — a
 handful of small, deliberately-chosen wirings whose every value is derived by
 hand and published here as the engine's specification of record. The engine is
 then validated against them in CI.
 
 The goal is that a user who thinks the engine is wrong can argue with the
-*documented model* instead of reading Python. That only works if the anchor
+*documented model* instead of reading Python. That only works if the reference
 cases are legible, which is where this graphic comes in: a wall of JSON and
 fractions is not something anyone will argue with.
 
-There are 4 anchor cases and 10 states today, in `docs/spec/anchors/`.
+There are 4 reference cases and 10 snapshots today, in `docs/spec/cases/`.
 
 ## What to build
 
-An interactive diagram that renders one anchor case, embedded in a docs page.
+An interactive diagram that renders one reference case, embedded in a docs page.
 
 **v1 — the scope of this brief**
 
-- A **topology graphic**: the devices of one anchor case and the power flowing
+- A **topology graphic**: the devices of one reference case and the power flowing
   between them. Flow direction and magnitude both matter; edge width should
   carry watts.
-- A **case/state navbar above the graphic** to switch between the 10 states.
-  Switching state keeps the wiring and changes the flows.
+- A **snapshot navbar above the graphic** to switch between the case's
+  snapshots. Switching keeps the wiring and changes the flows.
 - **Click a device** → it highlights, and a panel shows that device's values:
   its configuration, its role this snapshot, its reading, and either where its
   output went (if it is a source) or where its power came from (if it is a
   sink). Keyboard-selectable too, please, not click-only.
 
-**v2 — design for it, don't build it yet**
+**v2 — since built**
 
-A second navbar selecting which **value category** is displayed: power (W),
-shares (%), channels, prices and rates (EUR/kWh, EUR/h), restriction deficits.
-The same topology, re-labelled. Please leave room for it in the layout so it
-does not need a redesign later.
+A second navbar selecting which **value category** is displayed. It landed as
+the engine's own four layers, taken from `docs/spec/properties.json`: the
+readings and totals, source provenance, the channel split, and the monetary
+model. Each re-labels the same topology and lists every value the engine
+published for that snapshot underneath — because the graph can only ever
+re-label its nodes, and most of what the integration computes has nowhere to
+live on the picture.
 
 ## The one thing that will bite you
 
@@ -58,8 +61,8 @@ each snapshot from the *sign* of its power reading:
 | negative | exporting → **sink** | standby draw → **sink** | charging → **sink** | load → **sink** |
 | exactly 0 | idle — in neither group | idle | idle | idle |
 
-So in `A-004/export_non_exporting_battery` the grid is a **sink** being fed by
-the house, while in `A-001/import_mix` the same grid is the largest **source**.
+So in `grid-export/export_non_exporting_battery` the grid is a **sink** being fed by
+the house, while in `baseline-mix/import_mix` the same grid is the largest **source**.
 A layout that hard-codes "grid on the left, loads on the right" will break on
 half the cases. The sides have to be derived from the data.
 
@@ -71,14 +74,14 @@ drawn, and visibly distinguished from real devices.
 
 ## Data contract
 
-One JSON file per case in `docs/spec/anchors/`, plus `index.json` listing them.
-Read `A-003.json` (group captivity) and `A-004.json` (export) first — between
-them they exercise every shape.
+One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them.
+Read `group-captivity.json` and `grid-export.json` first — between them they
+exercise every shape.
 
 ```jsonc
 {
-  "id": "A-003",
-  "title": "Group captivity (Hall's condition)",
+  "id": "group-captivity",
+  "title": "Group captivity",
   "summary": "…prose for the page…",
   "decides": ["…the modelling choices this case pins…"],
 
@@ -131,14 +134,15 @@ The design should surface that distinction honestly — a reader deserves to kno
 which numbers a human has checked. A small badge is enough; please don't let it
 dominate.
 
-**Not every property appears in every state.** The set varies by what each
-state is there to demonstrate. Render what is present; don't assume a fixed list.
+**Don't assume a fixed property list.** Every state publishes the whole
+catalog today, but a property the engine cannot answer for a snapshot is left
+out rather than written as null — so render what is present.
 
 ## Embedding — as built
 
 The site moved from MkDocs Material to **Docusaurus 3** while this component was
 being designed, so the constraints below are the ones that actually applied. The
-implementation lives in `website/src/components/AnchorDiagram/`.
+implementation lives in `website/src/components/CaseDiagram/`.
 
 - **Build-time JSON imports, never `fetch`.** A page imports its case data and
   passes it in as a prop. That removes the base-path problem entirely (the site
@@ -160,9 +164,10 @@ implementation lives in `website/src/components/AnchorDiagram/`.
   so the Docusaurus toggle just works and there is nothing to hydrate.
 - **Inline SVG**, one `viewBox`, `width: 100%` — crisp at any zoom, themeable
   through the same variables, and focusable per node in a way canvas is not.
-- **Deep links.** The selected case and state are mirrored into the query
-  string (`?case=A-003&state=hall_tight_pair`), so an issue report can point at
-  exactly the snapshot it means.
+- **Deep links.** The selected snapshot is mirrored into the query string
+  (`?state=hall_tight_pair`), so an issue report can point at exactly the
+  snapshot it means. The case is not in the query: each case has its own page,
+  so the path already names it.
 - These docs get read on phones: the state cards wrap, the detail panel collapses
   to one column, and the SVG scales with its container.
 
@@ -178,10 +183,10 @@ implementation lives in `website/src/components/AnchorDiagram/`.
 Both are unresolved and both live in this data. Don't design around either
 answer — just don't let the diagram imply one is settled.
 
-1. In `A-003/unsatisfiable_overlap`, captive demand (300 W) exceeds local supply
+1. In `group-captivity/unsatisfiable_overlap`, captive demand (300 W) exceeds local supply
    (200 W), so some restriction must be broken. The engine currently serves
    `bat_c` in full and pushes a 50 W deficit onto each of `bat_a` and `bat_b`.
    Whether that is the intended priority is undecided.
-2. In `A-002/source_in_standby`, `home_base_load_power` includes the 400 W that
+2. In `captive-battery/source_in_standby`, `home_base_load_power` includes the 400 W that
    `bat_1` drew but could not legally be attributed — so the "unmetered" load
    includes a device that very much has a meter on it.

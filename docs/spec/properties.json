@@ -1,5 +1,5 @@
 {
-  "$comment": "Property catalog for the anchor-case corpus. Written once and shared by every case: it supplies the per-property reference documentation, the guiding steps printed on a certification worksheet, and the dependency order those worksheets are issued in. Definitions are taken from the engine's own docstrings; formulas are only stated where they have been checked against a real anchor value.",
+  "$comment": "Property catalog for the reference-case corpus. Written once and shared by every case: it supplies the per-property reference documentation, the guiding steps printed on a certification worksheet, and the dependency order those worksheets are issued in. Definitions are taken from the engine's own docstrings; formulas are only stated where they have been checked against a real published value.",
 
   "layers": {
     "1": "Readings and totals",
@@ -118,7 +118,7 @@
         "Add up every metered sink's draw (the negative readings, written positive).",
         "Subtract that from gross power."
       ],
-      "note": "OPEN QUESTION: where a sink's restriction cannot be satisfied, the engine currently leaves that undeliverable draw in this figure, so it can exceed gross minus metered draw. See A-002 / source_in_standby."
+      "note": "OPEN QUESTION: where a sink's restriction cannot be satisfied, the engine currently leaves that undeliverable draw in this figure, so it can exceed gross minus metered draw. See captive-battery / source_in_standby."
     },
 
     "sink_adapters_source_shares": {

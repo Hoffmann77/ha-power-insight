@@ -1,4 +1,4 @@
-"""Generate printable certification worksheets from the anchor cases.
+"""Generate printable certification worksheets from the reference cases.
 
 A worksheet states the problem and withholds the answer. That is the whole
 point: a value you derived independently, without the engine's number in front
@@ -25,7 +25,7 @@ Usage::
 
     uv run python tools/worksheet.py                     # next 6 pending
     uv run python tools/worksheet.py --count 12
-    uv run python tools/worksheet.py --case A-003 --all
+    uv run python tools/worksheet.py --case group-captivity --all
     uv run python tools/worksheet.py --pdf               # also render a PDF
 
 Answers are entered later against the manifest each run writes, so a sheet
@@ -45,7 +45,7 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ANCHORS = ROOT / "docs" / "spec" / "anchors"
+CASES = ROOT / "docs" / "spec" / "cases"
 CATALOG = ROOT / "docs" / "spec" / "properties.json"
 OUT_DIR = ROOT / "worksheets"
 
@@ -67,7 +67,10 @@ def load_catalog() -> dict:
 
 
 def load_cases() -> list[dict]:
-    return [json.loads(pathlib.Path(p).read_text()) for p in sorted(glob.glob(str(ANCHORS / "A-*.json")))]
+    """Every case, in the index's order — which is the order they were authored
+    in, and reads better than the alphabetical order a glob would give."""
+    index = json.loads((CASES / "index.json").read_text())
+    return [json.loads((CASES / e["file"]).read_text()) for e in index["cases"]]
 
 
 def dependency_rank(catalog: dict) -> dict[str, int]:
@@ -362,7 +365,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--count", type=int, default=6, help="problems to issue (default 6)")
     parser.add_argument("--all", action="store_true", help="issue every pending problem")
-    parser.add_argument("--case", help="restrict to one case id, e.g. A-003")
+    parser.add_argument("--case", help="restrict to one case id, e.g. group-captivity")
     parser.add_argument("--pdf", action="store_true", help="also render a PDF")
     parser.add_argument("--out", default=str(OUT_DIR), help="output directory")
     parser.add_argument("--id", help="sheet id (default: today's date)")

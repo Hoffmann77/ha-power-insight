@@ -2,7 +2,7 @@
 title: A-003 — Group captivity
 ---
 
-import ANCHOR_CASES, {anchorCase} from './anchors/all';
+import {anchorCase, PROPERTIES} from './anchors/all';
 
 export const CASE = anchorCase('A-003');
 
@@ -18,7 +18,7 @@ export const CASE = anchorCase('A-003');
   ))}
 </ul>
 
-<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-003" />
+<CaseDiagram case={CASE} properties={PROPERTIES} />
 
 ## The snapshots
 

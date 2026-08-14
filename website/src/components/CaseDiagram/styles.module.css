@@ -1,50 +1,50 @@
-/* Anchor-case diagram — the "plain" skin from the design, resolved.
+/* Reference-case diagram — the "plain" skin from the design, resolved.
  *
  * The design fixed a light palette; everything below keeps those values for
  * light mode and defines a dark counterpart, so the component tracks the
  * Docusaurus theme toggle purely in CSS. No JavaScript reads the theme, which
  * keeps the whole diagram server-renderable with no hydration mismatch.
  *
- * Device colours are custom properties (--ad-c-*) because the SVG strokes and
+ * Device colours are custom properties (--cd-c-*) because the SVG strokes and
  * the ledger bars both need them, and both flip with the theme for free. */
 
 .root {
-  --ad-bg: #ffffff;
-  --ad-fg: #24292f;
-  --ad-mut: #6a737d;
-  --ad-line: #d8dde3;
-  --ad-card: #f6f8fa;
-  --ad-amber: #c77e12;
-  --ad-ok: #4a9e5c;
-  --ad-c-grid: #3d6b9e;
-  --ad-c-pv: #b3861e;
-  --ad-c-battery: #b05577;
-  --ad-c-consumer: #38897c;
-  --ad-c-home: #7a8290;
+  --cd-bg: #ffffff;
+  --cd-fg: #24292f;
+  --cd-mut: #6a737d;
+  --cd-line: #d8dde3;
+  --cd-card: #f6f8fa;
+  --cd-amber: #c77e12;
+  --cd-ok: #4a9e5c;
+  --cd-c-grid: #3d6b9e;
+  --cd-c-pv: #b3861e;
+  --cd-c-battery: #b05577;
+  --cd-c-consumer: #38897c;
+  --cd-c-home: #7a8290;
 
   font-family: inherit;
   font-size: 13.5px;
   line-height: 1.45;
-  color: var(--ad-fg);
-  background: var(--ad-bg);
-  border: 1px solid var(--ad-line);
+  color: var(--cd-fg);
+  background: var(--cd-bg);
+  border: 1px solid var(--cd-line);
   border-radius: 3px;
   overflow: hidden;
 }
 
 :global([data-theme='dark']) .root {
-  --ad-bg: #1b1f27;
-  --ad-fg: #e6e9ef;
-  --ad-mut: #99a1b0;
-  --ad-line: #363d4a;
-  --ad-card: #232833;
-  --ad-amber: #e0a44a;
-  --ad-ok: #5fbf74;
-  --ad-c-grid: #6f9fd4;
-  --ad-c-pv: #d4a63f;
-  --ad-c-battery: #d17e9d;
-  --ad-c-consumer: #5aab9e;
-  --ad-c-home: #99a1af;
+  --cd-bg: #1b1f27;
+  --cd-fg: #e6e9ef;
+  --cd-mut: #99a1b0;
+  --cd-line: #363d4a;
+  --cd-card: #232833;
+  --cd-amber: #e0a44a;
+  --cd-ok: #5fbf74;
+  --cd-c-grid: #6f9fd4;
+  --cd-c-pv: #d4a63f;
+  --cd-c-battery: #d17e9d;
+  --cd-c-consumer: #5aab9e;
+  --cd-c-home: #99a1af;
 }
 
 .root * {
@@ -59,72 +59,37 @@
   cursor: pointer;
 }
 
-/* ---- case index ------------------------------------------------------- */
-
-.idx {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 4px 20px;
-  padding: 14px 18px 11px;
-  border-bottom: 1px solid var(--ad-line);
-}
-
-.caseBtn {
-  font-size: 12.5px;
-  color: var(--ad-mut);
-  padding: 2px 0;
-  border-bottom: 2px solid transparent;
-}
-
-.caseBtn b {
-  font-weight: 600;
-  margin-right: 7px;
-  opacity: 0.6;
-  letter-spacing: 0.02em;
-}
-
-.caseBtn.on {
-  color: var(--ad-fg);
-  border-bottom-color: var(--ad-fg);
-}
-
-.caseBtn.on b {
-  color: var(--ad-fg);
-  opacity: 1;
-}
-
 /* ---- state cards ------------------------------------------------------ */
 
 .scards {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 16px 18px 4px;
+  padding: 18px 18px 4px;
   align-items: stretch;
 }
 
-/* The design was drawn against a two-state case. A-004 has four, and at four
- * across the titles wrap to a word per line — so the cards wrap into rows
- * instead of squeezing, keeping the intended proportions at any count. */
+/* The design was drawn against a two-snapshot case. Grid export has four, and
+ * at four across the titles wrap to a word per line — so the cards wrap into
+ * rows instead of squeezing, keeping the intended proportions at any count. */
 .scard {
   flex: 1 1 200px;
   min-width: 200px;
   text-align: left;
-  border: 1px solid var(--ad-line);
+  border: 1px solid var(--cd-line);
   border-radius: 3px;
   padding: 10px 13px;
-  background: var(--ad-bg);
+  background: var(--cd-bg);
   position: relative;
   transition: border-color 0.15s;
 }
 
 .scard:hover {
-  border-color: var(--ad-mut);
+  border-color: var(--cd-mut);
 }
 
 .scard.on {
-  border-color: var(--ad-fg);
+  border-color: var(--cd-fg);
   box-shadow: 0 1px 0 rgba(36, 41, 47, 0.08);
 }
 
@@ -136,7 +101,7 @@
   bottom: -1px;
   width: 3px;
   border-radius: 3px 0 0 3px;
-  background: var(--ad-fg);
+  background: var(--cd-fg);
 }
 
 .sctitle {
@@ -145,11 +110,11 @@
   gap: 8px;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
 }
 
 .scard.on .sctitle {
-  color: var(--ad-fg);
+  color: var(--cd-fg);
 }
 
 .scnum {
@@ -160,7 +125,7 @@
 }
 
 .scard.on .scnum {
-  color: var(--ad-fg);
+  color: var(--cd-fg);
   opacity: 1;
 }
 
@@ -168,7 +133,7 @@
   display: block;
   font-size: 11.5px;
   line-height: 1.45;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   margin-top: 4px;
   opacity: 0.75;
 }
@@ -180,7 +145,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--ad-amber);
+  background: var(--cd-amber);
 }
 
 .scqlab {
@@ -188,7 +153,7 @@
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: var(--ad-amber);
+  color: var(--cd-amber);
 }
 
 @media (max-width: 640px) {
@@ -197,34 +162,56 @@
   }
 }
 
-/* ---- metric selector -------------------------------------------------- */
+/* ---- layer selector ---------------------------------------------------- */
 
+/* A segmented control rather than text tabs: the four layers are one choice
+ * between mutually exclusive views, and a grouped track says that where a row
+ * of underlined words does not. */
 .metricrow {
   display: flex;
   justify-content: center;
-  align-items: baseline;
-  gap: 18px;
-  padding: 16px 14px 2px;
-}
-
-.mlab {
-  font-size: 11px;
-  color: var(--ad-mut);
-  opacity: 0.65;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  margin: 16px auto 2px;
+  padding: 3px;
+  background: var(--cd-card);
+  border: 1px solid var(--cd-line);
+  border-radius: 5px;
 }
 
 .metric {
   font-size: 12px;
-  padding: 2px 0;
-  color: var(--ad-mut);
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  padding: 5px 16px;
+  color: var(--cd-mut);
+  border-radius: 3px;
 }
 
 .metric.on {
-  color: var(--ad-fg);
-  border-bottom-color: var(--ad-fg);
+  color: var(--cd-fg);
   font-weight: 600;
+  background: var(--cd-bg);
+  box-shadow:
+    0 1px 2px rgba(16, 22, 33, 0.12),
+    0 0 0 1px rgba(16, 22, 33, 0.06);
+}
+
+:global([data-theme='dark']) .metric.on {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 480px) {
+  .metricrow {
+    width: auto;
+    margin: 16px 14px 2px;
+  }
+
+  .metric {
+    flex: 1;
+    padding: 5px 8px;
+  }
 }
 
 /* ---- supply / demand ledger ------------------------------------------- */
@@ -233,7 +220,7 @@
   max-width: 600px;
   margin: 14px auto 0;
   padding: 12px 16px 0;
-  border-top: 1px solid var(--ad-line);
+  border-top: 1px solid var(--cd-line);
 }
 
 .lrow {
@@ -247,12 +234,12 @@
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   margin-bottom: 4px;
 }
 
 .lhead b {
-  color: var(--ad-fg);
+  color: var(--cd-fg);
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -264,7 +251,7 @@
   height: 24px;
   border-radius: 2px;
   overflow: hidden;
-  background: var(--ad-card);
+  background: var(--cd-card);
 }
 
 .lbar i {
@@ -278,7 +265,7 @@
 }
 
 .lbar i + i {
-  border-left: 1.5px solid var(--ad-bg);
+  border-left: 1.5px solid var(--cd-bg);
 }
 
 .lbar i span {
@@ -286,6 +273,8 @@
   font-weight: 600;
   color: #fff;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   padding: 0 4px;
 }
@@ -295,12 +284,12 @@
   flex-wrap: wrap;
   gap: 3px 14px;
   font-size: 11px;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   margin-top: 4px;
 }
 
 .lleg b {
-  color: var(--ad-fg);
+  color: var(--cd-fg);
   font-weight: 600;
 }
 
@@ -314,8 +303,27 @@
 
 .lempty {
   font-size: 11.5px;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   font-style: italic;
+}
+
+/* The channel split is about what power was *used for*, not which device it
+ * passed through, so it gets its own four colours rather than borrowing the
+ * device palette. */
+.ch_export {
+  background: var(--cd-c-grid);
+}
+
+.ch_consumption {
+  background: var(--cd-c-consumer);
+}
+
+.ch_charging {
+  background: var(--cd-c-battery);
+}
+
+.ch_standby {
+  background: var(--cd-c-home);
 }
 
 /* ---- diagram ---------------------------------------------------------- */
@@ -382,15 +390,15 @@
 .elabel {
   font-size: 10.5px;
   font-weight: 600;
-  fill: var(--ad-mut);
+  fill: var(--cd-mut);
   paint-order: stroke;
-  stroke: var(--ad-bg);
+  stroke: var(--cd-bg);
   stroke-width: 3px;
 }
 
 .pot {
   fill: none;
-  stroke: var(--ad-mut);
+  stroke: var(--cd-mut);
   stroke-width: 1.5;
   stroke-dasharray: 4 6;
   opacity: 0.4;
@@ -400,9 +408,9 @@
 
 .panel {
   margin: 10px 14px 2px;
-  border: 1px solid var(--ad-line);
+  border: 1px solid var(--cd-line);
   border-radius: 3px;
-  background: var(--ad-card);
+  background: var(--cd-card);
   overflow: hidden;
 }
 
@@ -411,7 +419,7 @@
   align-items: center;
   gap: 9px;
   padding: 9px 12px;
-  border-bottom: 1px solid var(--ad-line);
+  border-bottom: 1px solid var(--cd-line);
 }
 
 .uid {
@@ -422,7 +430,7 @@
 
 .kindlab {
   font-size: 12px;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
 }
 
 .role {
@@ -437,7 +445,7 @@
 
 .px {
   margin-left: auto;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   font-size: 16px;
   padding: 2px 6px;
 }
@@ -452,7 +460,7 @@
 }
 
 .pcol + .pcol {
-  border-left: 1px solid var(--ad-line);
+  border-left: 1px solid var(--cd-line);
 }
 
 @media (max-width: 560px) {
@@ -462,7 +470,7 @@
 
   .pcol + .pcol {
     border-left: none;
-    border-top: 1px solid var(--ad-line);
+    border-top: 1px solid var(--cd-line);
   }
 }
 
@@ -474,7 +482,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   margin: 0 0 7px;
 }
 
@@ -487,7 +495,7 @@
 }
 
 .kv i {
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   font-style: normal;
 }
 
@@ -498,7 +506,7 @@
 }
 
 .frac {
-  color: var(--ad-mut);
+  color: var(--cd-mut);
   font-weight: 400;
   font-size: 11px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -524,7 +532,7 @@
 .bar {
   height: 4px;
   border-radius: 2px;
-  background: var(--ad-line);
+  background: var(--cd-line);
   margin-top: 3px;
   overflow: hidden;
 }
@@ -536,25 +544,173 @@
 
 .alert {
   margin-top: 9px;
-  border: 1px solid var(--ad-amber);
+  border: 1px solid var(--cd-amber);
   border-radius: 5px;
   padding: 7px 9px;
   font-size: 12px;
-  color: var(--ad-amber);
+  color: var(--cd-amber);
   background: transparent;
 }
 
-/* ---- legend ----------------------------------------------------------- */
+/* ---- published values ------------------------------------------------- */
 
-.legend {
+/* The graph can only re-label its nodes, so most of what the engine computes
+ * lives here: one row per published property, exact fraction beside the figure
+ * a reader intuits. */
+.values {
+  margin: 14px 14px 0;
+  border-top: 1px solid var(--cd-line);
+  padding-top: 12px;
+}
+
+.vtitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cd-mut);
+  margin: 0 0 8px;
+}
+
+.prow {
+  border-bottom: 1px solid var(--cd-line);
+}
+
+.prow:last-child {
+  border-bottom: none;
+}
+
+.phead {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 6px 16px;
-  align-items: center;
-  padding: 8px 14px 12px;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 2px;
+  text-align: left;
+}
+
+.phead:disabled {
+  cursor: default;
+}
+
+.pname {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--cd-fg);
+}
+
+.phead b {
+  font-weight: 600;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* A caret that turns, so a row that explains itself looks like one. */
+.pchev {
+  width: 0;
+  height: 0;
+  border-left: 4px solid var(--cd-mut);
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  transition: transform 0.15s;
+  transform-origin: 25% 50%;
+  flex: none;
+  opacity: 0.7;
+}
+
+.prow.on .pchev {
+  transform: rotate(90deg);
+}
+
+.pdef {
+  padding: 2px 2px 10px 11px;
+  font-size: 12px;
+  color: var(--cd-mut);
+  max-width: 62ch;
+}
+
+.pdef p {
+  margin: 0 0 6px;
+}
+
+.pformula,
+.pprop code {
+  display: inline-block;
   font-size: 11px;
-  color: var(--ad-mut);
+  background: var(--cd-card);
+  border: 1px solid var(--cd-line);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+.pnote {
+  font-style: italic;
+}
+
+.pprop {
+  margin: 6px 0 0;
+}
+
+.vmap {
+  padding: 0 2px 7px 11px;
+}
+
+.vrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 1.5px 0;
+}
+
+.vrow i {
+  color: var(--cd-mut);
+  font-style: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+}
+
+.vrow b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.vgroup {
+  margin: 3px 0;
+}
+
+.vgroup .vmap {
+  padding: 0 0 0 11px;
+  border-left: 1px solid var(--cd-line);
+}
+
+.vkey {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.vnone {
+  font-size: 11.5px;
+  color: var(--cd-mut);
+  font-style: italic;
+  padding: 1px 0 6px;
+}
+
+.vunavail {
+  color: var(--cd-mut);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.certline {
+  margin: 10px 14px 12px;
+  font-size: 11px;
+  color: var(--cd-mut);
 }
 
 .cert {
@@ -562,13 +718,20 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  border: 1.4px solid var(--ad-mut);
+  border: 1.4px solid var(--cd-mut);
   opacity: 0.75;
   vertical-align: middle;
+  flex: none;
 }
 
 .cert.v {
-  background: var(--ad-ok);
-  border-color: var(--ad-ok);
+  background: var(--cd-ok);
+  border-color: var(--cd-ok);
+  opacity: 1;
+}
+
+.cert.d {
+  background: var(--cd-amber);
+  border-color: var(--cd-amber);
   opacity: 1;
 }

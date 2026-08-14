@@ -1,12 +1,13 @@
 ---
-title: A-003 — Group captivity
+title: Group captivity
+description: "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
 ---
 
-import ANCHOR_CASES, {anchorCase} from './anchors/all';
+import {referenceCase, PROPERTIES} from './cases/all';
 
-export const CASE = anchorCase('A-003');
+export const CASE = referenceCase('group-captivity');
 
-# A-003 — Group captivity
+# Group captivity
 
 {CASE.summary}
 
@@ -18,9 +19,15 @@ export const CASE = anchorCase('A-003');
   ))}
 </ul>
 
-<AnchorDiagram cases={ANCHOR_CASES} initialCase="A-003" />
+<CaseDiagram case={CASE} properties={PROPERTIES} />
 
 ## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and every value the engine published for that snapshot is listed
+underneath.
 
 {CASE.states.map((s) => (
   <div key={s.id} style={{marginBottom: '1.25rem'}}>

@@ -6,6 +6,7 @@
  * decimal is what they intuit, so most surfaces show the decimal with the
  * fraction alongside.
  */
+import type {Unit} from './types';
 
 /** Parse a stored rational ("400", "-600", "8/15") to a number. */
 export function rat(s: string | null | undefined): number {
@@ -38,6 +39,17 @@ export function fmtEur(v: number): string {
   return `${Math.round(v * 1000) / 1000} €/h`;
 }
 
+/** Euro per kilowatt-hour — a price, as opposed to a rate. */
+export function fmtEurKwh(v: number): string {
+  return `${(Math.round(v * 10000) / 10000).toFixed(4)} €/kWh`;
+}
+
+/** A share or ratio as a percentage, which is what a reader intuits. */
+export function fmtPct(v: number): string {
+  const pct = v * 100;
+  return `${Number.isInteger(pct) ? pct : Math.round(pct * 10) / 10}%`;
+}
+
 export interface ShareDisplay {
   /** Decimal form, the primary display. */
   dec: string;
@@ -55,8 +67,38 @@ export function fmtShare(s: string | null | undefined): ShareDisplay {
   };
 }
 
+/**
+ * One stored scalar, rendered in its catalog unit.
+ *
+ * Both forms are returned rather than one: `frac` is the value a reader checks
+ * a derivation against, `text` is the one they read off the page.
+ */
+export function fmtUnit(
+  stored: string | null | undefined,
+  unit: Unit | undefined,
+): {text: string; frac: string | null} {
+  const value = rat(stored);
+  const frac =
+    stored !== null && stored !== undefined && String(stored).includes('/')
+      ? String(stored)
+      : null;
+  switch (unit) {
+    case 'share':
+    case 'ratio':
+      return {text: fmtPct(value), frac};
+    case 'EUR/h':
+      return {text: fmtEur(value), frac};
+    case 'EUR/kWh':
+      return {text: fmtEurKwh(value), frac};
+    case 'W':
+      return {text: fmtW(value), frac};
+    default:
+      return {text: String(Math.round(value * 1000) / 1000), frac};
+  }
+}
+
 /** `hall_tight_pair` -> `Hall tight pair`. */
 export function humanize(id: string): string {
-  const s = id.replace(/_/g, ' ');
+  const s = id.replace(/[_-]/g, ' ');
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

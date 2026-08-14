@@ -10,14 +10,15 @@
  *   - **Edges.** Watts on a flow are `share × |sink draw|`, multiplied out of
  *     the provenance matrix rather than duplicated in the data.
  */
-import {rat} from './rational';
+import {fmtEur, fmtPct, fmtW, rat} from './rational';
 import type {
-  AnchorCase,
-  AnchorState,
   Certification,
+  Channel,
   Expectation,
-  Metric,
+  LayerId,
   NodeKind,
+  ReferenceCase,
+  CaseState,
   Role,
   ValueTree,
 } from './types';
@@ -25,7 +26,7 @@ import type {
 export interface FlowNode {
   uid: string;
   kind: NodeKind;
-  config: AnchorCase['topology'][number]['config'] | null;
+  config: ReferenceCase['topology'][number]['config'] | null;
   /** Signed watts as read (the virtual home node is stored negative). */
   reading: number;
   role: Role;
@@ -33,6 +34,8 @@ export interface FlowNode {
   side: 'L' | 'R';
   /** True for the home base load, which has no device behind it. */
   virtual: boolean;
+  /** Which channel of the gross-power split this sink is, if it is one. */
+  channel: Channel | null;
 }
 
 export interface FlowEdge {
@@ -44,13 +47,27 @@ export interface FlowEdge {
   share: string;
 }
 
+/** One segment of the gross-power channel split. */
+export interface ChannelSlice {
+  channel: Channel;
+  label: string;
+  /** The stored ratio, exact. */
+  ratio: string;
+  value: number;
+}
+
 export interface FlowModel {
   nodes: FlowNode[];
   edges: FlowEdge[];
   deficits: {[uid: string]: string};
-  /** uid -> €/kWh this source is charged at (grid tariff, or own LCOE/LCOS). */
+  /**
+   * uid -> €/kWh this source is charged at. The engine's own per-source price
+   * where the state publishes one, otherwise the static tariff or LCOE/LCOS —
+   * so a browser-side cost never contradicts a published number.
+   */
   rates: {[uid: string]: number};
   gross: number;
+  channels: ChannelSlice[];
   byProperty: Map<string, Expectation>;
 }
 
@@ -61,6 +78,21 @@ const IDLE_SIDE: {[k in NodeKind]: 'L' | 'R'} = {
   battery: 'R',
   consumer: 'R',
   home: 'R',
+};
+
+/** The four channels gross power splits into, and the ratio that measures each. */
+const CHANNEL_RATIOS: [Channel, string, string][] = [
+  ['export', 'Export', 'gross_power_export_ratio'],
+  ['consumption', 'Self-consumption', 'gross_power_consumption_ratio'],
+  ['charging', 'Charging', 'gross_power_charging_ratio'],
+  ['standby', 'Standby', 'gross_power_standby_ratio'],
+];
+
+export const CHANNEL_LABEL: {[k in Channel]: string} = {
+  export: 'export',
+  charging: 'charging',
+  consumption: 'consumption',
+  standby: 'standby',
 };
 
 function asMap(v: ValueTree | undefined): {[k: string]: string} {
@@ -89,7 +121,7 @@ function asNested(v: ValueTree | undefined): {[k: string]: {[k: string]: string}
   return out;
 }
 
-export function indexExpectations(state: AnchorState): Map<string, Expectation> {
+export function indexExpectations(state: CaseState): Map<string, Expectation> {
   return new Map(state.expectations.map((e) => [e.property, e]));
 }
 
@@ -123,7 +155,7 @@ export function isVerified(
 }
 
 /** `[verified, total]` across every expectation in the case. */
-export function certCounts(c: AnchorCase): [number, number] {
+export function certCounts(c: ReferenceCase): [number, number] {
   let verified = 0;
   let total = 0;
   for (const st of c.states) {
@@ -137,7 +169,29 @@ export function certCounts(c: AnchorCase): [number, number] {
   return [verified, total];
 }
 
-export function buildModel(c: AnchorCase, st: AnchorState): FlowModel {
+/**
+ * Which channel a sink is. The channel split is a property of what the power
+ * was *used for*, and that is exactly what a sink's kind says: a grid being fed
+ * is export, a battery taking power is charging, a PV string drawing is
+ * standby, and everything else is self-consumption.
+ */
+function channelOf(kind: NodeKind, role: Role): Channel | null {
+  if (role !== 'sink') {
+    return null;
+  }
+  switch (kind) {
+    case 'grid':
+      return 'export';
+    case 'battery':
+      return 'charging';
+    case 'pv':
+      return 'standby';
+    default:
+      return 'consumption';
+  }
+}
+
+export function buildModel(c: ReferenceCase, st: CaseState): FlowModel {
   const byProperty = indexExpectations(st);
 
   const nodes: FlowNode[] = c.topology.map((d) => {
@@ -151,6 +205,7 @@ export function buildModel(c: AnchorCase, st: AnchorState): FlowModel {
       role,
       side: 'L',
       virtual: false,
+      channel: channelOf(d.kind, role),
     };
   });
 
@@ -165,6 +220,7 @@ export function buildModel(c: AnchorCase, st: AnchorState): FlowModel {
     role: hbl > 0 ? 'sink' : 'idle',
     side: 'R',
     virtual: true,
+    channel: hbl > 0 ? 'consumption' : null,
   });
 
   for (const n of nodes) {
@@ -190,8 +246,16 @@ export function buildModel(c: AnchorCase, st: AnchorState): FlowModel {
     }
   }
 
+  // Prefer the engine's own per-source price. It is published for exactly the
+  // states where the static config would be the wrong answer — a discharging
+  // battery is priced at its LCOS, not at the mix it charged on.
+  const published = asMap(valueOf(byProperty, 'source_adapters_dynamic_lcoe'));
   const rates: {[uid: string]: number} = {};
   for (const d of c.topology) {
+    if (published[d.uid] !== undefined) {
+      rates[d.uid] = rat(published[d.uid]);
+      continue;
+    }
     rates[d.uid] =
       d.kind === 'grid'
         ? rat(st.price)
@@ -202,12 +266,25 @@ export function buildModel(c: AnchorCase, st: AnchorState): FlowModel {
             : 0;
   }
 
+  const channels: ChannelSlice[] = [];
+  for (const [channel, label, property] of CHANNEL_RATIOS) {
+    const stored = valueOf(byProperty, property);
+    if (typeof stored !== 'string') {
+      continue;
+    }
+    const value = rat(stored);
+    if (value > 0) {
+      channels.push({channel, label, ratio: stored, value});
+    }
+  }
+
   return {
     nodes,
     edges,
     deficits: asMap(valueOf(byProperty, 'sink_adapters_restriction_deficit')),
     rates,
     gross: scalar(byProperty, 'gross_power'),
+    channels,
     byProperty,
   };
 }
@@ -242,21 +319,45 @@ export function costOf(m: FlowModel, n: FlowNode): number {
     .reduce((acc, e) => acc + (e.w / 1000) * (m.rates[e.from] ?? 0), 0);
 }
 
-/** The label a node carries under the current metric. */
+/**
+ * The label a node carries under the current layer.
+ *
+ * Every layer answers a different question about the same node, so the graph is
+ * re-labelled rather than redrawn: watts for the totals, a slice of gross power
+ * for provenance and the channel split, and a cost rate for the monetary model.
+ */
 export function nodeValueLabel(
   m: FlowModel,
   n: FlowNode,
-  metric: Metric,
-  fmtW: (v: number) => string,
-  fmtEur: (v: number) => string,
+  layer: LayerId,
 ): string {
-  if (metric === 'power' || n.role === 'idle') {
-    return fmtW(Math.abs(n.reading));
+  switch (layer) {
+    case '2':
+      return m.gross ? fmtPct(Math.abs(n.reading) / m.gross) : '—';
+    case '4':
+      return fmtEur(costOf(m, n));
+    default:
+      return fmtW(Math.abs(n.reading));
   }
-  if (metric === 'shares') {
-    return m.gross
-      ? (Math.round((Math.abs(n.reading) / m.gross) * 100) / 100).toFixed(2)
-      : '0';
+}
+
+/** The same question, asked only of what a node exchanges with the selection. */
+export function edgeSetLabel(
+  m: FlowModel,
+  edges: FlowEdge[],
+  layer: LayerId,
+): string {
+  const watts = edges.reduce((acc, e) => acc + e.w, 0);
+  switch (layer) {
+    case '2':
+      return edges.length
+        ? fmtPct(edges.reduce((acc, e) => acc + rat(e.share), 0))
+        : '—';
+    case '4':
+      return fmtEur(
+        edges.reduce((acc, e) => acc + (e.w / 1000) * (m.rates[e.from] ?? 0), 0),
+      );
+    default:
+      return fmtW(watts);
   }
-  return fmtEur(costOf(m, n));
 }

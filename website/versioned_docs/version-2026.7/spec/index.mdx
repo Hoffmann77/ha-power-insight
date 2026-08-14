@@ -3,7 +3,7 @@ title: Anchor cases
 description: Worked examples that pin down how the Power Insight engine attributes power.
 ---
 
-import ANCHOR_CASES from './anchors/all';
+import {anchorCase, PROPERTIES} from './anchors/all';
 
 # Anchor cases
 
@@ -20,11 +20,7 @@ true record of what it currently computes. Asserting them back against the
 engine in CI — so that a change to the code which contradicts this page fails
 the build — is the next step, and not yet in place.
 
-<AnchorDiagram
-  cases={ANCHOR_CASES}
-  initialCase="A-003"
-  initialState="hall_tight_pair"
-/>
+<CaseDiagram case={anchorCase('A-003')} properties={PROPERTIES} />
 
 ## How to read the diagram
 

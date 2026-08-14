@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import glob
 import json
 import pathlib
 import subprocess
@@ -32,7 +31,7 @@ import sys
 from fractions import Fraction
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ANCHORS = ROOT / "docs" / "spec" / "anchors"
+CASES = ROOT / "docs" / "spec" / "cases"
 CATALOG = ROOT / "docs" / "spec" / "properties.json"
 SHEETS = ROOT / "worksheets"
 
@@ -185,7 +184,7 @@ def render_answer(mine) -> str:
 
 
 def load_case(case_id: str) -> tuple[pathlib.Path, dict]:
-    path = ANCHORS / f"{case_id}.json"
+    path = CASES / f"{case_id}.json"
     return path, json.loads(path.read_text())
 
 
@@ -209,9 +208,9 @@ def find_expectation(case: dict, state_id: str, prop: str) -> dict | None:
 
 def cmd_status() -> int:
     total = verified = disputed = 0
-    print(f"{'case':8s} {'certified':>12s} {'disputed':>9s}")
-    for path in sorted(ANCHORS.glob("A-*.json")):
-        case = json.loads(path.read_text())
+    print(f"{'case':17s} {'certified':>12s} {'disputed':>9s}")
+    for entry in json.loads((CASES / "index.json").read_text())["cases"]:
+        case = json.loads((CASES / entry["file"]).read_text())
         c_total = c_ver = c_dis = 0
         for state in case["states"]:
             for exp in state["expectations"]:
@@ -220,7 +219,7 @@ def cmd_status() -> int:
                 c_ver += status == "verified"
                 c_dis += status == "disputed"
         total, verified, disputed = total + c_total, verified + c_ver, disputed + c_dis
-        print(f"{case['id']:8s} {f'{c_ver}/{c_total}':>12s} {c_dis:>9d}   {case['title']}")
+        print(f"{case['id']:17s} {f'{c_ver}/{c_total}':>12s} {c_dis:>9d}   {case['title']}")
     pct = 100 * verified / total if total else 0
     print(f"\n{verified} of {total} certified ({pct:.0f}%), {disputed} disputed")
     return 0

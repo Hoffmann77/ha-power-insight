@@ -1,6 +1,6 @@
 {
-  "$schema": "../anchor-case.schema.json",
-  "id": "A-002",
+  "$schema": "../reference-case.schema.json",
+  "id": "captive-battery",
   "title": "Captive battery",
   "summary": "bat1 may only charge from pv1. That single restriction changes the answer in two opposite ways depending on whether pv1 is producing: when it is, the captive sink depletes it before anyone else may share it; when it is not, the sink has nowhere legal to draw from.",
   "decides": [
@@ -167,6 +167,141 @@
           "certification": {
             "status": "unverified"
           }
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": "5/9",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "4/9",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_applicable_consumption_ratio",
+          "value": "1",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {
+            "grid": "0",
+            "pv1": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {
+            "grid": "0",
+            "pv1": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {
+            "grid": "0",
+            "pv1": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "3/20",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "19/100",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {
+            "grid": "3/10",
+            "pv1": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {
+            "grid": "3/10",
+            "pv1": "1/10"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
         }
       ]
     },
@@ -285,6 +420,136 @@
           "property": "sink_adapters_restriction_deficit",
           "value": {
             "bat1": "400"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": "29/50",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "2/5",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "1/50",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "gross_power_applicable_consumption_ratio",
+          "value": "29/30",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {
+            "grid": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {
+            "grid": "0"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {
+            "grid": "20"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "3/10",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "3/10",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "-3/500",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": "0",
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {
+            "grid": "3/10"
+          },
+          "derivation": [],
+          "certification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {
+            "grid": "3/10"
           },
           "derivation": [],
           "certification": {

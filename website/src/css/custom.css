@@ -26,9 +26,10 @@
   --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.12);
 }
 
-/* Tables in the entity reference and the anchor pages carry a lot of columns;
-   let them scroll rather than squeezing the prose column. */
+/* Tables in the entity reference and the reference-case pages carry a lot of
+   columns; let them scroll rather than squeezing the prose column. */
 .markdown table {
   display: block;
   overflow-x: auto;
 }
+
