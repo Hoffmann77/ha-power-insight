@@ -141,8 +141,35 @@ async def async_migrate_entry(
     """Migrate the config entry to a newer version."""
     if entry.version == 1 and entry.minor_version < 2:
         _migrate_options_to_scopes(hass, entry)
+    if entry.version == 1 and entry.minor_version < 3:
+        _migrate_drop_battery_efficiency(hass, entry)
 
     return True
+
+
+def _migrate_drop_battery_efficiency(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Drop the stored round-trip efficiency from every battery subentry.
+
+    Nothing ever read it. Savings work from the metered readings, and a
+    battery's LCOS divides its lifetime cost by the energy it *discharges*, so
+    the losses are already netted out of that figure — see
+    docs/dev/engine-calculations.md. Leaving the key behind would keep
+    suggesting it feeds a calculation somewhere.
+    """
+    for subentry in entry.subentries.values():
+        adapter = subentry.data.get("adapter", {})
+        config = adapter.get("config", {})
+        if "battery_efficiency" not in config:
+            continue
+
+        new_config = {k: v for k, v in config.items() if k != "battery_efficiency"}
+        hass.config_entries.async_update_subentry(
+            entry,
+            subentry,
+            data={**subentry.data, "adapter": {**adapter, "config": new_config}},
+        )
+
+    hass.config_entries.async_update_entry(entry, minor_version=3)
 
 
 def _migrate_options_to_scopes(hass: HomeAssistant, entry: MyConfigEntry) -> None:

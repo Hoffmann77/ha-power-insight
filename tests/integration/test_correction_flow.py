@@ -131,8 +131,16 @@ async def test_levelized_sensors_present_with_lcoe(hass: HomeAssistant) -> None:
 # C4 — per-adapter levelized display is scaled by the correction factor
 # ---------------------------------------------------------------------------
 
-async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> None:
-    """The displayed levelized savings rate equals the base value × factor."""
+async def test_levelized_measurement_applies_factor_to_the_price(
+    hass: HomeAssistant,
+) -> None:
+    """A correction scales the device's *price*, not its finished saving.
+
+    The saving is ``served × (tariff − lcoe)``. Scaling that product by the
+    correction factor moves it the wrong way — doubling a PV's lifetime cost
+    would double its reported saving, when a dearer kWh can only save less.
+    The factor belongs on the lcoe inside the bracket.
+    """
     grid_data = copy.deepcopy(make_grid_subentry_data())
     grid_data["data"]["adapter"]["config"][
         "grid_electricity_price_entity"
@@ -158,11 +166,18 @@ async def test_levelized_measurement_scaled_by_factor(hass: HomeAssistant) -> No
     await hass.async_block_till_done()
 
     pi = entry.runtime_data.power_insight
-    base = pi.prod_adapters_levelized_cost_saving_rates.get(PV_SUB_ID)
+    base = pi.adapters_levelized_saving_rates.get(PV_SUB_ID)
+    corrected = pi.adapters_levelized_saving_rates_corrected.get(PV_SUB_ID)
     state = _pv_state(hass, entry, f"{PV_SUB_ID}_levelized_cost_savings_rate")
     assert state is not None
-    assert base is not None
-    assert float(state.state) == pytest.approx(base * 2.0, rel=1e-6)
+    assert base is not None and corrected is not None
+
+    # 2 kW served at a 0.30 tariff, lcoe 0.10 doubled to 0.20.
+    assert base == pytest.approx(2.0 * (0.30 - 0.10))
+    assert corrected == pytest.approx(2.0 * (0.30 - 0.10 * 2.0))
+    assert float(state.state) == pytest.approx(corrected, rel=1e-6)
+    # Costlier energy saves less. The old behaviour returned base * 2.0.
+    assert corrected < base
 
 
 # ---------------------------------------------------------------------------
@@ -203,9 +218,65 @@ async def test_combined_ledger_sensor_includes_retired_totals(
     await setup_integration(hass, entry)
 
     ent_reg = er.async_get(hass)
-    uid = f"{entry.entry_id}_combined_total_levelized_operating_cost"
+    uid = f"{entry.entry_id}_combined_total_levelized_device_operating_cost"
     entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, uid)
     assert entity_id is not None
     state = hass.states.get(entity_id)
     # No active levelized adapters; the value is just the frozen ledger sum.
     assert float(state.state) == pytest.approx(42.0)
+
+
+# ---------------------------------------------------------------------------
+# C6 — the accumulated breakdown survives a restart
+#
+# A total accumulated from a blend of source prices can only be re-corrected
+# if the blend is persisted with it. These cover the storage contract itself;
+# the arithmetic it enables is pinned in tests/engine/test_full_topology.py.
+# ---------------------------------------------------------------------------
+
+
+def test_stored_data_round_trips_the_component_breakdown() -> None:
+    """Components survive serialisation, as Decimals."""
+    from decimal import Decimal
+
+    from custom_components.power_insight.entity import (
+        IntegrationSensorExtraStoredData,
+    )
+
+    stored = IntegrationSensorExtraStoredData(
+        Decimal("1.50"), "EUR", Decimal("1.50"),
+        {"pv": Decimal("1.00"), "grid": Decimal("0.50")},
+    )
+    restored = IntegrationSensorExtraStoredData.from_dict(stored.as_dict())
+
+    assert restored is not None
+    assert restored.component_totals == {
+        "pv": Decimal("1.00"), "grid": Decimal("0.50"),
+    }
+    # The parts still add up to the total they were split from.
+    assert sum(restored.component_totals.values()) == restored.native_value
+
+
+def test_stored_data_without_components_restores_cleanly() -> None:
+    """A total written before the breakdown existed still restores.
+
+    It comes back with no attribution, which is the honest answer — there is
+    nothing to correct it by, so the display carries it through unscaled
+    rather than inventing a factor for it.
+    """
+    from decimal import Decimal
+
+    from custom_components.power_insight.entity import (
+        IntegrationSensorExtraStoredData,
+    )
+
+    legacy = IntegrationSensorExtraStoredData(
+        Decimal("2.00"), "EUR", Decimal("2.00"),
+    ).as_dict()
+    del legacy["component_totals"]
+
+    restored = IntegrationSensorExtraStoredData.from_dict(legacy)
+
+    assert restored is not None
+    assert restored.native_value == Decimal("2.00")
+    assert restored.component_totals is None

@@ -1,6 +1,8 @@
 """Tests for PowerInsight sensor entity creation and state updates."""
 from __future__ import annotations
 
+import copy
+
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -501,3 +503,251 @@ async def test_gross_power_with_grid_and_pv(
     pi = mock_config_entry_with_pv.runtime_data.power_insight
     # grid import (200) + pv production (1000) + battery discharge (0) = 1200
     assert pi.gross_power == pytest.approx(1200.0)
+
+
+# ---------------------------------------------------------------------------
+# Channel cost sensors (CON / CHG / STB / EXP)
+#
+# The combined "operating cost" sensors only ever measured the charging
+# channel, so they are renamed to say so, and the other three channels get
+# sensors of their own. See docs/dev/engine-calculations.md.
+# ---------------------------------------------------------------------------
+
+
+async def _setup_full_house(hass: HomeAssistant) -> MockConfigEntry:
+    """Grid + PV + battery + consumer, importing while the battery charges."""
+    grid_data = copy.deepcopy(make_grid_subentry_data())
+    grid_data["data"]["adapter"]["config"][
+        "grid_electricity_price_entity"
+    ] = "sensor.grid_price"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=FULL_OPTIONS,
+        subentries_data=[
+            grid_data,
+            make_pv_subentry_data(),
+            make_battery_subentry_data(),
+            make_consumer_subentry_data(),
+        ],
+    )
+    readings = {
+        "grid_power": "1000",
+        "pv_power": "2000",
+        "battery_power": "-800",
+        "consumer_power": "-400",
+    }
+    for name, value in readings.items():
+        hass.states.async_set(f"sensor.{name}", value, {"unit_of_measurement": "W"})
+    hass.states.async_set(
+        "sensor.grid_price", "0.30", {"unit_of_measurement": "EUR/kWh"}
+    )
+    await setup_integration(hass, entry)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def test_channel_cost_sensors_registered(hass: HomeAssistant) -> None:
+    """The renamed charging sensors exist and the old names are gone."""
+    entry = await _setup_full_house(hass)
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    prefix = f"{entry.entry_id}_"
+
+    for key in (
+        "combined_charging_cost_rate",
+        "combined_levelized_charging_cost_rate",
+        "combined_consumption_cost_rate",
+        "combined_levelized_consumption_cost_rate",
+        "combined_standby_cost_rate",
+        "combined_export_cost_rate",
+        "combined_total_charging_cost",
+        "combined_total_consumption_cost",
+    ):
+        assert f"{prefix}{key}" in keys, f"missing {key}"
+
+    # The mis-named originals are gone outright — a clean break, so their
+    # accumulated history does not silently reappear under a new meaning.
+    for key in (
+        "combined_operating_cost_rate",
+        "combined_levelized_operating_cost_rate",
+        "combined_total_operating_cost",
+    ):
+        assert f"{prefix}{key}" not in keys, f"{key} should have been removed"
+
+
+async def test_channel_cost_sensors_conserve(hass: HomeAssistant) -> None:
+    """The four channel costs partition the cost of gross power.
+
+    The sensor-layer form of the cost-conservation invariant: every watt
+    entering the house is bought exactly once, in exactly one channel.
+    """
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    channels = (
+        pi.combined_levelized_consumption_cost_rate,
+        pi.combined_levelized_charging_cost_rate,
+        pi.combined_levelized_standby_cost_rate,
+        pi.combined_levelized_export_cost_rate,
+    )
+    assert None not in channels
+    assert sum(channels) == pytest.approx(pi.combined_lcoe_rate)
+
+    # Charging is a strict subset of the whole: with a battery charging off a
+    # priced import it is non-zero, and consumption carries the rest.
+    assert pi.combined_charging_cost_rate > 0
+    assert pi.combined_consumption_cost_rate > 0
+
+
+async def test_consumer_avoided_cost_sensor(hass: HomeAssistant) -> None:
+    """A consumer reports what it did *not* pay the grid, and it is bounded."""
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    avoided = pi.sink_adapters_avoided_cost_rates
+    assert CONS_SUB_ID in avoided
+
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    assert f"{entry.entry_id}_{CONS_SUB_ID}_avoided_cost_rate" in keys
+
+    # It can never exceed buying the whole draw from the grid.
+    draw_kw = 400 / 1000
+    assert 0.0 <= avoided[CONS_SUB_ID] <= draw_kw * 0.30 + 1e-9
+
+    # Sink side and source side are two views of one number, never a sum.
+    sink_side = sum(avoided.values()) + pi.home_base_load_avoided_cost_rate
+    source_side = sum(pi.source_adapters_avoided_cost_rates.values())
+    assert sink_side == pytest.approx(source_side)
+
+
+async def test_device_operating_cost_matches_its_per_device_sensors(
+    hass: HomeAssistant,
+) -> None:
+    """The device view sums the per-device operating costs, exactly.
+
+    This is the pairing that was missing: the ledger total is derived from the
+    per-device totals, so the rate it belongs to has to be the per-device sum —
+    not the charging channel, which excludes PV standby.
+    """
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    prefix = f"{entry.entry_id}_"
+    assert f"{prefix}combined_device_operating_cost_rate" in keys
+    assert f"{prefix}combined_levelized_device_operating_cost_rate" in keys
+    assert f"{prefix}combined_total_levelized_device_operating_cost" in keys
+
+    per_device = pi.source_adapters_lcoo_rates
+    assert sum(per_device.values()) == pytest.approx(
+        pi.combined_levelized_device_operating_cost_rate
+    )
+
+
+async def test_device_view_and_channel_view_diverge_on_standby(
+    hass: HomeAssistant,
+) -> None:
+    """With PV in standby and nothing charging, the two views must differ.
+
+    The charging channel is empty, but the hardware is still costing money —
+    which is exactly the case the single old name hid.
+    """
+    entry = await _setup_full_house(hass)
+
+    # Night: no PV output, PV drawing standby, battery idle, grid covering.
+    hass.states.async_set("sensor.pv_power", "-50", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+    await hass.async_block_till_done()
+
+    pi = entry.runtime_data.power_insight
+    assert pi.combined_standby_power == pytest.approx(50.0)
+    assert pi.combined_charging_power == pytest.approx(0.0)
+
+    # Channel view: nothing charged, so nothing in the CHG bucket.
+    assert pi.combined_levelized_charging_cost_rate == pytest.approx(0.0)
+    # Device view: the standby draw still costs, and it is the standby bucket.
+    device = pi.combined_levelized_device_operating_cost_rate
+    assert device > 0.0
+    assert device == pytest.approx(pi.combined_levelized_standby_cost_rate)
+
+
+async def test_per_device_savings_sum_to_the_combined_saving(
+    hass: HomeAssistant,
+) -> None:
+    """Savings additivity, at the sensor layer.
+
+    The per-device sensors read the every-role family, so a device drawing
+    (a PV in standby) contributes its negative share and the totals reconcile.
+    """
+    entry = await _setup_full_house(hass)
+    hass.states.async_set("sensor.pv_power", "-50", {"unit_of_measurement": "W"})
+    await hass.async_block_till_done()
+
+    pi = entry.runtime_data.power_insight
+    assert sum(pi.adapters_levelized_saving_rates.values()) == pytest.approx(
+        pi.combined_levelized_saving_rate
+    )
+    assert sum(pi.adapters_saving_rates.values()) == pytest.approx(
+        pi.combined_saving_rate
+    )
+
+
+# ---------------------------------------------------------------------------
+# Home base load — a device for the unmetered remainder
+# ---------------------------------------------------------------------------
+
+
+async def test_home_base_load_device_and_sensors(hass: HomeAssistant) -> None:
+    """The residual gets a device of its own, gated on the option."""
+    from homeassistant.helpers import device_registry as dr
+
+    entry = await _setup_full_house(hass)
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    prefix = f"{entry.entry_id}_"
+
+    assert f"{prefix}home_base_load_power" in keys
+    assert f"{prefix}home_base_load_avoided_cost_rate" in keys
+
+    dev_reg = dr.async_get(hass)
+    device = dev_reg.async_get_device(
+        identifiers={(DOMAIN, f"{entry.entry_id}_home_base_load")}
+    )
+    assert device is not None, "the home base load should have its own device"
+    assert "Home base load" in device.name
+
+
+async def test_home_base_load_absent_when_not_enabled(hass: HomeAssistant) -> None:
+    """Without the option the device is never created."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), make_consumer_subentry_data()],
+    )
+    for name in ("grid_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    keys = {e.unique_id for e in get_entry_entities(hass, entry) if e.unique_id}
+    assert f"{entry.entry_id}_home_base_load_power" not in keys
+
+
+async def test_home_base_load_reports_the_residual_and_its_mix(
+    hass: HomeAssistant,
+) -> None:
+    """Its power is gross minus every metered draw, and it says where it came from."""
+    entry = await _setup_full_house(hass)
+    pi = entry.runtime_data.power_insight
+
+    # gross 3000 (grid 1000 + pv 2000); metered draws: battery 800 + consumer 400.
+    assert pi.gross_power == pytest.approx(3000.0)
+    assert pi.home_base_load_power == pytest.approx(3000.0 - 800.0 - 400.0)
+
+    state = get_sensor_state(hass, entry, f"{entry.entry_id}_home_base_load_power")
+    assert state is not None
+    assert float(state.state) == pytest.approx(1800.0)
+
+    # The provenance row rides along as attributes, and it is a real mix.
+    shares = pi.home_base_load_source_shares
+    assert sum(shares.values()) == pytest.approx(1.0)
+    assert set(shares) == {GRID_SUB_ID, PV_SUB_ID}

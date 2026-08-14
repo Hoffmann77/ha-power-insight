@@ -40,12 +40,17 @@ from .const import (
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
     CONF_EXPORT_COMPENSATION,
-    CONF_BAT_EFFICIENCY,
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_POWER_FROM_ADAPTERS,
+    CONF_SOURCE_MODE,
+    SOURCE_MODE_MIX,
+    SOURCE_MODE_DEVICES,
+    SOURCE_MODE_DEVICE_FIELD,
     CONF_ENABLE_DEBUG_ENTITIES,
     CONF_ENABLE_DISTRIBUTION_POWER,
     CONF_ENABLE_DISTRIBUTION_RATIOS,
     CONF_ENABLE_DISTRIBUTION_SHARES,
+    CONF_ENABLE_HOME_BASE_LOAD,
     CONF_ENABLE_CHARGING_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
@@ -173,15 +178,57 @@ def _levelized_production_required(options: dict) -> bool:
 # HELPERS
 # ============================================================================
 
-def _build_charge_from_selector(
+SOURCE_MODE_SELECTOR = selector.SelectSelector(
+    selector.SelectSelectorConfig(
+        options=[
+            selector.SelectOptionDict(value=SOURCE_MODE_MIX, label="Whole mix"),
+            selector.SelectOptionDict(
+                value=SOURCE_MODE_DEVICES, label="Specific devices"
+            ),
+        ],
+        mode=selector.SelectSelectorMode.LIST,
+    )
+)
+
+
+def apply_source_mode(
+    adapter_type: str | None,
+    user_input: dict[str, Any],
+    errors: dict[str, str],
+) -> None:
+    """Reconcile the source-mode selector with its paired device list, in place.
+
+    The mode is a UI-only choice realised through the device list (see
+    :data:`CONF_SOURCE_MODE`):
+
+    * ``mix`` — clear the device list to ``[]``; the engine reads an empty list
+      as "draw from the whole source mix".
+    * ``devices`` — keep the selection but require at least one device; an empty
+      selection here is the only misconfiguration (records a field error).
+
+    No-op for adapter types without a source restriction (grid, pv_system).
+    """
+    device_field = SOURCE_MODE_DEVICE_FIELD.get(adapter_type)
+    if device_field is None:
+        return
+    mode = user_input.get(CONF_SOURCE_MODE, SOURCE_MODE_MIX)
+    if mode == SOURCE_MODE_DEVICES:
+        if not user_input.get(device_field):
+            errors[device_field] = "source_devices_required"
+    else:
+        user_input[device_field] = []
+
+
+def _build_power_source_selector(
     entry: ConfigEntry,
     exclude_subentry_id: str | None = None,
 ) -> selector.SelectSelector:
-    """Build the dynamic multi-select selector for charge_from_adapters.
+    """Build the dynamic multi-select selector for a power-source restriction.
 
-    Called by ``build_schema`` when resolving ``AdapterField.selector_fn``
-    for ``CONF_CHARGE_FROM_ADAPTERS``.  Includes the grid adapter (if
-    configured) followed by all PV-system adapters.
+    Shared by ``build_schema`` when resolving ``AdapterField.selector_fn`` for
+    both the battery ``CONF_CHARGE_FROM_ADAPTERS`` and the consumer
+    ``CONF_POWER_FROM_ADAPTERS`` fields — the selectable sources are identical:
+    the grid adapter (if configured) followed by all PV-system adapters.
     """
     options: list[selector.SelectOptionDict] = []
 
@@ -257,11 +304,14 @@ def calculate_lcos(
 ) -> float | None:
     """Calculate Levelized Cost of Storage (EUR/kWh).
 
-    NOTE: LCOS is currently computed identically to LCOE (lifetime cost /
-    lifetime throughput). A storage-specific formula (accounting for
-    round-trip efficiency and charge/discharge losses) is a planned
-    refinement; the two are kept as separate functions so that change can be
-    made without touching the LCOE path.
+    Deliberately the same arithmetic as LCOE: lifetime cost over lifetime
+    throughput. It needs no round-trip efficiency term, because the throughput
+    is the energy the battery *discharges*, not the energy put into it —
+    charging and conversion losses are already netted out of the figure the
+    user enters. Dividing by efficiency here would count them twice.
+
+    Kept as its own function so storage can diverge from generation later
+    without disturbing the LCOE path.
     """
     costs = fields.get(CONF_LIFETIME_COST)
     production = fields.get(CONF_LIFETIME_PRODUCTION)
@@ -606,6 +656,10 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
         power_fields[vol.Required(
             "distribution_shares", default=defaults.get("distribution_shares", False)
         )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_HOME_BASE_LOAD in supported:
+        power_fields[vol.Required(
+            "home_base_load", default=defaults.get("home_base_load", False)
+        )] = BOOLEAN_SELECTOR
     if CONF_ENABLE_CHARGING_SOURCE_SHARES in supported:
         power_fields[vol.Required(
             "charging_source_shares", default=defaults.get("charging_source_shares", False)
@@ -723,6 +777,8 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
         enabled.add(CONF_ENABLE_DISTRIBUTION_RATIOS)
     if user_input.get("distribution_shares"):
         enabled.add(CONF_ENABLE_DISTRIBUTION_SHARES)
+    if user_input.get("home_base_load"):
+        enabled.add(CONF_ENABLE_HOME_BASE_LOAD)
     if user_input.get("charging_source_shares"):
         enabled.add(CONF_ENABLE_CHARGING_SOURCE_SHARES)
     if user_input.get("power_source_shares"):
@@ -775,6 +831,7 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
         "distribution_power": CONF_ENABLE_DISTRIBUTION_POWER in leaves,
         "distribution_ratios": CONF_ENABLE_DISTRIBUTION_RATIOS in leaves,
         "distribution_shares": CONF_ENABLE_DISTRIBUTION_SHARES in leaves,
+        "home_base_load": CONF_ENABLE_HOME_BASE_LOAD in leaves,
         "charging_source_shares": CONF_ENABLE_CHARGING_SOURCE_SHARES in leaves,
         "power_source_shares": CONF_ENABLE_POWER_SOURCE_SHARES in leaves,
         "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,
@@ -1050,14 +1107,6 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
-    CONF_BAT_EFFICIENCY: AdapterField(
-        selector=PERCENT_SELECTOR,
-        required=True,
-        default=95,
-        in_config_flow=True,
-        in_reconfigure_flow=False,
-        store_in_adapter_config=True,
-    ),
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
@@ -1075,8 +1124,17 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=False,
         store_in_adapter_config=True,
     ),
+    # Source mode selector — form-only (not persisted). "Whole mix" clears the
+    # charge_from list; "Specific devices" keeps it and requires >= 1 source.
+    CONF_SOURCE_MODE: AdapterField(
+        selector=SOURCE_MODE_SELECTOR,
+        required=True,
+        default=SOURCE_MODE_MIX,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+    ),
     CONF_CHARGE_FROM_ADAPTERS: AdapterField(
-        selector_fn=_build_charge_from_selector,
+        selector_fn=_build_power_source_selector,
         required=False,
         default=[],
         in_config_flow=True,
@@ -1185,6 +1243,26 @@ CONSUMER_FIELDS: dict[str, AdapterField] = {
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=False,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
+    # Source mode selector — form-only (not persisted). "Whole mix" clears the
+    # power_from list; "Specific devices" keeps it and requires >= 1 source.
+    CONF_SOURCE_MODE: AdapterField(
+        selector=SOURCE_MODE_SELECTOR,
+        required=True,
+        default=SOURCE_MODE_MIX,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+    ),
+    # Optional source restriction — the sources this consumer draws from (e.g. a
+    # smart plug set to run only on excess solar). Mirrors the battery's
+    # charge_from field; empty (the "whole mix" mode) draws from the general mix.
+    CONF_POWER_FROM_ADAPTERS: AdapterField(
+        selector_fn=_build_power_source_selector,
+        required=False,
+        default=[],
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
@@ -1517,7 +1595,7 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     def __init__(self) -> None:
         self._title: str = ""
@@ -1670,6 +1748,11 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             )
             errors.update(validation_errors)
 
+            # Reconcile the source-mode selector with its device list ("whole
+            # mix" clears it; "specific devices" requires >= 1). Mutates
+            # user_input so the stored list matches the chosen mode.
+            apply_source_mode(self._adapter_type, user_input, errors)
+
             if not errors:
                 # Determine key and title
                 if self._adapter_type == "grid":
@@ -1763,6 +1846,10 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             )
             errors.update(validation_errors)
 
+            # Reconcile the source-mode selector with its device list, as in the
+            # configure step.
+            apply_source_mode(self._adapter_type, user_input, errors)
+
             if not errors:
                 # Evaluate calculated fields (current_lcoe/lcos, correction
                 # factor) from the edited lifetime values, reading the immutable
@@ -1814,18 +1901,29 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             if k != "adapter" and k in self._adapter_fields:
                 seed.setdefault(k, v)
 
-        # For charge_from_adapters, strip stale subentry IDs before seeding so
-        # the selector is pre-populated with only currently valid selections.
-        # Valid sources are grid and pv_system adapters.
-        if CONF_CHARGE_FROM_ADAPTERS in seed:
-            valid_source_ids = {
-                sub.subentry_id
-                for sub in parent_entry.subentries.values()
-                if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
-            }
-            seed[CONF_CHARGE_FROM_ADAPTERS] = [
-                i for i in seed[CONF_CHARGE_FROM_ADAPTERS] if i in valid_source_ids
-            ]
+        # For the power-source restriction fields (battery charge_from,
+        # consumer power_from), strip stale subentry IDs before seeding so the
+        # selector is pre-populated with only currently valid selections. Valid
+        # sources are grid and pv_system adapters.
+        valid_source_ids = {
+            sub.subentry_id
+            for sub in parent_entry.subentries.values()
+            if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
+        }
+        for source_field in (CONF_CHARGE_FROM_ADAPTERS, CONF_POWER_FROM_ADAPTERS):
+            if source_field in seed:
+                seed[source_field] = [
+                    i for i in seed[source_field] if i in valid_source_ids
+                ]
+
+        # Derive the (form-only) source-mode selector from the seeded list: a
+        # non-empty restriction pre-selects "specific devices", an empty one
+        # pre-selects "whole mix".
+        device_field = SOURCE_MODE_DEVICE_FIELD.get(self._adapter_type)
+        if device_field is not None:
+            seed[CONF_SOURCE_MODE] = (
+                SOURCE_MODE_DEVICES if seed.get(device_field) else SOURCE_MODE_MIX
+            )
 
         schema = build_schema(
             self._adapter_fields,

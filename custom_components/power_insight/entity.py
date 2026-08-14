@@ -288,12 +288,20 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
     """
 
     last_valid_state: Decimal | None
+    #: The running total split by which adapter's correction factor scales it.
+    #: ``None`` for a total accumulated before the split existed, which can
+    #: therefore no longer be corrected — see the class docstring.
+    component_totals: dict[str, Decimal] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """Serialise to a JSON-compatible dict."""
         data = super().as_dict()
         data["last_valid_state"] = (
             str(self.last_valid_state) if self.last_valid_state is not None else None
+        )
+        data["component_totals"] = (
+            {key: str(value) for key, value in self.component_totals.items()}
+            if self.component_totals is not None else None
         )
         return data
 
@@ -317,10 +325,22 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
         if last_valid_state is None:
             return None
 
+        component_totals: dict[str, Decimal] | None = None
+        raw_components = restored.get("component_totals")
+        if isinstance(raw_components, dict):
+            try:
+                component_totals = {
+                    key: Decimal(str(value)) for key, value in raw_components.items()
+                }
+            except InvalidOperation:
+                _LOGGER.error("Could not restore component_totals — value corrupted")
+                component_totals = None
+
         return cls(
             extra.native_value,
             extra.native_unit_of_measurement,
             last_valid_state,
+            component_totals,
         )
 
 
@@ -399,9 +419,15 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         # to restore state when native_value is None at shutdown.
         self._last_valid_state: Decimal | None = None
 
+        # The running total split by correction target; parallel to _state and
+        # summing to it. Empty until the first step with a breakdown available.
+        self._component_totals: dict[str, Decimal] = {}
+
         # Left-endpoint anchor: the integration_value at the end of the
         # previous interval.  None until the first event is received.
         self._last_integration_value: float | None = None
+        # The matching anchor for the per-component breakdown.
+        self._last_integration_components: dict[str, float] | None = None
         # Timestamp of the previous integration step (or the first event).
         # None until the first event is received.
         self._last_integration_time: datetime | None = None
@@ -423,6 +449,18 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     # ------------------------------------------------------------------
 
     @property
+    def integration_components(self) -> dict[str, float] | None:
+        """Return ``integration_value`` split by correction target, if it splits.
+
+        ``None`` (the default) means this sensor accumulates an undivided
+        value. When a breakdown is returned its parts must sum to
+        ``integration_value``, and each key names the adapter whose correction
+        factor scales that part — so the accumulated total can be re-corrected
+        exactly, however long afterwards the lifetime cost is edited.
+        """
+        return None
+
+    @property
     @abstractmethod
     def integration_value(self) -> float | None:
         """Return the current rate value to integrate (e.g. EUR/h).
@@ -435,6 +473,32 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     # ------------------------------------------------------------------
     # Integration helpers
     # ------------------------------------------------------------------
+
+    def _update_component_integrals(
+        self,
+        elapsed_seconds: Decimal,
+        left: dict[str, float],
+        right: dict[str, float],
+    ) -> None:
+        """Integrate each component over the same interval as the total.
+
+        Every integration method is linear in the value, so integrating the
+        parts and integrating the whole agree exactly — the components stay a
+        true decomposition of ``_state`` rather than drifting from it.
+        """
+        for key in set(left) | set(right):
+            states = self._method.validate_states(
+                left.get(key, 0.0), right.get(key, 0.0)
+            )
+            if not states:
+                continue
+            area = self._method.calculate_area_with_two_states(
+                elapsed_seconds, *states
+            )
+            scaled = area / (self._unit_prefix * self._unit_time)
+            self._component_totals[key] = (
+                self._component_totals.get(key, Decimal(0)) + scaled
+            )
 
     def _update_integral(self, area: Decimal) -> None:
         """Add one area slice to the running total.
@@ -527,6 +591,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             )
             self._attr_native_value = last_sensor_data.native_value
             self._last_valid_state = last_sensor_data.last_valid_state
+            self._component_totals = dict(last_sensor_data.component_totals or {})
             _LOGGER.debug(
                 "Restored state=%s last_valid_state=%s",
                 self._state, self._last_valid_state,
@@ -608,6 +673,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
 
         if self._last_integration_value is None:
             # First event: record the initial anchor; nothing to integrate yet.
+            self._last_integration_components = self.integration_components
             self._last_integration_value = right_value
             self._last_integration_time = timestamp
             self.async_write_ha_state()
@@ -624,14 +690,22 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             left_value, right_value, float(elapsed_seconds),
         )
 
+        right_components = self.integration_components
+        left_components = self._last_integration_components
+
         if elapsed_seconds > 0 and left_value is not None and right_value is not None:
             if states := self._method.validate_states(left_value, right_value):
                 area = self._method.calculate_area_with_two_states(elapsed_seconds, *states)
                 self._update_integral(area)
+                if left_components is not None and right_components is not None:
+                    self._update_component_integrals(
+                        elapsed_seconds, left_components, right_components,
+                    )
 
         # Advance the left-endpoint anchor.
         self._last_integration_time = timestamp
         self._last_integration_value = right_value
+        self._last_integration_components = right_components
 
         # Cancel old timer and start a fresh one from this event's timestamp.
         self._cancel_and_reschedule_max_sub_interval()
@@ -665,6 +739,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             self.native_value,
             self.native_unit_of_measurement,
             self._last_valid_state,
+            dict(self._component_totals) or None,
         )
 
     async def async_get_last_sensor_data(

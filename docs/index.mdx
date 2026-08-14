@@ -1,12 +1,16 @@
 ---
 title: Power Insight for Home Assistant
+sidebar_label: Home
+slug: /
 ---
+
+import Logo from './assets/logo.png';
 
 # Power Insight
 
-<p align="center">
-  <img src="assets/logo.png" alt="Power Insight" width="320">
-</p>
+<div style={{textAlign: 'center', margin: '1.5rem 0'}}>
+  <img src={Logo} alt="Power Insight" width="320" />
+</div>
 
 **Real-time insight into the cost, savings, and distribution of the electrical
 power in your home.**
@@ -23,14 +27,20 @@ Because every calculation is driven by **instantaneous power values**, Power
 Insight works great with **dynamic electricity prices** — the numbers you see
 always reflect the price you are paying right now.
 
-!!! note "CO₂ tracking is not available yet"
-    Carbon-intensity / CO₂ tracking is planned but not yet implemented in this
-    release. The configuration flow may ask for a CO₂ intensity entity or a CO₂
-    footprint, but **no CO₂ sensors are created yet**.
+:::note[CO₂ tracking is not available yet]
 
-!!! warning "Beta software"
-    Power Insight is in beta (`0.1.0b1`). Entity names and options may change
-    until the 1.0 release.
+Carbon-intensity / CO₂ tracking is planned but not yet implemented in this
+release. The configuration flow may ask for a CO₂ intensity entity or a CO₂
+footprint, but **no CO₂ sensors are created yet**.
+
+:::
+
+:::warning[Beta software]
+
+Power Insight is in beta (`0.1.0b1`). Entity names and options may change
+until the 1.0 release.
+
+:::
 
 ## What you get
 
@@ -48,27 +58,15 @@ always reflect the price you are paying right now.
 
 ## How to read these docs
 
-<div class="grid cards" markdown>
-
-- :material-download: **[Installation](installation.md)**
-  Install via HACS (recommended) or manually.
-
-- :material-rocket-launch: **[Getting started](getting-started.md)**
-  Name the hub, pick a preset, add your devices.
-
-- :material-cog: **[Configuration](configuration/index.md)**
-  Every setting for the grid, PV, battery, and consumer devices.
-
-- :material-tune-variant: **[Sensors, presets & options](configuration/options-and-presets.md)**
-  Choose exactly which sensors get created.
-
-- :material-format-list-bulleted: **[Entity reference](entities.md)**
-  The full, accurate list of every sensor Power Insight can create.
-
-- :material-lightbulb-on: **[Core concepts](concepts.md)**
-  LCOE/LCOS, sign conventions, how savings are calculated.
-
-</div>
+| Page | What it covers |
+| --- | --- |
+| **[Installation](installation.md)** | Install via HACS (recommended) or manually. |
+| **[Getting started](getting-started.md)** | Name the hub, pick a preset, add your devices. |
+| **[Configuration](configuration/index.md)** | Every setting for the grid, PV, battery, and consumer devices. |
+| **[Sensors, presets & options](configuration/options-and-presets.md)** | Choose exactly which sensors get created. |
+| **[Entity reference](entities.md)** | The full, accurate list of every sensor Power Insight can create. |
+| **[Core concepts](concepts.md)** | LCOE/LCOS, sign conventions, how savings are calculated. |
+| **[Anchor cases](spec/index.mdx)** | Worked examples that pin down exactly how the engine attributes power. |
 
 ## Limitations
 

@@ -52,11 +52,13 @@
             "name": "Power sensors",
             "data": {
               "distribution_power": "Power distribution (W)",
-              "distribution_ratios": "Power distribution ratios (%)"
+              "distribution_ratios": "Power distribution ratios (%)",
+              "home_base_load": "Home base load"
             },
             "data_description": {
               "distribution_power": "Creates one sensor per power flow type (self-consumption, grid import, grid export, etc.) showing the current power in Watts. These are the fundamental building blocks — other sensors are derived from them.",
-              "distribution_ratios": "Creates percentage sensors that show each power flow as a share of total home power. For example: \"currently 65 % of my home load comes from solar.\" Useful for dashboards."
+              "distribution_ratios": "Creates percentage sensors that show each power flow as a share of total home power. For example: \"currently 65 % of my home load comes from solar.\" Useful for dashboards.",
+              "home_base_load": "Creates a device for everything consumed without a sensor on it — gross power minus every metered draw. In most homes it is the single largest consumer, and without it the per-device figures never add up to the totals. It reports its power, where that power came from, and what it avoided paying the grid."
             }
           },
           "costs": {
@@ -79,6 +81,17 @@
             "data_description": {
               "savings_method": "Cost savings measure how much money you avoid spending on grid electricity by self-consuming locally-produced power.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price. Requires a price entity on the grid adapter.\n**Levelized** — savings calculated using each device's LCOE as the baseline. Requires lifetime values per device.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. The total is stored in Home Assistant's recorder and survives restarts."
+            }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "The financial return combines what you saved by using your own generation with what you earned exporting the surplus, across every device.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of what the energy cost to produce, using each device's lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
             }
           }
         }
@@ -173,6 +186,17 @@
               "savings_method": "Savings represent the money you avoid spending on grid electricity by self-consuming PV power.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price. Requires a price entity on the grid adapter.\n**Levelized** — savings calculated using the PV system's LCOE as the baseline cost. Requires lifetime values.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. Stored in the recorder and survives restarts."
             }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "What this PV system earned: the grid electricity it displaced, plus the compensation for anything it exported.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of the system's own LCOE, so it shows profit rather than turnover. Requires lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
+            }
           }
         }
       },
@@ -227,6 +251,17 @@
               "savings_method": "Savings represent the money you avoid spending on grid electricity by discharging the battery instead.\n\n**None** — no savings sensors.\n**Standard** — savings calculated using the live grid price.\n**Levelized** — savings calculated using the battery's LCOS as the baseline. Requires lifetime values.\n**Both** — creates sensors for both methods.",
               "accumulate_savings": "Creates sensors that accumulate total savings over time. Stored in the recorder and survives restarts."
             }
+          },
+          "financial_return": {
+            "name": "Financial return",
+            "data": {
+              "financial_return_method": "Financial return calculation method",
+              "accumulate_financial_return": "Accumulate financial return"
+            },
+            "data_description": {
+              "financial_return_method": "What this battery earned: the grid electricity its discharge displaced, plus any export compensation, less what charging it cost.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of the battery's own LCOS. Requires lifetime values.\n**Both** — creates sensors for both methods.",
+              "accumulate_financial_return": "Creates sensors that accumulate the total return over time. Stored in the recorder and survives restarts."
+            }
           }
         }
       },
@@ -237,10 +272,12 @@
           "power_sensors": {
             "name": "Power source tracking",
             "data": {
-              "power_source_shares": "Power source shares (%)"
+              "power_source_shares": "Power source shares (%)",
+              "distribution_shares": "Power distribution shares (%)"
             },
             "data_description": {
-              "power_source_shares": "Creates sensors showing what fraction of this consumer's power currently comes from each source in your home (grid, solar, battery). For example: \"the heat pump is currently running 55 % on solar power.\" Power Insight infers the source mix from the real-time state of all your adapters."
+              "power_source_shares": "Creates sensors showing what fraction of this consumer's power currently comes from each source in your home (grid, solar, battery). For example: \"the heat pump is currently running 55 % on solar power.\" Power Insight infers the source mix from the real-time state of all your adapters.",
+              "distribution_shares": "Creates sensors showing how much of the home's total power flow this consumer accounts for."
             }
           },
           "costs": {
@@ -250,6 +287,15 @@
             },
             "data_description": {
               "cost_method": "**None** — no cost sensors for this consumer.\n**Standard** — cost calculated using the live grid price, weighted by the source mix. Requires a price entity on the grid adapter.\n**Levelized** — cost calculated using the levelized cost per kWh of each source in the mix. Requires lifetime values on each generating device.\n**Both** — creates sensors for both methods."
+            }
+          },
+          "savings": {
+            "name": "Cost savings",
+            "data": {
+              "savings_method": "Savings calculation method"
+            },
+            "data_description": {
+              "savings_method": "Savings represent the money this consumer avoided spending on grid electricity, because local generation supplied it instead. It is the same saved money the producing device reports from its own end — the two are two views of one figure, so do not add them together.\n\n**None** — no savings sensors.\n**Standard** — the avoided cost, valued at the live grid price."
             }
           }
         }
@@ -287,8 +333,9 @@
             "co2_intensity_entity": "CO₂ intensity entity",
             "exports_power": "Exports power to grid",
             "export_compensation": "Export compensation rate",
-            "battery_efficiency": "Round-trip efficiency",
+            "source_mode": "Source mode",
             "charge_from_adapters": "Charges from",
+            "power_from_adapters": "Powered from",
             "lifetime_production": "Lifetime production",
             "lifetime_cost": "Total lifetime cost",
             "co2_footprint": "CO₂ footprint"
@@ -301,9 +348,10 @@
             "co2_intensity_entity": "Sensor reporting the current grid CO₂ intensity in g/kWh (for example from the Electricity Maps integration). Required when CO₂ sensors are enabled.",
             "exports_power": "Turn on if this device can feed surplus power back to the grid. Enables export-compensation tracking when the corresponding option is active.",
             "export_compensation": "The amount you are paid per kWh of power exported to the grid, in your currency. Required when export-compensation or savings sensors are enabled.",
-            "battery_efficiency": "Round-trip efficiency in percent — the share of energy stored that you actually get back when discharging (typical values: 85–95 %). Used to correctly attribute charging losses to their source.",
-            "charge_from_adapters": "Select which sources this battery can charge from — the grid and/or specific PV systems you have configured. Power Insight uses this to trace how much of the battery's stored energy came from each source.",
-            "lifetime_production": "Total energy in kWh you expect this device to produce (or store) over its entire lifetime. Combined with the total lifetime cost to derive the levelized (per-kWh) cost. Required when any levelized sensor is enabled.",
+            "source_mode": "How to attribute this device's power. **Whole mix** shares it across every source by availability. **Specific devices** restricts it to the sources you pick below — useful for a battery that only charges from solar, or a smart plug set to run on excess PV.",
+            "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources this battery may charge from (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
+            "power_from_adapters": "Only used with the **Specific devices** source mode: which sources power this consumer (the grid and/or specific PV systems). Ignored when the mode is **Whole mix**.",
+            "lifetime_production": "Total energy in kWh you expect this device to deliver over its entire lifetime — generated, for a PV system, or discharged, for a battery. Count the energy that leaves the device, not what goes into it: measured that way, charging and conversion losses are already accounted for. Combined with the total lifetime cost to derive the levelized (per-kWh) cost. Required when any levelized sensor is enabled.",
             "lifetime_cost": "Total purchase, installation, and expected maintenance cost of this device over its lifetime, in your currency. Combined with lifetime production to derive the levelized cost per kWh. Required when any levelized cost sensor is enabled.",
             "co2_footprint": "Total CO₂ emitted to manufacture and install this device (in kg). Used to derive a levelized CO₂ intensity per kWh produced. Required when any levelized CO₂ sensor is enabled."
           }
@@ -316,7 +364,9 @@
             "power_entity_inverted": "Invert power direction",
             "grid_electricity_price_entity": "Electricity price entity",
             "co2_intensity_entity": "CO₂ intensity entity",
+            "source_mode": "Source mode",
             "charge_from_adapters": "Charges from",
+            "power_from_adapters": "Powered from",
             "lifetime_production": "Lifetime production",
             "lifetime_cost": "Total lifetime cost"
           },
@@ -325,8 +375,10 @@
             "power_entity_inverted": "Turn on if your sensor reports power with the opposite sign to the expected convention.",
             "grid_electricity_price_entity": "Sensor or input number with the current grid import price per kWh. Required when cost or savings sensors are enabled.",
             "co2_intensity_entity": "Sensor with the current grid CO₂ intensity in g/kWh. Required when CO₂ sensors are enabled.",
-            "charge_from_adapters": "Select which sources (the grid and/or your PV systems) this battery charges from.",
-            "lifetime_production": "Total energy (kWh) you expect this device to produce over its whole lifetime. Changing this value rescales the device's already-recorded levelized values.",
+            "source_mode": "**Whole mix** shares this device's power across every source by availability; **Specific devices** restricts it to the sources you pick below.",
+            "charge_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) this battery charges from.",
+            "power_from_adapters": "Only used with the **Specific devices** source mode: which sources (the grid and/or your PV systems) power this consumer.",
+            "lifetime_production": "Total energy (kWh) you expect this device to deliver over its whole lifetime — generated for a PV system, discharged for a battery. Count energy leaving the device, not energy put into it. Changing this value rescales the device's already-recorded levelized values.",
             "lifetime_cost": "Total purchase and installation cost of this device over its lifetime, in your currency. Changing this value rescales the device's already-recorded levelized values."
           }
         }
@@ -338,7 +390,8 @@
         "invalid_price_entity": "The selected entity does not exist or is unavailable.",
         "invalid_co2_entity": "The selected entity does not exist or is unavailable.",
         "invalid_input": "Invalid input.",
-        "required": "This field is required with the sensors you currently have enabled."
+        "required": "This field is required with the sensors you currently have enabled.",
+        "source_devices_required": "Select at least one source, or switch the source mode to \"Whole mix\"."
       },
       "abort": {
         "grid_already_configured": "A grid connection is already configured for this integration. Only one grid connection is supported per configuration.",
