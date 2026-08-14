@@ -5,10 +5,15 @@ point: a value you derived independently, without the engine's number in front
 of you, is evidence. A value you nodded along to is not.
 
 One worksheet is **one snapshot** — one case's topology under one set of
-readings. It opens with the wiring and the readings, then gives every pending
-property a page of its own, in an order where nothing is asked before the
-figures it is built on. It closes with a transcription page you copy your
-answers onto before typing them into ``tools/certify.py``.
+readings. It opens with the wiring, the readings and the configuration, then
+works through the pending values a page at a time, in an order where nothing is
+asked before the figures it is built on. It closes with a transcription page
+you copy your answers onto before typing them into ``tools/certify.py``.
+
+A page is a *derivation*, not a property. Values the catalog groups — gross
+power and the production inside it, grid import and export, the three views of
+one channel — share a page, because they are one piece of work and splitting
+them asked the same question three times.
 
 So four things are deliberately *not* printed:
 
@@ -48,6 +53,7 @@ import html
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 from fractions import Fraction
@@ -65,18 +71,23 @@ HOME = "home"
 #: Page numbers are fixed before anything is rendered, because the dependency
 #: strip on each problem page points at the page its inputs were derived on.
 PAGE_SNAPSHOT = 1
-PAGE_CONTENTS = 2
-PAGE_FIRST_PROBLEM = 3
+PAGE_FIRST_PROBLEM = 2
 
-# Config keys worth printing on a sheet, in the order they read best.
-CONFIG_LABELS = [
-    ("has_price_entity", "price ent.", None),
+# What a device's energy costs, split from the routing table below because they
+# are different questions and the sheet asks them on different pages. The CO2
+# intensities are deliberately absent: nothing on the sheet is priced in grams,
+# so printing them is a column of noise on every page 1.
+PRICE_LABELS = [
+    ("has_price_entity", "price entity", None),
     ("lcoe", "LCOE", "EUR/kWh"),
     ("lcos", "LCOS", "EUR/kWh"),
-    ("lco2_intensity", "LCO₂", "g/kWh"),
-    ("exports_power", "exports", None),
     ("export_compensation", "export comp.", "EUR/kWh"),
     ("correction_factor", "correction", None),
+]
+
+# Where a device's energy is allowed to go, and where it may come from.
+ROUTING_LABELS = [
+    ("exports_power", "may export", None),
     ("charge_from_adapters", "charges from", None),
     ("power_from_adapters", "draws from", None),
 ]
@@ -232,11 +243,11 @@ def problem_order(props: list[str], catalog: dict) -> list[str]:
     """Pending properties in the order they are asked.
 
     Layer first, dependency rank within it: the layers are the vocabulary the
-    rest of the spec uses, and grouping by them makes a thirty-page sheet read
-    as four stretches rather than one undifferentiated run. That only works
-    because the catalog's layers happen to be monotone over its dependencies —
-    which the rail below checks rather than assumes, since a future property
-    that depends upwards would silently start asking questions out of order.
+    rest of the spec uses, and grouping by them makes a long sheet read as four
+    stretches rather than one undifferentiated run. That only works because the
+    catalog's layers happen to be monotone over its dependencies — which the
+    rail below checks rather than assumes, since a future property that depends
+    upwards would silently start asking questions out of order.
     """
     rank = dependency_rank(catalog)
     key = lambda p: (catalog[p]["layer"], rank.get(p, 10_000))  # noqa: E731
@@ -248,6 +259,34 @@ def problem_order(props: list[str], catalog: dict) -> list[str]:
                     f"{catalog[dep]['layer']} depends on layer {catalog[prop]['layer']}"
                 )
     return sorted(props, key=key)
+
+
+def anchor_of(prop: str, catalog: dict) -> str:
+    """The property whose page ``prop`` is asked on — itself, or its group's."""
+    return catalog[prop].get("page", prop)
+
+
+def paginate(props: list[str], catalog: dict) -> list[list[str]]:
+    """Group properties into pages, in the order the pages are worked.
+
+    A property that names another in ``page`` is asked on that one's page. That
+    is how the catalog says *these are one derivation*: gross power and the
+    production inside it, grid import and export, the three views of a channel.
+    Splitting those over a page each asked the same question three times and
+    made a sheet twice as long as the work in it.
+    """
+    order = problem_order(props, catalog)
+    groups: dict[str, list[str]] = {}
+    for prop in order:
+        groups.setdefault(anchor_of(prop, catalog), []).append(prop)
+    # An anchor whose own slot is already certified still opens its page — the
+    # page is named after it either way, and its companions still need asking.
+    for anchor in groups:
+        if anchor in groups[anchor]:
+            groups[anchor].remove(anchor)
+            groups[anchor].insert(0, anchor)
+    ranked = problem_order(list(groups), catalog)
+    return [groups[a] for a in ranked]
 
 
 def collect(cases: list[dict], catalog: dict, case_id: str | None, state_id: str | None):
@@ -270,18 +309,18 @@ def collect(cases: list[dict], catalog: dict, case_id: str | None, state_id: str
                 (given if answered else pending).append(exp)
             if not pending:
                 continue
-            order = problem_order([e["property"] for e in pending], catalog)
             by_prop = {e["property"]: e for e in pending}
+            groups = paginate(list(by_prop), catalog)
             sheets.append(
                 {
                     "case": case,
                     "state": state,
-                    "pending": [by_prop[p] for p in order],
+                    "pages": [[by_prop[p] for p in group] for group in groups],
+                    "pending": [by_prop[p] for g in groups for p in g],
                     "given": {e["property"]: e for e in given},
                 }
             )
     return sheets
-
 
 # ---------------------------------------------------------------------------
 # Answer fields. The key structure is printed; every number is blank.
@@ -292,7 +331,7 @@ def blank(width: str = "5.5em") -> str:
     return f'<span class="blank" style="min-width:{width}"></span>'
 
 
-def roster(prop: str, uids: list[str]) -> list[str]:
+def roster(uids: list[str]) -> list[str]:
     """The candidate keys a map-valued answer may use — not its key set.
 
     Printing the engine's keys would give away half of several questions:
@@ -301,55 +340,48 @@ def roster(prop: str, uids: list[str]) -> list[str]:
     in the snapshot gives away nothing — that roster is on page 1 already — and
     turns four anonymous ruled lines into a table you can strike rows out of.
 
-    Only the home base load needs deciding: it is a sink and never a source, so
-    it joins the roster for the sink-keyed properties and stays off the rest.
+    The home base load is never on it. It has no adapter, so it is never a key
+    in any of these maps; what it draws is published by its own properties.
     """
-    if prop.startswith("sink_adapters"):
-        return uids + [HOME]
     return list(uids)
 
 
 def answer_field(meta: dict, uids: list[str]) -> str:
     """Render blanks shaped like the answer, revealing nothing about it.
 
-    Laid out as the docs diagram lays out a published value — key on the left,
-    figure on the right, one hairline per entry — so a number you wrote here
-    and a number you carry onto the next page's input strip look alike.
+    Laid out as the docs value ledger lays out a published value — key on the
+    left, figure on the right, one hairline per entry, the unit stated once in
+    the header — so a number written here and the same number carried onto the
+    next page's input strip look alike.
+
+    A map's roster runs in two columns. Six devices stacked in one column cost
+    more of the page than the working did, and the roster is a checklist rather
+    than something read in order.
     """
     shape, unit = meta["answer_shape"], meta["unit"]
-    suffix = f'<span class="unit">{html.escape(unit)}</span>' if unit else ""
+    nested = shape == "nested_map_fixed_keys"
 
-    if shape in ("map_derived_keys", "map_fixed_keys"):
-        hint = (
-            "Every device in this snapshot is listed. Strike out the rows that "
-            "do not belong — which keys the answer has is part of what you are "
-            "deriving, and there may be none at all."
-        )
+    if shape in ("map_derived_keys", "map_fixed_keys", "nested_map_fixed_keys"):
         rows = "".join(
-            f'<div class="arow"><i class="akey">{html.escape(uid)}</i>'
-            f"{blank()}{suffix}</div>"
-            for uid in roster(meta["property"], uids)
+            f'<div class="arow"><i class="akey">{esc(uid)}</i>{blank()}</div>'
+            for uid in roster(uids)
         )
-    elif shape == "nested_map_fixed_keys":
         hint = (
-            "One row per candidate sink, filled as <code>source = value, source "
-            f"= value</code> in {html.escape(unit)}s. Strike out the rows that "
-            "are not sinks this snapshot — a sink with no attributable supply is "
-            "a row of zeroes, which is not the same thing."
+            "one row per candidate sink, as source = value, source = value"
+            if nested
+            else "strike out the rows that do not belong"
         )
-        rows = "".join(
-            f'<div class="arow"><i class="akey">{html.escape(uid)}</i>{blank()}</div>'
-            for uid in roster(meta["property"], uids)
-        )
+        body = f'<div class="agrid{" wide" if nested else ""}">{rows}</div>'
     else:
         hint = ""
-        rows = (
-            f'<div class="arow"><i class="akey">{html.escape(meta["title"])}</i>'
-            f"{blank()}{suffix}</div>"
-        )
+        body = f'<div class="arow"><i class="akey">=</i>{blank()}</div>'
 
-    hint_html = f'<p class="hint">{hint}</p>' if hint else ""
-    return f'{hint_html}<div class="answer">{rows}</div>'
+    head = (
+        '<div class="ahead"><span>Answer</span>'
+        + (f'<span class="ahint">{esc(hint)}</span>' if hint else "")
+        + f'<span class="aunit">{esc(unit)}</span></div>'
+    )
+    return f'<div class="answer">{head}{body}</div>'
 
 
 # ---------------------------------------------------------------------------
@@ -369,8 +401,8 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 
 /* One .page is one printed side: fixed height, column layout, and whichever
    child is marked .grow eats the slack. That is the whole point of a page per
-   property — the working space is however much of the sheet the question did
-   not need. */
+   derivation — the working space is however much of the sheet the questions
+   did not need. */
 .page { height: 272mm; display: flex; flex-direction: column; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
 .grow { flex: 1 1 auto; min-height: 0; }
@@ -378,109 +410,99 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 .crumb {
   display: flex; justify-content: space-between; align-items: baseline;
   font: 8pt ui-monospace, Menlo, monospace; color: #6a737d;
-  border-bottom: 0.5pt solid #d8dde3; padding-bottom: 1.5mm; margin-bottom: 3mm;
+  border-bottom: 0.5pt solid #d8dde3; padding-bottom: 1.5mm; margin-bottom: 4mm;
   letter-spacing: .04em;
 }
 .crumb .layer { text-transform: uppercase; letter-spacing: .1em; }
 .foot {
-  margin-top: 2.5mm; padding-top: 1.5mm; border-top: 0.5pt solid #d8dde3;
+  margin-top: 3mm; padding-top: 1.5mm; border-top: 0.5pt solid #d8dde3;
   font: 7.5pt ui-monospace, Menlo, monospace; color: #8b949e;
   display: flex; justify-content: space-between;
 }
 
-h1 { font-size: 16pt; margin: 0 0 1mm; letter-spacing: -.01em; }
+h1 { font-size: 16pt; margin: 0 0 1.5mm; letter-spacing: -.01em; }
 h2 { font-size: 13pt; margin: 0 0 2mm; }
-.sub { font: 9pt ui-monospace, Menlo, monospace; color: #6a737d; margin: 0 0 4mm; }
+.sub { font: 9pt ui-monospace, Menlo, monospace; color: #6a737d; margin: 0 0 6mm; }
 .shead { font-size: 8pt; letter-spacing: .1em; text-transform: uppercase;
          color: #6a737d; margin: 0 0 2mm; }
 
 /* ---- page 1: the snapshot ------------------------------------------- */
-.diag { display: flex; gap: 0; margin-bottom: 5mm; }
+.diag { display: flex; gap: 0; }
 .col { flex: 1 1 0; min-width: 0; }
 .colhead { font: 8pt ui-monospace, Menlo, monospace; letter-spacing: .12em;
-           color: #6a737d; text-align: center; margin: 0 0 2.5mm; }
+           color: #6a737d; text-align: center; margin: 0 0 3mm; }
 .spine { width: 22mm; flex: none; position: relative; }
 .spine::before {
-  content: ""; position: absolute; left: 50%; top: 6mm; bottom: 2mm;
+  content: ""; position: absolute; left: 50%; top: 6mm; bottom: 3mm;
   border-left: 0.8pt dashed #c3c9d1;
 }
-/* Under the columns rather than along the spine: a snapshot with one device
-   leaves the gap too short to hold a rotated caption, and it spilled over the
-   rows above and below it. */
 .withheld { text-align: center; font-size: 7.5pt; color: #9aa1ab;
-            margin: 0 0 4mm; letter-spacing: .03em; }
+            margin: 1mm 0 0; letter-spacing: .03em; }
 .card {
   border: 0.8pt solid #d8dde3; border-left: 2.2pt solid var(--c);
-  border-radius: 1.2mm; padding: 2mm 2.5mm; margin-bottom: 2.5mm;
-  display: grid; grid-template-columns: 8mm 1fr auto; column-gap: 2mm;
+  border-radius: 1.2mm; padding: 3mm 3mm; margin-bottom: 3.5mm;
+  display: grid; grid-template-columns: 9mm 1fr auto; column-gap: 2.5mm;
   align-items: center;
 }
 .card.virt { border-style: dashed; border-left-style: solid; }
-.card .gly { width: 7mm; height: 7mm; grid-row: span 2; color: var(--c); }
-.card .uid { font: 600 11pt ui-monospace, Menlo, monospace; }
+.card .gly { width: 8mm; height: 8mm; grid-row: span 2; color: var(--c); }
+.card .uid { font: 600 11.5pt ui-monospace, Menlo, monospace; }
 .card .kind { font-size: 8pt; color: #6a737d; }
-.card .read { font: 700 13pt ui-monospace, Menlo, monospace; text-align: right;
+.card .read { font: 700 14pt ui-monospace, Menlo, monospace; text-align: right;
               white-space: nowrap; }
 .card .read.na { color: #c77e12; font-size: 9.5pt; font-weight: 400; }
-.card .role { grid-column: 2 / 4; font-size: 8pt; color: #6a737d; margin-top: .6mm; }
-.idlerow { border: 0.5pt dashed #d8dde3; border-radius: 1.2mm; padding: 2mm 2.5mm;
-           font-size: 8.5pt; color: #6a737d; margin-bottom: 4mm; }
-.idlerow b { font-family: ui-monospace, Menlo, monospace; color: #24292f; }
-.band { margin-bottom: 4mm; }
+.card .role { grid-column: 2 / 4; font-size: 8pt; color: #6a737d; margin-top: .8mm; }
+.band { margin-top: 2mm; }
 .bandrow { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 22mm; }
 .bandrow .card { opacity: .85; }
 
+.tables > div + div { margin-top: 5mm; }
 table.cfg { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
-table.cfg th, table.cfg td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.3mm 2mm;
+table.cfg th, table.cfg td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.6mm 2mm;
                              text-align: left; vertical-align: top; }
 table.cfg thead th { background: #f6f8fa; border-bottom: 0.8pt solid #d8dde3;
                      font-weight: 600; color: #444d56; white-space: nowrap; }
 table.cfg td.num, table.cfg th.num { text-align: right;
                                      font-family: ui-monospace, Menlo, monospace;
                                      white-space: nowrap; }
-table.cfg td.uid { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
-table.cfg td.kind { white-space: nowrap; }
+table.cfg td.uid { font-family: ui-monospace, Menlo, monospace; font-weight: 600;
+                   white-space: nowrap; }
 .frac { color: #8b949e; font-size: 7.5pt; margin-left: .6em; }
+.tariffline { font-size: 9.5pt; margin: 0 0 2.5mm; }
+.tariffline b { font-family: ui-monospace, Menlo, monospace; }
 
 .given { border: 0.5pt solid #cfd6dd; background: #f6f8fa; border-radius: 1.2mm;
-         padding: 2mm 3mm; margin-top: 4mm; font-size: 9pt; }
+         padding: 2.5mm 3mm; margin-top: 5mm; font-size: 9pt; }
 .given .g { font-family: ui-monospace, Menlo, monospace; }
-.tariff { display: flex; gap: 6mm; font-size: 9pt; margin: 0 0 3mm; }
-.tariff b { font-family: ui-monospace, Menlo, monospace; }
 
-/* ---- page 2: contents and conventions -------------------------------- */
-.toc { column-count: 2; column-gap: 8mm; font-size: 9pt; }
-.toc .lay { break-inside: avoid; margin-bottom: 3mm; }
-.toc .layname { font-size: 8pt; letter-spacing: .08em; text-transform: uppercase;
-                color: #6a737d; border-bottom: 0.5pt solid #e6e9ee;
-                padding-bottom: .8mm; margin-bottom: 1.2mm; }
-.toc .row { display: flex; justify-content: space-between; gap: 2mm;
-            break-inside: avoid; padding: .4mm 0; }
-.toc .row i { font-style: normal; }
-.toc .row b { font: 400 8.5pt ui-monospace, Menlo, monospace; color: #6a737d; }
-.rules { display: flex; gap: 5mm; margin-top: 5mm; }
-.rules > div { flex: 1 1 0; border: 0.5pt solid #d8dde3; border-radius: 1.2mm;
-               padding: 2.5mm 3mm; font-size: 8.5pt; }
-.rules ul { margin: 0; padding-left: 4mm; }
-.rules li { margin-bottom: 1mm; }
-.rules dl { margin: 0; display: grid; grid-template-columns: auto 1fr;
-            gap: .6mm 3mm; font-size: 8.5pt; }
-.rules dt { font-family: ui-monospace, Menlo, monospace; }
-.rules dd { margin: 0; color: #444d56; }
+.legend { display: flex; gap: 5mm; margin-top: 5mm; }
+.legend > div { flex: 1 1 0; border: 0.5pt solid #d8dde3; border-radius: 1.2mm;
+                padding: 2.5mm 3mm; font-size: 8.5pt; }
+.legend ul { margin: 0; padding-left: 4mm; }
+.legend li { margin-bottom: 1mm; }
+.legend dl { margin: 0; display: grid; grid-template-columns: auto 1fr;
+             gap: .6mm 3mm; font-size: 8.5pt; }
+.legend dt { font-family: ui-monospace, Menlo, monospace; }
+.legend dd { margin: 0; color: #444d56; }
 
-/* ---- problem pages ---------------------------------------------------- */
-.ptitle { font-size: 14pt; font-weight: 700; margin: 0 0 1mm; }
-.pname { font: 9.5pt ui-monospace, Menlo, monospace; color: #24292f;
+/* ---- derivation pages ------------------------------------------------- */
+.ptitle { font-size: 14pt; font-weight: 700; margin: 0 0 3mm; }
+.block { margin-bottom: 4mm; }
+.block + .block { border-top: 0.5pt solid #e6e9ee; padding-top: 3mm; }
+.bhead { display: flex; align-items: baseline; gap: 2.5mm; margin: 0 0 1.5mm;
+         flex-wrap: wrap; }
+.bhead .bname { font-size: 11pt; font-weight: 700; }
+.pname { font: 9pt ui-monospace, Menlo, monospace; color: #24292f;
          background: #f0f2f5; padding: .6mm 1.6mm; border-radius: .8mm; }
-.punit { font-size: 8.5pt; color: #6a737d; margin-left: 2mm; }
-.def { font-size: 9.5pt; margin: 2.5mm 0 3mm; color: #24292f; }
-.formula { font: 9pt ui-monospace, Menlo, monospace; background: #f6f8fa;
-           border-left: 2pt solid #d8dde3; padding: 2mm 2.5mm; margin: 0 0 3mm;
+.sensor { font-size: 7.5pt; color: #8b949e; }
+.def { font-size: 9pt; margin: 0 0 2mm; }
+.formula { font: 8.5pt ui-monospace, Menlo, monospace; background: #f6f8fa;
+           border-left: 2pt solid #d8dde3; padding: 1.8mm 2.5mm; margin: 0 0 2mm;
            word-break: break-word; }
-.note { font-size: 8.5pt; font-style: italic; color: #444d56;
-        border-left: 1.5pt solid #d8dde3; padding-left: 2.5mm; margin: 0 0 3mm; }
+.note { font-size: 8pt; font-style: italic; color: #57606a;
+        border-left: 1.5pt solid #d8dde3; padding-left: 2.5mm; margin: 0 0 2mm; }
 .inputs { border: 0.5pt solid #d8dde3; border-radius: 1.2mm; padding: 2mm 3mm;
-          margin: 0 0 3mm; }
+          margin: 0 0 4mm; }
 .inputs .irow { display: flex; align-items: baseline; gap: 2.5mm;
                 font-size: 9pt; padding: .8mm 0; }
 .inputs .iname { flex: none; font-family: ui-monospace, Menlo, monospace;
@@ -492,43 +514,75 @@ table.cfg td.kind { white-space: nowrap; }
 .inputs .from { flex: none; width: 13mm; text-align: right;
                 font: 7.5pt ui-monospace, Menlo, monospace; color: #8b949e;
                 white-space: nowrap; }
-.inputs .none { font-size: 8.5pt; color: #6a737d; }
-ol.steps { margin: 0 0 3mm; padding-left: 5mm; font-size: 9pt; }
-ol.steps li { margin-bottom: 1mm; }
-.answer { margin: 1.5mm 0 0; border: 0.5pt solid #d8dde3; border-radius: 1.2mm;
-          padding: 0 3mm; }
-.arow { display: flex; align-items: baseline; gap: 3mm; padding: 2mm 0;
-        border-bottom: 0.4pt solid #eef1f4;
-        font-family: ui-monospace, Menlo, monospace; font-size: 10pt; }
-.arow:last-child { border-bottom: 0; }
+.inputs .none { font-size: 8.5pt; color: #6a737d; margin: 0; }
+ol.steps { margin: 0 0 2.5mm; padding-left: 5mm; font-size: 8.5pt; }
+ol.steps li { margin-bottom: .8mm; }
+
+/* The answer, laid out like a published value: label, rule, unit up top. */
+.answer { border: 0.6pt solid #c3c9d1; border-radius: 1.2mm; overflow: hidden; }
+.ahead { display: flex; justify-content: space-between; align-items: baseline;
+         background: #f0f2f5; border-bottom: 0.5pt solid #d8dde3;
+         padding: 1.2mm 3mm; font-size: 7.5pt; letter-spacing: .1em;
+         text-transform: uppercase; color: #57606a; }
+.ahead .aunit { letter-spacing: 0; text-transform: none; font-size: 8pt;
+                font-family: ui-monospace, Menlo, monospace; }
+.ahead .ahint { flex: 1 1 auto; text-align: center; letter-spacing: 0;
+                text-transform: none; font-size: 7.5pt; color: #8b949e; }
+.agrid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 6mm;
+         padding: 1.5mm 3mm; }
+.agrid.wide { grid-template-columns: 1fr; }
+.arow { display: flex; align-items: baseline; gap: 3mm; padding: 1.6mm 0;
+        font-family: ui-monospace, Menlo, monospace; font-size: 9.5pt; }
+.answer > .arow { padding: 2mm 3mm; }
+.answer > .arow .akey { min-width: 1.5em; }
 .arow .blank { flex: 1 1 auto; }
-.akey { flex: none; min-width: 8em; font-style: normal; color: #444d56; }
+.akey { flex: none; min-width: 5.5em; font-style: normal; color: #57606a; }
 .blank { display: inline-block; border-bottom: 0.8pt solid #24292f; height: 1.2em; }
-.unit { font-size: 8pt; color: #6a737d; }
-.hint { font-size: 8pt; color: #6a737d; margin: 0 0 1.5mm; }
-/* Faint rules rather than a dot grid: arithmetic is written on lines, and a
-   5 mm dot lattice costs a few thousand vector circles a page — which turned a
-   thirty-page sheet into a five-megabyte PDF. */
-.work { border: 0.5pt dashed #c3c9d1; border-radius: 1.2mm; margin-top: 2.5mm;
-        position: relative;
+.work { border: 0.5pt dashed #c3c9d1; border-radius: 1.2mm; margin-top: 3mm;
+        position: relative; min-height: 18mm;
         background-image: repeating-linear-gradient(
           to bottom, #f0f3f6 0 0.2mm, transparent 0.2mm 7mm); }
 .work span { position: absolute; top: 1mm; right: 2mm; font-size: 7pt;
              color: #aab1b9; letter-spacing: .08em; text-transform: uppercase; }
 
+/* A page carrying three or four derivations tightens rather than overflowing. */
+.dense .ptitle, .denser .ptitle { font-size: 12.5pt; margin-bottom: 2mm; }
+.dense .block, .denser .block { margin-bottom: 2.5mm; }
+.dense .block + .block { padding-top: 2mm; }
+.denser .block { margin-bottom: 1.8mm; }
+.denser .block + .block { padding-top: 1.5mm; }
+.dense .def, .denser .def { font-size: 8.5pt; margin-bottom: 1.5mm; }
+.dense .formula, .denser .formula { font-size: 8pt; padding: 1.4mm 2mm;
+                                    margin-bottom: 1.5mm; }
+.dense ol.steps, .denser ol.steps { font-size: 8pt; margin-bottom: 2mm; }
+.dense .note, .denser .note { font-size: 7.5pt; margin-bottom: 1.5mm; }
+.dense .bhead, .denser .bhead { margin-bottom: 1mm; }
+.dense .bname, .denser .bname { font-size: 10pt; }
+.dense .arow, .denser .arow { padding: 1.2mm 0; font-size: 9pt; }
+.denser .arow { padding: 0.9mm 0; }
+.dense .inputs, .denser .inputs { margin-bottom: 2.5mm; padding: 1.5mm 3mm; }
+.dense .inputs .irow, .denser .inputs .irow { padding: .4mm 0; font-size: 8.5pt; }
+.dense .agrid, .denser .agrid { padding: 1mm 3mm; }
+.dense .ahead, .denser .ahead { padding: .9mm 3mm; }
+.denser .work { min-height: 14mm; }
+
 /* ---- transcription --------------------------------------------------- */
-table.tx { width: 100%; border-collapse: collapse; font-size: 9pt; }
-table.tx th, table.tx td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.6mm 2mm;
+table.tx { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+table.tx th, table.tx td { border-bottom: 0.5pt solid #e6e9ee; padding: 1.35mm 2mm;
                            text-align: left; }
 table.tx thead th { background: #f6f8fa; border-bottom: 0.8pt solid #d8dde3;
-                    font-size: 8pt; letter-spacing: .06em; text-transform: uppercase;
+                    font-size: 7.5pt; letter-spacing: .06em; text-transform: uppercase;
                     color: #444d56; }
-table.tx td.p { font: 8.5pt ui-monospace, Menlo, monospace; color: #6a737d;
-                width: 10mm; }
-table.tx td.n { font: 8.5pt ui-monospace, Menlo, monospace; width: 62mm; }
-table.tx td.v { border-bottom: 0.8pt solid #24292f; width: 38mm; }
-table.tx td.ref { width: 38mm; font: 8pt ui-monospace, Menlo, monospace;
-                  color: #8b949e; }
+table.tx td.p { font: 7.5pt ui-monospace, Menlo, monospace; color: #8b949e;
+                width: 8mm; }
+table.tx td.n { font: 7.5pt ui-monospace, Menlo, monospace; }
+table.tx td.v { border-bottom: 0.8pt solid #24292f; width: 26mm; }
+table.tx td.ref { width: 26mm; font: 7pt ui-monospace, Menlo, monospace;
+                  color: #8b949e; white-space: nowrap; }
+.txcols { display: flex; gap: 6mm; align-items: flex-start; }
+.txcols > table { flex: 1 1 0; min-width: 0; }
+table.tx tr.lay td { background: #f6f8fa; font-size: 7.5pt; letter-spacing: .08em;
+                     text-transform: uppercase; color: #6a737d; }
 """
 
 
@@ -605,6 +659,41 @@ def given_text(value, unit: str) -> str:
     return f"{text} = {frac}" if frac else text
 
 
+def config_table(topology: list[dict], keys: list[tuple], caption: str) -> str:
+    """One table over the topology, for the config keys it actually uses."""
+    used = [
+        (key, label, unit)
+        for key, label, unit in keys
+        if any(key in a.get("config", {}) for a in topology)
+    ]
+    if not used:
+        return ""
+    head = "".join(
+        f'<th class="{"num" if unit else ""}">{esc(label)}</th>' for _, label, unit in used
+    )
+    rows = []
+    for adapter in topology:
+        cfg = adapter.get("config", {})
+        if not any(key in cfg for key, _, _ in used):
+            continue
+        cells = []
+        for key, _, unit in used:
+            if key not in cfg:
+                cells.append(f'<td class="{"num" if unit else ""}">·</td>')
+                continue
+            text, frac = fmt_config(key, cfg[key], unit)
+            extra = f'<span class="frac">= {esc(frac)}</span>' if frac else ""
+            cells.append(f'<td class="{"num" if unit else ""}">{esc(text)}{extra}</td>')
+        rows.append(f'<tr><td class="uid">{esc(adapter["uid"])}</td>{"".join(cells)}</tr>')
+    if not rows:
+        return ""
+    return (
+        f'<p class="shead">{esc(caption)}</p>'
+        f'<table class="cfg"><thead><tr><th>device</th>{head}</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody></table>'
+    )
+
+
 def render_snapshot_page(sheet: dict, props: dict, sheet_id: str, total: int) -> str:
     """Page 1 — the wiring and the readings, and nothing derived from them.
 
@@ -645,10 +734,10 @@ def render_snapshot_page(sheet: dict, props: dict, sheet_id: str, total: int) ->
         crumb("the snapshot", f"{case['id']} / {state['id']}", "readings — given"),
         f"<h1>{esc(case['title'])}</h1>",
         f'<p class="sub">{esc(case["id"])} / {esc(state["id"])} · '
-        f"{len(sheet['pending'])} values to derive</p>",
+        f"{len(sheet['pending'])} values over {len(sheet['pages'])} pages</p>",
         '<div class="diag">',
         '<div class="col"><p class="colhead">SOURCES</p>'
-        + ("".join(sources) or '<div class="idlerow">No source this snapshot.</div>')
+        + ("".join(sources) or '<div class="card">No source this snapshot.</div>')
         + "</div>",
         '<div class="spine"></div>',
         '<div class="col"><p class="colhead">SINKS</p>' + "".join(sinks) + "</div>",
@@ -668,51 +757,38 @@ def render_snapshot_page(sheet: dict, props: dict, sheet_id: str, total: int) ->
         parts.append(
             '<div class="band"><p class="colhead">NEITHER</p>'
             f'<div class="bandrow">{"".join(neither)}</div>'
-            f'<p class="hint">{esc("; ".join(caveats))}.</p></div>'
+            f'<p class="withheld">{esc("; ".join(caveats))}.</p></div>'
         )
 
     parts.append(
         '<p class="withheld">Flows between these devices are not drawn — '
         "which source served which sink is what you are deriving.</p>"
     )
+    parts.append('<div class="grow"></div>')
 
-    # Static configuration — the numbers a reading alone does not carry.
-    used = [
-        (key, label, unit)
-        for key, label, unit in CONFIG_LABELS
-        if any(key in a.get("config", {}) for a in case["topology"])
-    ]
-    head = "".join(
-        f'<th class="{"num" if unit else ""}">{esc(label)}</th>' for _, label, unit in used
-    )
-    rows = []
-    for adapter in case["topology"]:
-        cfg = adapter.get("config", {})
-        cells = []
-        for key, _, unit in used:
-            if key not in cfg:
-                cells.append(f'<td class="{"num" if unit else ""}">·</td>')
-                continue
-            text, frac = fmt_config(key, cfg[key], unit)
-            extra = f'<span class="frac">= {esc(frac)}</span>' if frac else ""
-            cells.append(f'<td class="{"num" if unit else ""}">{esc(text)}{extra}</td>')
-        rows.append(
-            f'<tr><td class="uid">{esc(adapter["uid"])}</td>'
-            f'<td class="kind">{esc(KIND_LABEL[adapter["kind"]])}</td>'
-            f"{''.join(cells)}</tr>"
-        )
-
+    # Two tables, not one: what energy costs is a different question from where
+    # it is allowed to go, and the sheet asks them on different pages.
     price_text, price_frac = fmt_unit(state["price"], "EUR/kWh")
-    parts.append('<p class="shead">Configuration and tariffs</p>')
     parts.append(
-        f'<p class="tariff"><span>Grid price <b>{esc(price_text)}</b>'
+        '<p class="tariffline">Grid price '
+        f"<b>{esc(price_text)}</b>"
         + (f'<span class="frac">= {esc(price_frac)}</span>' if price_frac else "")
-        + "</span></p>"
+        + " · the tariff every avoided cost is priced against.</p>"
+    )
+    parts.append('<div class="tables">')
+    parts.append(
+        "<div>"
+        + config_table(case["topology"], PRICE_LABELS, "Tariffs — what this device's energy costs")
+        + "</div>"
     )
     parts.append(
-        '<table class="cfg"><thead><tr><th>device</th><th>kind</th>'
-        f"{head}</tr></thead><tbody>{''.join(rows)}</tbody></table>"
+        "<div>"
+        + config_table(
+            case["topology"], ROUTING_LABELS, "Routing — where its power may come from and go"
+        )
+        + "</div>"
     )
+    parts.append("</div>")
 
     if sheet["given"]:
         entries = "".join(
@@ -725,84 +801,72 @@ def render_snapshot_page(sheet: dict, props: dict, sheet_id: str, total: int) ->
             f"{entries}</div>"
         )
 
-    # Whatever the snapshot did not need is working space, on the one page the
-    # deriver keeps flipping back to. Sums over the readings get re-derived on
-    # half the pages that follow; they may as well live here.
-    parts.append('<div class="work grow"><span>scratch</span></div>')
-    parts.append(foot(sheet_id, PAGE_SNAPSHOT, total))
-    parts.append("</section>")
-    return "".join(parts)
-
-
-def render_contents_page(
-    sheet: dict, sheet_id: str, catalog: dict, layers: dict, pages: dict, total: int
-) -> str:
-    props = catalog["properties"]
-    groups: dict[int, list[str]] = {}
-    for exp in sheet["pending"]:
-        groups.setdefault(props[exp["property"]]["layer"], []).append(exp["property"])
-
-    blocks = []
-    for layer in sorted(groups):
-        rows = "".join(
-            f'<div class="row"><i>{esc(props[p]["title"])}</i>'
-            f"<b>{pages[p]}</b></div>"
-            for p in groups[layer]
-        )
-        blocks.append(
-            f'<div class="lay"><p class="layname">{layer} · '
-            f'{esc(layers.get(str(layer), f"Layer {layer}"))}</p>{rows}</div>'
-        )
-
     units = sorted({props[e["property"]]["unit"] for e in sheet["pending"]})
     tolerances = "".join(
         f"<dt>{esc(unit)}</dt><dd>{esc(TOLERANCE_NOTE.get(unit, 'exact'))}</dd>"
         for unit in units
     )
-
-    return "".join(
-        [
-            '<section class="page">',
-            crumb(
-                "how to work this sheet",
-                f"{sheet['case']['id']} / {sheet['state']['id']}",
-                "conventions",
-            ),
-            "<h2>Contents</h2>",
-            '<p class="sub">One property per page, in an order where nothing is '
-            "asked before the figures it is built on.</p>",
-            f'<div class="toc">{"".join(blocks)}</div>',
-            '<div class="rules">',
-            "<div><p class='shead'>Sign convention</p><ul>"
-            "<li><b>Grid</b> — positive is importing, negative is exporting.</li>"
-            "<li><b>PV and battery</b> — positive is producing or discharging, "
-            "negative is standby draw or charging.</li>"
-            "<li><b>Consumer</b> — negative is a load.</li>"
-            "<li>Exactly zero is idle: neither source nor sink.</li>"
-            "<li>No reading at all is not zero.</li></ul></div>",
-            "<div><p class='shead'>Recording an answer</p><ul>"
-            "<li>Exact rationals are welcome — <code>8/15</code> is a better "
-            "answer than <code>0.533</code>.</li>"
-            "<li><b>nothing</b> is an answer: the engine should publish no value "
-            "here. It is not the same as zero.</li>"
-            "<li>Copy each result onto the last page as you go, then type that "
-            f"page in with <code>tools/certify.py --sheet {esc(sheet_id)}</code>."
-            "</li></ul></div>",
-            f"<div class='grow'><p class='shead'>Accepted precision</p>"
-            f"<dl>{tolerances}</dl>"
-            "<p style='margin:2.5mm 0 0;color:#6a737d'>Carrying a share past "
-            "three decimals buys nothing — that is where certification stops "
-            "caring.</p></div>",
-            "</div>",
-            '<div class="grow"></div>',
-            foot(sheet_id, PAGE_CONTENTS, total),
-            "</section>",
-        ]
+    parts.append(
+        '<div class="legend">'
+        "<div><p class='shead'>Sign convention</p><ul>"
+        "<li><b>Grid</b> — positive imports, negative exports.</li>"
+        "<li><b>PV and battery</b> — positive produces or discharges, negative "
+        "draws standby or charges.</li>"
+        "<li><b>Consumer</b> — negative is a load.</li>"
+        "<li>Exactly zero is idle; no reading at all is not zero.</li></ul></div>"
+        "<div><p class='shead'>Recording an answer</p><ul>"
+        "<li>Exact rationals are welcome — <code>8/15</code> beats "
+        "<code>0.533</code>.</li>"
+        "<li><b>nothing</b> is an answer: the engine should publish no value "
+        "here. It is not zero.</li>"
+        "<li>Copy each result onto the last page as you go.</li></ul></div>"
+        f"<div><p class='shead'>Accepted precision</p><dl>{tolerances}</dl></div>"
+        "</div>"
     )
+    parts.append(foot(sheet_id, PAGE_SNAPSHOT, total))
+    parts.append("</section>")
+    return "".join(parts)
 
 
-def render_problem_page(
-    exp: dict,
+def input_strip(group: list[str], props: dict, sheet: dict, pages: dict) -> str:
+    """The values this page's derivations are built on, and where they live.
+
+    Certified inputs arrive filled in; the rest point at the page you derived
+    them on. Carrying a value forward was the main reason to flip back through
+    a sheet, and this makes it a glance. Inputs derived on this very page are
+    left out — they are a few centimetres up.
+    """
+    rows = []
+    seen = set()
+    for prop in group:
+        for dep in props[prop]["depends_on"]:
+            if dep in seen or dep in group or dep not in props:
+                continue
+            seen.add(dep)
+            given = sheet["given"].get(dep)
+            if given is not None and not isinstance(given["value"], dict):
+                value = f'<span class="ival">{esc(given_text(given["value"], props[dep]["unit"]))}</span>'
+                source = "given, p.1"
+            elif given is not None:
+                value = '<span class="ival">see p.1</span>'
+                source = "given, p.1"
+            else:
+                value = blank("7em")
+                source = f"your p.{pages[dep]}" if dep in pages else ""
+            rows.append(
+                f'<div class="irow"><span class="iname">{esc(dep)}</span>'
+                f'<span class="ititle">{esc(props[dep]["title"])}</span>{value}'
+                f'<span class="from">{esc(source)}</span></div>'
+            )
+    body = "".join(rows) or (
+        '<p class="none">None derived — this page comes straight off the '
+        "readings and the configuration on page 1.</p>"
+    )
+    return f'<div class="inputs"><p class="shead">Inputs</p>{body}</div>'
+
+
+def render_page(
+    group: list[dict],
     sheet: dict,
     sheet_id: str,
     catalog: dict,
@@ -812,70 +876,65 @@ def render_problem_page(
     total: int,
     uids: list[str],
 ) -> str:
+    """One page: every property the catalog groups onto it, then the working."""
     props = catalog["properties"]
-    prop = exp["property"]
-    meta = dict(props[prop], property=prop)
-    layer = meta["layer"]
+    names = [exp["property"] for exp in group]
+    # The page is named after the property that anchors it, even on the day
+    # that one is already certified and only its companions are still pending.
+    anchor = props[anchor_of(names[0], props)]
+    layer = anchor["layer"]
+    title = anchor.get("page_title", anchor["title"])
 
-    steps = "".join(f"<li>{esc(s)}</li>" for s in meta["worksheet_steps"])
-    formula = (
-        f'<div class="formula">{esc(meta["formula"])}</div>' if meta.get("formula") else ""
-    )
-    note = f'<p class="note">{esc(meta["note"])}</p>' if meta.get("note") else ""
-
-    # The dependency strip. Certified inputs arrive filled in; the rest point at
-    # the page you derived them on, so carrying a value forward is a glance
-    # rather than a hunt back through thirty sheets.
-    rows = []
-    for dep in meta["depends_on"]:
-        if dep not in props:
-            continue
-        title = props[dep]["title"]
-        given = sheet["given"].get(dep)
-        if given is not None and not isinstance(given["value"], dict):
-            text = given_text(given["value"], props[dep]["unit"])
-            value = f'<span class="ival">{esc(text)}</span>'
-            source = "given, p.1"
-        elif given is not None:
-            value = '<span class="ival">see p.1</span>'
-            source = "given, p.1"
-        elif dep in pages:
-            value = blank("7em")
-            source = f"your p.{pages[dep]}"
-        else:
-            value = blank("7em")
-            source = ""
-        rows.append(
-            f'<div class="irow"><span class="iname">{esc(dep)}</span>'
-            f'<span class="ititle">{esc(title)}</span>{value}'
-            f'<span class="from">{esc(source)}</span></div>'
+    blocks = []
+    seen_notes: set[str] = set()
+    for name in names:
+        meta = props[name]
+        sensor = (
+            f'<span class="sensor">sensor: {esc(", ".join(meta["sensors"]))}</span>'
+            if meta.get("sensors")
+            else '<span class="sensor">no sensor of its own — an input to the '
+            "values it shares this page with</span>"
         )
-    inputs = (
-        f'<div class="inputs"><p class="shead">Inputs</p>{"".join(rows)}</div>'
-        if rows
-        else '<div class="inputs"><p class="shead">Inputs</p>'
-        '<p class="none">None derived — this one comes straight off the '
-        "readings on page 1.</p></div>"
-    )
+        steps = "".join(f"<li>{esc(s)}</li>" for s in meta["worksheet_steps"])
+        # The three views of a channel carry the same caveat. Printing it three
+        # times costs a third of the working space and reads as an oversight.
+        note = meta.get("note")
+        if note in seen_notes:
+            note = None
+        elif note:
+            seen_notes.add(note)
+        blocks.append(
+            '<div class="block">'
+            f'<div class="bhead"><span class="bname">{esc(meta["title"])}</span>'
+            f'<span class="pname">{esc(name)}</span>{sensor}</div>'
+            f'<p class="def">{esc(meta["definition"])}</p>'
+            + (
+                f'<div class="formula">{esc(meta["formula"])}</div>'
+                if meta.get("formula")
+                else ""
+            )
+            + (f'<ol class="steps">{steps}</ol>' if steps else "")
+            + (f'<p class="note">{esc(note)}</p>' if note else "")
+            + answer_field(dict(meta, property=name), uids)
+            + "</div>"
+        )
 
+    # Typography tightens as a page fills. Every page is one sheet — the page
+    # numbers on the input strips say so — so a page that would overflow has to
+    # give somewhere, and giving a point of leading is better than giving the
+    # working space or splitting a derivation across a fold.
+    density = "" if len(names) < 3 else " dense" if len(names) == 3 else " denser"
     return "".join(
         [
-            '<section class="page">',
+            f'<section class="page{density}">',
             crumb(
                 f"layer {layer} · {layers.get(str(layer), '')}",
                 f"{sheet['case']['id']} / {sheet['state']['id']}",
-                f"{page - PAGE_FIRST_PROBLEM + 1} of {len(sheet['pending'])}",
+                f"{len(names)} value{'s' if len(names) > 1 else ''}",
             ),
-            f'<p class="ptitle">{esc(meta["title"])}</p>',
-            f'<p style="margin:0 0 1mm"><span class="pname">{esc(prop)}</span>'
-            f'<span class="punit">answers in {esc(meta["unit"])}</span></p>',
-            f'<p class="def">{esc(meta["definition"])}</p>',
-            formula,
-            inputs,
-            f'<p class="shead">Steps</p><ol class="steps">{steps}</ol>',
-            note,
-            '<p class="shead">Answer</p>',
-            answer_field(meta, uids),
+            f'<p class="ptitle">{esc(title)}</p>',
+            input_strip(names, props, sheet, pages),
+            "".join(blocks),
             '<div class="work grow"><span>working</span></div>',
             foot(sheet_id, page, total),
             "</section>",
@@ -884,12 +943,25 @@ def render_problem_page(
 
 
 def render_transcription_page(
-    sheet: dict, sheet_id: str, catalog: dict, pages: dict, total: int
+    sheet: dict, sheet_id: str, catalog: dict, layers: dict, pages: dict, total: int
 ) -> str:
+    """The last page: every answer in one column, ready to be typed in.
+
+    Two tables side by side rather than one long one — seventy values do not
+    fit down a single A4 page, and a transcription sheet that runs onto a
+    second page stops being the one place the snapshot is visible at once.
+    """
     props = catalog["properties"]
-    cells = []
+    rows = []
+    layer = None
     for exp in sheet["pending"]:
         prop = exp["property"]
+        if props[prop]["layer"] != layer:
+            layer = props[prop]["layer"]
+            rows.append(
+                f'<tr class="lay"><td colspan="3">{layer} · '
+                f'{esc(layers.get(str(layer), ""))}</td></tr>'
+            )
         # A map does not fit on a line and pretending otherwise would invite a
         # half-copied answer. It stays on its own page and gets typed in from
         # there; the column is for the scalars, where a value that contradicts
@@ -899,24 +971,30 @@ def render_transcription_page(
             if props[prop]["answer_shape"] == "scalar"
             else f'<td class="ref">read off p.{pages[prop]}</td>'
         )
-        cells.append(
+        rows.append(
             f'<tr><td class="p">p.{pages[prop]}</td>'
-            f'<td>{esc(props[prop]["title"])}</td>'
             f'<td class="n">{esc(prop)}</td>{value}</tr>'
         )
-    rows = "".join(cells)
+
+    half = (len(rows) + 1) // 2
+    # Never start a column on a layer heading that belongs to the rows above it.
+    if half < len(rows) and 'class="lay"' in rows[half - 1]:
+        half -= 1
+    head = '<thead><tr><th>page</th><th>property</th><th>value</th></tr></thead>'
+    tables = "".join(
+        f'<table class="tx">{head}<tbody>{"".join(part)}</tbody></table>'
+        for part in (rows[:half], rows[half:])
+        if part
+    )
     return "".join(
         [
             '<section class="page">',
             crumb("transcription", f"{sheet['case']['id']} / {sheet['state']['id']}", ""),
             "<h2>Answers</h2>",
-            '<p class="sub">Copy each result here as you finish its page. This is '
-            "the page you type in, and the one place the whole snapshot is "
-            "visible at once — an answer that contradicts one above it is "
-            "much easier to spot in a column than thirty pages apart.</p>",
-            '<table class="tx"><thead><tr><th>page</th><th>property</th>'
-            "<th>name</th><th>value</th></tr></thead>"
-            f"<tbody>{rows}</tbody></table>",
+            '<p class="sub">Copy each result here as you finish its page, then '
+            f"type this page in with <code>tools/certify.py --sheet "
+            f"{esc(sheet_id)}</code>.</p>",
+            f'<div class="txcols">{tables}</div>',
             '<div class="grow"></div>',
             foot(sheet_id, total, total),
             "</section>",
@@ -932,44 +1010,49 @@ def render(sheet: dict, catalog: dict) -> tuple[str, str, dict]:
     uids = [a["uid"] for a in case["topology"]]
 
     pages = {
-        exp["property"]: PAGE_FIRST_PROBLEM + i for i, exp in enumerate(sheet["pending"])
+        exp["property"]: PAGE_FIRST_PROBLEM + i
+        for i, group in enumerate(sheet["pages"])
+        for exp in group
     }
-    # Snapshot, contents, one page each, transcription last — so the last page
+    # Snapshot, one page per group, transcription last — so the last page
     # number and the page count are the same number.
-    total = PAGE_FIRST_PROBLEM + len(sheet["pending"])
+    total = PAGE_FIRST_PROBLEM + len(sheet["pages"])
 
     parts = [
         "<!doctype html><meta charset='utf-8'>",
         f"<title>Certification sheet {esc(sheet_id)}</title>",
         f"<style>{CSS}</style>",
         render_snapshot_page(sheet, catalog["properties"], sheet_id, total),
-        render_contents_page(sheet, sheet_id, catalog, layers, pages, total),
     ]
     manifest = []
-    for n, exp in enumerate(sheet["pending"], start=1):
-        page = pages[exp["property"]]
+    n = 0
+    for i, group in enumerate(sheet["pages"]):
+        page = PAGE_FIRST_PROBLEM + i
         parts.append(
-            render_problem_page(
-                exp, sheet, sheet_id, catalog, layers, pages, page, total, uids
+            render_page(
+                group, sheet, sheet_id, catalog, layers, pages, page, total, uids
             )
         )
-        manifest.append(
-            {
-                "n": n,
-                "case": case["id"],
-                "state": state["id"],
-                "property": exp["property"],
-                "page": page,
-            }
-        )
-    parts.append(render_transcription_page(sheet, sheet_id, catalog, pages, total))
+        for exp in group:
+            n += 1
+            manifest.append(
+                {
+                    "n": n,
+                    "case": case["id"],
+                    "state": state["id"],
+                    "property": exp["property"],
+                    "page": page,
+                }
+            )
+    parts.append(
+        render_transcription_page(sheet, sheet_id, catalog, layers, pages, total)
+    )
 
     return (
         sheet_id,
         "\n".join(parts),
         {"id": sheet_id, "case": case["id"], "state": state["id"], "problems": manifest},
     )
-
 
 # ---------------------------------------------------------------------------
 # PDF
@@ -1015,6 +1098,22 @@ def to_pdf(chrome: str, html_path: pathlib.Path, pdf_path: pathlib.Path) -> bool
     return pdf_path.exists()
 
 
+def pdf_pages(pdf_path: pathlib.Path) -> int:
+    """Sheets in a rendered PDF, or 0 if they cannot be counted.
+
+    The check this exists for: every page of a worksheet is one printed side,
+    and the page numbers on the input strips are computed before anything is
+    rendered. A page that grows past the paper takes the numbering with it, and
+    it does so quietly — the sheet still prints, it just stops pointing at the
+    right pages. Counting what came out is the cheapest way to be told.
+    """
+    try:
+        blob = pdf_path.read_bytes()
+    except OSError:
+        return 0
+    return len(re.findall(rb"/Type\s*/Page[^s]", blob))
+
+
 # ---------------------------------------------------------------------------
 
 
@@ -1043,10 +1142,19 @@ def main() -> int:
         html_path = out / f"sheet-{sheet_id}.html"
         html_path.write_text(document)
         (out / f"sheet-{sheet_id}.json").write_text(json.dumps(manifest, indent=2) + "\n")
-        pages = PAGE_FIRST_PROBLEM + len(sheet["pending"])
-        line = f"{sheet_id}: {len(manifest['problems'])} problem(s), {pages} pages"
+        pages = PAGE_FIRST_PROBLEM + len(sheet["pages"])
+        line = (
+            f"{sheet_id}: {len(manifest['problems'])} value(s) over "
+            f"{len(sheet['pages'])} derivation pages, {pages} pages total"
+        )
         if chrome and to_pdf(chrome, html_path, out / f"sheet-{sheet_id}.pdf"):
             line += " → pdf"
+            printed = pdf_pages(out / f"sheet-{sheet_id}.pdf")
+            if printed and printed != pages:
+                line += (
+                    f"  ** {printed} sheets printed, not {pages}: a page has "
+                    f"outgrown the paper and the page references are now wrong **"
+                )
         print(line)
 
     print(f"\n{len(sheets)} worksheet(s) in {out}")

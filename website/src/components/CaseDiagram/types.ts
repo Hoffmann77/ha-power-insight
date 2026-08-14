@@ -104,6 +104,14 @@ export interface PropertyDoc {
   answer_shape?: string;
   worksheet_steps?: string[];
   note?: string;
+  /** The HA sensors this property feeds, as `scope:key`. Empty for a property
+   * that is only ever an input to the ones grouped with it. */
+  sensors?: string[];
+  /** The property whose worksheet page this one is derived on, when the
+   * catalog groups several values into one derivation. */
+  page?: string;
+  /** What that grouped page is called, set on the property that anchors it. */
+  page_title?: string;
 }
 
 export interface PropertyCatalog {
