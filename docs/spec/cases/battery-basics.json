@@ -51,6 +51,7 @@
     {
       "id": "charging",
       "note": "bat1 charges from the mix, taking the same proportions as the metered load beside it.",
+      "asks": "c0f8ec82343b15e4",
       "readings": {
         "grid": "800",
         "pv1": "600",
@@ -61,245 +62,218 @@
       "expectations": [
         {
           "property": "gross_power",
-          "value": "1400",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_import",
-          "value": "800",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_export",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_production",
-          "value": "600",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_charging_power",
-          "value": "600",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_discharging_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_standby_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_consumption",
-          "value": "800",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_power",
-          "value": "300",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_source_shares",
-          "value": {
-            "bat1": {
-              "grid": "4/7",
-              "pv1": "3/7"
-            },
-            "cons1": {
-              "grid": "4/7",
-              "pv1": "3/7"
-            }
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_source_shares",
-          "value": {
-            "grid": "4/7",
-            "pv1": "3/7"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_restriction_deficit",
-          "value": {},
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_export_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_consumption_ratio",
-          "value": "4/7",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_charging_ratio",
-          "value": "3/7",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_standby_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_applicable_consumption_ratio",
-          "value": "1",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_power",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_shares",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_standby_power",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_coe_rate",
-          "value": "6/25",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_lcoe_rate",
-          "value": "3/10",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_avoided_cost_rate",
-          "value": "18/175",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_saving_rate",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_export_compensation_rate",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_coe",
-          "value": {
-            "grid": "3/10",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
-          "value": {
-            "grid": "3/10",
-            "pv1": "1/10"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         }
       ]
@@ -307,6 +281,7 @@
     {
       "id": "discharging",
       "note": "The sun is down and bat1 has become a source, supplying two thirds of the house.",
+      "asks": "a629b22f013175ca",
       "readings": {
         "grid": "200",
         "pv1": "0",
@@ -317,241 +292,218 @@
       "expectations": [
         {
           "property": "gross_power",
-          "value": "600",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_import",
-          "value": "200",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_export",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_production",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_charging_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_discharging_power",
-          "value": "400",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_standby_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_consumption",
-          "value": "600",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_power",
-          "value": "100",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_source_shares",
-          "value": {
-            "cons1": {
-              "grid": "1/3",
-              "bat1": "2/3"
-            }
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_source_shares",
-          "value": {
-            "grid": "1/3",
-            "bat1": "2/3"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_restriction_deficit",
-          "value": {},
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_export_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_consumption_ratio",
-          "value": "1",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_charging_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_standby_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_applicable_consumption_ratio",
-          "value": "1",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_power",
-          "value": {
-            "grid": "0",
-            "bat1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_shares",
-          "value": {
-            "grid": "0",
-            "bat1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_standby_power",
-          "value": {
-            "grid": "0",
-            "bat1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_coe_rate",
-          "value": "3/50",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_lcoe_rate",
-          "value": "3/25",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_avoided_cost_rate",
-          "value": "3/25",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_saving_rate",
-          "value": "3/25",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_export_compensation_rate",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_coe",
-          "value": {
-            "grid": "3/10",
-            "bat1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
-          "value": {
-            "grid": "3/10",
-            "bat1": "3/20"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         }
       ]
@@ -559,6 +511,7 @@
     {
       "id": "idle",
       "note": "bat1 sits at exactly 0 W: neither a source nor a sink, and absent from both groups.",
+      "asks": "9ec713f6789e867c",
       "readings": {
         "grid": "900",
         "pv1": "600",
@@ -569,241 +522,218 @@
       "expectations": [
         {
           "property": "gross_power",
-          "value": "1500",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_import",
-          "value": "900",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_grid_export",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_production",
-          "value": "600",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_charging_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_discharging_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_standby_power",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_consumption",
-          "value": "1500",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_power",
-          "value": "1000",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_source_shares",
-          "value": {
-            "cons1": {
-              "grid": "3/5",
-              "pv1": "2/5"
-            }
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "home_base_load_source_shares",
-          "value": {
-            "grid": "3/5",
-            "pv1": "2/5"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "sink_adapters_restriction_deficit",
-          "value": {},
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_export_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_consumption_ratio",
-          "value": "1",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_charging_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_standby_ratio",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "gross_power_applicable_consumption_ratio",
-          "value": "1",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_power",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_export_shares",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_standby_power",
-          "value": {
-            "grid": "0",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_coe_rate",
-          "value": "27/100",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_lcoe_rate",
-          "value": "33/100",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_avoided_cost_rate",
-          "value": "9/50",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_saving_rate",
-          "value": "9/50",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "combined_export_compensation_rate",
-          "value": "0",
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_coe",
-          "value": {
-            "grid": "3/10",
-            "pv1": "0"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
-          "value": {
-            "grid": "3/10",
-            "pv1": "1/10"
-          },
+          "value": null,
           "derivation": [],
           "certification": {
-            "status": "unverified"
+            "status": "pending"
           }
         }
       ]

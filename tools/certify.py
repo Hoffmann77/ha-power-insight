@@ -1,8 +1,15 @@
 """Enter hand-derived answers against an issued worksheet and stamp the corpus.
 
+The corpus holds no value this tool did not put there. Slots arrive empty from
+``tools/gen_cases.py``, and the only way one gets filled is somebody working it
+out from the model and typing it in here — which is why the engine can be
+meaningfully asserted against the result afterwards.
+
 The contract this tool exists to enforce: a certification means *a human worked
-this out independently and got the same number*. So the engine's value is never
-shown before you answer.
+this out independently and got the same number*. The engine is consulted live,
+at the moment you answer, and never before — its answer is not in the case
+file to be glimpsed, so blindness is now a property of the data rather than a
+discipline this tool has to maintain.
 
 On a mismatch it asks you to re-check first, still without revealing anything —
 most mismatches are arithmetic slips, and revealing the answer at that point
@@ -18,6 +25,11 @@ Usage::
 
 Answers accept exact rationals or decimals: ``1400``, ``-600``, ``8/15``,
 ``0.533``. Press Enter on a prompt to skip a problem and leave it pending.
+
+Map-valued properties are entered free-form, as ``key = value`` lines. Which
+keys belong in the answer is part of what you are deriving — whether a grid
+that is importing appears in the export attribution at all, say — so the tool
+does not hand you the key set to fill in.
 """
 
 from __future__ import annotations
@@ -31,6 +43,10 @@ import sys
 from fractions import Fraction
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from tests.engine.scenario_framework import engine_from_corpus  # noqa: E402
+
 CASES = ROOT / "docs" / "spec" / "cases"
 CATALOG = ROOT / "docs" / "spec" / "properties.json"
 SHEETS = ROOT / "worksheets"
@@ -47,9 +63,18 @@ TOLERANCE = {
 }
 
 
-def rat(text: str) -> Fraction:
-    """Parse an exact rational or a decimal."""
+#: A derived answer of "the engine should report nothing here". Distinct from
+#: an empty slot: null means nobody has worked this out, whereas this means
+#: somebody worked it out and *nothing* is the answer — which for a snapshot
+#: with an unavailable sensor is the whole point of the exercise.
+UNAVAILABLE = "unavailable"
+
+
+def rat(text: str) -> Fraction | str:
+    """Parse an exact rational, a decimal, or the unavailable marker."""
     text = text.strip()
+    if text.lower() in (UNAVAILABLE, "none", "nothing"):
+        return UNAVAILABLE
     if "/" in text:
         num, _, den = text.partition("/")
         return Fraction(int(num.strip()), int(den.strip()))
@@ -91,18 +116,22 @@ def ask(prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def collect_answer(shape: str, value, unit: str):
-    """Prompt for an answer in the same shape as the stored value.
+def collect_answer(shape: str, unit: str):
+    """Prompt for an answer, in the shape the property's answer takes.
 
-    Returns the answer as nested Fractions, or ``None`` to skip.
+    Nothing is pre-filled and no key set is offered, because there is no
+    engine answer in the file to derive one from — and because which keys
+    belong in a map is itself part of the derivation. A scalar is one number;
+    a map is free-form ``key = value`` lines; a nested map is one line per
+    sink. Returns nested Fractions, or ``None`` to skip.
     """
     if shape == "scalar":
-        raw = ask(f"    answer ({unit}): ")
+        raw = ask(f"    answer ({unit}, or `unavailable`): ")
         return None if not raw.strip() else rat(raw)
 
-    if shape == "map_derived_keys":
+    if shape in ("map_derived_keys", "map_fixed_keys"):
         print(f"    list each entry as `key = value` ({unit}); blank line ends, "
-              f"`none` if there are no entries")
+              f"`none` if the answer has no entries")
         out: dict[str, Fraction] = {}
         while True:
             raw = ask("      > ").strip()
@@ -116,54 +145,66 @@ def collect_answer(shape: str, value, unit: str):
                 continue
             out[key.strip()] = rat(val)
 
-    if shape == "map_fixed_keys":
-        if not isinstance(value, dict) or not value:
-            raw = ask(f"    expected empty; press Enter to confirm, or type `key = value`: ").strip()
-            if not raw:
-                return {}
-            key, _, val = raw.partition("=")
-            return {key.strip(): rat(val)}
-        out = {}
-        for key in value:
-            raw = ask(f"      {key} ({unit}): ")
-            if not raw.strip():
-                return None
-            out[key] = rat(raw)
-        return out
-
     if shape == "nested_map_fixed_keys":
-        if not isinstance(value, dict) or not value:
-            ask("    expected empty; press Enter to confirm: ")
-            return {}
-        columns: list[str] = []
-        for row in value.values():
-            for col in row:
-                if col not in columns:
-                    columns.append(col)
-        out = {}
-        for sink in value:
-            raw = ask(f"      {sink} ({' '.join(columns)}): ")
-            if not raw.strip():
-                return None
-            parts = raw.replace(",", " ").split()
-            if len(parts) != len(columns):
-                print(f"      expected {len(columns)} values, got {len(parts)}")
-                return None
-            out[sink] = {col: rat(p) for col, p in zip(columns, parts)}
-        return out
+        print(f"    one line per sink: `sink: source = value, source = value` "
+              f"({unit}); blank line ends, `none` if the answer has no entries")
+        nested: dict[str, dict[str, Fraction]] = {}
+        while True:
+            raw = ask("      > ").strip()
+            if not raw:
+                return nested if nested else None
+            if raw.lower() == "none":
+                return {}
+            sink, _, rest = raw.partition(":")
+            if not rest.strip():
+                print("      expected `sink: source = value, ...`")
+                continue
+            row: dict[str, Fraction] = {}
+            try:
+                for pair in rest.split(","):
+                    key, _, val = pair.partition("=")
+                    row[key.strip()] = rat(val)
+            except (ValueError, ZeroDivisionError):
+                print("      could not read that row")
+                continue
+            nested[sink.strip()] = row
 
     raise ValueError(f"unknown answer shape {shape!r}")
 
 
-def matches(mine, stored, unit: str) -> bool:
-    """Compare a hand answer against the stored value, shape-aware."""
-    if isinstance(stored, str):
-        return isinstance(mine, Fraction) and close_enough(mine, rat(stored), unit)
-    if isinstance(stored, dict):
-        if not isinstance(mine, dict) or set(mine) != set(stored):
+def matches(mine, actual, unit: str) -> bool:
+    """Compare a hand-derived answer against the engine's live answer."""
+    if mine == UNAVAILABLE or actual is None:
+        return mine == UNAVAILABLE and actual is None
+    if isinstance(actual, dict):
+        if not isinstance(mine, dict) or set(mine) != set(actual):
             return False
-        return all(matches(mine[k], stored[k], unit) for k in stored)
-    return False
+        return all(matches(mine[k], actual[k], unit) for k in actual)
+    if not isinstance(mine, Fraction):
+        return False
+    return close_enough(mine, Fraction(actual).limit_denominator(1_000_000), unit)
+
+
+def encode(value):
+    """The engine's answer as exact rational strings, in the corpus's shape."""
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return {k: encode(v) for k, v in value.items()}
+    if isinstance(value, bool):
+        return value
+    return str(Fraction(value).limit_denominator(1_000_000))
+
+
+def store(mine):
+    """A hand-derived answer in the corpus's shape: exact rational strings."""
+    if isinstance(mine, dict):
+        return {k: store(v) for k, v in mine.items()}
+    return str(mine)
+
+
+def render_engine(actual) -> str:
+    return UNAVAILABLE if actual is None else render(encode(actual))
 
 
 def render(value) -> str:
@@ -190,6 +231,13 @@ def load_case(case_id: str) -> tuple[pathlib.Path, dict]:
 
 def save_case(path: pathlib.Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def find_state(case: dict, state_id: str) -> dict | None:
+    for state in case["states"]:
+        if state["id"] == state_id:
+            return state
+    return None
 
 
 def find_expectation(case: dict, state_id: str, prop: str) -> dict | None:
@@ -253,8 +301,9 @@ def cmd_sheet(sheet_id: str, who: str) -> int:
             caches[case_id] = load_case(case_id)
         path, case = caches[case_id]
         exp = find_expectation(case, state_id, prop)
+        state = find_state(case, state_id)
         meta = catalog.get(prop)
-        if exp is None or meta is None:
+        if exp is None or state is None or meta is None:
             print(f"  ?? {case_id}/{state_id}/{prop} no longer exists — skipping")
             skipped += 1
             continue
@@ -262,9 +311,14 @@ def cmd_sheet(sheet_id: str, who: str) -> int:
             print(f"  ✓ {problem['n']:02d} {prop} already certified — skipping")
             continue
 
+        # Asked now, after the problem is on screen and before the answer is
+        # typed. It is never written to the case file, so there is nothing in
+        # the corpus for a future deriver to read the answer off.
+        actual = getattr(engine_from_corpus(case, state), prop)
+
         print(f"  {problem['n']:02d}  {meta['title']}  [{case_id}/{state_id}/{prop}]")
         try:
-            mine = collect_answer(meta["answer_shape"], exp["value"], meta["unit"])
+            mine = collect_answer(meta["answer_shape"], meta["unit"])
         except (ValueError, ZeroDivisionError) as err:
             print(f"      could not read that ({err}) — skipping\n")
             skipped += 1
@@ -275,8 +329,9 @@ def cmd_sheet(sheet_id: str, who: str) -> int:
             skipped += 1
             continue
 
-        if matches(mine, exp["value"], meta["unit"]):
+        if matches(mine, actual, meta["unit"]):
             note = ask("    ✓ agrees. one-line working (optional): ").strip()
+            exp["value"] = store(mine)
             exp["certification"] = {
                 "status": "verified",
                 "by": who,
@@ -296,12 +351,13 @@ def cmd_sheet(sheet_id: str, who: str) -> int:
         print("    ✗ that does not match. Re-check your working and enter again,")
         print("      or press Enter to stand by it and record a disagreement.")
         try:
-            again = collect_answer(meta["answer_shape"], exp["value"], meta["unit"])
+            again = collect_answer(meta["answer_shape"], meta["unit"])
         except (ValueError, ZeroDivisionError):
             again = None
 
-        if again is not None and matches(again, exp["value"], meta["unit"]):
+        if again is not None and matches(again, actual, meta["unit"]):
             note = ask("    ✓ agrees. one-line working (optional): ").strip()
+            exp["value"] = store(again)
             exp["certification"] = {
                 "status": "verified",
                 "by": who,
@@ -318,15 +374,18 @@ def cmd_sheet(sheet_id: str, who: str) -> int:
             continue
 
         standing = again if again is not None else mine
-        print(f"\n    Recorded as disputed. The engine says: {render(exp['value'])}")
+        print(f"\n    Recorded as disputed. The engine says: {render_engine(actual)}")
         print("    Yours:", render_answer(standing))
         print("    Neither is assumed right. Work out which, then either fix the")
         print("    engine or re-certify this value.\n")
+        # The derived value goes in as the published one. A dispute means the
+        # corpus and the engine disagree, and the corpus is the specification —
+        # so it states what the model says, not what the code does. What the
+        # code says is not recorded here at all: the test recomputes it live,
+        # and a stale copy of it in the file would only ever mislead.
+        exp["value"] = store(standing)
         exp["certification"] = {
             "status": "disputed",
-            "claimed": json.loads(render_answer(standing))
-            if isinstance(standing, dict)
-            else str(standing),
             "by": who,
             "date": today,
             "engine_commit": commit,

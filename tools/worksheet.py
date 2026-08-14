@@ -108,51 +108,41 @@ def blank(width: str = "5.5em") -> str:
     return f'<span class="blank" style="min-width:{width}"></span>'
 
 
-def answer_field(shape: str, value, unit: str) -> str:
-    """Render blanks shaped like the answer, without revealing any of it.
+def answer_field(shape: str, unit: str) -> str:
+    """Render blanks shaped like the answer, revealing nothing about it.
 
-    Keys are structural — which sinks are drawing, which sources exist — and a
-    reader can already see them in the readings. Numbers are the answer.
-    ``map_derived_keys`` is the exception: *which* keys appear is itself what
-    is being worked out, so the rows are left blank too.
+    There is nothing to reveal any more — the corpus holds no engine value for
+    this slot — but the layout still changes with the shape, because a sheet
+    that gives you a grid to fill for a nested map is far easier to work than
+    one blank line.
+
+    Keys are left blank throughout. Which sinks appear in a provenance table,
+    and whether a source belongs in an export attribution at all, are part of
+    what is being derived; an earlier version of this sheet printed the keys
+    from the engine's answer, which quietly gave away half of several
+    questions.
     """
     suffix = f' <span class="unit">{html.escape(unit)}</span>' if unit else ""
 
-    if shape == "map_derived_keys":
+    if shape in ("map_derived_keys", "map_fixed_keys"):
         rows = "".join(
             f'<div class="arow">{blank("9em")} = {blank()}{suffix}</div>' for _ in range(4)
         )
-        return f'<div class="answer"><p class="hint">List only the entries that apply — there may be none.</p>{rows}</div>'
-
-    if shape == "map_fixed_keys" and isinstance(value, dict):
-        if not value:
-            return f'<div class="answer"><p class="hint">Expected to be empty — confirm, or list what belongs here.</p><div class="arow">{blank("9em")} = {blank()}{suffix}</div></div>'
-        # No per-row unit here: the Answer heading already carries it, and
-        # repeating "share" down a column is just noise.
-        cells = "".join(
-            f'<div class="arow"><span class="key">{html.escape(k)}</span> {blank()}</div>'
-            for k in value
+        return (
+            '<div class="answer"><p class="hint">List only the entries that '
+            f'apply — there may be none.</p>{rows}</div>'
         )
-        return f'<div class="answer">{cells}</div>'
 
-    if shape == "nested_map_fixed_keys" and isinstance(value, dict):
-        if not value:
-            return f'<div class="answer"><p class="hint">Expected to be empty — confirm, or list what belongs here.</p></div>'
-        columns: list[str] = []
-        for row in value.values():
-            for col in row:
-                if col not in columns:
-                    columns.append(col)
-        head = "".join(f"<th>{html.escape(c)}</th>" for c in columns)
-        body = "".join(
-            "<tr><th>"
-            + html.escape(sink)
-            + "</th>"
-            + "".join(f"<td>{blank('4.5em')}</td>" for _ in columns)
-            + "</tr>"
-            for sink in value
+    if shape == "nested_map_fixed_keys":
+        rows = "".join(
+            f'<div class="arow">{blank("7em")} : {blank("16em")}{suffix}</div>'
+            for _ in range(4)
         )
-        return f'<div class="answer"><table class="grid"><tr><th></th>{head}</tr>{body}</table></div>'
+        return (
+            '<div class="answer"><p class="hint">One line per sink, as '
+            '<code>sink : source = value, source = value</code>. There may be '
+            f'none.</p>{rows}</div>'
+        )
 
     return f'<div class="answer"><div class="arow">{blank("7em")}{suffix}</div></div>'
 
@@ -174,7 +164,11 @@ def collect(cases: list[dict], catalog: dict, case_filter: str | None) -> list[d
             for exp in state["expectations"]:
                 if exp["property"] not in catalog:
                     continue
-                (given if exp["certification"]["status"] == "verified" else pending).append(exp)
+                # "Given" means somebody has already derived it, whether or
+                # not the engine agreed — a disputed value is still a value
+                # this snapshot's later derivations may lean on.
+                answered = exp["certification"]["status"] in ("verified", "disputed")
+                (given if answered else pending).append(exp)
             pending.sort(key=lambda e: rank.get(e["property"], 10_000))
             given.sort(key=lambda e: rank.get(e["property"], 10_000))
             if pending:
@@ -307,7 +301,7 @@ def render(blocks: list[dict], sheet_id: str, limit: int | None) -> tuple[str, l
                 f"<h3>Steps</h3><ol>{steps}</ol>"
                 f"<h3>Answer &nbsp;<span style='font-weight:400;text-transform:none;letter-spacing:0'>"
                 f"({html.escape(meta['unit'])})</span></h3>"
-                f"{answer_field(meta['answer_shape'], exp['value'], meta['unit'])}"
+                f"{answer_field(meta['answer_shape'], meta['unit'])}"
                 f"<div class='working'><span>working</span></div>"
                 f"</div>"
             )

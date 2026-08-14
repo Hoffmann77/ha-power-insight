@@ -4,9 +4,9 @@ import styles from './styles.module.css';
 import type {Certification} from './types';
 
 const TITLE: {[k: string]: string} = {
-  verified: 'hand-certified: derived independently, and it agreed',
+  verified: 'hand-certified: derived independently, and the engine agreed',
   disputed: 'hand-derived answer disagreed with the engine',
-  unverified: 'engine-generated, not yet certified',
+  pending: 'not yet derived — no value is published for this slot',
 };
 
 /**
@@ -14,7 +14,7 @@ const TITLE: {[k: string]: string} = {
  * numbers a human has checked, but the badge must not dominate the number.
  */
 export default function CertDot({
-  status = 'unverified',
+  status = 'pending',
 }: {
   status?: Certification['status'];
 }): React.ReactElement {
@@ -25,7 +25,7 @@ export default function CertDot({
         status === 'verified' && styles.v,
         status === 'disputed' && styles.d,
       )}
-      title={TITLE[status] ?? TITLE.unverified}
+      title={TITLE[status] ?? TITLE.pending}
     />
   );
 }

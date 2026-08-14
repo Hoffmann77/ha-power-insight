@@ -4,6 +4,7 @@ import clsx from 'clsx';
 import styles from './styles.module.css';
 import CertDot from './CertDot';
 import {fmtUnit, humanize} from './rational';
+import {UNAVAILABLE} from './types';
 import type {Expectation, PropertyCatalog, PropertyDoc, ValueTree} from './types';
 
 /**
@@ -21,7 +22,14 @@ function scalarCell(
   stored: string | null,
   doc: PropertyDoc | undefined,
 ): React.ReactElement {
+  // Two different nothings, and conflating them would be a lie in both
+  // directions. A null slot is one nobody has derived — the corpus is silent,
+  // not asserting anything. The unavailable marker is a derivation whose
+  // answer *is* that the engine should report nothing.
   if (stored === null) {
+    return <b className={styles.vpending}>not yet derived</b>;
+  }
+  if (stored === UNAVAILABLE) {
     return <b className={styles.vunavail}>unavailable</b>;
   }
   const {text, frac} = fmtUnit(stored, doc?.unit);
@@ -38,6 +46,9 @@ function breakdown(
   value: ValueTree,
   doc: PropertyDoc | undefined,
 ): React.ReactElement {
+  if (value === null) {
+    return <div className={styles.vpending}>not yet derived</div>;
+  }
   const entries = Object.entries(value as {[k: string]: ValueTree});
   if (!entries.length) {
     return <div className={styles.vnone}>none this snapshot</div>;
@@ -71,6 +82,7 @@ function Row({
   const [open, setOpen] = useState(false);
   const {property, value, certification} = expectation;
   const isMap = value !== null && typeof value === 'object';
+  const pending = value === null;
   const explainable = Boolean(doc?.definition);
 
   return (
@@ -86,7 +98,7 @@ function Row({
           {explainable && <span className={styles.pchev} aria-hidden="true" />}
           {doc?.title ?? humanize(property)}
         </span>
-        {!isMap && scalarCell(value as string | null, doc)}
+        {(!isMap || pending) && scalarCell(value as string | null, doc)}
         <CertDot status={certification.status} />
       </button>
       {isMap && breakdown(value, doc)}

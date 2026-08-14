@@ -10,6 +10,13 @@
 /** An exact rational, as stored. `null` models an unavailable reading. */
 export type Rat = string | null;
 
+/**
+ * A derived value of "the engine should report nothing here". Stored in place
+ * of a number, and distinct from a `null` value, which means the slot is
+ * pending and nobody has derived anything.
+ */
+export const UNAVAILABLE = 'unavailable';
+
 /** A stored expectation value: a scalar, or a (possibly nested) map of them. */
 export type ValueTree = Rat | {[key: string]: ValueTree};
 
@@ -43,8 +50,16 @@ export interface DerivationStep {
   result?: string;
 }
 
+/**
+ * How a slot came to hold what it holds.
+ *
+ * `pending` is the default and, for now, almost everything: the corpus is
+ * hand-derived, so a slot stays empty until somebody works it out. It is not
+ * the same as a value of `"unavailable"`, which is somebody having worked it
+ * out and concluded the engine should report nothing.
+ */
 export interface Certification {
-  status: 'verified' | 'unverified' | 'disputed';
+  status: 'pending' | 'verified' | 'disputed';
   by?: string;
   date?: string;
   method?: string;
@@ -130,30 +145,33 @@ export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
 export interface PropertyCoverage {
   title: string;
   layer: number;
-  first_case: string | null;
-  first_case_title: string | null;
-  first_state: string | null;
-  published: number;
-  verified: number;
-  distinct: number;
-  settled_by: string[];
+  /** Slots this property has across the corpus — one per snapshot. */
+  slots: number;
+  /** Slots a human has filled in, disputed ones included. */
+  derived: number;
+  disputed: number;
+  /** Cases where at least one slot has been derived. */
+  derived_in: string[];
 }
 
-export interface CaseDecisions {
+export interface CaseCoverage {
   case: string;
   case_title: string;
   decides: string[];
+  slots: number;
+  derived: number;
 }
 
 export interface Coverage {
   /** Case ids in ladder order. */
   order: string[];
-  decisions: CaseDecisions[];
+  decisions: CaseCoverage[];
   properties: {[name: string]: PropertyCoverage};
   totals: {
-    published: number;
-    verified: number;
-    /** Catalogued properties the corpus never publishes — holes, if any. */
-    unpublished: string[];
+    slots: number;
+    derived: number;
+    disputed: number;
+    /** Properties with no derived value anywhere yet. */
+    untouched: string[];
   };
 }

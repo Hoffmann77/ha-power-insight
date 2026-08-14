@@ -1,13 +1,32 @@
-"""Generate the reference-case JSON files from topology/state definitions.
+"""Generate the reference-case *scaffolds* from topology/state definitions.
 
-Values are read from the engine and written with ``status: unverified``.
-Derivations are deliberately NOT written: they are the author's own work,
-produced during blind certification. Writing them here would destroy the
-independence that makes a certification worth anything.
+This tool writes the question, never the answer. It emits each case's wiring,
+its snapshots' readings, and one empty slot per catalogued property — and stops
+there. No value in the corpus is ever produced by this script, or by the engine
+it could trivially read them from.
+
+That is the whole design. A corpus generated from the implementation can only
+ever record what the code already does, so asserting it back against that code
+proves nothing: the engine agreeing with itself is a tautology, and a bug
+faithfully recorded is still a bug with a page of documentation behind it. The
+values here are a *specification*, so they have to come from somewhere the
+implementation cannot reach — a human working the model out from first
+principles, on paper, without the engine's answer in view.
+
+Slots are filled by ``tools/worksheet.py`` (issues them, blind) and
+``tools/certify.py`` (records the derived answer and what the engine said about
+it). ``tests/engine/test_reference_corpus.py`` then asserts the engine against
+the filled slots, which is the direction that means something.
+
+Re-running this is safe: a filled slot is carried forward untouched. It is
+dropped only when the snapshot it describes has changed underneath it — a
+derivation is a claim about a specific set of readings, and it does not survive
+those readings being edited.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -17,14 +36,16 @@ from fractions import Fraction
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology  # noqa: E402
+# Only the declarative half of the scenario framework. Nothing here builds an
+# engine, and that omission is deliberate rather than incidental.
+from tests.engine.scenario_framework import Adapter  # noqa: E402
 
 OUT = str(ROOT / "docs" / "spec" / "cases")
 CATALOG = ROOT / "docs" / "spec" / "properties.json"
 
 # Every property the catalog documents, in catalog order — which is dependency
-# order, so a state's expectations read from readings up to the monetary model.
-# The docs render the whole set: a property the engine answers but the corpus
+# order, so a state's slots read from readings up to the monetary model. The
+# docs render the whole set: a property the catalog documents but the corpus
 # never publishes is a metric the reader simply cannot check.
 PROPERTIES = list(json.loads(CATALOG.read_text())["properties"])
 
@@ -459,14 +480,34 @@ CASES = [
 ]
 
 
-def existing_certifications(case_id):
-    """Certifications and derivations already recorded for this case.
+def snapshot_fingerprint(topology: list[dict], st: dict) -> str:
+    """Identify the *question* a snapshot asks, so an answer can be tied to it.
 
-    Regenerating must never destroy hand-certification work: those are
-    mornings of somebody's derivation, keyed by (state, property) rather than
-    by file position so they survive the case being reshaped around them. A
-    certification whose *value* has changed is dropped deliberately -- it was a
-    claim about the old number and no longer holds.
+    A derivation is a claim about one specific set of readings against one
+    specific wiring. Edit either and the claim is about a snapshot that no
+    longer exists, however sound the arithmetic was. Hashing the inputs lets a
+    regeneration tell those two cases apart: reshaping the prose around a
+    snapshot keeps its answers, changing what it asks throws them away.
+    """
+    payload = json.dumps(
+        {
+            "topology": topology,
+            "readings": {k: rat(v) for k, v in st["readings"].items()},
+            "price": rat(st["price"]),
+        },
+        sort_keys=True,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
+def existing_answers(case_id: str) -> dict:
+    """Hand-derived answers already recorded for this case.
+
+    These are the only values the corpus has and every one of them cost
+    somebody a morning, so regenerating must never quietly drop one. They are
+    keyed by (state, property) rather than by file position, so they survive
+    the case being reshaped around them, and each carries the fingerprint of
+    the snapshot it was derived against.
     """
     path = os.path.join(OUT, f"{case_id}.json")
     if not os.path.exists(path):
@@ -476,62 +517,56 @@ def existing_certifications(case_id):
     kept = {}
     for state in prior.get("states", []):
         for exp in state.get("expectations", []):
-            cert = exp.get("certification", {})
-            if cert.get("status") == "unverified" and not exp.get("derivation"):
+            # Only the two statuses a human can produce. Anything else is an
+            # empty slot or a leftover from when this tool wrote values itself,
+            # and neither is something to preserve.
+            if exp.get("certification", {}).get("status") not in ("verified", "disputed"):
                 continue
-            kept[(state["id"], exp["property"])] = (
-                exp.get("value"),
-                exp.get("derivation", []),
-                cert,
-            )
+            kept[(state["id"], exp["property"])] = (state.get("asks"), exp)
     return kept
 
 
 def build(case):
-    topo = Topology(*case["topology"])
-    prior = existing_certifications(case["id"])
+    topology = [adapter_json(a) for a in case["topology"]]
+    prior = existing_answers(case["id"])
     out = {
         "$schema": "../reference-case.schema.json",
         "id": case["id"],
         "title": case["title"],
         "summary": case["summary"],
         "decides": case["decides"],
-        "topology": [adapter_json(a) for a in case["topology"]],
+        "topology": topology,
         "states": [],
     }
     for st in case["states"]:
-        state = State(price=st["price"], **st["readings"])
-        engine = Cell(topo, state).build_engine()
+        asks = snapshot_fingerprint(topology, st)
         expectations = []
         for name in PROPERTIES:
-            value = encode(getattr(engine, name))
-            # A property the engine cannot answer this snapshot is left out
-            # rather than published as null: the corpus states what the engine
-            # computes, and "nothing" is not a value anyone can certify.
-            if value is None:
-                continue
-            derivation, certification = [], {"status": "unverified"}
-            kept = prior.get((st["id"], name))
-            if kept is not None:
-                old_value, old_derivation, old_certification = kept
-                if old_value == value:
-                    derivation, certification = old_derivation, old_certification
+            # An empty slot. Every property gets one on every snapshot, whether
+            # or not the engine has an answer for it — whether it does is
+            # exactly the sort of thing a derivation is entitled to disagree
+            # about, and a slot the scaffold silently omitted could not.
+            slot = {
+                "property": name,
+                "value": None,
+                "derivation": [],
+                "certification": {"status": "pending"},
+            }
+            held = prior.get((st["id"], name))
+            if held is not None:
+                held_asks, held_exp = held
+                if held_asks == asks:
+                    slot = held_exp
                 else:
                     print(
-                        f"  ! {case['id']}/{st['id']}/{name}: value changed, "
-                        f"dropping a {old_certification.get('status')} certification"
+                        f"  ! {case['id']}/{st['id']}/{name}: snapshot changed, "
+                        f"dropping a {held_exp['certification'].get('status')} answer"
                     )
-            expectations.append(
-                {
-                    "property": name,
-                    "value": value,
-                    "derivation": derivation,
-                    "certification": certification,
-                }
-            )
+            expectations.append(slot)
         entry = {
             "id": st["id"],
             "note": st["note"],
+            "asks": asks,
             "readings": {k: rat(v) for k, v in st["readings"].items()},
             "price": rat(st["price"]),
             "expectations": expectations,
@@ -543,67 +578,72 @@ def build(case):
 
 
 def coverage(built: list[dict]) -> dict:
-    """Where each published property is first settled, and how often it appears.
+    """The state of the derivation programme, per property and per rung.
 
-    This is the corpus's closure proof, and it is deliberately not a count of
-    how often a property appears. Nearly every property has *some* value on the
-    first rung — a one-adapter house still has a gross power and a cost of
-    energy — so "where does it first appear" says nothing.
-
-    What says something is ``settled_by``: the rungs that each published a
-    value for this property that no earlier rung had. A property settled by one
-    rung is pinned by a single wiring and everything above it merely repeats
-    that answer. A property settled by six is one the corpus is genuinely
-    exercising. A property with an empty ``settled_by`` is documented but never
-    published, and is a hole in the corpus.
+    Once the corpus stopped recording engine output, "which rungs publish a
+    distinct value for this property" stopped being answerable — there are no
+    values to be distinct until somebody derives them. What replaces it is
+    plainer and more useful: how many slots each property has, how many are
+    filled, and where the filled ones are. It is a worklist as much as a
+    coverage table, and it will read as almost entirely empty for a while.
+    That is the honest picture, not a defect in the report.
     """
     catalog = json.loads(CATALOG.read_text())["properties"]
     entries = {}
     for name in PROPERTIES:
         doc = catalog[name]
-        seen, settled_by = set(), []
         entry = {
             "title": doc["title"],
             "layer": doc["layer"],
-            "first_case": None,
-            "first_case_title": None,
-            "first_state": None,
-            "published": 0,
-            "verified": 0,
+            "slots": 0,
+            "derived": 0,
+            "disputed": 0,
+            "derived_in": [],
         }
         for case in built:
             for state in case["states"]:
                 for exp in state["expectations"]:
                     if exp["property"] != name:
                         continue
-                    if entry["first_case"] is None:
-                        entry["first_case"] = case["id"]
-                        entry["first_case_title"] = case["title"]
-                        entry["first_state"] = state["id"]
-                    entry["published"] += 1
-                    if exp["certification"].get("status") == "verified":
-                        entry["verified"] += 1
-                    fingerprint = json.dumps(exp["value"], sort_keys=True)
-                    if fingerprint not in seen:
-                        seen.add(fingerprint)
-                        if case["id"] not in settled_by:
-                            settled_by.append(case["id"])
-        entry["distinct"] = len(seen)
-        entry["settled_by"] = settled_by
+                    entry["slots"] += 1
+                    status = exp["certification"].get("status")
+                    if status == "pending":
+                        continue
+                    entry["derived"] += 1
+                    if status == "disputed":
+                        entry["disputed"] += 1
+                    if case["id"] not in entry["derived_in"]:
+                        entry["derived_in"].append(case["id"])
         entries[name] = entry
+
+    per_case = []
+    for case in built:
+        slots = sum(len(s["expectations"]) for s in case["states"])
+        derived = sum(
+            1
+            for s in case["states"]
+            for e in s["expectations"]
+            if e["certification"].get("status") != "pending"
+        )
+        per_case.append(
+            {
+                "case": case["id"],
+                "case_title": case["title"],
+                "decides": case["decides"],
+                "slots": slots,
+                "derived": derived,
+            }
+        )
+
     return {
-        "decisions": [
-            {"case": c["id"], "case_title": c["title"], "decides": c["decides"]}
-            for c in built
-        ],
         "order": [c["id"] for c in built],
+        "decisions": per_case,
         "properties": entries,
         "totals": {
-            "published": sum(e["published"] for e in entries.values()),
-            "verified": sum(e["verified"] for e in entries.values()),
-            "unpublished": sorted(
-                n for n, e in entries.items() if e["first_case"] is None
-            ),
+            "slots": sum(e["slots"] for e in entries.values()),
+            "derived": sum(e["derived"] for e in entries.values()),
+            "disputed": sum(e["disputed"] for e in entries.values()),
+            "untouched": sorted(n for n, e in entries.items() if e["derived"] == 0),
         },
     }
 
@@ -631,10 +671,16 @@ for case in CASES:
                 if e["certification"].get("status") == "verified"
             ),
             "total": sum(len(s["expectations"]) for s in data["states"]),
+            "pending": sum(
+                1
+                for s in data["states"]
+                for e in s["expectations"]
+                if e["certification"].get("status") == "pending"
+            ),
         }
     )
-    print(f"wrote {path}  ({len(data['states'])} states, "
-          f"{sum(len(s['expectations']) for s in data['states'])} expectations)")
+    slots = sum(len(s["expectations"]) for s in data["states"])
+    print(f"wrote {path}  ({len(data['states'])} states, {slots} slots)")
 
 with open(os.path.join(OUT, "index.json"), "w") as fh:
     json.dump(index, fh, indent=2)
@@ -645,13 +691,9 @@ cov = coverage(built)
 with open(os.path.join(OUT, "coverage.json"), "w") as fh:
     json.dump(cov, fh, indent=2)
     fh.write("\n")
+t = cov["totals"]
 print(
-    f"wrote coverage.json  ({cov['totals']['published']} values, "
-    f"{cov['totals']['verified']} verified"
-    + (
-        f", NOT PUBLISHED: {', '.join(cov['totals']['unpublished'])}"
-        if cov["totals"]["unpublished"]
-        else ""
-    )
+    f"wrote coverage.json  ({t['derived']} of {t['slots']} slots derived"
+    + (f", {t['disputed']} disputed" if t["disputed"] else "")
     + ")"
 )

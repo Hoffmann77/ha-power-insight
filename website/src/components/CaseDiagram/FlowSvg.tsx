@@ -208,7 +208,9 @@ export default function FlowSvg({
               tabIndex={0}
               role="button"
               aria-pressed={selected?.uid === n.uid}
-              aria-label={`${n.uid}, ${roleText(n)}, ${fmtW(Math.abs(n.reading))}`}
+              aria-label={`${n.uid}, ${roleText(n)}, ${fmtW(
+                n.reading === null ? null : Math.abs(n.reading),
+              )}`}
               onClick={(ev) => {
                 ev.stopPropagation();
                 onSelect(n.uid);
