@@ -80,48 +80,22 @@ landing page — need to be `.mdx`. Prefer `.md` for everything else.
 
 ## Versioning
 
-The site publishes **the released docs at the root** and the in-development docs
-under `/next`, with a version selector in the navbar.
+The site currently publishes a **single version**. The MkDocs site was versioned
+with `mike`; that history stays browsable on the old `gh-pages` branch but is no
+longer updated.
 
-| Where you edit | Where it appears |
-|---|---|
-| `docs/` | `/next` — labelled *Next (unreleased)* |
-| `website/versioned_docs/version-2026.7/` | the site root — what visitors get by default |
+Docusaurus versions by snapshotting: `npm run docusaurus docs:version 1.0` copies
+the current `docs/` into `website/versioned_docs/version-1.0/`. Worth turning on
+when the integration hits 1.0 and the docs need to describe more than one
+supported release — before that it mostly adds ceremony.
 
-Docusaurus versions by **snapshotting source**, not built output. Cutting a
-version copies the whole of `docs/` — markdown, the anchor-case JSON, all of it —
-into `website/versioned_docs/`, and that copy is then frozen. Day-to-day work
-happens in `docs/` and lands under `/next`; nothing you write there changes what
-a visitor sees until the next version is cut.
+:::warning[If you do enable versioning]
 
-### Cutting a version at release time
-
-```bash
-cd website
-npm run docusaurus docs:version 2026.8   # MAJOR.MINOR of the release
-```
-
-That is the whole ritual. It writes `versioned_docs/version-2026.8/`, a matching
-sidebar, and a new entry in `versions.json`; the newest entry becomes what the
-root serves. Commit all three.
-
-Old versions stay browsable and are still *rebuilt* on every deploy, because
-Docusaurus versions source rather than output — so a theme fix reaches every
-version at once.
-
-:::warning[Why anchor-case data is passed in as a prop]
-
-That last point cuts both ways. `docs/` is snapshotted; `website/src/` is
-**shared across every version**. So the anchor-case JSON lives under
-`docs/spec/anchors/` to be frozen with the prose around it, while the component
-that draws it is shared — which is why each page imports its own case data and
-passes it in rather than letting the component reach for it.
-
-Break that split and an old version's page will quietly start rendering today's
-numbers, which for a page whose entire purpose is pinning down specific values
-would be worse than useless.
+The anchor-case JSON lives under `docs/spec/anchors/` precisely so it gets
+snapshotted with the prose. The component that renders it lives in
+`website/src/` and is **shared across all versions**, which is why every page
+passes its case data in as a prop rather than letting the component import it.
+Keep that split, or an old version's page will start rendering with today's
+data.
 
 :::
-
-The MkDocs site was versioned with `mike`. That history stays on the old
-`gh-pages` branch and is no longer updated or served.

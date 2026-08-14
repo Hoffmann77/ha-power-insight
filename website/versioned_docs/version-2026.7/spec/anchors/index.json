@@ -1,0 +1,50 @@
+{
+  "cases": [
+    {
+      "id": "A-001",
+      "title": "Baseline mix, no restrictions",
+      "file": "A-001.json",
+      "states": [
+        "import_mix",
+        "standby_and_idle"
+      ],
+      "certified": 0,
+      "total": 30
+    },
+    {
+      "id": "A-002",
+      "title": "Captive battery",
+      "file": "A-002.json",
+      "states": [
+        "captive_depletes_first",
+        "source_in_standby"
+      ],
+      "certified": 0,
+      "total": 24
+    },
+    {
+      "id": "A-003",
+      "title": "Group captivity (Hall's condition)",
+      "file": "A-003.json",
+      "states": [
+        "hall_tight_pair",
+        "unsatisfiable_overlap"
+      ],
+      "certified": 0,
+      "total": 24
+    },
+    {
+      "id": "A-004",
+      "title": "Export",
+      "file": "A-004.json",
+      "states": [
+        "export_non_exporting_battery",
+        "export_with_standby",
+        "discharge_dynamic_prices",
+        "pure_export_zero_gross"
+      ],
+      "certified": 0,
+      "total": 60
+    }
+  ]
+}

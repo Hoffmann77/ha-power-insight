@@ -44,6 +44,12 @@ const config: Config = {
           editUrl:
             'https://github.com/Hoffmann77/ha-power-insight/edit/main/docs/',
           showLastUpdateTime: true,
+          // Visitors land on the released docs; `docs/` is the in-development
+          // version and is served under /next. Cut a new one at release time
+          // with `npm run docusaurus docs:version <MAJOR.MINOR>`.
+          versions: {
+            current: {label: 'Next (unreleased)', path: 'next'},
+          },
         },
         blog: false,
         theme: {customCss: './src/css/custom.css'},
@@ -78,6 +84,7 @@ const config: Config = {
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
         {to: '/spec', label: 'Anchor cases', position: 'left'},
+        {type: 'docsVersionDropdown', position: 'right'},
         {
           href: 'https://github.com/Hoffmann77/ha-power-insight',
           label: 'GitHub',
