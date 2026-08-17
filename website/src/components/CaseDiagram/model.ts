@@ -140,10 +140,11 @@ export function valueOf(
 /**
  * A scalar property as a number, or `null` when the corpus has no answer.
  *
- * Null covers both nothings — a slot nobody has derived, and one derived as
- * having no value — and the distinction does not matter to a diagram, because
- * in either case there is no number to draw and it must not invent one.
- * Returning 0 would draw an idle node reading "0 W", a claim nobody made.
+ * Null covers both nothings — a property this snapshot publishes no value for,
+ * and one published as having no value — and the distinction does not matter
+ * to a diagram, because in either case there is no number to draw and it must
+ * not invent one. Returning 0 would draw an idle node reading "0 W", a claim
+ * nobody made.
  */
 export function scalar(
   byProperty: Map<string, Expectation>,
@@ -153,26 +154,17 @@ export function scalar(
   return typeof v === 'string' ? rat(v) : null;
 }
 
-export function isDerived(
+/** Whether this snapshot publishes a value for `property` at all. */
+export function hasValue(
   byProperty: Map<string, Expectation>,
   property: string,
 ): boolean {
-  return byProperty.get(property)?.derived === true;
+  return byProperty.has(property);
 }
 
-/** `[derived, total]` across every expectation in the case. */
-export function derivedCounts(c: ReferenceCase): [number, number] {
-  let derived = 0;
-  let total = 0;
-  for (const st of c.states) {
-    for (const e of st.expectations) {
-      total += 1;
-      if (e.derived) {
-        derived += 1;
-      }
-    }
-  }
-  return [derived, total];
+/** How many values the case publishes across all its snapshots. */
+export function derivedCount(c: ReferenceCase): number {
+  return c.states.reduce((n, st) => n + st.expectations.length, 0);
 }
 
 /**

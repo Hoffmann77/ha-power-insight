@@ -37,19 +37,18 @@ export interface Adapter {
   config: AdapterConfig;
 }
 
+/**
+ * One value a case claims for one property.
+ *
+ * Only derived values are published — a property nobody has worked out for
+ * this snapshot is simply absent from the list, because the corpus publishes
+ * answers rather than an inventory of the questions. So a `null` here is not
+ * an empty slot: it is somebody deriving that the engine should report nothing
+ * at all, which is a claim like any other.
+ */
 export interface Expectation {
   property: string;
   value: ValueTree;
-  /**
-   * Whether somebody has derived this slot — and the only thing that says so.
-   *
-   * Expectation values are literal, so a derived answer of "there is no value
-   * here" is a plain `null` and is indistinguishable from an empty slot by its
-   * value alone. Read this flag, never the value, to decide which you have.
-   *
-   * `false` is the default and, for now, most of the corpus.
-   */
-  derived: boolean;
 }
 
 export interface CaseState {
@@ -124,11 +123,9 @@ export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
 export interface PropertyCoverage {
   title: string;
   layer: number;
-  /** Slots this property has across the corpus — one per snapshot. */
-  slots: number;
-  /** Slots a human has filled in. */
+  /** Values published for this property across the corpus. */
   derived: number;
-  /** Cases where at least one slot has been derived. */
+  /** Cases that publish at least one value for it. */
   derived_in: string[];
 }
 
@@ -136,7 +133,6 @@ export interface CaseCoverage {
   case: string;
   case_title: string;
   decides: string[];
-  slots: number;
   derived: number;
 }
 
@@ -146,7 +142,6 @@ export interface Coverage {
   decisions: CaseCoverage[];
   properties: {[name: string]: PropertyCoverage};
   totals: {
-    slots: number;
     derived: number;
     /** Properties with no derived value anywhere yet. */
     untouched: string[];

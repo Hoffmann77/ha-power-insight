@@ -1,19 +1,22 @@
 """The reference corpus: nine small homes the engine is specified against.
 
-Each module here is one case — a wiring, a few snapshots of it, and the answers
-somebody worked out by hand for those snapshots. Two things read them:
+Each module here is one case — an ordinary scenario class (``@topology`` /
+``@state`` / source-order binding, exactly like every other engine test) whose
+``@expect`` methods claim values somebody worked out **by hand from the
+model**. Two things read them:
 
-* ``tests/engine/test_reference_corpus.py`` asserts the engine against every
-  answer. That is the direction that means something: the values are derived
-  from the model, not read back from the code, so a disagreement is evidence
-  rather than a tautology.
-* ``tools/export_cases.py`` publishes them to ``docs/spec/cases/*.json``, which
-  is what the documentation site renders.
+* pytest, which runs each claim as a test. That is the direction that means
+  something: the values are derived from the model, not read back from the
+  code, so a disagreement is evidence rather than a tautology.
+* ``tools/export_cases.py``, which calls :meth:`ReferenceCase.publish` on each
+  class and writes ``docs/spec/cases/*.json`` for the documentation site. The
+  export walks the same source-order binding the tests bind by, so a published
+  page cannot describe a snapshot differently from the way it is asserted.
 
-Write answers by hand. An answer copied out of a failing test's "engine says"
-line records what the code already does, which proves nothing and quietly
-turns the corpus into a changelog. If you cannot derive a value, leave the slot
-out — an empty slot is honest, and a wrong one is worse than none.
+Write answers by hand. An answer copied out of a failing test's ``actual:``
+line records what the code already does, which proves nothing and quietly turns
+the corpus into a changelog. If you cannot derive a value, write no method for
+it — nothing is published and nothing is asserted.
 
 The corpus is a **ladder**, and ``REFERENCE_CASES`` is in ladder order. Each
 case is the smallest wiring that can express the decision it settles, and every
@@ -37,37 +40,44 @@ decision.
 
 from __future__ import annotations
 
-from tests.engine.reference.battery_basics import CASE as BATTERY_BASICS
-from tests.engine.reference.captive_battery import CASE as CAPTIVE_BATTERY
-from tests.engine.reference.captive_load import CASE as CAPTIVE_LOAD
-from tests.engine.reference.case import CATALOG, PROPERTIES, Case, F, Snapshot
-from tests.engine.reference.grid_only import CASE as GRID_ONLY
-from tests.engine.reference.group_captivity import CASE as GROUP_CAPTIVITY
-from tests.engine.reference.metered_load import CASE as METERED_LOAD
-from tests.engine.reference.mixed_export_house import CASE as MIXED_EXPORT_HOUSE
-from tests.engine.reference.pv_export import CASE as PV_EXPORT
-from tests.engine.reference.pv_self_consumption import CASE as PV_SELF_CONSUMPTION
+from tests.engine.reference.case import (
+    CATALOG,
+    PROPERTIES,
+    TOLERANCE,
+    F,
+    ReferenceCase,
+    expect,
+)
+from tests.engine.reference.test_battery_basics import TestBatteryBasics
+from tests.engine.reference.test_captive_battery import TestCaptiveBattery
+from tests.engine.reference.test_captive_load import TestCaptiveLoad
+from tests.engine.reference.test_grid_only import TestGridOnly
+from tests.engine.reference.test_group_captivity import TestGroupCaptivity
+from tests.engine.reference.test_metered_load import TestMeteredLoad
+from tests.engine.reference.test_mixed_export_house import TestMixedExportHouse
+from tests.engine.reference.test_pv_export import TestPvExport
+from tests.engine.reference.test_pv_self_consumption import TestPvSelfConsumption
 
 #: Every reference case, in ladder order. The order is the corpus's argument,
 #: not an accident — see the module docstring.
-REFERENCE_CASES: tuple[Case, ...] = (
-    GRID_ONLY,
-    PV_SELF_CONSUMPTION,
-    PV_EXPORT,
-    METERED_LOAD,
-    CAPTIVE_LOAD,
-    BATTERY_BASICS,
-    CAPTIVE_BATTERY,
-    GROUP_CAPTIVITY,
-    MIXED_EXPORT_HOUSE,
+REFERENCE_CASES: tuple[type[ReferenceCase], ...] = (
+    TestGridOnly,
+    TestPvSelfConsumption,
+    TestPvExport,
+    TestMeteredLoad,
+    TestCaptiveLoad,
+    TestBatteryBasics,
+    TestCaptiveBattery,
+    TestGroupCaptivity,
+    TestMixedExportHouse,
 )
 
-_BY_ID = {case.id: case for case in REFERENCE_CASES}
+_BY_ID = {case.case_id: case for case in REFERENCE_CASES}
 if len(_BY_ID) != len(REFERENCE_CASES):
     raise ValueError("duplicate reference case id")
 
 
-def reference_case(case_id: str) -> Case:
+def reference_case(case_id: str) -> type[ReferenceCase]:
     """One case by id, e.g. ``reference_case("group-captivity")``."""
     try:
         return _BY_ID[case_id]
@@ -77,23 +87,13 @@ def reference_case(case_id: str) -> Case:
         ) from None
 
 
-def derived_slots() -> list[tuple[Case, Snapshot, str]]:
-    """Every ``(case, snapshot, property)`` somebody has written an answer for."""
-    return [
-        (case, snap, prop)
-        for case in REFERENCE_CASES
-        for snap in case.snapshots
-        for prop in snap.derived
-    ]
-
-
 __all__ = [
     "CATALOG",
     "PROPERTIES",
     "REFERENCE_CASES",
-    "Case",
+    "TOLERANCE",
     "F",
-    "Snapshot",
-    "derived_slots",
+    "ReferenceCase",
+    "expect",
     "reference_case",
 ]

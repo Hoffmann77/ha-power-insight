@@ -90,9 +90,7 @@ def test_registering_an_adapter_invalidates() -> None:
     before = engine.sink_adapters_source_shares
     assert "bat_late" not in before
 
-    engine.register_adapter(
-        Adapter.battery("bat_late", charge_from=("pv1",)).build()
-    )
+    engine.register_adapter(Adapter.battery("bat_late", charge_from=("pv1",)).build())
     engine.set_value("sensor.bat_late_power", -300)
 
     assert "bat_late" in engine.sink_adapters_source_shares
@@ -104,13 +102,13 @@ def test_a_sequence_of_changes_never_serves_a_stale_answer() -> None:
     readings = dict(BASE)
 
     steps = [
-        ("pv1", 2500),          # sun picks up
-        ("bat_solar", -1200),   # battery charges harder
-        ("grid", 200),          # import falls away
-        ("grid", -600),         # ... and turns into export
-        ("pv2", -50),           # a string drops into standby
-        ("cons1", 0),           # a load switches off entirely
-        ("bat_flex", 900),      # a battery starts discharging
+        ("pv1", 2500),  # sun picks up
+        ("bat_solar", -1200),  # battery charges harder
+        ("grid", 200),  # import falls away
+        ("grid", -600),  # ... and turns into export
+        ("pv2", -50),  # a string drops into standby
+        ("cons1", 0),  # a load switches off entirely
+        ("bat_flex", 900),  # a battery starts discharging
     ]
     for uid, value in steps:
         engine.set_value(f"sensor.{uid}_power", value)

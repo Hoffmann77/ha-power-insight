@@ -1,4 +1,5 @@
 """Tests for the PowerInsight config flow and subentry flows."""
+
 from __future__ import annotations
 
 import pytest
@@ -130,9 +131,7 @@ async def test_subentry_grid_creates_subentry(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
 
-    hass.states.async_set(
-        "sensor.grid_power", "100", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
 
     result = await hass.config_entries.subentries.async_init(
         (entry.entry_id, "adapter"), context={"source": "user"}
@@ -234,9 +233,7 @@ async def test_subentry_consumer_rejects_duplicate_name(
     )
     entry.add_to_hass(hass)
 
-    hass.states.async_set(
-        "sensor.other_power", "100", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.other_power", "100", {"unit_of_measurement": "W"})
 
     result = await hass.config_entries.subentries.async_init(
         (entry.entry_id, "adapter"), context={"source": "user"}
@@ -270,9 +267,7 @@ async def test_subentry_pv_creates_subentry(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
 
-    hass.states.async_set(
-        "sensor.solar_power", "2000", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.solar_power", "2000", {"unit_of_measurement": "W"})
 
     result = await hass.config_entries.subentries.async_init(
         (entry.entry_id, "adapter"), context={"source": "user"}
@@ -524,7 +519,10 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={
-            "power_sensors": {"distribution_power": False, "distribution_ratios": False},
+            "power_sensors": {
+                "distribution_power": False,
+                "distribution_ratios": False,
+            },
             "costs": {"cost_method": "none", "accumulate_costs": False},
             "savings": {"savings_method": "none", "accumulate_savings": False},
             "financial_return": {

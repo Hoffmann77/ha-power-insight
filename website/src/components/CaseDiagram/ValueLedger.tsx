@@ -2,7 +2,6 @@ import React, {useState} from 'react';
 import clsx from 'clsx';
 
 import styles from './styles.module.css';
-import CertDot from './CertDot';
 import {fmtUnit, humanize} from './rational';
 import type {Expectation, PropertyCatalog, PropertyDoc, ValueTree} from './types';
 
@@ -12,27 +11,23 @@ import type {Expectation, PropertyCatalog, PropertyDoc, ValueTree} from './types
  * The graph can only ever re-label its nodes, so most of what the integration
  * computes — the channel ratios, the per-source attributions, the whole
  * monetary family — has nowhere to live on the picture. It lives here instead:
- * one row per published property, in the catalog's dependency order, with the
- * exact fraction next to the figure a reader intuits and a dot saying whether a
- * human has checked it.
+ * one row per published value, in the catalog's dependency order, with the
+ * exact fraction next to the figure a reader intuits.
+ *
+ * Every row here is somebody's derivation. Properties nobody has worked out
+ * for this snapshot are absent rather than listed as blanks, so a short table
+ * means the checking has not got far — not that the engine reports nothing.
  */
 
 function scalarCell(
   stored: string | null,
   doc: PropertyDoc | undefined,
-  pending: boolean,
 ): React.ReactElement {
-  // Two different nothings, told apart by the `derived` flag rather than the
-  // value: expectation values are literal, so a derived "no value here" is a
-  // plain null and looks exactly like a slot nobody has touched. Conflating
-  // them would be a lie in both directions — one is the corpus asserting the
-  // engine should report nothing, the other is it saying nothing at all.
+  // A published null is a claim, not a gap: the model says the engine should
+  // report nothing at all here, usually because a reading it needs is
+  // unavailable. Slots nobody has derived never reach this component.
   if (stored === null) {
-    return pending ? (
-      <b className={styles.vpending}>not yet derived</b>
-    ) : (
-      <b className={styles.vunavail}>unavailable</b>
-    );
+    return <b className={styles.vunavail}>unavailable</b>;
   }
   const {text, frac} = fmtUnit(stored, doc?.unit);
   return (
@@ -47,7 +42,6 @@ function scalarCell(
 function breakdown(
   value: ValueTree,
   doc: PropertyDoc | undefined,
-  pending: boolean,
 ): React.ReactElement {
   const entries = Object.entries(value as {[k: string]: ValueTree});
   if (!entries.length) {
@@ -59,12 +53,12 @@ function breakdown(
         inner !== null && typeof inner === 'object' ? (
           <div className={styles.vgroup} key={key}>
             <span className={styles.vkey}>{key}</span>
-            {breakdown(inner, doc, pending)}
+            {breakdown(inner, doc)}
           </div>
         ) : (
           <div className={styles.vrow} key={key}>
             <i>{key}</i>
-            {scalarCell(inner as string | null, doc, pending)}
+            {scalarCell(inner as string | null, doc)}
           </div>
         ),
       )}
@@ -80,9 +74,8 @@ function Row({
   doc: PropertyDoc | undefined;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const {property, value, derived} = expectation;
+  const {property, value} = expectation;
   const isMap = value !== null && typeof value === 'object';
-  const pending = !derived;
   const explainable = Boolean(doc?.definition);
 
   return (
@@ -98,10 +91,9 @@ function Row({
           {explainable && <span className={styles.pchev} aria-hidden="true" />}
           {doc?.title ?? humanize(property)}
         </span>
-        {!isMap && scalarCell(value as string | null, doc, pending)}
-        <CertDot derived={derived} />
+        {!isMap && scalarCell(value as string | null, doc)}
       </button>
-      {isMap && breakdown(value, doc, pending)}
+      {isMap && breakdown(value, doc)}
       {open && doc && (
         <div className={styles.pdef}>
           <p>{doc.definition}</p>
@@ -140,7 +132,7 @@ export default function ValueLedger({
         ))
       ) : (
         <div className={styles.vnone}>
-          This snapshot publishes nothing in this layer.
+          Nothing in this layer has been derived for this snapshot yet.
         </div>
       )}
     </section>

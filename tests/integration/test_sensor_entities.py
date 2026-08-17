@@ -1,4 +1,5 @@
 """Tests for PowerInsight sensor entity creation and state updates."""
+
 from __future__ import annotations
 
 import copy
@@ -61,9 +62,7 @@ async def test_hub_sensors_created_for_grid_only_setup(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Hub-level sensors should be registered after loading with a grid adapter."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
     entries = get_entry_entities(hass, mock_config_entry)
@@ -79,9 +78,7 @@ async def test_grid_adapter_sensors_created(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Grid-specific sensors should be registered under the grid subentry."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
     entries = get_entry_entities(hass, mock_config_entry)
@@ -89,6 +86,7 @@ async def test_grid_adapter_sensors_created(
 
     # Grid adapter unique_id is the subentry_id
     from .conftest import GRID_SUB_ID
+
     grid_prefix = f"{mock_config_entry.entry_id}_{GRID_SUB_ID}"
     grid_sensors = [uid for uid in unique_ids if uid and uid.startswith(grid_prefix)]
     assert len(grid_sensors) > 0, "Expected at least one grid adapter sensor"
@@ -98,18 +96,15 @@ async def test_pv_adapter_sensors_created(
     hass: HomeAssistant, mock_config_entry_with_pv: MockConfigEntry
 ) -> None:
     """PV adapter sensors should be registered when a PV subentry is configured."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
-    hass.states.async_set(
-        "sensor.pv_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry_with_pv)
 
     entries = get_entry_entities(hass, mock_config_entry_with_pv)
     unique_ids = {e.unique_id for e in entries}
 
     from .conftest import PV_SUB_ID
+
     pv_prefix = f"{mock_config_entry_with_pv.entry_id}_{PV_SUB_ID}"
     pv_sensors = [uid for uid in unique_ids if uid and uid.startswith(pv_prefix)]
     assert len(pv_sensors) > 0, "Expected at least one PV adapter sensor"
@@ -189,7 +184,9 @@ async def test_grid_charging_sensors_absent_without_battery(
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
-    uids = {e.unique_id for e in get_entry_entities(hass, mock_config_entry) if e.unique_id}
+    uids = {
+        e.unique_id for e in get_entry_entities(hass, mock_config_entry) if e.unique_id
+    }
     grid = f"{mock_config_entry.entry_id}_{GRID_SUB_ID}"
 
     assert f"{grid}_charging_ratio" not in uids
@@ -258,9 +255,7 @@ async def test_disabling_option_disables_entity_but_keeps_it(
     Power-share sensors are gated on ``enable_power_shares``; toggling it must
     therefore take effect on the registered entities.
     """
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     ent_reg = er.async_get(hass)
 
@@ -331,9 +326,7 @@ async def test_options_form_submit_reloads_and_applies(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Completing the options flow reloads the entry and applies the changes."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     ent_reg = er.async_get(hass)
     uid = f"{mock_config_entry.entry_id}_combined_export_ratio"
@@ -342,9 +335,7 @@ async def test_options_form_submit_reloads_and_applies(
     assert ent_reg.async_get(entity_id).disabled_by is None
 
     # Open options and pick custom to configure per-scope.
-    result = await hass.config_entries.options.async_init(
-        mock_config_entry.entry_id
-    )
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         user_input={"preset": "custom", "debug_power_entities": False},
@@ -358,7 +349,10 @@ async def test_options_form_submit_reloads_and_applies(
             "power_sensors": {"distribution_power": True, "distribution_ratios": False},
             "costs": {"cost_method": "none", "accumulate_costs": False},
             "savings": {"savings_method": "none", "accumulate_savings": False},
-            "financial_return": {"financial_return_method": "none", "accumulate_financial_return": False},
+            "financial_return": {
+                "financial_return_method": "none",
+                "accumulate_financial_return": False,
+            },
         },
     )
     assert result["step_id"] == "grid"
@@ -384,8 +378,7 @@ async def test_options_form_submit_reloads_and_applies(
 
     # The save reloaded the entry; dropping distribution_ratios disabled the sensor.
     assert (
-        ent_reg.async_get(entity_id).disabled_by
-        is er.RegistryEntryDisabler.INTEGRATION
+        ent_reg.async_get(entity_id).disabled_by is er.RegistryEntryDisabler.INTEGRATION
     )
 
 
@@ -398,9 +391,7 @@ async def test_grid_import_sensor_reflects_initial_state(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """The grid import sensor should read 500 W when grid_power starts at 500."""
-    hass.states.async_set(
-        "sensor.grid_power", "500", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "500", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     await hass.async_block_till_done()
 
@@ -413,9 +404,7 @@ async def test_grid_export_sensor_reflects_negative_power(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Negative grid power (export) should be reflected correctly in PowerInsight."""
-    hass.states.async_set(
-        "sensor.grid_power", "-300", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "-300", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
     pi = mock_config_entry.runtime_data.power_insight
@@ -427,9 +416,7 @@ async def test_sensor_state_updates_on_state_change(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """HA sensor state should update when the source entity changes."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     await hass.async_block_till_done()
 
@@ -441,9 +428,7 @@ async def test_sensor_state_updates_on_state_change(
     assert sensor_state_before is not None
 
     # Trigger a state change
-    hass.states.async_set(
-        "sensor.grid_power", "800", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "800", {"unit_of_measurement": "W"})
     await hass.async_block_till_done()
 
     pi = mock_config_entry.runtime_data.power_insight
@@ -454,9 +439,7 @@ async def test_sensor_reflects_unavailable_after_source_goes_unavailable(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """When a source entity becomes unavailable, PowerInsight should store None."""
-    hass.states.async_set(
-        "sensor.grid_power", "500", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "500", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
     # Source entity goes unavailable
@@ -474,9 +457,7 @@ async def test_sensor_recovers_after_unavailable(
     hass.states.async_set("sensor.grid_power", "unavailable", {})
     await setup_integration(hass, mock_config_entry)
 
-    hass.states.async_set(
-        "sensor.grid_power", "200", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "200", {"unit_of_measurement": "W"})
     await hass.async_block_till_done()
 
     pi = mock_config_entry.runtime_data.power_insight
@@ -492,12 +473,8 @@ async def test_gross_power_with_grid_and_pv(
     hass: HomeAssistant, mock_config_entry_with_pv: MockConfigEntry
 ) -> None:
     """gross_power should sum grid import + PV production when both are set."""
-    hass.states.async_set(
-        "sensor.grid_power", "200", {"unit_of_measurement": "W"}
-    )
-    hass.states.async_set(
-        "sensor.pv_power", "1000", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "200", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "1000", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry_with_pv)
 
     pi = mock_config_entry_with_pv.runtime_data.power_insight
@@ -517,9 +494,9 @@ async def test_gross_power_with_grid_and_pv(
 async def _setup_full_house(hass: HomeAssistant) -> MockConfigEntry:
     """Grid + PV + battery + consumer, importing while the battery charges."""
     grid_data = copy.deepcopy(make_grid_subentry_data())
-    grid_data["data"]["adapter"]["config"][
-        "grid_electricity_price_entity"
-    ] = "sensor.grid_price"
+    grid_data["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",

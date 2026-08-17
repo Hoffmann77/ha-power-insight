@@ -1,4 +1,5 @@
 """Tests for the correction-factor reconfigure flow and sensor display (item C)."""
+
 from __future__ import annotations
 
 import copy
@@ -34,6 +35,7 @@ def _pv_state(hass: HomeAssistant, entry: MockConfigEntry, suffix: str):
 # ---------------------------------------------------------------------------
 # C2 — reconfigure recomputes the correction factor
 # ---------------------------------------------------------------------------
+
 
 async def test_reconfigure_pv_computes_correction_factor(
     hass: HomeAssistant,
@@ -84,6 +86,7 @@ async def test_reconfigure_pv_computes_correction_factor(
 # A3 — per-adapter levelized sensors gated on adapter.lcoe
 # ---------------------------------------------------------------------------
 
+
 async def test_levelized_sensors_absent_without_lcoe(hass: HomeAssistant) -> None:
     """A PV adapter without a configured LCOE gets no levelized sensors."""
     pv_data = copy.deepcopy(make_pv_subentry_data())
@@ -101,8 +104,7 @@ async def test_levelized_sensors_absent_without_lcoe(hass: HomeAssistant) -> Non
 
     ent_reg = er.async_get(hass)
     uids = {
-        e.unique_id
-        for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+        e.unique_id for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id)
     }
     assert f"{entry.entry_id}_{PV_SUB_ID}_levelized_operating_cost_rate" not in uids
 
@@ -121,8 +123,7 @@ async def test_levelized_sensors_present_with_lcoe(hass: HomeAssistant) -> None:
 
     ent_reg = er.async_get(hass)
     uids = {
-        e.unique_id
-        for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+        e.unique_id for e in er.async_entries_for_config_entry(ent_reg, entry.entry_id)
     }
     assert f"{entry.entry_id}_{PV_SUB_ID}_levelized_operating_cost_rate" in uids
 
@@ -130,6 +131,7 @@ async def test_levelized_sensors_present_with_lcoe(hass: HomeAssistant) -> None:
 # ---------------------------------------------------------------------------
 # C4 — per-adapter levelized display is scaled by the correction factor
 # ---------------------------------------------------------------------------
+
 
 async def test_levelized_measurement_applies_factor_to_the_price(
     hass: HomeAssistant,
@@ -142,9 +144,9 @@ async def test_levelized_measurement_applies_factor_to_the_price(
     The factor belongs on the lcoe inside the bracket.
     """
     grid_data = copy.deepcopy(make_grid_subentry_data())
-    grid_data["data"]["adapter"]["config"][
-        "grid_electricity_price_entity"
-    ] = "sensor.grid_price"
+    grid_data["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
     pv_data = copy.deepcopy(make_pv_subentry_data())
     pv_data["data"]["adapter"]["config"]["correction_factor"] = 2.0
     entry = MockConfigEntry(
@@ -153,15 +155,11 @@ async def test_levelized_measurement_applies_factor_to_the_price(
         options=FULL_OPTIONS,
         subentries_data=[grid_data, pv_data],
     )
-    hass.states.async_set(
-        "sensor.grid_power", "1000", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "1000", {"unit_of_measurement": "W"})
     hass.states.async_set(
         "sensor.grid_price", "0.30", {"unit_of_measurement": "EUR/kWh"}
     )
-    hass.states.async_set(
-        "sensor.pv_power", "2000", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
     await hass.async_block_till_done()
 
@@ -187,6 +185,7 @@ async def test_levelized_measurement_applies_factor_to_the_price(
 # covered end-to-end in tests/test_end_to_end.py; here we only check the read
 # side: a pre-seeded ledger is reflected in the combined derived sensor.
 # ---------------------------------------------------------------------------
+
 
 async def test_combined_ledger_sensor_includes_retired_totals(
     hass: HomeAssistant,
@@ -244,14 +243,17 @@ def test_stored_data_round_trips_the_component_breakdown() -> None:
     )
 
     stored = IntegrationSensorExtraStoredData(
-        Decimal("1.50"), "EUR", Decimal("1.50"),
+        Decimal("1.50"),
+        "EUR",
+        Decimal("1.50"),
         {"pv": Decimal("1.00"), "grid": Decimal("0.50")},
     )
     restored = IntegrationSensorExtraStoredData.from_dict(stored.as_dict())
 
     assert restored is not None
     assert restored.component_totals == {
-        "pv": Decimal("1.00"), "grid": Decimal("0.50"),
+        "pv": Decimal("1.00"),
+        "grid": Decimal("0.50"),
     }
     # The parts still add up to the total they were split from.
     assert sum(restored.component_totals.values()) == restored.native_value
@@ -271,7 +273,9 @@ def test_stored_data_without_components_restores_cleanly() -> None:
     )
 
     legacy = IntegrationSensorExtraStoredData(
-        Decimal("2.00"), "EUR", Decimal("2.00"),
+        Decimal("2.00"),
+        "EUR",
+        Decimal("2.00"),
     ).as_dict()
     del legacy["component_totals"]
 

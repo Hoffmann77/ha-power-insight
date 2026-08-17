@@ -26,18 +26,25 @@ pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 def _subentry(adapter_type: str, config: dict, **top_level):
     """Build a minimal fake config subentry for from_subentry."""
     data = {
-        "adapter": {"adapter_type": adapter_type, "key": adapter_type, "config": config},
+        "adapter": {
+            "adapter_type": adapter_type,
+            "key": adapter_type,
+            "config": config,
+        },
         **top_level,
     }
-    return SimpleNamespace(subentry_id=f"{adapter_type}_1", title=adapter_type, data=data)
+    return SimpleNamespace(
+        subentry_id=f"{adapter_type}_1", title=adapter_type, data=data
+    )
 
 
 # --- PV base backfill ---
 
+
 def test_pv_lcoe_backfilled_from_lifetime_when_base_absent() -> None:
     sub = _subentry(
         "pv_system",
-        {"power_entity": "sensor.pv_power"},          # no default_lcoe
+        {"power_entity": "sensor.pv_power"},  # no default_lcoe
         lifetime_cost=2000.0,
         lifetime_production=10000.0,
     )
@@ -49,7 +56,7 @@ def test_pv_lcoe_backfilled_from_lifetime_when_base_absent() -> None:
 def test_pv_co2_intensity_backfilled_from_lifetime() -> None:
     sub = _subentry(
         "pv_system",
-        {"power_entity": "sensor.pv_power"},          # no default_co2_intensity
+        {"power_entity": "sensor.pv_power"},  # no default_co2_intensity
         co2_footprint=500.0,
         lifetime_production=10000.0,
     )
@@ -63,7 +70,7 @@ def test_pv_stored_base_is_used_verbatim() -> None:
         "pv_system",
         {"power_entity": "sensor.pv_power", "default_lcoe": 0.5},
         lifetime_cost=2000.0,
-        lifetime_production=10000.0,                    # would imply 0.2
+        lifetime_production=10000.0,  # would imply 0.2
     )
     assert PvAdapterModel.from_subentry(sub).lcoe == pytest.approx(0.5)
 
@@ -75,16 +82,19 @@ def test_pv_lcoe_none_without_base_or_lifetime() -> None:
 
 # --- Battery base backfill ---
 
+
 def test_battery_lcos_backfilled_from_lifetime_when_base_absent() -> None:
     sub = _subentry(
         "battery",
-        {"power_entity": "sensor.bat_power"},          # no default_lcos
+        {"power_entity": "sensor.bat_power"},  # no default_lcos
         lifetime_cost=3000.0,
         lifetime_production=10000.0,
     )
     model = BatteryAdapterModel.from_subentry(sub)
     assert model.lcos == pytest.approx(0.3)
-    assert model.create_adapter().lcoe == pytest.approx(0.3)  # battery.lcoe returns _lcos
+    assert model.create_adapter().lcoe == pytest.approx(
+        0.3
+    )  # battery.lcoe returns _lcos
 
 
 def test_battery_stored_base_is_used_verbatim() -> None:
@@ -92,7 +102,7 @@ def test_battery_stored_base_is_used_verbatim() -> None:
         "battery",
         {"power_entity": "sensor.bat_power", "default_lcos": 0.15},
         lifetime_cost=3000.0,
-        lifetime_production=10000.0,                    # would imply 0.3
+        lifetime_production=10000.0,  # would imply 0.3
     )
     assert BatteryAdapterModel.from_subentry(sub).lcos == pytest.approx(0.15)
 

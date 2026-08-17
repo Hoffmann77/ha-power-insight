@@ -32,8 +32,6 @@ print(power_insight.prod_adapters_charging_shares_by_battery)
 print(power_insight.storage_adapters_charging_source_shares)
 
 
-
-
 # Pv power distribution order
 # 1. Battery with only pv adapers or battery with pv adapters and grid with no import
 # 2. Consumers

@@ -20,7 +20,6 @@
         "Marginal and levelized cost agree while the grid is the only source.",
         "An unavailable reading collapses the derived values rather than defaulting to zero."
       ],
-      "slots": 81,
       "derived": 20
     },
     {
@@ -32,7 +31,6 @@
         "Marginal cost and levelized cost diverge as soon as a local source runs.",
         "A source that only draws standby makes the saving rate negative."
       ],
-      "slots": 108,
       "derived": 0
     },
     {
@@ -44,7 +42,6 @@
         "The applicable self-consumption ratio measures only what stayed home.",
         "Zero gross power guards to zero rather than dividing by zero."
       ],
-      "slots": 81,
       "derived": 0
     },
     {
@@ -55,7 +52,6 @@
         "A metered draw larger than gross power clamps the base load to zero rather than going negative.",
         "A zeroed base load still publishes a share row, of zeros."
       ],
-      "slots": 54,
       "derived": 0
     },
     {
@@ -66,7 +62,6 @@
         "Serving the captive sink first pushes the unrestricted base load onto the grid.",
         "A draw the allowed sources cannot cover is still attributed, and the shortfall is reported as a restriction deficit."
       ],
-      "slots": 54,
       "derived": 0
     },
     {
@@ -78,7 +73,6 @@
         "Its marginal price is zero \u2014 the mix it charged on happened earlier, where a snapshot cannot see it.",
         "An adapter reading exactly 0 W belongs to neither flow group."
       ],
-      "slots": 81,
       "derived": 0
     },
     {
@@ -89,7 +83,6 @@
         "When every allowed source is idle the row collapses to zero rather than dividing by zero.",
         "The unservable draw is reported as a restriction deficit."
       ],
-      "slots": 54,
       "derived": 0
     },
     {
@@ -100,7 +93,6 @@
         "A flexible sink must not take local power a tight group needs.",
         "When restrictions cannot all be honoured, the sink with the fewest permitted alternatives is served first and the deficit falls on the sinks that had somewhere else to go."
       ],
-      "slots": 54,
       "derived": 0
     },
     {
@@ -111,7 +103,6 @@
         "Standby draw is routed through the provenance allocation, not by gross share.",
         "Two dischargers with different levelized costs price the mix between them."
       ],
-      "slots": 81,
       "derived": 0
     }
   ],
@@ -119,7 +110,6 @@
     "gross_power": {
       "title": "Gross power",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -128,7 +118,6 @@
     "combined_grid_import": {
       "title": "Grid import",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -137,7 +126,6 @@
     "combined_grid_export": {
       "title": "Grid export",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -146,7 +134,6 @@
     "combined_production": {
       "title": "PV production",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -155,7 +142,6 @@
     "combined_charging_power": {
       "title": "Charging power",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -164,7 +150,6 @@
     "combined_discharging_power": {
       "title": "Discharging power",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -173,7 +158,6 @@
     "combined_standby_power": {
       "title": "Standby power",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -182,7 +166,6 @@
     "combined_consumption": {
       "title": "Self-consumption",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -191,7 +174,6 @@
     "home_base_load_power": {
       "title": "Home base load",
       "layer": 1,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -200,14 +182,12 @@
     "sink_adapters_source_shares": {
       "title": "Source provenance",
       "layer": 2,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "home_base_load_source_shares": {
       "title": "Home base load provenance",
       "layer": 2,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -216,14 +196,12 @@
     "sink_adapters_restriction_deficit": {
       "title": "Restriction deficit",
       "layer": 2,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "gross_power_export_ratio": {
       "title": "Export ratio",
       "layer": 3,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -232,7 +210,6 @@
     "gross_power_consumption_ratio": {
       "title": "Self-consumption ratio",
       "layer": 3,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -241,7 +218,6 @@
     "gross_power_charging_ratio": {
       "title": "Charging ratio",
       "layer": 3,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -250,7 +226,6 @@
     "gross_power_standby_ratio": {
       "title": "Standby ratio",
       "layer": 3,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -259,7 +234,6 @@
     "gross_power_applicable_consumption_ratio": {
       "title": "Applicable self-consumption ratio",
       "layer": 3,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -268,28 +242,24 @@
     "source_adapters_export_power": {
       "title": "Exported power per source",
       "layer": 3,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "source_adapters_export_shares": {
       "title": "Export share per source",
       "layer": 3,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "source_adapters_standby_power": {
       "title": "Standby power per source",
       "layer": 3,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "combined_coe_rate": {
       "title": "Cost of electricity rate",
       "layer": 4,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -298,7 +268,6 @@
     "combined_lcoe_rate": {
       "title": "Levelized cost of electricity rate",
       "layer": 4,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -307,7 +276,6 @@
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
       "layer": 4,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -316,7 +284,6 @@
     "combined_saving_rate": {
       "title": "Cost saving rate",
       "layer": 4,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -325,7 +292,6 @@
     "combined_export_compensation_rate": {
       "title": "Export compensation rate",
       "layer": 4,
-      "slots": 24,
       "derived": 1,
       "derived_in": [
         "grid-only"
@@ -334,20 +300,17 @@
     "source_adapters_dynamic_coe": {
       "title": "Marginal price per source",
       "layer": 4,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     },
     "source_adapters_dynamic_lcoe": {
       "title": "Levelized price per source",
       "layer": 4,
-      "slots": 24,
       "derived": 0,
       "derived_in": []
     }
   },
   "totals": {
-    "slots": 648,
     "derived": 20,
     "untouched": [
       "sink_adapters_restriction_deficit",

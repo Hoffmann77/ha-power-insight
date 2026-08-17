@@ -26,9 +26,9 @@ export const CASE = referenceCase('captive-battery');
 Each card above is one snapshot of this wiring. The tabs under them re-label the
 same picture with a different layer of the engine — the readings, where each
 sink's power came from, how the gross power split between channels, and what it
-all cost — and every property the corpus carries a slot for is listed
-underneath. A slot nobody has derived yet reads *not yet derived*, and a
-snapshot whose provenance is still pending has no flows to draw.
+all cost — and the values derived for that snapshot are listed underneath. Only
+derived values appear, so a short table means the hand-checking has not got far
+here; a snapshot whose provenance is still undecided has no flows to draw.
 
 {CASE.states.map((s) => (
   <div key={s.id} style={{marginBottom: '1.25rem'}}>

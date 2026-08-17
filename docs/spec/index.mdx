@@ -17,8 +17,8 @@ choice** — a place where more than one answer is defensible, and Power Insight
 picks one.
 
 Those choices are what this section is for. Each **reference case** is a small,
-deliberately-chosen wiring with a value published for every property, so you can
-disagree with the *model* without reading a line of Python.
+deliberately-chosen wiring, so you can disagree with the *model* without reading
+a line of Python.
 
 **No value on these pages comes from the engine.** Each one is worked out by
 hand from the model, on paper, without the engine's answer in view — and the
@@ -30,8 +30,8 @@ can only ever record what the code already does, which makes asserting it back
 a tautology: a bug faithfully captured is still a bug, now with a documentation
 page vouching for it. Values derived independently can say the code is *wrong*.
 
-The cost is that it is slow, and the corpus starts empty. Most slots below read
-*not yet derived*, and diagrams whose provenance rows are still pending have no
+The cost is that it is slow, and the corpus starts empty. Most properties below
+have no value yet, and diagrams whose provenance rows are undecided have no
 flows to draw. That is the honest state of the work rather than a defect in the
 page.
 
@@ -83,9 +83,7 @@ them still hold when they all apply at once.
             ))}
           </ul>
         </td>
-        <td>
-          {d.derived} / {d.slots}
-        </td>
+        <td>{d.derived || '—'}</td>
       </tr>
     ))}
   </tbody>
@@ -111,9 +109,10 @@ Click it again, or anywhere else on the diagram, to step back out.
 ### The four layers
 
 The engine computes in layers, and the tab row steps through them. Each one
-re-labels the same picture and lists every property the corpus carries a slot
-for underneath — the derived value with its exact fraction where there is one,
-and *not yet derived* where there is not.
+re-labels the same picture and lists the values derived for that snapshot
+underneath, each with its exact fraction next to the figure you would intuit.
+Only derived values are listed: a property missing from a layer is one nobody
+has worked out here yet, not one the engine reports nothing for.
 
 | Layer | The question it answers |
 | --- | --- |
@@ -128,29 +127,45 @@ checked against a real value.
 
 ## How a value gets here
 
-A slot starts empty. Somebody works the value out from the model — the wiring,
-the readings, and the definition of the property, with the engine's answer not
-in view — and writes it into the case's module under
-`tests/engine/reference/`, next to the readings it was derived from:
+**Every case on these pages is a test.** Somebody works a value out from the
+model — the wiring, the readings, and the definition of the property, with the
+engine's answer not in view — and writes it as a method on the case's class in
+`tests/engine/reference/`, directly under the readings it was derived from:
 
 ```python
-Snapshot(
-    id="import_only",
-    note="The house runs on the grid alone; every watt is unmetered base load.",
-    readings=dict(grid=1200),
-    price=F(3, 10),
-    answers={
-        "gross_power": 1200,
-        "home_base_load_source_shares": {"grid": 1},
-    },
-)
+class TestGridOnly(ReferenceCase):
+    """One meter and nothing else. ...
+
+    Decides:
+
+    * With no local device, the whole gross power is the home base load.
+    """
+
+    case_id = "grid-only"
+    title = "Grid only"
+
+    @topology
+    def wiring(self):
+        return (Adapter.grid(),)
+
+    @state
+    def import_only(self):
+        """The house runs on the grid alone; every watt is base load."""
+        return State(grid=1200, price=F(3, 10))
+
+    @expect("gross_power")
+    def test_import_only_gross_power(self):
+        return 1200
 ```
 
-From then on CI asserts the engine against it on every commit, and
-`tools/export_cases.py` publishes it to these pages. A dot next to a value says
-whether anybody has derived it yet.
+That is the whole source. This page is generated from it: the summary you are
+reading is the class docstring, the caption under each snapshot card is its
+`@state` docstring, and every value in the tables is what an `@expect` method
+returned. Nothing is written twice, so nothing can drift — and the snapshot
+being described here is by construction the one being asserted.
 
-There are two outcomes and no third. Either the engine agrees, or the build goes
+From then on CI runs each `@expect` as a test against a freshly built engine.
+There are two outcomes and no third: either the engine agrees, or the build goes
 red — and a red build means *either* the engine is broken *or* the derivation
 was. The corpus holds no opinion about which; working that out is the
 interesting part, and it ends with one of the two being fixed rather than with a
@@ -160,19 +175,19 @@ be.
 ## Coverage
 
 Where the derivation programme has got to, generated with the cases so it cannot
-drift from them. Every property has one slot per snapshot; the table says how
-many of those a human has filled and which rungs they are on.
+drift from them: how many values each property has across the corpus, and which
+rungs they are on.
 
 It reads as almost entirely empty, and will for a long while. That is the point
 of publishing it: you can see exactly how far the hand-checking has got, and a
-slot nobody has derived is one the engine is not being held to.
+property with no values anywhere is one the engine is not being held to.
 
 <table>
   <thead>
     <tr>
       <th>Property</th>
       <th>Layer</th>
-      <th>Derived</th>
+      <th>Values</th>
       <th>On rung</th>
     </tr>
   </thead>
@@ -183,9 +198,7 @@ slot nobody has derived is one the engine is not being held to.
           <code>{name}</code>
         </td>
         <td>{c.layer}</td>
-        <td>
-          {c.derived} / {c.slots}
-        </td>
+        <td>{c.derived || '—'}</td>
         <td>{c.derived_in.map((id) => RUNG[id]).join(' · ') || '—'}</td>
       </tr>
     ))}
@@ -193,10 +206,8 @@ slot nobody has derived is one the engine is not being held to.
 </table>
 
 <p>
-  <strong>
-    {COVERAGE_TABLE.totals.derived} of {COVERAGE_TABLE.totals.slots}
-  </strong>{' '}
-  slots have been derived.
+  <strong>{COVERAGE_TABLE.totals.derived}</strong> values have been derived
+  across the corpus.
   {COVERAGE_TABLE.totals.untouched.length ===
     Object.keys(COVERAGE_TABLE.properties).length &&
     ' Nothing has been derived yet — the corpus is a worklist and nothing more.'}
