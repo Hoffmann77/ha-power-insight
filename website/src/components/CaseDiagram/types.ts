@@ -1,5 +1,6 @@
 /**
- * The reference-case JSON contract (see docs/spec/reference-case.schema.json).
+ * The reference-case JSON contract, as published by `tools/export_cases.py`
+ * from the Python cases in `tests/engine/reference/`.
  *
  * Every number in a case file is an *exact rational string* — "400", "-600",
  * "8/15", "3/20" — never a JSON float. That is the whole point of the format:
@@ -36,36 +37,19 @@ export interface Adapter {
   config: AdapterConfig;
 }
 
-export interface DerivationStep {
-  text: string;
-  detail?: string;
-  math?: string;
-  result?: string;
-}
-
-/**
- * How a slot came to hold what it holds — and the only thing that says whether
- * a human has filled it in.
- *
- * Expectation values are literal, so a derived answer of "there is no value
- * here" is a plain `null` and is indistinguishable from an empty slot by its
- * value alone. Read the status, never the value, to decide which you have.
- *
- * `pending` is the default and, for now, almost everything.
- */
-export interface Certification {
-  status: 'pending' | 'verified' | 'disputed';
-  by?: string;
-  date?: string;
-  method?: string;
-  engine_commit?: string;
-}
-
 export interface Expectation {
   property: string;
   value: ValueTree;
-  derivation: DerivationStep[];
-  certification: Certification;
+  /**
+   * Whether somebody has derived this slot — and the only thing that says so.
+   *
+   * Expectation values are literal, so a derived answer of "there is no value
+   * here" is a plain `null` and is indistinguishable from an empty slot by its
+   * value alone. Read this flag, never the value, to decide which you have.
+   *
+   * `false` is the default and, for now, most of the corpus.
+   */
+  derived: boolean;
 }
 
 export interface CaseState {
@@ -102,7 +86,7 @@ export interface PropertyDoc {
   formula?: string;
   depends_on?: string[];
   answer_shape?: string;
-  worksheet_steps?: string[];
+  derivation_steps?: string[];
   note?: string;
 }
 
@@ -142,9 +126,8 @@ export interface PropertyCoverage {
   layer: number;
   /** Slots this property has across the corpus — one per snapshot. */
   slots: number;
-  /** Slots a human has filled in, disputed ones included. */
+  /** Slots a human has filled in. */
   derived: number;
-  disputed: number;
   /** Cases where at least one slot has been derived. */
   derived_in: string[];
 }
@@ -165,7 +148,6 @@ export interface Coverage {
   totals: {
     slots: number;
     derived: number;
-    disputed: number;
     /** Properties with no derived value anywhere yet. */
     untouched: string[];
   };

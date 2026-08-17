@@ -21,7 +21,7 @@
         "An unavailable reading collapses the derived values rather than defaulting to zero."
       ],
       "slots": 81,
-      "derived": 0
+      "derived": 20
     },
     {
       "case": "pv-self-consumption",
@@ -120,144 +120,156 @@
       "title": "Gross power",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_grid_import": {
       "title": "Grid import",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_grid_export": {
       "title": "Grid export",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_production": {
       "title": "PV production",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_charging_power": {
       "title": "Charging power",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_discharging_power": {
       "title": "Discharging power",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_standby_power": {
       "title": "Standby power",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_consumption": {
       "title": "Self-consumption",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "home_base_load_power": {
       "title": "Home base load",
       "layer": 1,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "sink_adapters_source_shares": {
       "title": "Source provenance",
       "layer": 2,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "home_base_load_source_shares": {
       "title": "Home base load provenance",
       "layer": 2,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "sink_adapters_restriction_deficit": {
       "title": "Restriction deficit",
       "layer": 2,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "gross_power_export_ratio": {
       "title": "Export ratio",
       "layer": 3,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "gross_power_consumption_ratio": {
       "title": "Self-consumption ratio",
       "layer": 3,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "gross_power_charging_ratio": {
       "title": "Charging ratio",
       "layer": 3,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "gross_power_standby_ratio": {
       "title": "Standby ratio",
       "layer": 3,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "gross_power_applicable_consumption_ratio": {
       "title": "Applicable self-consumption ratio",
       "layer": 3,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "source_adapters_export_power": {
       "title": "Exported power per source",
       "layer": 3,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "source_adapters_export_shares": {
@@ -265,7 +277,6 @@
       "layer": 3,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "source_adapters_standby_power": {
@@ -273,55 +284,58 @@
       "layer": 3,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "combined_coe_rate": {
       "title": "Cost of electricity rate",
       "layer": 4,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_lcoe_rate": {
       "title": "Levelized cost of electricity rate",
       "layer": 4,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
       "layer": 4,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_saving_rate": {
       "title": "Cost saving rate",
       "layer": 4,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_export_compensation_rate": {
       "title": "Export compensation rate",
       "layer": 4,
       "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "source_adapters_dynamic_coe": {
       "title": "Marginal price per source",
       "layer": 4,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     },
     "source_adapters_dynamic_lcoe": {
@@ -329,35 +343,13 @@
       "layer": 4,
       "slots": 24,
       "derived": 0,
-      "disputed": 0,
       "derived_in": []
     }
   },
   "totals": {
     "slots": 648,
-    "derived": 0,
-    "disputed": 0,
+    "derived": 20,
     "untouched": [
-      "combined_avoided_cost_rate",
-      "combined_charging_power",
-      "combined_coe_rate",
-      "combined_consumption",
-      "combined_discharging_power",
-      "combined_export_compensation_rate",
-      "combined_grid_export",
-      "combined_grid_import",
-      "combined_lcoe_rate",
-      "combined_production",
-      "combined_saving_rate",
-      "combined_standby_power",
-      "gross_power",
-      "gross_power_applicable_consumption_ratio",
-      "gross_power_charging_ratio",
-      "gross_power_consumption_ratio",
-      "gross_power_export_ratio",
-      "gross_power_standby_ratio",
-      "home_base_load_power",
-      "home_base_load_source_shares",
       "sink_adapters_restriction_deficit",
       "sink_adapters_source_shares",
       "source_adapters_dynamic_coe",

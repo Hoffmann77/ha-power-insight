@@ -22,11 +22,11 @@ function scalarCell(
   doc: PropertyDoc | undefined,
   pending: boolean,
 ): React.ReactElement {
-  // Two different nothings, told apart by the status rather than the value:
-  // expectation values are literal, so a derived "no value here" is a plain
-  // null and looks exactly like a slot nobody has touched. Conflating them
-  // would be a lie in both directions — one is the corpus asserting the engine
-  // should report nothing, the other is it saying nothing at all.
+  // Two different nothings, told apart by the `derived` flag rather than the
+  // value: expectation values are literal, so a derived "no value here" is a
+  // plain null and looks exactly like a slot nobody has touched. Conflating
+  // them would be a lie in both directions — one is the corpus asserting the
+  // engine should report nothing, the other is it saying nothing at all.
   if (stored === null) {
     return pending ? (
       <b className={styles.vpending}>not yet derived</b>
@@ -80,9 +80,9 @@ function Row({
   doc: PropertyDoc | undefined;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const {property, value, certification} = expectation;
+  const {property, value, derived} = expectation;
   const isMap = value !== null && typeof value === 'object';
-  const pending = certification.status === 'pending';
+  const pending = !derived;
   const explainable = Boolean(doc?.definition);
 
   return (
@@ -99,7 +99,7 @@ function Row({
           {doc?.title ?? humanize(property)}
         </span>
         {!isMap && scalarCell(value as string | null, doc, pending)}
-        <CertDot status={certification.status} />
+        <CertDot derived={derived} />
       </button>
       {isMap && breakdown(value, doc, pending)}
       {open && doc && (

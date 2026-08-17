@@ -23,6 +23,13 @@ jobs:
       - name: Run engine tests
         run: uv run --group engine pytest tests/engine -q
 
+      # The docs render the reference cases from generated JSON. The cases
+      # themselves are the Python in tests/engine/reference/, so a derived
+      # answer added there but never exported is a value CI holds the engine to
+      # and the published spec does not show.
+      - name: Check the published reference cases are up to date
+        run: uv run --group engine python tools/export_cases.py --check
+
   # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.
   integration-tests:
     runs-on: ubuntu-latest

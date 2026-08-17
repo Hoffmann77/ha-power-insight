@@ -12,7 +12,6 @@
  */
 import {fmtEur, fmtPct, fmtW, rat} from './rational';
 import type {
-  Certification,
   Channel,
   Expectation,
   LayerId,
@@ -154,33 +153,26 @@ export function scalar(
   return typeof v === 'string' ? rat(v) : null;
 }
 
-export function certificationOf(
-  byProperty: Map<string, Expectation>,
-  property: string,
-): Certification | undefined {
-  return byProperty.get(property)?.certification;
-}
-
-export function isVerified(
+export function isDerived(
   byProperty: Map<string, Expectation>,
   property: string,
 ): boolean {
-  return certificationOf(byProperty, property)?.status === 'verified';
+  return byProperty.get(property)?.derived === true;
 }
 
-/** `[verified, total]` across every expectation in the case. */
-export function certCounts(c: ReferenceCase): [number, number] {
-  let verified = 0;
+/** `[derived, total]` across every expectation in the case. */
+export function derivedCounts(c: ReferenceCase): [number, number] {
+  let derived = 0;
   let total = 0;
   for (const st of c.states) {
     for (const e of st.expectations) {
       total += 1;
-      if (e.certification.status === 'verified') {
-        verified += 1;
+      if (e.derived) {
+        derived += 1;
       }
     }
   }
-  return [verified, total];
+  return [derived, total];
 }
 
 /**

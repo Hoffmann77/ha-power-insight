@@ -106,12 +106,8 @@ single adapter, and still a slot for every property.
       "readings": { "grid": "200", "east": "100", "bat_a": "-100" },
       "price": "3/10",
       "expectations": [
-        { "property": "gross_power", "value": "400",
-          "derivation": [{ "text": "sum of the positive readings" }],
-          "certification": { "status": "verified", "by": "…", "date": "…" } },
-        { "property": "sink_adapters_source_shares",
-          "value": null,
-          "derivation": [], "certification": { "status": "pending" } }
+        { "property": "gross_power", "value": "400", "derived": true },
+        { "property": "sink_adapters_source_shares", "value": null, "derived": false }
       ]
     }
   ]
@@ -134,26 +130,27 @@ flow(source → sink) = sink_adapters_source_shares[sink][source] × |readings[s
 flow(source → home) = home_base_load_source_shares[source]      × home_base_load_power
 ```
 
+**These files are generated, and are not the source of truth.** The cases live
+in `tests/engine/reference/` as Python modules — wiring, snapshots, and
+hand-derived answers — and `tools/export_cases.py` projects them into this JSON.
+Edit the Python and re-export; an edit to a `.json` file here is overwritten on
+the next run.
+
 **Most slots are empty, and will be for a long time.** No value in the corpus
-comes from the engine: each is derived by hand and entered through
-`tools/certify.py`, so a slot stays `"value": null` with
-`certification.status` of `"pending"` until somebody works it out. Expect the
-overwhelming majority of what you render to be pending, including the share
-matrices the diagram needs — **a snapshot with no derived provenance has no
-edges to draw**, and the design has to look deliberate in that state rather
-than broken.
+comes from the engine: each is worked out by hand from the model, so a slot
+stays `"value": null` with `"derived": false` until somebody does that work.
+Expect the overwhelming majority of what you render to be pending, including
+the share matrices the diagram needs — **a snapshot with no derived provenance
+has no edges to draw**, and the design has to look deliberate in that state
+rather than broken.
 
-The other two statuses both mean a human derived it: `"verified"` (the engine
-agreed) and `"disputed"` (it did not, and the derivation stands). `derivation`
-is a list of `{text, detail?, math?, result?}` steps.
-
-**Read the status, never the value, to tell an empty slot from a derived one.**
+**Read `derived`, never the value, to tell an empty slot from a derived one.**
 Expectation values are literal — there is no in-band marker standing in for
 "nothing" — so a slot derived as having no value is a plain `null` and looks
-identical to one nobody has touched. `"pending"` means not derived; a `null`
-under either other status means the model says the engine should report nothing
-here. The two want different words on screen. That ambiguity goes away once
-every slot is derived, because there will be no empty ones left.
+identical to one nobody has touched. `"derived": false` means not derived; a
+`null` with `"derived": true` means the model says the engine should report
+nothing here. The two want different words on screen. That ambiguity goes away
+once every slot is derived, because there will be no empty ones left.
 
 The design should surface those distinctions honestly — a reader deserves to
 know which numbers a human has checked. A small badge is enough; please don't let it

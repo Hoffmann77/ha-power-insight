@@ -128,21 +128,34 @@ checked against a real value.
 
 ## How a value gets here
 
-A slot starts empty. `tools/worksheet.py` issues a printable sheet of pending
-slots — the wiring, the readings, and a blank — and nothing else, because the
-engine's answer is not in the corpus for the sheet to leak. You work the value
-out from the model. `tools/certify.py` then takes your answer, asks the engine
-live, and records one of two outcomes:
+A slot starts empty. Somebody works the value out from the model — the wiring,
+the readings, and the definition of the property, with the engine's answer not
+in view — and writes it into the case's module under
+`tests/engine/reference/`, next to the readings it was derived from:
 
-- **verified** — the engine agreed. The value is published with your derivation
-  beside it, and CI holds the engine to it from then on.
-- **disputed** — the engine disagreed and you stood by your working. Your value
-  is published, because the corpus is the specification and the specification is
-  what the model says. Which of the two is wrong is then a real question with a
-  real answer, and it is recorded rather than resolved by whoever noticed.
+```python
+Snapshot(
+    id="import_only",
+    note="The house runs on the grid alone; every watt is unmetered base load.",
+    readings=dict(grid=1200),
+    price=F(3, 10),
+    answers={
+        "gross_power": 1200,
+        "home_base_load_source_shares": {"grid": 1},
+    },
+)
+```
 
-A dot next to a value says which. Nothing about this is fast, and it is not
-meant to be.
+From then on CI asserts the engine against it on every commit, and
+`tools/export_cases.py` publishes it to these pages. A dot next to a value says
+whether anybody has derived it yet.
+
+There are two outcomes and no third. Either the engine agrees, or the build goes
+red — and a red build means *either* the engine is broken *or* the derivation
+was. The corpus holds no opinion about which; working that out is the
+interesting part, and it ends with one of the two being fixed rather than with a
+disagreement being filed. Nothing about this is fast, and it is not meant to
+be.
 
 ## Coverage
 
@@ -161,7 +174,6 @@ slot nobody has derived is one the engine is not being held to.
       <th>Layer</th>
       <th>Derived</th>
       <th>On rung</th>
-      <th>Disputed</th>
     </tr>
   </thead>
   <tbody>
@@ -175,7 +187,6 @@ slot nobody has derived is one the engine is not being held to.
           {c.derived} / {c.slots}
         </td>
         <td>{c.derived_in.map((id) => RUNG[id]).join(' · ') || '—'}</td>
-        <td>{c.disputed || '—'}</td>
       </tr>
     ))}
   </tbody>
@@ -185,13 +196,7 @@ slot nobody has derived is one the engine is not being held to.
   <strong>
     {COVERAGE_TABLE.totals.derived} of {COVERAGE_TABLE.totals.slots}
   </strong>{' '}
-  slots have been derived
-  {COVERAGE_TABLE.totals.disputed > 0 && (
-    <>
-      , {COVERAGE_TABLE.totals.disputed} of them currently disputed
-    </>
-  )}
-  .
+  slots have been derived.
   {COVERAGE_TABLE.totals.untouched.length ===
     Object.keys(COVERAGE_TABLE.properties).length &&
     ' Nothing has been derived yet — the corpus is a worklist and nothing more.'}

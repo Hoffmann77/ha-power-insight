@@ -90,7 +90,6 @@ from __future__ import annotations
 import importlib.util
 import os
 from dataclasses import dataclass
-from fractions import Fraction
 from typing import Any, Callable
 
 import pytest
@@ -404,63 +403,6 @@ def _check_compatible(topology: Topology, state: State) -> None:
             f"{topology.name!r}: missing readings {missing}, unexpected {extra}. "
             f"(A state must supply exactly the topology's uids {sorted(want)}.)"
         )
-
-
-# ---------------------------------------------------------------------------
-# Rebuilding a snapshot from the published corpus.
-# ---------------------------------------------------------------------------
-#
-# The reference cases in ``docs/spec/cases/`` describe their own wiring, so a
-# snapshot can be reconstructed from the JSON alone. Two callers need that and
-# they must not drift apart: ``tools/certify.py``, which asks the engine what
-# it says about a slot a human is deriving, and
-# ``tests/engine/test_reference_corpus.py``, which asserts the engine against
-# every slot already derived.
-
-
-def _stored_number(stored: Any) -> float | None:
-    """A stored exact rational ("3/20", "-600") back into a float, or None."""
-    if stored is None or isinstance(stored, bool):
-        return None
-    return float(Fraction(stored))
-
-
-_CORPUS_FACTORY: dict[str, Callable[[str, dict], Adapter]] = {
-    "grid": lambda uid, cfg: Adapter.grid(
-        has_price_entity=cfg.get("has_price_entity", True)
-    ),
-    "pv": lambda uid, cfg: Adapter.pv(
-        uid,
-        lcoe=_stored_number(cfg.get("lcoe")),
-        lco2_intensity=_stored_number(cfg.get("lco2_intensity")),
-        exports=cfg.get("exports_power", False),
-        export_comp=_stored_number(cfg.get("export_compensation")) or 0.0,
-        correction_factor=_stored_number(cfg.get("correction_factor")) or 1.0,
-    ),
-    "battery": lambda uid, cfg: Adapter.battery(
-        uid,
-        lcos=_stored_number(cfg.get("lcos")),
-        lco2_intensity=_stored_number(cfg.get("lco2_intensity")),
-        exports=cfg.get("exports_power", False),
-        export_comp=_stored_number(cfg.get("export_compensation")) or 0.0,
-        charge_from=tuple(cfg.get("charge_from_adapters", ())),
-    ),
-    "consumer": lambda uid, cfg: Adapter.consumer(
-        uid, power_from=tuple(cfg.get("power_from_adapters", ()))
-    ),
-}
-
-
-def engine_from_corpus(case: dict, state: dict) -> Any:
-    """Rebuild the snapshot a published case/state describes."""
-    adapters = [
-        _CORPUS_FACTORY[a["kind"]](a["uid"], a["config"]) for a in case["topology"]
-    ]
-    readings = {uid: _stored_number(v) for uid, v in state["readings"].items()}
-    return Cell(
-        Topology(*adapters),
-        State(price=_stored_number(state["price"]), **readings),
-    ).build_engine()
 
 
 # ---------------------------------------------------------------------------

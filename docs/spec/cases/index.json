@@ -9,9 +9,9 @@
         "grid_idle",
         "grid_unavailable"
       ],
-      "certified": 0,
+      "derived": 20,
       "total": 81,
-      "pending": 81
+      "pending": 61
     },
     {
       "id": "pv-self-consumption",
@@ -23,7 +23,7 @@
         "pv_standby",
         "pv_unavailable"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 108,
       "pending": 108
     },
@@ -36,7 +36,7 @@
         "export_all",
         "zero_gross"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 81,
       "pending": 81
     },
@@ -48,7 +48,7 @@
         "load_and_base",
         "over_metered"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 54,
       "pending": 54
     },
@@ -60,7 +60,7 @@
         "captive_load",
         "load_exceeds"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 54,
       "pending": 54
     },
@@ -73,7 +73,7 @@
         "discharging",
         "idle"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 81,
       "pending": 81
     },
@@ -85,7 +85,7 @@
         "captive_depletes_first",
         "source_in_standby"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 54,
       "pending": 54
     },
@@ -97,7 +97,7 @@
         "hall_tight_pair",
         "unsatisfiable_overlap"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 54,
       "pending": 54
     },
@@ -110,7 +110,7 @@
         "export_with_standby",
         "discharge_dynamic_prices"
       ],
-      "certified": 0,
+      "derived": 0,
       "total": 81,
       "pending": 81
     }

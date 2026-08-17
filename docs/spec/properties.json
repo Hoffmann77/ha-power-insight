@@ -1,5 +1,5 @@
 {
-  "$comment": "Property catalog for the reference-case corpus. Written once and shared by every case: it supplies the per-property reference documentation, the guiding steps printed on a certification worksheet, and the dependency order those worksheets are issued in. Definitions are taken from the engine's own docstrings; formulas are only stated where they have been checked against a real published value.",
+  "$comment": "Property catalog for the reference-case corpus. Written once and shared by every case: it supplies the per-property reference documentation, the guiding steps for deriving a value by hand, and the dependency order to derive them in (a cost rate is far easier once the channel watts underneath it are settled). Definitions are taken from the engine's own docstrings; formulas are only stated where they have been checked against a real published value.",
 
   "layers": {
     "1": "Readings and totals",
@@ -17,7 +17,7 @@
       "formula": "gross_power = Σ reading(a) for every adapter a whose reading is positive",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "Classify every adapter by the sign of its reading: positive is a source, negative a sink, exactly zero is idle and belongs to neither.",
         "Sum the readings of the sources."
       ],
@@ -32,7 +32,7 @@
       "formula": "combined_grid_import = max(reading(grid), 0)",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Read the grid. A positive reading is the import; a negative one means zero."]
+      "derivation_steps": ["Read the grid. A positive reading is the import; a negative one means zero."]
     },
 
     "combined_grid_export": {
@@ -43,7 +43,7 @@
       "formula": "combined_grid_export = max(-reading(grid), 0)",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Read the grid. A negative reading is the export, written positive; a positive one means zero."]
+      "derivation_steps": ["Read the grid. A negative reading is the export, written positive; a positive one means zero."]
     },
 
     "combined_production": {
@@ -54,7 +54,7 @@
       "formula": "combined_production = Σ max(reading(pv), 0) over the PV adapters",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Sum the PV readings that are positive. Ignore any that are negative."]
+      "derivation_steps": ["Sum the PV readings that are positive. Ignore any that are negative."]
     },
 
     "combined_charging_power": {
@@ -65,7 +65,7 @@
       "formula": "combined_charging_power = Σ max(-reading(battery), 0)",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Sum the battery readings that are negative, written positive."]
+      "derivation_steps": ["Sum the battery readings that are negative, written positive."]
     },
 
     "combined_discharging_power": {
@@ -76,7 +76,7 @@
       "formula": "combined_discharging_power = Σ max(reading(battery), 0)",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Sum the battery readings that are positive."]
+      "derivation_steps": ["Sum the battery readings that are positive."]
     },
 
     "combined_standby_power": {
@@ -87,7 +87,7 @@
       "formula": "combined_standby_power = Σ max(-reading(pv), 0)",
       "depends_on": [],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Sum the PV readings that are negative, written positive."]
+      "derivation_steps": ["Sum the PV readings that are negative, written positive."]
     },
 
     "combined_consumption": {
@@ -103,7 +103,7 @@
         "combined_standby_power"
       ],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Subtract export, charging and standby from gross power."]
+      "derivation_steps": ["Subtract export, charging and standby from gross power."]
     },
 
     "home_base_load_power": {
@@ -114,7 +114,7 @@
       "formula": "home_base_load_power = gross_power − Σ metered sink draws",
       "depends_on": ["gross_power"],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "Add up every metered sink's draw (the negative readings, written positive).",
         "Subtract that from gross power."
       ],
@@ -129,7 +129,7 @@
       "formula": null,
       "depends_on": ["gross_power", "home_base_load_power"],
       "answer_shape": "nested_map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "List the sources and their output, and the sinks and their draw. Remember the home base load is a sink.",
         "For each sink, note which sources it is allowed to draw from. An empty restriction means the whole mix.",
         "Find any group of sinks whose combined draw exhausts every source it is allowed — such a group has no freedom and must be served first.",
@@ -148,7 +148,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "home_base_load_power"],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "The home load is unrestricted, so it draws from whatever the restricted sinks leave.",
         "Express its intake as fractions of its own draw."
       ]
@@ -162,7 +162,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares"],
       "answer_shape": "map_derived_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "For each restricted sink, add up what it was attributed from sources outside its allowed set.",
         "List only the sinks where that is not zero. An unrestricted sink can never have one."
       ]
@@ -176,7 +176,7 @@
       "formula": "combined_grid_export / gross_power",
       "depends_on": ["gross_power", "combined_grid_export"],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Divide export by gross power. If gross power is zero the answer is zero, not undefined."]
+      "derivation_steps": ["Divide export by gross power. If gross power is zero the answer is zero, not undefined."]
     },
 
     "gross_power_consumption_ratio": {
@@ -187,7 +187,7 @@
       "formula": "combined_consumption / gross_power",
       "depends_on": ["gross_power", "combined_consumption"],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Divide self-consumption by gross power."]
+      "derivation_steps": ["Divide self-consumption by gross power."]
     },
 
     "gross_power_charging_ratio": {
@@ -198,7 +198,7 @@
       "formula": "combined_charging_power / gross_power",
       "depends_on": ["gross_power", "combined_charging_power"],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Divide charging by gross power."]
+      "derivation_steps": ["Divide charging by gross power."]
     },
 
     "gross_power_standby_ratio": {
@@ -209,7 +209,7 @@
       "formula": "combined_standby_power / gross_power",
       "depends_on": ["gross_power", "combined_standby_power"],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Divide standby by gross power."]
+      "derivation_steps": ["Divide standby by gross power."]
     },
 
     "gross_power_applicable_consumption_ratio": {
@@ -225,7 +225,7 @@
         "combined_charging_power"
       ],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "Take gross power and set aside export and charging.",
         "Divide self-consumption by what is left."
       ]
@@ -239,7 +239,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_grid_export"],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "The exporting grid is a sink, so its provenance row is the export mix.",
         "Multiply each source's share of that row by the exported watts."
       ]
@@ -253,7 +253,7 @@
       "formula": "source_adapters_export_power[uid] / combined_grid_export",
       "depends_on": ["source_adapters_export_power", "combined_grid_export"],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": ["Divide each source's exported watts by the total export."]
+      "derivation_steps": ["Divide each source's exported watts by the total export."]
     },
 
     "source_adapters_standby_power": {
@@ -264,7 +264,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_standby_power"],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "A PV string in standby is a sink with its own provenance row.",
         "Multiply each source's share of that row by the standby watts."
       ]
@@ -278,7 +278,7 @@
       "formula": "combined_coe_rate = (combined_grid_import / 1000) × grid price",
       "depends_on": ["combined_grid_import"],
       "answer_shape": "scalar",
-      "worksheet_steps": ["Convert the grid import to kW and multiply by the price."]
+      "derivation_steps": ["Convert the grid import to kW and multiply by the price."]
     },
 
     "combined_lcoe_rate": {
@@ -289,7 +289,7 @@
       "formula": "combined_lcoe_rate = Σ (output(source) / 1000) × price(source), where the grid's price is the tariff and a local source's is its own LCOE / LCOS",
       "depends_on": ["gross_power", "combined_coe_rate"],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "For every source, take its output in kW.",
         "Multiply by the grid tariff for the grid, or by that device's own LCOE / LCOS for local generation.",
         "Sum them."
@@ -304,7 +304,7 @@
       "formula": "combined_avoided_cost_rate = (locally supplied share of the CON channel / 1000) × grid price",
       "depends_on": ["combined_consumption", "sink_adapters_source_shares"],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "Take the self-consumption channel — the metered loads plus the home base load.",
         "Work out how much of it came from local generation rather than the grid.",
         "Price those kW at the grid tariff."
@@ -320,7 +320,7 @@
       "formula": null,
       "depends_on": ["combined_avoided_cost_rate", "sink_adapters_source_shares"],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "Credit each local source for the power it put into self-consumption, at the grid tariff.",
         "Debit each charging battery for the grid power it took in, at the same tariff.",
         "Add them up; the result can be negative."
@@ -335,7 +335,7 @@
       "formula": "Σ (source_adapters_export_power[uid] / 1000) × export_compensation(uid)",
       "depends_on": ["source_adapters_export_power"],
       "answer_shape": "scalar",
-      "worksheet_steps": [
+      "derivation_steps": [
         "For each source, take the watts it exported.",
         "Multiply by that device's export compensation and sum."
       ]
@@ -349,7 +349,7 @@
       "formula": null,
       "depends_on": [],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "The grid costs its tariff.",
         "PV and batteries read zero — a discharging battery's energy was paid for when it was charged."
       ],
@@ -364,7 +364,7 @@
       "formula": null,
       "depends_on": ["source_adapters_dynamic_coe"],
       "answer_shape": "map_fixed_keys",
-      "worksheet_steps": [
+      "derivation_steps": [
         "The grid costs its tariff.",
         "A PV string costs its configured LCOE; a discharging battery its flat LCOS."
       ]

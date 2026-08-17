@@ -9,7 +9,7 @@ import ValueLedger from './ValueLedger';
 import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
 import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
-import {costOf, buildModel, isVerified, roleText} from './model';
+import {costOf, buildModel, isDerived, roleText} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
 import type {
   AdapterConfig,
@@ -191,9 +191,7 @@ export default function CaseDiagram({
   const selected: FlowNode | null =
     model.nodes.find((n) => n.uid === selectedUid) ?? null;
 
-  const stateCertified = activeState.expectations.filter(
-    (e) => e.certification.status === 'verified',
-  ).length;
+  const stateDerived = activeState.expectations.filter((e) => e.derived).length;
 
   /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
@@ -363,7 +361,7 @@ export default function CaseDiagram({
     });
   };
 
-  const sharesVerified = isVerified(
+  const sharesDerived = isDerived(
     model.byProperty,
     selected?.virtual
       ? 'home_base_load_source_shares'
@@ -512,7 +510,7 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
+                    <CertDot derived={sharesDerived} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.to === selected.uid),
@@ -525,7 +523,7 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its output went{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
+                    <CertDot derived={sharesDerived} />
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.from === selected.uid),
@@ -567,8 +565,8 @@ export default function CaseDiagram({
       />
 
       <p className={styles.certline}>
-        {stateCertified} of {activeState.expectations.length} values in this
-        snapshot hand-certified
+        {stateDerived} of {activeState.expectations.length} values in this
+        snapshot derived by hand
       </p>
     </div>
   );
