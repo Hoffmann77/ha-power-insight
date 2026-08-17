@@ -47,6 +47,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'dev/engine-calculations',
         'dev/source-share-allocation-problem',
+        'dev/reference-corpus-architecture',
         'dev/entity-naming',
         'dev/releasing',
         'dev/options-flow-redesign',
