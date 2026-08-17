@@ -424,26 +424,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             "pv1": 113 / 325,
             "pv2": 113 / 650,
         })
-        assert power_insight.source_adapters_cost_saving_rates == pytest.approx({
-            "grid": 0.0,
-            "pv1": 113 / 325,
-            "pv2": 113 / 650,
-        })
-        assert power_insight.source_adapters_levelized_cost_saving_rates == pytest.approx({
-            "grid": 0.0,
-            "pv1": 339 / 1625,
-            "pv2": 113 / 975,
-        })
-        assert power_insight.source_adapters_financial_return_rates == pytest.approx({
-            "grid": 0.0,
-            "pv1": 113 / 325,
-            "pv2": 113 / 650,
-        })
-        assert power_insight.source_adapters_levelized_financial_return_rates == pytest.approx({
-            "grid": 0.0,
-            "pv1": 339 / 1625,
-            "pv2": 113 / 975,
-        })
+        # The savings and financial-return ledger is device-keyed
+        # (adapters_saving_rates and friends, asserted below) rather than
+        # keyed by flow role, so there is nothing source-side to assert here.
 
     # -- Per-sink attribution ---------------------------------------------
 

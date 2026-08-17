@@ -1822,54 +1822,6 @@ class PowerInsight:
         }
 
     @property
-    def source_adapters_cost_saving_rates(self) -> dict:
-        """Cost-saving rate per source (EUR/h)."""
-        if self.gross_power is None:
-            return {}
-
-        return {
-            a.uid: self._source_saving_rate(a, levelized=False)
-            for a in self.source_adapters
-        }
-
-    @property
-    def source_adapters_levelized_cost_saving_rates(self) -> dict:
-        """Levelized cost-saving rate per source (EUR/h)."""
-        if self.gross_power is None:
-            return {}
-
-        return {
-            a.uid: self._source_saving_rate(a, levelized=True)
-            for a in self.source_adapters
-        }
-
-    @property
-    def source_adapters_financial_return_rates(self) -> dict:
-        """Financial return rate per source (EUR/h)."""
-        if self.gross_power is None:
-            return {}
-
-        rates = self._adapter_financial_return_rates(levelized=False)
-
-        return {
-            a.uid: rates.get(a.uid, self._export_compensation_rate(a))
-            for a in self.source_adapters
-        }
-
-    @property
-    def source_adapters_levelized_financial_return_rates(self) -> dict:
-        """Levelized financial return rate per source (EUR/h)."""
-        if self.gross_power is None:
-            return {}
-
-        rates = self._adapter_financial_return_rates(levelized=True)
-
-        return {
-            a.uid: rates.get(a.uid, self._export_compensation_rate(a))
-            for a in self.source_adapters
-        }
-
-    @property
     def source_adapters_dynamic_coe(self) -> dict[str, float | None]:
         """Blended cost of electricity per source (EUR/kWh); batteries use their charge mix.
 
