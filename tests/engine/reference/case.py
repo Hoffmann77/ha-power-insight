@@ -65,10 +65,25 @@ would not be exact. Comparison tolerance comes from the property's unit in
 ``docs/spec/properties.json``, so a share written as a rounded literal is not
 failed for being rounded.
 
-Not deriving something is free: write no method for it. Nothing is published
-and nothing is asserted. Never paste an answer out of a failing test's
-``actual:`` line — that records what the code already does, which proves
-nothing and quietly turns the corpus into a changelog.
+Not deriving something is free. Every property the catalog documents already
+has a stub on every snapshot, returning :data:`TODO`::
+
+    @expect("gross_power_export_ratio")
+    def test_import_only_gross_power_export_ratio(self):
+        return TODO
+
+A stub skips rather than fails, and publishes nothing — it claims nothing,
+because nobody has claimed anything. Replace the ``TODO`` with the value you
+worked out and that one line starts holding the engine to it. The skip carries
+the catalog's definition and steps for the property, so::
+
+    uv run pytest tests/engine/reference/test_grid_only.py -rs
+
+reads as a worklist with the instructions already in it.
+
+Never paste an answer out of a failing test's ``actual:`` line — that records
+what the code already does, which proves nothing and quietly turns the corpus
+into a changelog.
 """
 
 from __future__ import annotations
@@ -80,6 +95,7 @@ from fractions import Fraction
 from typing import Any, Callable
 
 from tests.engine.scenario_framework import (
+    TODO as TODO,  # re-exported: cases import it from here alongside @expect
     Block,
     EngineScenario,
     expect_attribute,
@@ -120,15 +136,31 @@ def expect(prop: str) -> Callable[[Callable], Callable]:
     Thin wrapper over :func:`expect_attribute`: it looks the property up in the
     catalog, so the tolerance is the one that unit deserves and a misspelled
     name raises here rather than silently publishing a slot nothing can render.
+
+    A method still returning :data:`TODO` skips, and the skip carries the
+    catalog's own description of what to derive — run ``pytest -rs`` over a case
+    and the report is a worklist with the definitions already in it.
     """
     try:
-        unit = CATALOG["properties"][prop]["unit"]
+        doc = CATALOG["properties"][prop]
     except KeyError:
         raise ValueError(
             f"{prop!r} is not documented in docs/spec/properties.json — check "
             f"the spelling, or add the property to the catalog"
         ) from None
-    return expect_attribute(prop, abs_tol=TOLERANCE.get(unit))
+    return expect_attribute(
+        prop, abs_tol=TOLERANCE.get(doc["unit"]), todo_reason=_todo_reason(prop, doc)
+    )
+
+
+def _todo_reason(prop: str, doc: dict) -> str:
+    """What to tell somebody who is about to sit down and derive this one."""
+    lines = [f"derive {prop} ({doc['unit']}) — {doc['definition']}"]
+    if doc.get("formula"):
+        lines.append(f"  formula: {doc['formula']}")
+    for i, step in enumerate(doc.get("derivation_steps", ()), start=1):
+        lines.append(f"  {i}. {step}")
+    return "\n".join(lines)
 
 
 class ReferenceCase(EngineScenario):

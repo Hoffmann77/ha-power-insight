@@ -164,6 +164,11 @@ reading is the class docstring, the caption under each snapshot card is its
 returned. Nothing is written twice, so nothing can drift — and the snapshot
 being described here is by construction the one being asserted.
 
+Every snapshot already has a method for every property, most of them still
+returning a `TODO` placeholder. Those skip and publish nothing, which is why
+these pages are mostly empty: deriving a value is replacing one `TODO` with a
+number.
+
 From then on CI runs each `@expect` as a test against a freshly built engine.
 There are two outcomes and no third: either the engine agrees, or the build goes
 red — and a red build means *either* the engine is broken *or* the derivation

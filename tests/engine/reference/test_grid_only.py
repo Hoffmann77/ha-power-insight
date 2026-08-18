@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase, expect
+from tests.engine.reference.case import TODO, F, ReferenceCase, expect
 from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
@@ -81,11 +81,19 @@ class TestGridOnly(ReferenceCase):
     # Layer 2 — provenance. The base load has exactly one source available to
     # it, so its row is that source at 1.
 
+    @expect("sink_adapters_source_shares")
+    def test_import_only_sink_adapters_source_shares(self):
+        return TODO
+
     @expect("home_base_load_source_shares")
     def test_import_only_home_base_load_source_shares(self):
         return {
             "grid": 1,
         }
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_import_only_sink_adapters_restriction_deficit(self):
+        return TODO
 
     # Layer 3 — the channel split. Everything self-consumed.
 
@@ -109,6 +117,18 @@ class TestGridOnly(ReferenceCase):
     def test_import_only_gross_power_applicable_consumption_ratio(self):
         # 1200 / (1200 - 0 export - 0 charging): no standby to lose.
         return 1
+
+    @expect("source_adapters_export_power")
+    def test_import_only_source_adapters_export_power(self):
+        return TODO
+
+    @expect("source_adapters_export_shares")
+    def test_import_only_source_adapters_export_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_power")
+    def test_import_only_source_adapters_standby_power(self):
+        return TODO
 
     # Layer 4 — money. 1.2 kW at 0.30 EUR/kWh, and marginal equals levelized
     # while the grid is the only source.
@@ -136,13 +156,13 @@ class TestGridOnly(ReferenceCase):
     def test_import_only_combined_export_compensation_rate(self):
         return 0
 
-    # Still to derive for this snapshot: the map-shaped properties
-    # (sink_adapters_source_shares, sink_adapters_restriction_deficit,
-    # source_adapters_export_power / _export_shares / _standby_power,
-    # source_adapters_dynamic_coe / _dynamic_lcoe). Their *key sets* are part
-    # of the answer — whether a source with nothing to attribute appears as a
-    # zero row or not at all — so they are a modelling decision, not
-    # arithmetic.
+    @expect("source_adapters_dynamic_coe")
+    def test_import_only_source_adapters_dynamic_coe(self):
+        return TODO
+
+    @expect("source_adapters_dynamic_lcoe")
+    def test_import_only_source_adapters_dynamic_lcoe(self):
+        return TODO
 
     # ----------------------------------------------------------------------
 
@@ -153,8 +173,121 @@ class TestGridOnly(ReferenceCase):
         """
         return State(grid=0, price=F(3, 10))
 
-    # Nothing derived for this snapshot yet. Add @expect methods here;
-    # see tests/engine/reference/case.py.
+    # Layer 1 — Readings and totals.
+
+    @expect("gross_power")
+    def test_grid_idle_gross_power(self):
+        return TODO
+
+    @expect("combined_grid_import")
+    def test_grid_idle_combined_grid_import(self):
+        return TODO
+
+    @expect("combined_grid_export")
+    def test_grid_idle_combined_grid_export(self):
+        return TODO
+
+    @expect("combined_production")
+    def test_grid_idle_combined_production(self):
+        return TODO
+
+    @expect("combined_charging_power")
+    def test_grid_idle_combined_charging_power(self):
+        return TODO
+
+    @expect("combined_discharging_power")
+    def test_grid_idle_combined_discharging_power(self):
+        return TODO
+
+    @expect("combined_standby_power")
+    def test_grid_idle_combined_standby_power(self):
+        return TODO
+
+    @expect("combined_consumption")
+    def test_grid_idle_combined_consumption(self):
+        return TODO
+
+    @expect("home_base_load_power")
+    def test_grid_idle_home_base_load_power(self):
+        return TODO
+
+    # Layer 2 — Source provenance.
+
+    @expect("sink_adapters_source_shares")
+    def test_grid_idle_sink_adapters_source_shares(self):
+        return TODO
+
+    @expect("home_base_load_source_shares")
+    def test_grid_idle_home_base_load_source_shares(self):
+        return TODO
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_grid_idle_sink_adapters_restriction_deficit(self):
+        return TODO
+
+    # Layer 3 — Channel split and per-source attribution.
+
+    @expect("gross_power_export_ratio")
+    def test_grid_idle_gross_power_export_ratio(self):
+        return TODO
+
+    @expect("gross_power_consumption_ratio")
+    def test_grid_idle_gross_power_consumption_ratio(self):
+        return TODO
+
+    @expect("gross_power_charging_ratio")
+    def test_grid_idle_gross_power_charging_ratio(self):
+        return TODO
+
+    @expect("gross_power_standby_ratio")
+    def test_grid_idle_gross_power_standby_ratio(self):
+        return TODO
+
+    @expect("gross_power_applicable_consumption_ratio")
+    def test_grid_idle_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_export_power")
+    def test_grid_idle_source_adapters_export_power(self):
+        return TODO
+
+    @expect("source_adapters_export_shares")
+    def test_grid_idle_source_adapters_export_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_power")
+    def test_grid_idle_source_adapters_standby_power(self):
+        return TODO
+
+    # Layer 4 — The monetary model.
+
+    @expect("combined_coe_rate")
+    def test_grid_idle_combined_coe_rate(self):
+        return TODO
+
+    @expect("combined_lcoe_rate")
+    def test_grid_idle_combined_lcoe_rate(self):
+        return TODO
+
+    @expect("combined_avoided_cost_rate")
+    def test_grid_idle_combined_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_saving_rate")
+    def test_grid_idle_combined_saving_rate(self):
+        return TODO
+
+    @expect("combined_export_compensation_rate")
+    def test_grid_idle_combined_export_compensation_rate(self):
+        return TODO
+
+    @expect("source_adapters_dynamic_coe")
+    def test_grid_idle_source_adapters_dynamic_coe(self):
+        return TODO
+
+    @expect("source_adapters_dynamic_lcoe")
+    def test_grid_idle_source_adapters_dynamic_lcoe(self):
+        return TODO
 
     # ----------------------------------------------------------------------
 
@@ -170,5 +303,118 @@ class TestGridOnly(ReferenceCase):
         """
         return State(grid=None, price=F(3, 10))
 
-    # Nothing derived for this snapshot yet. Add @expect methods here;
-    # see tests/engine/reference/case.py.
+    # Layer 1 — Readings and totals.
+
+    @expect("gross_power")
+    def test_grid_unavailable_gross_power(self):
+        return TODO
+
+    @expect("combined_grid_import")
+    def test_grid_unavailable_combined_grid_import(self):
+        return TODO
+
+    @expect("combined_grid_export")
+    def test_grid_unavailable_combined_grid_export(self):
+        return TODO
+
+    @expect("combined_production")
+    def test_grid_unavailable_combined_production(self):
+        return TODO
+
+    @expect("combined_charging_power")
+    def test_grid_unavailable_combined_charging_power(self):
+        return TODO
+
+    @expect("combined_discharging_power")
+    def test_grid_unavailable_combined_discharging_power(self):
+        return TODO
+
+    @expect("combined_standby_power")
+    def test_grid_unavailable_combined_standby_power(self):
+        return TODO
+
+    @expect("combined_consumption")
+    def test_grid_unavailable_combined_consumption(self):
+        return TODO
+
+    @expect("home_base_load_power")
+    def test_grid_unavailable_home_base_load_power(self):
+        return TODO
+
+    # Layer 2 — Source provenance.
+
+    @expect("sink_adapters_source_shares")
+    def test_grid_unavailable_sink_adapters_source_shares(self):
+        return TODO
+
+    @expect("home_base_load_source_shares")
+    def test_grid_unavailable_home_base_load_source_shares(self):
+        return TODO
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_grid_unavailable_sink_adapters_restriction_deficit(self):
+        return TODO
+
+    # Layer 3 — Channel split and per-source attribution.
+
+    @expect("gross_power_export_ratio")
+    def test_grid_unavailable_gross_power_export_ratio(self):
+        return TODO
+
+    @expect("gross_power_consumption_ratio")
+    def test_grid_unavailable_gross_power_consumption_ratio(self):
+        return TODO
+
+    @expect("gross_power_charging_ratio")
+    def test_grid_unavailable_gross_power_charging_ratio(self):
+        return TODO
+
+    @expect("gross_power_standby_ratio")
+    def test_grid_unavailable_gross_power_standby_ratio(self):
+        return TODO
+
+    @expect("gross_power_applicable_consumption_ratio")
+    def test_grid_unavailable_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_export_power")
+    def test_grid_unavailable_source_adapters_export_power(self):
+        return TODO
+
+    @expect("source_adapters_export_shares")
+    def test_grid_unavailable_source_adapters_export_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_power")
+    def test_grid_unavailable_source_adapters_standby_power(self):
+        return TODO
+
+    # Layer 4 — The monetary model.
+
+    @expect("combined_coe_rate")
+    def test_grid_unavailable_combined_coe_rate(self):
+        return TODO
+
+    @expect("combined_lcoe_rate")
+    def test_grid_unavailable_combined_lcoe_rate(self):
+        return TODO
+
+    @expect("combined_avoided_cost_rate")
+    def test_grid_unavailable_combined_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_saving_rate")
+    def test_grid_unavailable_combined_saving_rate(self):
+        return TODO
+
+    @expect("combined_export_compensation_rate")
+    def test_grid_unavailable_combined_export_compensation_rate(self):
+        return TODO
+
+    @expect("source_adapters_dynamic_coe")
+    def test_grid_unavailable_source_adapters_dynamic_coe(self):
+        return TODO
+
+    @expect("source_adapters_dynamic_lcoe")
+    def test_grid_unavailable_source_adapters_dynamic_lcoe(self):
+        return TODO

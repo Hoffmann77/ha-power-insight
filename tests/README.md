@@ -87,8 +87,29 @@ class TestGridOnly(ReferenceCase):
 unit deserves, looked up from `docs/spec/properties.json` — so a misspelled
 name raises at import rather than passing silently. Return `None` to claim the
 engine should publish *nothing at all* here; that is asserted just as strictly
-as a number and never matches a zero. Derive nothing for a property and simply
-write no method: nothing is published and nothing is asserted.
+as a number and never matches a zero.
+
+**Every snapshot already has a method for every property**, in the catalog's
+dependency order, most of them still reading `return TODO`. A stub skips rather
+than fails and publishes nothing — it claims nothing, because nobody has
+claimed anything. Filling one in is a one-line edit:
+
+```python
+    @expect("gross_power")
+    def test_import_only_gross_power(self):
+        return TODO      # <- replace with the value you worked out
+```
+
+The skip carries the property's definition, formula and steps straight from the
+catalog, so running a case with `-rs` is a worklist with the instructions in it:
+
+```bash
+uv run --group engine pytest tests/engine/reference/test_grid_only.py -rs
+```
+
+`reference/test_corpus.py` keeps that scaffold complete: add a property to the
+catalog and every snapshot tells you it needs a method, rather than the gap
+going unnoticed.
 
 A red test means **either** the engine is broken **or** the derivation was, and
 the corpus has no opinion about which — that call is yours, and it is the whole

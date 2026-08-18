@@ -45,6 +45,28 @@ def test_case_is_wellformed(case):
         )
 
 
+@pytest.mark.parametrize("case", REFERENCE_CASES, ids=lambda c: c.case_id)
+def test_every_property_has_a_method(case):
+    """Every snapshot declares an ``@expect`` for every catalogued property.
+
+    Most of them still ``return TODO``, which skips and publishes nothing —
+    that is the worklist, and it is meant to read as mostly unfinished. What
+    this pins is that the worklist is *complete*: add a property to the catalog
+    and every snapshot tells you it needs one, rather than the gap going
+    unnoticed because nothing was there to notice it.
+    """
+    for block in case.blocks():
+        declared = {exp.attribute for exp in block.expectations} | set(block.pending)
+        missing = [p for p in PROPERTIES if p not in declared]
+        assert not missing, (
+            f"{case.case_id}/{block.state.name} has no @expect method for "
+            f"{missing}. Add one per property, in catalog order:\n\n"
+            f'    @expect("{missing[0]}")\n'
+            f"    def test_{block.state.name}_{missing[0]}(self):\n"
+            f"        return TODO\n"
+        )
+
+
 def test_ladder_ids_are_unique():
     ids = [case.case_id for case in REFERENCE_CASES]
     assert len(ids) == len(set(ids)), f"duplicate case ids in the ladder: {ids}"
