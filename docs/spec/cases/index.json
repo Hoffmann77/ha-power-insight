@@ -10,8 +10,8 @@
         "grid_unavailable"
       ],
       "certified": 0,
-      "total": 81,
-      "pending": 81
+      "total": 213,
+      "pending": 213
     },
     {
       "id": "pv-self-consumption",
@@ -24,8 +24,8 @@
         "pv_unavailable"
       ],
       "certified": 0,
-      "total": 108,
-      "pending": 108
+      "total": 284,
+      "pending": 284
     },
     {
       "id": "pv-export",
@@ -37,8 +37,8 @@
         "zero_gross"
       ],
       "certified": 0,
-      "total": 81,
-      "pending": 81
+      "total": 213,
+      "pending": 213
     },
     {
       "id": "metered-load",
@@ -49,8 +49,8 @@
         "over_metered"
       ],
       "certified": 0,
-      "total": 54,
-      "pending": 54
+      "total": 142,
+      "pending": 142
     },
     {
       "id": "captive-load",
@@ -61,8 +61,8 @@
         "load_exceeds"
       ],
       "certified": 0,
-      "total": 54,
-      "pending": 54
+      "total": 142,
+      "pending": 142
     },
     {
       "id": "battery-basics",
@@ -74,8 +74,8 @@
         "idle"
       ],
       "certified": 0,
-      "total": 81,
-      "pending": 81
+      "total": 213,
+      "pending": 213
     },
     {
       "id": "captive-battery",
@@ -86,8 +86,8 @@
         "source_in_standby"
       ],
       "certified": 0,
-      "total": 54,
-      "pending": 54
+      "total": 142,
+      "pending": 142
     },
     {
       "id": "group-captivity",
@@ -98,8 +98,8 @@
         "unsatisfiable_overlap"
       ],
       "certified": 0,
-      "total": 54,
-      "pending": 54
+      "total": 142,
+      "pending": 142
     },
     {
       "id": "mixed-export-house",
@@ -111,8 +111,8 @@
         "discharge_dynamic_prices"
       ],
       "certified": 0,
-      "total": 81,
-      "pending": 81
+      "total": 213,
+      "pending": 213
     }
   ]
 }

@@ -20,7 +20,7 @@
         "Marginal and levelized cost agree while the grid is the only source.",
         "An unavailable reading collapses the derived values rather than defaulting to zero."
       ],
-      "slots": 81,
+      "slots": 213,
       "derived": 0
     },
     {
@@ -32,7 +32,7 @@
         "Marginal cost and levelized cost diverge as soon as a local source runs.",
         "A source that only draws standby makes the saving rate negative."
       ],
-      "slots": 108,
+      "slots": 284,
       "derived": 0
     },
     {
@@ -44,7 +44,7 @@
         "The applicable self-consumption ratio measures only what stayed home.",
         "Zero gross power guards to zero rather than dividing by zero."
       ],
-      "slots": 81,
+      "slots": 213,
       "derived": 0
     },
     {
@@ -55,7 +55,7 @@
         "A metered draw larger than gross power clamps the base load to zero rather than going negative.",
         "A zeroed base load still publishes a share row, of zeros."
       ],
-      "slots": 54,
+      "slots": 142,
       "derived": 0
     },
     {
@@ -66,7 +66,7 @@
         "Serving the captive sink first pushes the unrestricted base load onto the grid.",
         "A draw the allowed sources cannot cover is still attributed, and the shortfall is reported as a restriction deficit."
       ],
-      "slots": 54,
+      "slots": 142,
       "derived": 0
     },
     {
@@ -78,7 +78,7 @@
         "Its marginal price is zero \u2014 the mix it charged on happened earlier, where a snapshot cannot see it.",
         "An adapter reading exactly 0 W belongs to neither flow group."
       ],
-      "slots": 81,
+      "slots": 213,
       "derived": 0
     },
     {
@@ -89,7 +89,7 @@
         "When every allowed source is idle the row collapses to zero rather than dividing by zero.",
         "The unservable draw is reported as a restriction deficit."
       ],
-      "slots": 54,
+      "slots": 142,
       "derived": 0
     },
     {
@@ -100,7 +100,7 @@
         "A flexible sink must not take local power a tight group needs.",
         "When restrictions cannot all be honoured, the sink with the fewest permitted alternatives is served first and the deficit falls on the sinks that had somewhere else to go."
       ],
-      "slots": 54,
+      "slots": 142,
       "derived": 0
     },
     {
@@ -111,13 +111,21 @@
         "Standby draw is routed through the provenance allocation, not by gross share.",
         "Two dischargers with different levelized costs price the mix between them."
       ],
-      "slots": 81,
+      "slots": 213,
       "derived": 0
     }
   ],
   "properties": {
     "gross_power": {
       "title": "Gross power",
+      "layer": 1,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_production": {
+      "title": "PV production",
       "layer": 1,
       "slots": 24,
       "derived": 0,
@@ -134,14 +142,6 @@
     },
     "combined_grid_export": {
       "title": "Grid export",
-      "layer": 1,
-      "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
-    },
-    "combined_production": {
-      "title": "PV production",
       "layer": 1,
       "slots": 24,
       "derived": 0,
@@ -174,6 +174,14 @@
     },
     "combined_consumption": {
       "title": "Self-consumption",
+      "layer": 1,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "sink_adapters_consumption_shares": {
+      "title": "Self-consumption share per sink",
       "layer": 1,
       "slots": 24,
       "derived": 0,
@@ -244,14 +252,6 @@
       "disputed": 0,
       "derived_in": []
     },
-    "gross_power_applicable_consumption_ratio": {
-      "title": "Applicable self-consumption ratio",
-      "layer": 3,
-      "slots": 24,
-      "derived": 0,
-      "disputed": 0,
-      "derived_in": []
-    },
     "source_adapters_export_power": {
       "title": "Exported power per source",
       "layer": 3,
@@ -268,9 +268,105 @@
       "disputed": 0,
       "derived_in": []
     },
+    "source_adapters_export_ratios": {
+      "title": "Export ratio per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_consumption_power": {
+      "title": "Self-consumption power per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_consumption_shares": {
+      "title": "Self-consumption share per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_consumption_ratios": {
+      "title": "Self-consumption ratio per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_charging_power": {
+      "title": "Charging power per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_charging_shares": {
+      "title": "Charging share per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_charging_ratios": {
+      "title": "Charging ratio per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
     "source_adapters_standby_power": {
       "title": "Standby power per source",
       "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_standby_shares": {
+      "title": "Standby share per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_standby_ratios": {
+      "title": "Standby ratio per source",
+      "layer": 3,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_dynamic_coe": {
+      "title": "Marginal price per source",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_dynamic_lcoe": {
+      "title": "Levelized price per source",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_coe_rate": {
+      "title": "Cost of electricity rate per source",
+      "layer": 4,
       "slots": 24,
       "derived": 0,
       "disputed": 0,
@@ -292,6 +388,182 @@
       "disputed": 0,
       "derived_in": []
     },
+    "combined_lcoe_rate_corrected": {
+      "title": "Levelized cost rate, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_coe": {
+      "title": "Cost of electricity",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_lcoe": {
+      "title": "Levelized cost of electricity",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_export_cost_rate": {
+      "title": "Export cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_consumption_cost_rate": {
+      "title": "Self-consumption cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_charging_cost_rate": {
+      "title": "Charging cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_standby_cost_rate": {
+      "title": "Standby cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_export_cost_rate": {
+      "title": "Levelized export cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_consumption_cost_rate": {
+      "title": "Levelized self-consumption cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_lcoo_rate_corrected": {
+      "title": "Levelized charging cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_standby_cost_rate": {
+      "title": "Levelized standby cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_coo_rates": {
+      "title": "Operating cost rate per device",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_lcoo_rates": {
+      "title": "Levelized operating cost rate per device",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_lcoo_rates_corrected": {
+      "title": "Levelized operating cost per device, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_device_operating_cost_rate": {
+      "title": "Device operating cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_device_operating_cost_rate": {
+      "title": "Levelized device operating cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_device_operating_cost_rate_corrected": {
+      "title": "Levelized device operating cost, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "sink_adapters_coo_rates": {
+      "title": "Operating cost rate per sink",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "sink_adapters_lcoo_rates": {
+      "title": "Levelized operating cost rate per sink",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "source_adapters_avoided_cost_rates": {
+      "title": "Avoided cost rate per source",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "sink_adapters_avoided_cost_rates": {
+      "title": "Avoided cost rate per sink",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "home_base_load_avoided_cost_rate": {
+      "title": "Home base load avoided cost rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
       "layer": 4,
@@ -300,8 +572,8 @@
       "disputed": 0,
       "derived_in": []
     },
-    "combined_saving_rate": {
-      "title": "Cost saving rate",
+    "source_adapters_export_compensation_rates": {
+      "title": "Export compensation rate per source",
       "layer": 4,
       "slots": 24,
       "derived": 0,
@@ -316,16 +588,96 @@
       "disputed": 0,
       "derived_in": []
     },
-    "source_adapters_dynamic_coe": {
-      "title": "Marginal price per source",
+    "adapters_saving_rates": {
+      "title": "Cost saving rate per device",
       "layer": 4,
       "slots": 24,
       "derived": 0,
       "disputed": 0,
       "derived_in": []
     },
-    "source_adapters_dynamic_lcoe": {
-      "title": "Levelized price per source",
+    "adapters_levelized_saving_rates": {
+      "title": "Levelized cost saving rate per device",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "adapters_levelized_saving_rates_corrected": {
+      "title": "Levelized cost saving per device, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_saving_rate": {
+      "title": "Cost saving rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_saving_rate": {
+      "title": "Levelized cost saving rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_saving_rate_corrected": {
+      "title": "Levelized cost saving rate, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "adapters_financial_return_rates": {
+      "title": "Financial return rate per device",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "adapters_levelized_financial_return_rates": {
+      "title": "Levelized financial return rate per device",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+      "title": "Levelized financial return per device, corrected",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_financial_return_rate": {
+      "title": "Financial return rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_financial_return_rate": {
+      "title": "Levelized financial return rate",
+      "layer": 4,
+      "slots": 24,
+      "derived": 0,
+      "disputed": 0,
+      "derived_in": []
+    },
+    "combined_levelized_financial_return_rate_corrected": {
+      "title": "Levelized financial return rate, corrected",
       "layer": 4,
       "slots": 24,
       "derived": 0,
@@ -334,37 +686,81 @@
     }
   },
   "totals": {
-    "slots": 648,
+    "slots": 1704,
     "derived": 0,
     "disputed": 0,
     "untouched": [
+      "adapters_financial_return_rates",
+      "adapters_levelized_financial_return_rates",
+      "adapters_levelized_financial_return_rates_corrected",
+      "adapters_levelized_saving_rates",
+      "adapters_levelized_saving_rates_corrected",
+      "adapters_saving_rates",
       "combined_avoided_cost_rate",
+      "combined_charging_cost_rate",
       "combined_charging_power",
+      "combined_coe",
       "combined_coe_rate",
       "combined_consumption",
+      "combined_consumption_cost_rate",
+      "combined_device_operating_cost_rate",
       "combined_discharging_power",
       "combined_export_compensation_rate",
+      "combined_export_cost_rate",
+      "combined_financial_return_rate",
       "combined_grid_export",
       "combined_grid_import",
+      "combined_lcoe",
       "combined_lcoe_rate",
+      "combined_lcoe_rate_corrected",
+      "combined_lcoo_rate_corrected",
+      "combined_levelized_consumption_cost_rate",
+      "combined_levelized_device_operating_cost_rate",
+      "combined_levelized_device_operating_cost_rate_corrected",
+      "combined_levelized_export_cost_rate",
+      "combined_levelized_financial_return_rate",
+      "combined_levelized_financial_return_rate_corrected",
+      "combined_levelized_saving_rate",
+      "combined_levelized_saving_rate_corrected",
+      "combined_levelized_standby_cost_rate",
       "combined_production",
       "combined_saving_rate",
+      "combined_standby_cost_rate",
       "combined_standby_power",
       "gross_power",
-      "gross_power_applicable_consumption_ratio",
       "gross_power_charging_ratio",
       "gross_power_consumption_ratio",
       "gross_power_export_ratio",
       "gross_power_standby_ratio",
+      "home_base_load_avoided_cost_rate",
       "home_base_load_power",
       "home_base_load_source_shares",
+      "sink_adapters_avoided_cost_rates",
+      "sink_adapters_consumption_shares",
+      "sink_adapters_coo_rates",
+      "sink_adapters_lcoo_rates",
       "sink_adapters_restriction_deficit",
       "sink_adapters_source_shares",
+      "source_adapters_avoided_cost_rates",
+      "source_adapters_charging_power",
+      "source_adapters_charging_ratios",
+      "source_adapters_charging_shares",
+      "source_adapters_coe_rate",
+      "source_adapters_consumption_power",
+      "source_adapters_consumption_ratios",
+      "source_adapters_consumption_shares",
+      "source_adapters_coo_rates",
       "source_adapters_dynamic_coe",
       "source_adapters_dynamic_lcoe",
+      "source_adapters_export_compensation_rates",
       "source_adapters_export_power",
+      "source_adapters_export_ratios",
       "source_adapters_export_shares",
-      "source_adapters_standby_power"
+      "source_adapters_lcoo_rates",
+      "source_adapters_lcoo_rates_corrected",
+      "source_adapters_standby_power",
+      "source_adapters_standby_ratios",
+      "source_adapters_standby_shares"
     ]
   }
 }

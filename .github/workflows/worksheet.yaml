@@ -1,12 +1,14 @@
 name: Worksheet
 
-# Issues a certification worksheet from the anchor cases and attaches it to the
-# run, so a sheet can be printed from anywhere without a local checkout.
+# Issues certification worksheets from the reference cases and attaches them to
+# the run, so a sheet can be printed from anywhere without a local checkout.
 #
-# Run it from Actions -> Worksheet -> Run workflow. The PDF appears under the
-# run's Artifacts. Answers are entered locally afterwards:
+# One worksheet is one snapshot: the wiring and the readings on the front, one
+# page per pending property after it, and a transcription page at the back. Run
+# it from Actions -> Worksheet -> Run workflow. The PDFs appear under the run's
+# Artifacts. Answers are entered locally afterwards:
 #
-#   uv run python tools/certify.py --sheet <id>
+#   uv run python tools/certify.py --sheet <case>-<state>
 #
 # Download the sheet's .json manifest alongside the PDF and drop it in
 # `worksheets/` first — that is what certify.py reads to know which problems
@@ -14,18 +16,14 @@ name: Worksheet
 on:
   workflow_dispatch:
     inputs:
-      count:
-        description: "How many problems to issue"
-        required: false
-        default: "6"
       case:
-        description: "Restrict to one case id (e.g. A-003). Blank = all."
+        description: "Restrict to one case id (e.g. group-captivity). Blank = all."
         required: false
         default: ""
-      all:
-        description: "Issue every pending problem, ignoring count"
-        type: boolean
-        default: false
+      state:
+        description: "Restrict to one snapshot id within that case. Blank = all."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -45,33 +43,32 @@ jobs:
       - name: Install dependencies
         run: uv sync --group engine
 
-      - name: Generate worksheet
+      - name: Generate worksheets
         id: gen
         env:
-          COUNT: ${{ inputs.count }}
           CASE: ${{ inputs.case }}
-          ALL: ${{ inputs.all }}
+          STATE: ${{ inputs.state }}
         run: |
           set -euo pipefail
-          sheet_id="$(date -u +%Y-%m-%d-%H%M)"
-          args=(--id "$sheet_id" --pdf)
-          if [ "$ALL" = "true" ]; then
-            args+=(--all)
-          else
-            args+=(--count "$COUNT")
-          fi
+          args=(--pdf)
           if [ -n "$CASE" ]; then
             args+=(--case "$CASE")
           fi
+          if [ -n "$STATE" ]; then
+            args+=(--state "$STATE")
+          fi
           uv run python tools/worksheet.py "${args[@]}"
-          echo "sheet_id=$sheet_id" >> "$GITHUB_OUTPUT"
+          echo "stamp=$(date -u +%Y-%m-%d-%H%M)" >> "$GITHUB_OUTPUT"
 
-      - name: Upload sheet
+      - name: Upload sheets
         uses: actions/upload-artifact@v4
         with:
-          name: worksheet-${{ steps.gen.outputs.sheet_id }}
-          # The manifest travels with the PDF: certify.py needs it to replay
-          # the problems in the order they were printed.
+          # Only the run stamp varies: the sheets themselves are named after the
+          # snapshot they cover, so the same snapshot issued twice is the same
+          # file both times.
+          name: worksheets-${{ steps.gen.outputs.stamp }}
+          # The manifests travel with the PDFs: certify.py needs one to replay a
+          # sheet's problems in the order they were printed.
           path: |
             worksheets/*.pdf
             worksheets/*.html
