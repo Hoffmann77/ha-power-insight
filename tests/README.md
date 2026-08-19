@@ -135,6 +135,17 @@ uv run --group engine python tools/export_cases.py           # re-export
 uv run --group engine python tools/export_cases.py --check   # just check
 ```
 
+If you filled a value in and forgot to re-export, **Actions → Export reference
+cases → Run workflow** does it on the branch you pick and commits the result.
+It is manual on purpose: an automatic export would land bot commits on branches
+while you are working on them, and the staleness test already catches the
+mistake in seconds. Tick *dry run* to see what would change without committing.
+
+One wrinkle worth knowing: a commit pushed by that workflow uses `GITHUB_TOKEN`,
+and GitHub does not start new workflow runs for those. The new head lands with
+no checks against it, so re-run them from the Actions tab (or push anything
+else) if your PR needs green checks to merge.
+
 ## Integration tier (`integration/`)
 
 Home Assistant layer tests — config flow, subentry flows, setup, sensor state
