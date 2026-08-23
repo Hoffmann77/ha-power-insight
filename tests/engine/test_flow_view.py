@@ -123,8 +123,10 @@ class TestFlowPartition(EngineScenario):
         assert index == []
         assert arr == []
 
-    def test_source_shares_dict_is_empty(self, power_insight):
-        assert power_insight.sink_adapters_source_shares == {}
+    def test_source_shares_dict_is_none(self, power_insight):
+        # Provenance is unknowable with an inflow sensor down, so the map
+        # collapses to None ("we can't tell"), not {} ("nothing is drawing").
+        assert power_insight.sink_adapters_source_shares is None
 
 
 class TestGrossPowerShares(EngineScenario):

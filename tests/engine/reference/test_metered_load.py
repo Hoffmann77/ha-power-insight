@@ -88,10 +88,6 @@ class TestMeteredLoad(ReferenceCase):
     def test_load_and_base_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_load_and_base_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -112,6 +108,10 @@ class TestMeteredLoad(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_load_and_base_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_load_and_base_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -213,10 +213,6 @@ class TestMeteredLoad(ReferenceCase):
     def test_over_metered_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_over_metered_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -237,6 +233,10 @@ class TestMeteredLoad(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_over_metered_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_over_metered_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")

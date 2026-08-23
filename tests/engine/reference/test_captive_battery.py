@@ -88,10 +88,6 @@ class TestCaptiveBattery(ReferenceCase):
     def test_captive_depletes_first_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_captive_depletes_first_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -112,6 +108,10 @@ class TestCaptiveBattery(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_captive_depletes_first_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_captive_depletes_first_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -218,10 +218,6 @@ class TestCaptiveBattery(ReferenceCase):
     def test_source_in_standby_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_source_in_standby_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -242,6 +238,10 @@ class TestCaptiveBattery(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_source_in_standby_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_source_in_standby_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")

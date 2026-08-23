@@ -85,10 +85,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_sunny_partial_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_sunny_partial_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -109,6 +105,10 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_sunny_partial_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_sunny_partial_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -210,10 +210,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_pv_covers_all_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_pv_covers_all_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -234,6 +230,10 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_pv_covers_all_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_pv_covers_all_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -335,10 +335,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_pv_standby_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_pv_standby_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -359,6 +355,10 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_pv_standby_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_pv_standby_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -460,10 +460,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_pv_unavailable_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_pv_unavailable_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -484,6 +480,10 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_pv_unavailable_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_pv_unavailable_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")

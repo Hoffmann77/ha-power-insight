@@ -6,7 +6,7 @@
     "With no local device, the whole gross power is the unmetered home base load.",
     "A sink with one available source has a provenance row of exactly one.",
     "Marginal and levelized cost agree while the grid is the only source.",
-    "An unavailable reading collapses the derived values rather than defaulting to zero."
+    "An unavailable meter collapses everything derived from it to nothing, while a total over an empty device set (no PV, no battery) stays zero."
   ],
   "topology": [
     {
@@ -63,6 +63,10 @@
           "value": "1200"
         },
         {
+          "property": "sink_adapters_source_shares",
+          "value": {}
+        },
+        {
           "property": "home_base_load_source_shares",
           "value": {
             "grid": "1"
@@ -89,6 +93,30 @@
           "value": "1"
         },
         {
+          "property": "source_adapters_consumption_power",
+          "value": {
+            "grid": "1200"
+          }
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {
+            "grid": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {
+            "grid": "0"
+          }
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {
+            "grid": "0"
+          }
+        },
+        {
           "property": "combined_coe_rate",
           "value": "9/25"
         },
@@ -107,6 +135,18 @@
         {
           "property": "combined_export_compensation_rate",
           "value": "0"
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {
+            "grid": "3/10"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {
+            "grid": "3/10"
+          }
         }
       ]
     },
@@ -117,17 +157,235 @@
         "grid": "0"
       },
       "price": "3/10",
-      "expectations": []
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "0"
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "0"
+        },
+        {
+          "property": "combined_production",
+          "value": "0"
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_consumption",
+          "value": "0"
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "0"
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {}
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {}
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_applicable_consumption_ratio",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_consumption_power",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {}
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {}
+        }
+      ],
+      "open_question": "at exactly 0 W the grid is idle \u2014 in no flow group \u2014 so every per-source map is empty and the sensors reading them publish nothing. A connected meter reading zero is arguably not the same as an absent one; whether these per-source sensors should show 0 (grid present, delivering nothing) rather than go blank is unsettled."
     },
     {
       "id": "grid_unavailable",
-      "note": "The grid sensor has dropped out. Nothing downstream of it can be answered.",
+      "note": "The grid sensor has dropped out. Everything derived from the meter collapses to nothing, while a total over an empty device set \u2014 no PV, no battery \u2014 is still a confident zero.\n\nWhere a value is grid-derived (gross power, consumption, the ratios, the provenance maps, every cost rate) the engine publishes nothing at all rather than a stale or invented figure. Where a value is a structural sum over devices that do not exist here (production, charging, discharging, standby) it stays 0: the missing meter says nothing about PV that is not installed.",
       "readings": {
         "grid": null
       },
       "price": "3/10",
-      "expectations": [],
-      "open_question": "combined_saving_rate publishes 0 EUR/h here while every other rate in layer 4 correctly publishes nothing. Zero is a claim \u2014 that the house saved exactly nothing this snapshot \u2014 and the engine is in no position to make it with the only meter unavailable."
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": null
+        },
+        {
+          "property": "combined_grid_import",
+          "value": null
+        },
+        {
+          "property": "combined_grid_export",
+          "value": null
+        },
+        {
+          "property": "combined_production",
+          "value": "0"
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_consumption",
+          "value": null
+        },
+        {
+          "property": "home_base_load_power",
+          "value": null
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": null
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": null
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": null
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": null
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": null
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": null
+        },
+        {
+          "property": "gross_power_applicable_consumption_ratio",
+          "value": null
+        },
+        {
+          "property": "source_adapters_consumption_power",
+          "value": null
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": null
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": null
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": null
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": null
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": null
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": null
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": null
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": null
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": null
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": null
+        }
+      ]
     }
   ]
 }

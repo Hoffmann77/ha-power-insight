@@ -91,10 +91,6 @@ class TestBatteryBasics(ReferenceCase):
     def test_charging_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_charging_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -115,6 +111,10 @@ class TestBatteryBasics(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_charging_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_charging_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -216,10 +216,6 @@ class TestBatteryBasics(ReferenceCase):
     def test_discharging_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_discharging_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -240,6 +236,10 @@ class TestBatteryBasics(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_discharging_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_discharging_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -341,10 +341,6 @@ class TestBatteryBasics(ReferenceCase):
     def test_idle_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_idle_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -365,6 +361,10 @@ class TestBatteryBasics(ReferenceCase):
 
     @expect("gross_power_applicable_consumption_ratio")
     def test_idle_gross_power_applicable_consumption_ratio(self):
+        return TODO
+
+    @expect("source_adapters_consumption_power")
+    def test_idle_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
