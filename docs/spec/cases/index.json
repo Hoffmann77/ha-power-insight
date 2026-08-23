@@ -9,7 +9,7 @@
         "grid_idle",
         "grid_unavailable"
       ],
-      "derived": 81
+      "derived": 78
     },
     {
       "id": "pv-self-consumption",

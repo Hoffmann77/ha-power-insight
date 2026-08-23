@@ -106,10 +106,6 @@ class TestMeteredLoad(ReferenceCase):
     def test_load_and_base_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_load_and_base_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_load_and_base_source_adapters_consumption_power(self):
         return TODO
@@ -229,10 +225,6 @@ class TestMeteredLoad(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_over_metered_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_over_metered_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")

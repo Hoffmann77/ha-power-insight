@@ -89,10 +89,6 @@
           "value": "0"
         },
         {
-          "property": "gross_power_applicable_consumption_ratio",
-          "value": "1"
-        },
-        {
           "property": "source_adapters_consumption_power",
           "value": {
             "grid": "1200"
@@ -219,10 +215,6 @@
           "value": "0"
         },
         {
-          "property": "gross_power_applicable_consumption_ratio",
-          "value": "0"
-        },
-        {
           "property": "source_adapters_consumption_power",
           "value": {}
         },
@@ -335,10 +327,6 @@
         },
         {
           "property": "gross_power_standby_ratio",
-          "value": null
-        },
-        {
-          "property": "gross_power_applicable_consumption_ratio",
           "value": null
         },
         {

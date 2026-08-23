@@ -113,12 +113,6 @@ class TestMixedExportHouse(ReferenceCase):
     def test_export_non_exporting_battery_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_export_non_exporting_battery_gross_power_applicable_consumption_ratio(
-        self,
-    ):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_export_non_exporting_battery_source_adapters_consumption_power(self):
         return TODO
@@ -242,10 +236,6 @@ class TestMixedExportHouse(ReferenceCase):
     def test_export_with_standby_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_export_with_standby_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_export_with_standby_source_adapters_consumption_power(self):
         return TODO
@@ -365,10 +355,6 @@ class TestMixedExportHouse(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_discharge_dynamic_prices_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_discharge_dynamic_prices_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")

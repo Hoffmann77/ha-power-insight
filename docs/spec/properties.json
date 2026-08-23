@@ -198,25 +198,6 @@
       "derivation_steps": ["Divide standby by gross power."]
     },
 
-    "gross_power_applicable_consumption_ratio": {
-      "title": "Applicable self-consumption ratio",
-      "unit": "ratio",
-      "layer": 3,
-      "definition": "Of the power that stayed home and was not stored, the fraction actually used rather than lost to standby. Reads 1.0 when there is no standby draw.",
-      "formula": "combined_consumption / (gross_power − export − charging)",
-      "depends_on": [
-        "gross_power",
-        "combined_consumption",
-        "combined_grid_export",
-        "combined_charging_power"
-      ],
-      "answer_shape": "scalar",
-      "derivation_steps": [
-        "Take gross power and set aside export and charging.",
-        "Divide self-consumption by what is left."
-      ]
-    },
-
     "source_adapters_consumption_power": {
       "title": "Self-consumed power per source",
       "unit": "W",

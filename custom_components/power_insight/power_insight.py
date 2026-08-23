@@ -1032,29 +1032,6 @@ class PowerInsight:
         return self._gross_ratio(self.combined_charging_power)
 
     # -------------------------------------------------------------->
-    # APPLICABLE GROSS POWER RATIOS
-    # -------------------------------------------------------------->
-
-    @property
-    def gross_power_applicable_consumption_ratio(self) -> float | None:
-        """Self-consumption ratio excluding export and charging.
-
-        Of the *applicable* gross power — what is left once export and charging
-        are set aside (``gross − export − charging``, i.e. consumption plus
-        standby) — the fraction that is actually self-consumed. It answers "of
-        the power that stayed home and was not stored, how much did I use rather
-        than lose to standby?", so it reads 1.0 with no standby draw.
-        """
-        gross = self.gross_power
-        export = self.combined_grid_export
-        charging = self.combined_charging_power
-        consumption = self.combined_consumption
-        if None in (gross, export, charging, consumption):
-            return None
-
-        return self._divide(consumption, gross - export - charging)
-
-    # -------------------------------------------------------------->
     # MONETARY CORE
     #
     # Everything below this point is priced from two things: the provenance

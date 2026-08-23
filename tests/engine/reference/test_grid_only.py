@@ -128,12 +128,6 @@ class TestGridOnly(ReferenceCase):
         """No standby draw, so 0 of gross power."""
         return 0
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_import_only_gross_power_applicable_consumption_ratio(self):
-        """Of the power that stayed home and was not stored (all 1200 W), all of
-        it was used — no standby — so the ratio is 1."""
-        return 1
-
     # Layer 3b — per-source power. The grid alone supplies each channel, so its
     # entire 1200 W sits in consumption and nothing in the others.
 
@@ -313,11 +307,6 @@ class TestGridOnly(ReferenceCase):
         """0/0 guards to 0."""
         return 0
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_grid_idle_gross_power_applicable_consumption_ratio(self):
-        """Applicable gross power is 0, so the guarded ratio is 0."""
-        return 0
-
     # Layer 3b — Per-source power. The grid is idle, so it is in no source
     # group and every per-source map is empty.
 
@@ -479,11 +468,6 @@ class TestGridOnly(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_grid_unavailable_gross_power_standby_ratio(self):
-        """A ratio of an unknown gross power is unknown."""
-        return None
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_grid_unavailable_gross_power_applicable_consumption_ratio(self):
         """A ratio of an unknown gross power is unknown."""
         return None
 

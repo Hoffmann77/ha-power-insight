@@ -16,7 +16,6 @@ class TestPvExport(ReferenceCase):
 
     * An exporting grid is a sink, not a source with a negative reading.
     * Export compensation is earned by the sources the export was drawn from.
-    * The applicable self-consumption ratio measures only what stayed home.
     * Zero gross power guards to zero rather than dividing by zero.
     """
 
@@ -101,10 +100,6 @@ class TestPvExport(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_export_surplus_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_export_surplus_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")
@@ -228,10 +223,6 @@ class TestPvExport(ReferenceCase):
     def test_export_all_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_export_all_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_export_all_source_adapters_consumption_power(self):
         return TODO
@@ -351,10 +342,6 @@ class TestPvExport(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_zero_gross_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_zero_gross_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")

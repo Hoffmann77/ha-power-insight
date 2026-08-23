@@ -728,3 +728,85 @@ async def test_home_base_load_reports_the_residual_and_its_mix(
     shares = pi.home_base_load_source_shares
     assert sum(shares.values()) == pytest.approx(1.0)
     assert set(shares) == {GRID_SUB_ID, PV_SUB_ID}
+
+
+# ---------------------------------------------------------------------------
+# Per-adapter sensor: idle reads 0, unavailable reads nothing
+# ---------------------------------------------------------------------------
+#
+# The engine publishes an empty map for a source that is idle (in no flow
+# group) and None when gross power is unknowable. At the sensor level those are
+# different: a device absent from an otherwise-present map contributed 0 to the
+# channel (a real zero), while a None map — or this device's own reading being
+# unavailable — is genuinely unknown.
+
+
+def _adapter_native_value(mapping, uid, power, *, transform=lambda v: v):
+    from types import SimpleNamespace
+
+    from custom_components.power_insight.sensor import PowerInsightAdapterSensor
+
+    sensor = object.__new__(PowerInsightAdapterSensor)
+    sensor.entity_description = SimpleNamespace(
+        value_fn=lambda _pi: mapping,
+        transform_fn=transform,
+        apply_correction_factor=False,
+    )
+    sensor.power_insight = None
+    sensor.device_adapter = SimpleNamespace(
+        uid=uid, power=power, correction_factor=1.0
+    )
+    return sensor.native_value
+
+
+def _dynamic_native_value(mapping, device_uid, dynamic_uid, power):
+    from types import SimpleNamespace
+
+    from custom_components.power_insight.sensor import (
+        PowerInsightDynamicAdapterSensor,
+    )
+
+    sensor = object.__new__(PowerInsightDynamicAdapterSensor)
+    sensor.entity_description = SimpleNamespace(
+        value_fn=lambda _pi: mapping, transform_fn=lambda v: v
+    )
+    sensor.power_insight = None
+    sensor.device_adapter = SimpleNamespace(uid=device_uid, power=power)
+    sensor.dynamic_adapter = SimpleNamespace(uid=dynamic_uid)
+    return sensor.native_value
+
+
+def test_per_adapter_sensor_reads_zero_when_idle() -> None:
+    """A present map missing this adapter is a real 0, not unavailable."""
+    # Delivering: the map carries the value.
+    assert _adapter_native_value({"grid": 1200.0}, "grid", 1200.0) == 1200.0
+    # Idle grid (0 W): the engine publishes {}, but the value is 0 — the meter
+    # is present and reads zero.
+    assert _adapter_native_value({}, "grid", 0.0) == 0.0
+    # Idle in a mixed snapshot: the map is present but omits this source.
+    assert _adapter_native_value({"pv1": 500.0}, "grid", 0.0) == 0.0
+
+
+def test_per_adapter_sensor_unavailable_only_when_truly_unknown() -> None:
+    """None map (gross unknowable) or this device's own reading down -> None."""
+    # The whole map is None because gross power is unavailable.
+    assert _adapter_native_value(None, "grid", None) is None
+    # The map is present, but this device's own sensor has dropped out (e.g. a
+    # consumer): its draw is unknown, so 0 would be a lie.
+    assert _adapter_native_value({"pv1": 500.0}, "cons1", None) is None
+    # A present key whose value is genuinely None stays None.
+    assert _adapter_native_value({"grid": None}, "grid", 1200.0) is None
+
+
+def test_dynamic_per_adapter_sensor_idle_and_unavailable() -> None:
+    """The nested map follows the same rule at both levels."""
+    nested = {"cons1": {"grid": 0.75, "pv1": 0.25}}
+    assert _dynamic_native_value(nested, "cons1", "grid", -800.0) == 0.75
+    # Device present but this source absent from its row -> 0.
+    assert _dynamic_native_value(nested, "cons1", "bat1", -800.0) == 0.0
+    # Device absent from an otherwise-present map (it is not drawing) -> 0.
+    assert _dynamic_native_value(nested, "bat1", "grid", 0.0) == 0.0
+    # Whole map None -> unavailable.
+    assert _dynamic_native_value(None, "cons1", "grid", None) is None
+    # This device's own reading unavailable -> unavailable.
+    assert _dynamic_native_value(nested, "cons1", "grid", None) is None

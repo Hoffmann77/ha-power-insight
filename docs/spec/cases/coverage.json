@@ -20,7 +20,7 @@
         "Marginal and levelized cost agree while the grid is the only source.",
         "An unavailable meter collapses everything derived from it to nothing, while a total over an empty device set (no PV, no battery) stays zero."
       ],
-      "derived": 81
+      "derived": 78
     },
     {
       "case": "pv-self-consumption",
@@ -39,7 +39,6 @@
       "decides": [
         "An exporting grid is a sink, not a source with a negative reading.",
         "Export compensation is earned by the sources the export was drawn from.",
-        "The applicable self-consumption ratio measures only what stayed home.",
         "Zero gross power guards to zero rather than dividing by zero."
       ],
       "derived": 0
@@ -227,14 +226,6 @@
         "grid-only"
       ]
     },
-    "gross_power_applicable_consumption_ratio": {
-      "title": "Applicable self-consumption ratio",
-      "layer": 3,
-      "derived": 3,
-      "derived_in": [
-        "grid-only"
-      ]
-    },
     "source_adapters_consumption_power": {
       "title": "Self-consumed power per source",
       "layer": 3,
@@ -325,7 +316,7 @@
     }
   },
   "totals": {
-    "derived": 81,
+    "derived": 78,
     "untouched": []
   }
 }

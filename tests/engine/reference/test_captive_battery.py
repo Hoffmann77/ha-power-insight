@@ -106,10 +106,6 @@ class TestCaptiveBattery(ReferenceCase):
     def test_captive_depletes_first_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_captive_depletes_first_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_captive_depletes_first_source_adapters_consumption_power(self):
         return TODO
@@ -234,10 +230,6 @@ class TestCaptiveBattery(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_source_in_standby_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_source_in_standby_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")

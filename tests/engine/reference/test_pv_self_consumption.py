@@ -103,10 +103,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_sunny_partial_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_sunny_partial_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_sunny_partial_source_adapters_consumption_power(self):
         return TODO
@@ -226,10 +222,6 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_pv_covers_all_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_pv_covers_all_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")
@@ -353,10 +345,6 @@ class TestPvSelfConsumption(ReferenceCase):
     def test_pv_standby_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_pv_standby_gross_power_applicable_consumption_ratio(self):
-        return TODO
-
     @expect("source_adapters_consumption_power")
     def test_pv_standby_source_adapters_consumption_power(self):
         return TODO
@@ -476,10 +464,6 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @expect("gross_power_standby_ratio")
     def test_pv_unavailable_gross_power_standby_ratio(self):
-        return TODO
-
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_pv_unavailable_gross_power_applicable_consumption_ratio(self):
         return TODO
 
     @expect("source_adapters_consumption_power")
