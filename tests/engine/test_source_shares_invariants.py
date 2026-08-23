@@ -82,7 +82,9 @@ class Case:
 
     def describe(self) -> str:
         parts = [f"{u}={v}" for u, v in self.sources.items()]
-        parts += [f"{u}=-{v}{list(self.allowed[u]) or ''}" for u, v in self.sinks.items()]
+        parts += [
+            f"{u}=-{v}{list(self.allowed[u]) or ''}" for u, v in self.sinks.items()
+        ]
         return f"sources/sinks: {', '.join(parts)}, home={self.home}"
 
 
@@ -113,13 +115,19 @@ def _make_case(rng: random.Random) -> Case | None:
     # Roles, then the readings that follow from them.
     grid_importing = rng.random() < 0.7
     pv_producing = {uid: rng.random() < 0.7 for uid in pv_uids}
-    bat_role = {uid: rng.choices(("charge", "discharge", "idle"),
-                                 (0.5, 0.3, 0.2))[0] for uid in bat_uids}
+    bat_role = {
+        uid: rng.choices(("charge", "discharge", "idle"), (0.5, 0.3, 0.2))[0]
+        for uid in bat_uids
+    }
 
     readings: dict[str, int] = {}
     sources: dict[str, int] = {}
     for uid in pv_uids:
-        power = rng.randrange(2, 60) * 50 if pv_producing[uid] else -rng.randrange(0, 3) * 10
+        power = (
+            rng.randrange(2, 60) * 50
+            if pv_producing[uid]
+            else -rng.randrange(0, 3) * 10
+        )
         readings[uid] = power
         if power > 0:
             sources[uid] = power
@@ -180,16 +188,19 @@ def _make_case(rng: random.Random) -> Case | None:
 
     adapters = [Adapter.grid()]
     adapters += [Adapter.pv(uid, exports=True) for uid in pv_uids]
-    adapters += [Adapter.battery(uid, charge_from=restrictions.get(uid, ()))
-                 for uid in bat_uids]
-    adapters += [Adapter.consumer(uid, power_from=restrictions.get(uid, ()))
-                 for uid in cons_uids]
+    adapters += [
+        Adapter.battery(uid, charge_from=restrictions.get(uid, ())) for uid in bat_uids
+    ]
+    adapters += [
+        Adapter.consumer(uid, power_from=restrictions.get(uid, ())) for uid in cons_uids
+    ]
 
     # Mask each restriction down to the sources actually providing: a sink
     # pinned to an idle PV has no allowed source at all this snapshot.
     allowed = {
         uid: tuple(t for t in restrictions.get(uid, ()) if t in sources)
-        if uid in restrictions else ()
+        if uid in restrictions
+        else ()
         for uid in sinks
     }
     # The exporting grid carries a restriction nobody configured: it may only
@@ -250,7 +261,9 @@ def _max_flow(capacity: dict[str, dict[str, int]], src: str, dst: str) -> int:
         bottleneck = min(capacity[a][b] for a, b in path)
         for a, b in path:
             capacity[a][b] -= bottleneck
-            capacity.setdefault(b, {})[a] = capacity.setdefault(b, {}).get(a, 0) + bottleneck
+            capacity.setdefault(b, {})[a] = (
+                capacity.setdefault(b, {}).get(a, 0) + bottleneck
+            )
         total += bottleneck
 
 
@@ -267,8 +280,7 @@ def _is_feasible(case: Case) -> bool:
     # a stranded sink in would declare the whole case infeasible and silently
     # cost invariant 4 its most interesting topologies.
     stranded = {
-        uid for uid in case.sinks
-        if uid in case.restricted and not case.allowed[uid]
+        uid for uid in case.sinks if uid in case.restricted and not case.allowed[uid]
     }
     demand = {uid: d for uid, d in case.sinks.items() if uid not in stranded}
     home = case.home + sum(case.sinks[uid] for uid in stranded)
@@ -313,7 +325,9 @@ def test_rows_are_normalised() -> None:
             total = sum(row.values())
             if abs(total - 1.0) > 1e-9 and abs(total) > 1e-9:
                 failures.append(f"{uid} row sums to {total:.6f}; {case.describe()}")
-    _report(failures, len(cases), "Every provenance row must sum to 1 (or 0 when idle).")
+    _report(
+        failures, len(cases), "Every provenance row must sum to 1 (or 0 when idle)."
+    )
 
 
 def test_no_source_is_overdrawn() -> None:
@@ -366,7 +380,8 @@ def test_unattributed_power_is_exactly_the_unreportable_draw() -> None:
             )
             unattributed += power - drawn
         stranded = sum(
-            draw for uid, draw in case.sinks.items()
+            draw
+            for uid, draw in case.sinks.items()
             if uid in case.restricted and not case.allowed[uid]
         )
         expected = case.home + stranded

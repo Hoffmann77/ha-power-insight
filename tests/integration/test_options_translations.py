@@ -6,6 +6,7 @@ one-line change to ``SCOPE_SUPPORTED_OPTIONS`` — and it is also why a section
 can appear in the UI with nothing to render it, which no flow test notices
 because flows are driven programmatically and never touch translations.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,9 +50,7 @@ def test_scope_form_sections_are_translated(scope: str, path: str) -> None:
         assert name in sections, f"{scope}: section '{name}' has no translation"
         data = sections[name].get("data", {})
         for field in fields:
-            assert field in data, (
-                f"{scope}.{name}: field '{field}' has no translation"
-            )
+            assert field in data, f"{scope}.{name}: field '{field}' has no translation"
 
 
 @pytest.mark.parametrize("path", TRANSLATION_FILES)

@@ -1,4 +1,5 @@
 """Tests for PowerInsight integration setup (__init__.py)."""
+
 from __future__ import annotations
 
 import pytest
@@ -78,9 +79,7 @@ async def test_setup_succeeds_with_grid(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Entry should load successfully when a grid adapter is configured."""
-    hass.states.async_set(
-        "sensor.grid_power", "500", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "500", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     assert mock_config_entry.state == ConfigEntryState.LOADED
 
@@ -89,9 +88,7 @@ async def test_grid_issue_dismissed_on_successful_setup(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """A prior 'no_grid_configured' issue should be absent after a successful setup."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     issue_reg = ir.async_get(hass)
     assert issue_reg.async_get_issue(DOMAIN, "no_grid_configured") is None
@@ -101,9 +98,7 @@ async def test_powerinsight_bootstrapped_from_ha_state(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """PowerInsight should be seeded with current HA state values at startup."""
-    hass.states.async_set(
-        "sensor.grid_power", "750", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "750", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
 
     pi = mock_config_entry.runtime_data.power_insight
@@ -125,9 +120,7 @@ async def test_powerinsight_kw_unit_scaled_to_watts(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """A state expressed in kW should be scaled to Watts in PowerInsight."""
-    hass.states.async_set(
-        "sensor.grid_power", "1.5", {"unit_of_measurement": "kW"}
-    )
+    hass.states.async_set("sensor.grid_power", "1.5", {"unit_of_measurement": "kW"})
     await setup_integration(hass, mock_config_entry)
 
     pi = mock_config_entry.runtime_data.power_insight
@@ -138,9 +131,7 @@ async def test_unload_entry(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:
     """Unloading should leave the entry in NOT_LOADED state."""
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     assert mock_config_entry.state == ConfigEntryState.LOADED
 
@@ -164,15 +155,14 @@ async def test_stale_battery_charge_source_creates_repair_issue(
         ],
     )
 
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(
-        DOMAIN, f"reconfigure_battery_{BAT_SUB_ID}"
-    ) is not None
+    assert (
+        issue_reg.async_get_issue(DOMAIN, f"reconfigure_battery_{BAT_SUB_ID}")
+        is not None
+    )
 
 
 async def test_valid_battery_charge_source_no_repair_issue(
@@ -192,18 +182,14 @@ async def test_valid_battery_charge_source_no_repair_issue(
         ],
     )
 
-    hass.states.async_set(
-        "sensor.grid_power", "0", {"unit_of_measurement": "W"}
-    )
-    hass.states.async_set(
-        "sensor.pv_power", "0", {"unit_of_measurement": "W"}
-    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(
-        DOMAIN, f"reconfigure_battery_{BAT_SUB_ID}"
-    ) is None
+    assert (
+        issue_reg.async_get_issue(DOMAIN, f"reconfigure_battery_{BAT_SUB_ID}") is None
+    )
 
 
 async def test_migrate_drops_stored_battery_efficiency(hass: HomeAssistant) -> None:

@@ -4,12 +4,11 @@ import clsx from 'clsx';
 
 import styles from './styles.module.css';
 import FlowSvg from './FlowSvg';
-import CertDot from './CertDot';
 import ValueLedger from './ValueLedger';
 import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
 import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
-import {costOf, buildModel, isVerified, roleText} from './model';
+import {costOf, buildModel, hasValue, roleText} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
 import type {
   AdapterConfig,
@@ -191,9 +190,7 @@ export default function CaseDiagram({
   const selected: FlowNode | null =
     model.nodes.find((n) => n.uid === selectedUid) ?? null;
 
-  const stateCertified = activeState.expectations.filter(
-    (e) => e.certification.status === 'verified',
-  ).length;
+  const stateDerived = activeState.expectations.length;
 
   /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
@@ -363,7 +360,7 @@ export default function CaseDiagram({
     });
   };
 
-  const sharesVerified = isVerified(
+  const sharesDerived = hasValue(
     model.byProperty,
     selected?.virtual
       ? 'home_base_load_source_shares'
@@ -512,7 +509,9 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
+                    {!sharesDerived && (
+                      <span className={styles.vpending}>not yet derived</span>
+                    )}
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.to === selected.uid),
@@ -525,7 +524,9 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its output went{' '}
-                    <CertDot status={sharesVerified ? 'verified' : 'pending'} />
+                    {!sharesDerived && (
+                      <span className={styles.vpending}>not yet derived</span>
+                    )}
                   </p>
                   {flowRows(
                     model.edges.filter((e) => e.from === selected.uid),
@@ -567,8 +568,9 @@ export default function CaseDiagram({
       />
 
       <p className={styles.certline}>
-        {stateCertified} of {activeState.expectations.length} values in this
-        snapshot hand-certified
+        {stateDerived === 1
+          ? '1 value derived by hand for this snapshot'
+          : `${stateDerived} values derived by hand for this snapshot`}
       </p>
     </div>
   );

@@ -5,6 +5,7 @@ pytest-homeassistant-custom-component, feed source-entity states, and assert the
 actual rendered HA sensor states — instantaneous, accumulated (time-driven), and
 the removal-ledger lifecycle.
 """
+
 from __future__ import annotations
 
 import copy
@@ -33,6 +34,7 @@ pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _state_obj(hass: HomeAssistant, entry: MockConfigEntry, suffix: str):
     ent_reg = er.async_get(hass)
     for ent in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
@@ -50,9 +52,9 @@ def _float(hass: HomeAssistant, entry: MockConfigEntry, suffix: str) -> float:
 
 def _grid_with_price() -> dict:
     grid = copy.deepcopy(make_grid_subentry_data())
-    grid["data"]["adapter"]["config"][
-        "grid_electricity_price_entity"
-    ] = "sensor.grid_price"
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
     return grid
 
 
@@ -76,6 +78,7 @@ async def _settle(hass: HomeAssistant) -> None:
 # Test 1 — instantaneous sensor values
 # ---------------------------------------------------------------------------
 
+
 async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
     """From config entry to rendered instantaneous sensor states."""
     pv = copy.deepcopy(make_pv_subentry_data())
@@ -87,11 +90,13 @@ async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
             "schema": 2,
             "scopes": {
                 "combined": [
-                    "calculate_cost_rates", "calculate_levelized_cost_rates",
+                    "calculate_cost_rates",
+                    "calculate_levelized_cost_rates",
                 ],
                 "grid": ["calculate_cost_rates"],
                 "pv_system": [
-                    "calculate_cost_rates", "calculate_levelized_cost_rates",
+                    "calculate_cost_rates",
+                    "calculate_levelized_cost_rates",
                 ],
             },
         },
@@ -122,6 +127,7 @@ async def test_e2e_instantaneous_sensor_values(hass: HomeAssistant) -> None:
 # ---------------------------------------------------------------------------
 # Test 2 — accumulated value over simulated time
 # ---------------------------------------------------------------------------
+
 
 async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
     """A constant rate held across an hour integrates into the total sensor.
@@ -167,6 +173,7 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
 # Test 3 — removal-ledger lifecycle
 # ---------------------------------------------------------------------------
 
+
 async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     """Accumulate, remove the device, and verify the frozen ledger persists."""
     entry = MockConfigEntry(
@@ -196,9 +203,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
         _set(hass, "sensor.pv_power", -100)
         await _settle(hass)
 
-    per_adapter = _float(
-        hass, entry, f"{PV_SUB_ID}_total_levelized_operating_cost"
-    )
+    per_adapter = _float(hass, entry, f"{PV_SUB_ID}_total_levelized_operating_cost")
     assert per_adapter == pytest.approx(0.03, abs=1e-3)
     # The derived combined sensor equals the sum of active per-adapter totals.
     combined = _float(hass, entry, "combined_total_levelized_device_operating_cost")
@@ -213,8 +218,7 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     # sum the operating-costs key across them.
     ledger = entry.data.get("retired_adapters", [])
     op_total = sum(
-        e.get("totals", {}).get("total_levelized_operating_cost", 0.0)
-        for e in ledger
+        e.get("totals", {}).get("total_levelized_operating_cost", 0.0) for e in ledger
     )
     assert op_total == pytest.approx(per_adapter, abs=1e-6)
 
@@ -222,7 +226,9 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
     # device is gone. Re-report a source entity to refresh the derived sensor.
     _set(hass, "sensor.grid_power", 1000)
     await _settle(hass)
-    combined_after = _float(hass, entry, "combined_total_levelized_device_operating_cost")
+    combined_after = _float(
+        hass, entry, "combined_total_levelized_device_operating_cost"
+    )
     assert combined_after == pytest.approx(per_adapter, abs=1e-6)
 
     # Reload again: no double-count.

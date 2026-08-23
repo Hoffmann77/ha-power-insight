@@ -170,13 +170,28 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_flow_partition(self, power_insight):
         # Grid imports -> it joins the sources. Every battery is charging, so
         # all three are sinks; both PV produce; both consumers load.
-        assert _uids(power_insight.source_adapters) == {"grid", "pv1", "pv2"}  # Calculated by claude
-        assert _uids(power_insight.local_source_adapters) == {"pv1", "pv2"}  # Calculated by claude
+        assert _uids(power_insight.source_adapters) == {
+            "grid",
+            "pv1",
+            "pv2",
+        }  # Calculated by claude
+        assert _uids(power_insight.local_source_adapters) == {
+            "pv1",
+            "pv2",
+        }  # Calculated by claude
         assert _uids(power_insight.sink_adapters) == {
-            "bat1", "bat2", "bat3", "cons1", "cons2",
+            "bat1",
+            "bat2",
+            "bat3",
+            "cons1",
+            "cons2",
         }  # Calculated by claude
         assert _uids(power_insight.local_sink_adapters) == {
-            "bat1", "bat2", "bat3", "cons1", "cons2",
+            "bat1",
+            "bat2",
+            "bat3",
+            "cons1",
+            "cons2",
         }  # Calculated by claude
         assert _uids(power_insight.grid_adapters) == {"grid"}  # Calculated by claude
 
@@ -203,23 +218,35 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert src_index == ["grid", "pv1", "pv2"]  # Calculated by claude
         assert src_arr == [1500.0, 2000.0, 1000.0]  # Calculated by claude
         sink_arr, sink_index = power_insight.sink_adapters_power
-        assert sink_index == ["bat1", "bat2", "bat3", "cons1", "cons2"]  # Calculated by claude
-        assert sink_arr == [-400.0, -1000.0, -600.0, -700.0, -300.0]  # Calculated by claude
+        assert sink_index == [
+            "bat1",
+            "bat2",
+            "bat3",
+            "cons1",
+            "cons2",
+        ]  # Calculated by claude
+        assert sink_arr == [
+            -400.0,
+            -1000.0,
+            -600.0,
+            -700.0,
+            -300.0,
+        ]  # Calculated by claude
 
     def test_gross_power_shares(self, power_insight):
         src_arr, src_index = power_insight.source_adapters_gross_power_shares
         assert src_index == ["grid", "pv1", "pv2"]
-        assert src_arr == [1/3, 4/9, 2/9]
+        assert src_arr == [1 / 3, 4 / 9, 2 / 9]
         sink_arr, sink_index = power_insight.sink_adapters_gross_power_shares
         assert sink_index == ["bat1", "bat2", "bat3", "cons1", "cons2"]
-        assert sink_arr == [4/45, 2/9, 2/15, 7/45, 1/15]
+        assert sink_arr == [4 / 45, 2 / 9, 2 / 15, 7 / 45, 1 / 15]
 
     # -- Gross-power channel ratios (EXP / CON / CHG / STB) ---------------
 
     def test_channel_ratios(self, power_insight):
         assert power_insight.gross_power_export_ratio == 0.0
-        assert power_insight.gross_power_consumption_ratio == 5/9
-        assert power_insight.gross_power_charging_ratio == 4/9
+        assert power_insight.gross_power_consumption_ratio == 5 / 9
+        assert power_insight.gross_power_charging_ratio == 4 / 9
         assert power_insight.gross_power_standby_ratio == 0.0
 
     def test_channel_ratios_sum_to_one(self, power_insight):
@@ -245,14 +272,14 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # route, so the last bit of the float need not match.
         expected = {
             "bat1": {
-                "grid": 9/26,
-                "pv1": 17/39,
-                "pv2": 17/78,
+                "grid": 9 / 26,
+                "pv1": 17 / 39,
+                "pv2": 17 / 78,
             },
             "bat2": {
                 "grid": 0.0,
-                "pv1": 2/3,
-                "pv2": 1/3,
+                "pv1": 2 / 3,
+                "pv2": 1 / 3,
             },
             "bat3": {
                 "grid": 1.0,
@@ -260,14 +287,14 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
                 "pv2": 0.0,
             },
             "cons1": {
-                "grid": 9/26,
-                "pv1": 17/39,
-                "pv2": 17/78,
+                "grid": 9 / 26,
+                "pv1": 17 / 39,
+                "pv2": 17 / 78,
             },
             "cons2": {
                 "grid": 0.0,
-                "pv1": 2/3,
-                "pv2": 1/3,
+                "pv1": 2 / 3,
+                "pv2": 1 / 3,
             },
         }
         actual = power_insight.sink_adapters_source_shares
@@ -298,7 +325,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert power_insight.combined_saving_rate == pytest.approx(0.3)
         assert power_insight.combined_levelized_saving_rate == pytest.approx(-1 / 25)
         assert power_insight.combined_financial_return_rate == pytest.approx(0.3)
-        assert power_insight.combined_levelized_financial_return_rate == pytest.approx(-1 / 25)
+        assert power_insight.combined_levelized_financial_return_rate == pytest.approx(
+            -1 / 25
+        )
         # Zero while importing (nothing exported), but assert it explicitly.
         assert power_insight.combined_export_compensation_rate == pytest.approx(0.0)
 
@@ -308,16 +337,25 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # price it at 0.12 * 1.25 = 0.15 instead.
         #
         #   lcoe_rate: 1.5*0.30 + 2.0*0.15 + 1.0*0.10 = 0.85 (base was 0.79)
-        assert power_insight.combined_lcoe_rate_corrected == pytest.approx(0.85)  # Calculated by claude
+        assert power_insight.combined_lcoe_rate_corrected == pytest.approx(
+            0.85
+        )  # Calculated by claude
         #   lcoo_rate: bat1 0.4*(9/26*0.30 + 17/39*0.15 + 17/78*0.10) = 149/1950
         #              bat2 1.0*(2/3*0.15 + 1/3*0.10)                 = 2/15
         #              bat3 0.6*0.30                                  = 9/50
-        assert power_insight.combined_lcoo_rate_corrected == pytest.approx(76 / 195)  # Calculated by claude
+        assert power_insight.combined_lcoo_rate_corrected == pytest.approx(
+            76 / 195
+        )  # Calculated by claude
         #   saving:  pv1 1.158974 kW * (0.30-0.15) + pv2 0.579487 * (0.30-0.10)
         #            = 113/390, minus the 76/195 above -> exactly -0.10
-        assert power_insight.combined_levelized_saving_rate_corrected == pytest.approx(-0.1)  # Calculated by claude
+        assert power_insight.combined_levelized_saving_rate_corrected == pytest.approx(
+            -0.1
+        )  # Calculated by claude
         # Nothing is exported here, so the financial return equals the saving.
-        assert power_insight.combined_levelized_financial_return_rate_corrected == pytest.approx(-0.1)  # Calculated by claude
+        assert (
+            power_insight.combined_levelized_financial_return_rate_corrected
+            == pytest.approx(-0.1)
+        )  # Calculated by claude
 
     def test_levelized_correction_factors(self, power_insight):
         # uid -> correction_factor for prod adapters with an LCOE (pv1 = 1.25,
@@ -335,95 +373,125 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_source_adapters_channel_power(self, power_insight):
         # Watts of each source's output going to each channel. Export and
         # standby are empty/zero while importing with no standby.
-        assert power_insight.source_adapters_consumption_power == pytest.approx({
-            "grid": 9900/13,
-            "pv1": 45200 / 39,
-            "pv2": 22600 / 39,
-        })
-        assert power_insight.source_adapters_charging_power == pytest.approx({
-            "grid": 9600/13,
-            "pv1": 32800 / 39,
-            "pv2": 16400 / 39,
-        })
-        assert power_insight.source_adapters_export_power == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
-        assert power_insight.source_adapters_standby_power == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
+        assert power_insight.source_adapters_consumption_power == pytest.approx(
+            {
+                "grid": 9900 / 13,
+                "pv1": 45200 / 39,
+                "pv2": 22600 / 39,
+            }
+        )
+        assert power_insight.source_adapters_charging_power == pytest.approx(
+            {
+                "grid": 9600 / 13,
+                "pv1": 32800 / 39,
+                "pv2": 16400 / 39,
+            }
+        )
+        assert power_insight.source_adapters_export_power == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
+        assert power_insight.source_adapters_standby_power == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
 
     def test_source_adapters_channel_shares(self, power_insight):
-        assert power_insight.source_adapters_consumption_shares == pytest.approx({
-            "grid": 99 / 325,
-            "pv1": 452 / 975,
-            "pv2": 226 / 975,
-        })
-        assert power_insight.source_adapters_charging_shares == pytest.approx({
-            "grid": 24 / 65,
-            "pv1": 82 / 195,
-            "pv2": 41 / 195,
-        })
-        assert power_insight.source_adapters_export_shares == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
-        assert power_insight.source_adapters_standby_shares == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
+        assert power_insight.source_adapters_consumption_shares == pytest.approx(
+            {
+                "grid": 99 / 325,
+                "pv1": 452 / 975,
+                "pv2": 226 / 975,
+            }
+        )
+        assert power_insight.source_adapters_charging_shares == pytest.approx(
+            {
+                "grid": 24 / 65,
+                "pv1": 82 / 195,
+                "pv2": 41 / 195,
+            }
+        )
+        assert power_insight.source_adapters_export_shares == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
+        assert power_insight.source_adapters_standby_shares == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
 
     def test_source_adapters_channel_ratios(self, power_insight):
-        assert power_insight.source_adapters_consumption_ratios == pytest.approx({
-            "grid": 33 / 65,
-            "pv1": 113 / 195,
-            "pv2": 113 / 195,
-        })
-        assert power_insight.source_adapters_charging_ratios == pytest.approx({
-            "grid": 32 / 65,
-            "pv1": 82 / 195,
-            "pv2": 82 / 195,
-        })
-        assert power_insight.source_adapters_export_ratios == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
-        assert power_insight.source_adapters_standby_ratios == pytest.approx({
-            "grid": 0.0,
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })
+        assert power_insight.source_adapters_consumption_ratios == pytest.approx(
+            {
+                "grid": 33 / 65,
+                "pv1": 113 / 195,
+                "pv2": 113 / 195,
+            }
+        )
+        assert power_insight.source_adapters_charging_ratios == pytest.approx(
+            {
+                "grid": 32 / 65,
+                "pv1": 82 / 195,
+                "pv2": 82 / 195,
+            }
+        )
+        assert power_insight.source_adapters_export_ratios == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
+        assert power_insight.source_adapters_standby_ratios == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )
 
     # -- Per-source attribution: rates ------------------------------------
 
     def test_source_adapters_rates(self, power_insight):
         # coe = the *marginal* price of what a source delivers: the grid's
         # tariff, and zero for local generation (the fuel is free).
-        assert power_insight.source_adapters_coe_rate == pytest.approx({
-            "grid": 0.45,   # 1.5 kW * 0.30
-            "pv1": 0.0,
-            "pv2": 0.0,
-        })  # Calculated by claude
+        assert power_insight.source_adapters_coe_rate == pytest.approx(
+            {
+                "grid": 0.45,  # 1.5 kW * 0.30
+                "pv1": 0.0,
+                "pv2": 0.0,
+            }
+        )  # Calculated by claude
         # lcoe additionally carries each device's own levelized cost (base,
         # uncorrected — pv1 at 0.12, not 0.15).
-        assert power_insight.source_adapters_lcoe_rate == pytest.approx({
-            "grid": 0.45,   # 1.5 kW * 0.30
-            "pv1": 0.24,    # 2.0 kW * 0.12
-            "pv2": 0.10,    # 1.0 kW * 0.10
-        })  # Calculated by claude
+        assert power_insight.source_adapters_lcoe_rate == pytest.approx(
+            {
+                "grid": 0.45,  # 1.5 kW * 0.30
+                "pv1": 0.24,  # 2.0 kW * 0.12
+                "pv2": 0.10,  # 1.0 kW * 0.10
+            }
+        )  # Calculated by claude
 
     def test_source_adapters_financial_rates(self, power_insight):
-        assert power_insight.source_adapters_avoided_cost_rates == pytest.approx({
-            "grid": 0.0,
-            "pv1": 113 / 325,
-            "pv2": 113 / 650,
-        })
+        assert power_insight.source_adapters_avoided_cost_rates == pytest.approx(
+            {
+                "grid": 0.0,
+                "pv1": 113 / 325,
+                "pv2": 113 / 650,
+            }
+        )
         # The savings and financial-return ledger is device-keyed
         # (adapters_saving_rates and friends, asserted below) rather than
         # keyed by flow role, so there is nothing source-side to assert here.
@@ -434,24 +502,30 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # Two loads (cons1, cons2) take their share of the CON channel. These
         # do *not* sum to 1: the 2500 W channel is mostly the 1500 W home base
         # load, which is not a consumer adapter.
-        assert power_insight.sink_adapters_consumption_shares == pytest.approx({
-            "cons1": 0.28,   # 700 / 2500
-            "cons2": 0.12,   # 300 / 2500
-        })  # Calculated by claude
-        assert power_insight.sink_adapters_coo_rates == pytest.approx({
-            "bat1": 27 / 650,
-            "bat2": 0.0,
-            "bat3": 9 / 50,
-            "cons1": 189 / 2600,
-            "cons2": 0.0,
-        })
-        assert power_insight.sink_adapters_lcoo_rates == pytest.approx({
-            "bat1": 347 / 4875,
-            "bat2": 17 / 150,
-            "bat3": 9 / 50,
-            "cons1": 2429 / 19500,
-            "cons2": 17 / 500,
-        })
+        assert power_insight.sink_adapters_consumption_shares == pytest.approx(
+            {
+                "cons1": 0.28,  # 700 / 2500
+                "cons2": 0.12,  # 300 / 2500
+            }
+        )  # Calculated by claude
+        assert power_insight.sink_adapters_coo_rates == pytest.approx(
+            {
+                "bat1": 27 / 650,
+                "bat2": 0.0,
+                "bat3": 9 / 50,
+                "cons1": 189 / 2600,
+                "cons2": 0.0,
+            }
+        )
+        assert power_insight.sink_adapters_lcoo_rates == pytest.approx(
+            {
+                "bat1": 347 / 4875,
+                "bat2": 17 / 150,
+                "bat3": 9 / 50,
+                "cons1": 2429 / 19500,
+                "cons2": 17 / 500,
+            }
+        )
 
     # -- Channel cost buckets (the cost ledger) ---------------------------
 
@@ -460,16 +534,28 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # (coe) prices only the grid contribution; local generation is free.
         #   CON: grid 9900/13 W -> 9.9/13 kW * 0.30 = 297/1300
         #   CHG: grid 9600/13 W -> 9.6/13 kW * 0.30 = 72/325
-        assert power_insight.combined_consumption_cost_rate == pytest.approx(297 / 1300)  # Calculated by claude
-        assert power_insight.combined_charging_cost_rate == pytest.approx(72 / 325)  # Calculated by claude
+        assert power_insight.combined_consumption_cost_rate == pytest.approx(
+            297 / 1300
+        )  # Calculated by claude
+        assert power_insight.combined_charging_cost_rate == pytest.approx(
+            72 / 325
+        )  # Calculated by claude
         assert power_insight.combined_standby_cost_rate == 0.0  # Calculated by claude
         assert power_insight.combined_export_cost_rate == 0.0  # Calculated by claude
         # Levelized additionally charges each local source its own LCOE.
         #   CON: 297/1300 (grid) + 226/1625 (pv1) + 113/1950 (pv2) = 8297/19500
-        assert power_insight.combined_levelized_consumption_cost_rate == pytest.approx(8297 / 19500)  # Calculated by claude
-        assert power_insight.combined_levelized_charging_cost_rate == pytest.approx(1777 / 4875)  # Calculated by claude
-        assert power_insight.combined_levelized_standby_cost_rate == 0.0  # Calculated by claude
-        assert power_insight.combined_levelized_export_cost_rate == 0.0  # Calculated by claude
+        assert power_insight.combined_levelized_consumption_cost_rate == pytest.approx(
+            8297 / 19500
+        )  # Calculated by claude
+        assert power_insight.combined_levelized_charging_cost_rate == pytest.approx(
+            1777 / 4875
+        )  # Calculated by claude
+        assert (
+            power_insight.combined_levelized_standby_cost_rate == 0.0
+        )  # Calculated by claude
+        assert (
+            power_insight.combined_levelized_export_cost_rate == 0.0
+        )  # Calculated by claude
 
     def test_cost_conservation_invariant(self, power_insight):
         # Invariant: every watt of gross power is bought exactly once and lands
@@ -495,15 +581,15 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # Producing into CON earns (grid - own cost); charging spends the cost
         # of its own source mix.
         assert power_insight.adapters_saving_rates == {
-            "pv1": pytest.approx(113 / 325),    # 1.158974 kW * 0.30
-            "pv2": pytest.approx(113 / 650),    # 0.579487 kW * 0.30
-            "bat1": pytest.approx(-27 / 650),   # 0.4 kW * 9/26 * 0.30 charged
-            "bat2": 0.0,                        # charges on PV only -> free
-            "bat3": pytest.approx(-9 / 50),     # 0.6 kW all grid * 0.30
+            "pv1": pytest.approx(113 / 325),  # 1.158974 kW * 0.30
+            "pv2": pytest.approx(113 / 650),  # 0.579487 kW * 0.30
+            "bat1": pytest.approx(-27 / 650),  # 0.4 kW * 9/26 * 0.30 charged
+            "bat2": 0.0,  # charges on PV only -> free
+            "bat3": pytest.approx(-9 / 50),  # 0.6 kW all grid * 0.30
         }  # Calculated by claude
         assert power_insight.adapters_levelized_saving_rates == {
-            "pv1": pytest.approx(339 / 1625),   # 1.158974 * (0.30 - 0.12)
-            "pv2": pytest.approx(113 / 975),    # 0.579487 * (0.30 - 0.10)
+            "pv1": pytest.approx(339 / 1625),  # 1.158974 * (0.30 - 0.12)
+            "pv2": pytest.approx(113 / 975),  # 0.579487 * (0.30 - 0.10)
             "bat1": pytest.approx(-347 / 4875),
             "bat2": pytest.approx(-17 / 150),
             "bat3": pytest.approx(-9 / 50),
@@ -526,8 +612,8 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # What each load did *not* pay the grid: its draw, times the non-grid
         # part of its mix, at the import price.
         assert power_insight.sink_adapters_avoided_cost_rates == {
-            "cons1": pytest.approx(357 / 2600),   # 0.7 kW * 17/26 * 0.30
-            "cons2": pytest.approx(0.09),         # 0.3 kW * 1.0  * 0.30
+            "cons1": pytest.approx(357 / 2600),  # 0.7 kW * 17/26 * 0.30
+            "cons2": pytest.approx(0.09),  # 0.3 kW * 1.0  * 0.30
         }  # Calculated by claude
         # The home base load is surfaced through its own properties rather than
         # as a dict key, so it can never collide with a user's device uid.
@@ -535,7 +621,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert power_insight.home_base_load_source_shares == pytest.approx(
             {"grid": 9 / 26, "pv1": 17 / 39, "pv2": 17 / 78}
         )  # Calculated by claude
-        assert power_insight.home_base_load_avoided_cost_rate == pytest.approx(153 / 520)  # Calculated by claude
+        assert power_insight.home_base_load_avoided_cost_rate == pytest.approx(
+            153 / 520
+        )  # Calculated by claude
 
     def test_avoided_cost_duality_invariant(self, power_insight):
         # Invariant: the source side and the sink side measure the same saved
@@ -613,14 +701,20 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             "sensor.cons1_power",
             "sensor.cons2_power",
         }
-        assert set(power_insight.source_entities_power) == power_entities  # Calculated by claude
-        assert set(power_insight.source_entities_price) == {"sensor.grid_price"}  # Calculated by claude
+        assert (
+            set(power_insight.source_entities_power) == power_entities
+        )  # Calculated by claude
+        assert set(power_insight.source_entities_price) == {
+            "sensor.grid_price"
+        }  # Calculated by claude
         assert set(power_insight.source_entities_co2) == set()  # Calculated by claude
         assert set(power_insight.source_entities) == power_entities | {
             "sensor.grid_price",
         }  # Calculated by claude
         # No entity is subscribed to twice.
-        assert len(power_insight.source_entities) == len(set(power_insight.source_entities))  # Calculated by claude
+        assert len(power_insight.source_entities) == len(
+            set(power_insight.source_entities)
+        )  # Calculated by claude
 
     # =====================================================================
     #   STATE 2 — evening export + discharge + standby
@@ -653,10 +747,27 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_flow_partition_export(self, power_insight):
         # Sources: pv1 + discharging bat1/bat2. Sinks: exporting grid, standby
         # pv2, both loads. bat3 (0 W) is idle -> in neither group.
-        assert _uids(power_insight.source_adapters) == {"pv1", "bat1", "bat2"}  # Calculated by claude
-        assert _uids(power_insight.local_source_adapters) == {"pv1", "bat1", "bat2"}  # Calculated by claude
-        assert _uids(power_insight.sink_adapters) == {"grid", "pv2", "cons1", "cons2"}  # Calculated by claude
-        assert _uids(power_insight.local_sink_adapters) == {"pv2", "cons1", "cons2"}  # Calculated by claude
+        assert _uids(power_insight.source_adapters) == {
+            "pv1",
+            "bat1",
+            "bat2",
+        }  # Calculated by claude
+        assert _uids(power_insight.local_source_adapters) == {
+            "pv1",
+            "bat1",
+            "bat2",
+        }  # Calculated by claude
+        assert _uids(power_insight.sink_adapters) == {
+            "grid",
+            "pv2",
+            "cons1",
+            "cons2",
+        }  # Calculated by claude
+        assert _uids(power_insight.local_sink_adapters) == {
+            "pv2",
+            "cons1",
+            "cons2",
+        }  # Calculated by claude
         assert _uids(power_insight.grid_adapters) == {"grid"}  # Calculated by claude
 
     # -- Combined powers (export / discharge / standby) -------------------
@@ -668,7 +779,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # contributes nothing here (and 50 W to combined_standby_power).
         assert power_insight.combined_production == 3000.0  # Calculated by claude
         assert power_insight.combined_charging_power == 0.0  # Calculated by claude
-        assert power_insight.combined_discharging_power == 1000.0  # Calculated by claude
+        assert (
+            power_insight.combined_discharging_power == 1000.0
+        )  # Calculated by claude
         assert power_insight.combined_standby_power == 50.0  # Calculated by claude
         # Residual: 4000 - 1200 export - 0 charging - 50 standby.
         assert power_insight.combined_consumption == 2750.0  # Calculated by claude
@@ -689,13 +802,21 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     # -- Gross-power channel ratios (export + standby non-zero) -----------
 
     def test_channel_ratios_export(self, power_insight):
-        assert power_insight.gross_power_export_ratio == 0.3          # 1200/4000  # Calculated by claude
-        assert power_insight.gross_power_consumption_ratio == 11 / 16  # 2750/4000  # Calculated by claude
+        assert (
+            power_insight.gross_power_export_ratio == 0.3
+        )  # 1200/4000  # Calculated by claude
+        assert (
+            power_insight.gross_power_consumption_ratio == 11 / 16
+        )  # 2750/4000  # Calculated by claude
         assert power_insight.gross_power_charging_ratio == 0.0  # Calculated by claude
-        assert power_insight.gross_power_standby_ratio == 0.0125       # 50/4000  # Calculated by claude
+        assert (
+            power_insight.gross_power_standby_ratio == 0.0125
+        )  # 50/4000  # Calculated by claude
         # Of what stayed home and was not stored (4000 - 1200 - 0 = 2800), the
         # fraction actually used rather than lost to standby: 2750/2800.
-        assert power_insight.gross_power_applicable_consumption_ratio == pytest.approx(55 / 56)  # Calculated by claude
+        assert power_insight.gross_power_applicable_consumption_ratio == pytest.approx(
+            55 / 56
+        )  # Calculated by claude
 
     # -- Source provenance (single pass; exporting grid is itself a sink) --
 
@@ -733,8 +854,12 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # bat2 cannot feed the grid, and here it does not have to: the two
         # exporting sources cover the 1200 W between them, so no restriction is
         # broken and nothing is reported as a deficit.
-        assert power_insight.sink_adapters_source_shares["grid"]["bat2"] == 0.0  # Calculated by claude
-        assert power_insight.sink_adapters_restriction_deficit.get("grid", 0.0) == 0.0  # Calculated by claude
+        assert (
+            power_insight.sink_adapters_source_shares["grid"]["bat2"] == 0.0
+        )  # Calculated by claude
+        assert (
+            power_insight.sink_adapters_restriction_deficit.get("grid", 0.0) == 0.0
+        )  # Calculated by claude
 
     def test_source_provenance_rows_sum_to_one_export(self, power_insight):
         # Invariant: no sink is stranded here (cons2 keeps pv1), so every row
@@ -748,11 +873,13 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # Only the two exporting devices can earn anything, and both are on the
         # same 0.08 tariff — so together they simply earn 1.2 kW * 0.08.
         assert power_insight.source_adapters_export_compensation_rates == {
-            "pv1": pytest.approx(44 / 525),    # 1.047619 kW * 0.08
+            "pv1": pytest.approx(44 / 525),  # 1.047619 kW * 0.08
             "bat1": pytest.approx(32 / 2625),  # 0.152381 kW * 0.08
-            "bat2": 0.0,                       # exports nothing to earn on
+            "bat2": 0.0,  # exports nothing to earn on
         }  # Calculated by claude
-        assert power_insight.combined_export_compensation_rate == pytest.approx(0.096)  # Calculated by claude
+        assert power_insight.combined_export_compensation_rate == pytest.approx(
+            0.096
+        )  # Calculated by claude
 
     # -- Per-source export attribution (non-zero while exporting) ---------
 
@@ -788,7 +915,7 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert power_insight.source_adapters_standby_power == {
             "pv1": pytest.approx(35750 / 1071),  # 50 * 715/1071 = 33.38 W
             "bat1": pytest.approx(5200 / 1071),  # 50 * 104/1071 =  4.86 W
-            "bat2": pytest.approx(200 / 17),     # 50 * 4/17     = 11.76 W
+            "bat2": pytest.approx(200 / 17),  # 50 * 4/17     = 11.76 W
         }  # Calculated by claude
         assert power_insight.source_adapters_standby_shares == {
             "pv1": pytest.approx(715 / 1071),
@@ -839,26 +966,30 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
     def test_channel_cost_buckets_export(self, power_insight):
         # Nothing is imported, so no watt has a marginal price: the whole
         # marginal ledger is zero even though the levelized one is not.
-        assert power_insight.combined_consumption_cost_rate == 0.0  # Calculated by claude
+        assert (
+            power_insight.combined_consumption_cost_rate == 0.0
+        )  # Calculated by claude
         assert power_insight.combined_charging_cost_rate == 0.0  # Calculated by claude
         assert power_insight.combined_standby_cost_rate == 0.0  # Calculated by claude
         assert power_insight.combined_export_cost_rate == 0.0  # Calculated by claude
         # Levelized, each source carries its own LCOE into every channel. The
         # kW figures below are the channel watts from the provenance rows.
         assert power_insight.combined_levelized_consumption_cost_rate == pytest.approx(
-            2055250 / 1_071_000 * 0.12   # pv1  1919.00 W
+            2055250 / 1_071_000 * 0.12  # pv1  1919.00 W
             + 260000 / 1_071_000 * 0.15  # bat1  242.76 W
-            + 10000 / 17_000 * 0.18      # bat2  588.24 W
+            + 10000 / 17_000 * 0.18  # bat2  588.24 W
         )  # = 0.3725770 — Calculated by claude
-        assert power_insight.combined_levelized_charging_cost_rate == 0.0  # Calculated by claude
+        assert (
+            power_insight.combined_levelized_charging_cost_rate == 0.0
+        )  # Calculated by claude
         assert power_insight.combined_levelized_standby_cost_rate == pytest.approx(
-            35750 / 1_071_000 * 0.12     # pv1    33.38 W
-            + 5200 / 1_071_000 * 0.15    # bat1    4.86 W
-            + 200 / 17_000 * 0.18        # bat2   11.76 W
+            35750 / 1_071_000 * 0.12  # pv1    33.38 W
+            + 5200 / 1_071_000 * 0.15  # bat1    4.86 W
+            + 200 / 17_000 * 0.18  # bat2   11.76 W
         )  # = 0.0068515 — Calculated by claude
         assert power_insight.combined_levelized_export_cost_rate == pytest.approx(
-            22000 / 21_000 * 0.12      # pv1  1047.62 W
-            + 3200 / 21_000 * 0.15     # bat1  152.38 W
+            22000 / 21_000 * 0.12  # pv1  1047.62 W
+            + 3200 / 21_000 * 0.15  # bat1  152.38 W
         )  # = 0.1485714 — Calculated by claude
 
     def test_cost_conservation_invariant_export(self, power_insight):
@@ -870,7 +1001,9 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
             + power_insight.combined_levelized_standby_cost_rate
             + power_insight.combined_levelized_export_cost_rate
         ) == pytest.approx(power_insight.combined_lcoe_rate)
-        assert power_insight.combined_lcoe_rate == pytest.approx(0.528)  # Calculated by claude
+        assert power_insight.combined_lcoe_rate == pytest.approx(
+            0.528
+        )  # Calculated by claude
 
     # -- Per-device savings across every flow role ------------------------
 
@@ -880,18 +1013,18 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # CON channel earns; export earns through the compensation instead.
         assert power_insight.adapters_saving_rates == {
             "pv1": pytest.approx(2055250 / 1_071_000 * 0.25),  # 0.4797502
-            "pv2": 0.0,                     # standby, but its mix costs 0 marginal
+            "pv2": 0.0,  # standby, but its mix costs 0 marginal
             "bat1": pytest.approx(260000 / 1_071_000 * 0.25),  # 0.0606909
-            "bat2": pytest.approx(10000 / 17_000 * 0.25),      # 0.1470588
+            "bat2": pytest.approx(10000 / 17_000 * 0.25),  # 0.1470588
             "bat3": 0.0,
         }  # Calculated by claude
         # Levelized, a discharge is worth (grid - LCOS) and standby costs the
         # levelized price of the mix it burns (0.05 kW * 0.1370308).
         assert power_insight.adapters_levelized_saving_rates == {
             "pv1": pytest.approx(2055250 / 1_071_000 * 0.13),  # 0.2494701
-            "pv2": pytest.approx(-1223 / 178_500),             # -0.0068515
+            "pv2": pytest.approx(-1223 / 178_500),  # -0.0068515
             "bat1": pytest.approx(260000 / 1_071_000 * 0.10),  # 0.0242764
-            "bat2": pytest.approx(10000 / 17_000 * 0.07),      # 0.0411765
+            "bat2": pytest.approx(10000 / 17_000 * 0.07),  # 0.0411765
             "bat3": 0.0,
         }  # Calculated by claude
 
@@ -904,8 +1037,12 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         ) == pytest.approx(power_insight.combined_levelized_saving_rate)
         # All 2750 W of the CON channel is local here, so the marginal saving
         # is simply the whole channel at the import price.
-        assert power_insight.combined_saving_rate == pytest.approx(0.6875)  # Calculated by claude
-        assert power_insight.combined_levelized_saving_rate == pytest.approx(4313 / 14_000)  # Calculated by claude
+        assert power_insight.combined_saving_rate == pytest.approx(
+            0.6875
+        )  # Calculated by claude
+        assert power_insight.combined_levelized_saving_rate == pytest.approx(
+            4313 / 14_000
+        )  # Calculated by claude
 
     # -- Financial return = saving + compensation - cost of exporting -----
 
@@ -914,14 +1051,18 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # its return is just its discharge into the house. pv2 is the only
         # device under water — standby is a pure cost.
         assert power_insight.adapters_levelized_financial_return_rates == {
-            "pv1": pytest.approx(12703 / 61_200),    # 0.2494701 + 0.0838095 - 0.1257143
-            "pv2": pytest.approx(-1223 / 178_500),   # standby, a pure cost
-            "bat1": pytest.approx(1822 / 133_875),   # 0.0242764 + 0.0121905 - 0.0228571
-            "bat2": pytest.approx(7 / 170),          # 0.0411765, nothing exported
+            "pv1": pytest.approx(12703 / 61_200),  # 0.2494701 + 0.0838095 - 0.1257143
+            "pv2": pytest.approx(-1223 / 178_500),  # standby, a pure cost
+            "bat1": pytest.approx(1822 / 133_875),  # 0.0242764 + 0.0121905 - 0.0228571
+            "bat2": pytest.approx(7 / 170),  # 0.0411765, nothing exported
             "bat3": 0.0,
         }  # Calculated by claude
-        assert power_insight.combined_financial_return_rate == pytest.approx(0.7835)  # Calculated by claude
-        assert power_insight.combined_levelized_financial_return_rate == pytest.approx(0.2555)  # Calculated by claude
+        assert power_insight.combined_financial_return_rate == pytest.approx(
+            0.7835
+        )  # Calculated by claude
+        assert power_insight.combined_levelized_financial_return_rate == pytest.approx(
+            0.2555
+        )  # Calculated by claude
 
     # -- Sink-side avoided cost + the home base load ----------------------
 
@@ -929,14 +1070,16 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         # No import at all, so every load's mix is fully local and it avoids
         # the whole import price on its whole draw.
         assert power_insight.sink_adapters_avoided_cost_rates == {
-            "cons1": pytest.approx(0.125),    # 0.5 kW * 1.0 * 0.25
-            "cons2": pytest.approx(0.0625),   # 0.25 kW * 1.0 * 0.25
+            "cons1": pytest.approx(0.125),  # 0.5 kW * 1.0 * 0.25
+            "cons2": pytest.approx(0.0625),  # 0.25 kW * 1.0 * 0.25
         }  # Calculated by claude
         assert power_insight.home_base_load_power == 2000.0  # Calculated by claude
         assert power_insight.home_base_load_source_shares == pytest.approx(
             {"pv1": 715 / 1071, "bat1": 104 / 1071, "bat2": 4 / 17}
         )  # Calculated by claude
-        assert power_insight.home_base_load_avoided_cost_rate == pytest.approx(0.5)  # Calculated by claude
+        assert power_insight.home_base_load_avoided_cost_rate == pytest.approx(
+            0.5
+        )  # Calculated by claude
 
     def test_avoided_cost_duality_invariant_export(self, power_insight):
         source_side = sum(power_insight.source_adapters_avoided_cost_rates.values())

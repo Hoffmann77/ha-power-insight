@@ -106,19 +106,15 @@ single adapter, and still a slot for every property.
       "readings": { "grid": "200", "east": "100", "bat_a": "-100" },
       "price": "3/10",
       "expectations": [
-        { "property": "gross_power", "value": "400",
-          "derivation": [{ "text": "sum of the positive readings" }],
-          "certification": { "status": "verified", "by": "…", "date": "…" } },
-        { "property": "sink_adapters_source_shares",
-          "value": null,
-          "derivation": [], "certification": { "status": "pending" } }
+        { "property": "gross_power", "value": "400" },
+        { "property": "combined_grid_export", "value": null }
       ]
     }
   ]
 }
 ```
 
-Four things to know about it:
+Five things to know about it:
 
 **Every number is an exact-rational string.** `"1/2"`, `"-600"`, `"3/20"`,
 `"400"`. Never a JSON float — the whole point is that these values are exact and
@@ -134,26 +130,24 @@ flow(source → sink) = sink_adapters_source_shares[sink][source] × |readings[s
 flow(source → home) = home_base_load_source_shares[source]      × home_base_load_power
 ```
 
-**Most slots are empty, and will be for a long time.** No value in the corpus
-comes from the engine: each is derived by hand and entered through
-`tools/certify.py`, so a slot stays `"value": null` with
-`certification.status` of `"pending"` until somebody works it out. Expect the
-overwhelming majority of what you render to be pending, including the share
-matrices the diagram needs — **a snapshot with no derived provenance has no
-edges to draw**, and the design has to look deliberate in that state rather
-than broken.
+**These files are generated, and are not the source of truth.** The cases live
+in `tests/engine/reference/` as pytest scenario classes; each one publishes
+itself into this JSON via `tools/export_cases.py`. Edit the Python and
+re-export — an edit to a `.json` file here is overwritten on the next run.
 
-The other two statuses both mean a human derived it: `"verified"` (the engine
-agreed) and `"disputed"` (it did not, and the derivation stands). `derivation`
-is a list of `{text, detail?, math?, result?}` steps.
+**Only derived values are published.** No value in the corpus comes from the
+engine: each is worked out by hand from the model. A property nobody has
+derived for a snapshot is simply **absent from `expectations`** rather than
+present-and-empty, so `expectations` is a short list of answers, not a fixed
+inventory of every metric. Expect most snapshots to publish very few — often
+none — including the share matrices the diagram needs: **a snapshot with no
+derived provenance has no edges to draw**, and the design has to look
+deliberate in that state rather than broken.
 
-**Read the status, never the value, to tell an empty slot from a derived one.**
-Expectation values are literal — there is no in-band marker standing in for
-"nothing" — so a slot derived as having no value is a plain `null` and looks
-identical to one nobody has touched. `"pending"` means not derived; a `null`
-under either other status means the model says the engine should report nothing
-here. The two want different words on screen. That ambiguity goes away once
-every slot is derived, because there will be no empty ones left.
+**A published `null` is a claim, not a gap.** It means the model says the
+engine should report nothing at all here, usually because a reading upstream is
+unavailable. Slots nobody has derived never appear at all, so there is no
+ambiguity to resolve — if it is in the list, somebody derived it.
 
 The design should surface those distinctions honestly — a reader deserves to
 know which numbers a human has checked. A small badge is enough; please don't let it

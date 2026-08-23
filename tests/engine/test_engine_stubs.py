@@ -21,7 +21,13 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine.scenario_framework import Adapter, EngineScenario, State, state, topology
+from tests.engine.scenario_framework import (
+    Adapter,
+    EngineScenario,
+    State,
+    state,
+    topology,
+)
 
 
 class TestCombinedRatesAndPrices(EngineScenario):

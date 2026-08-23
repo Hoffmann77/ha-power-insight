@@ -22,7 +22,13 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine.scenario_framework import Adapter, EngineScenario, State, state, topology
+from tests.engine.scenario_framework import (
+    Adapter,
+    EngineScenario,
+    State,
+    state,
+    topology,
+)
 
 
 def _uids(adapters):
@@ -42,19 +48,25 @@ class TestFlowPartition(EngineScenario):
     def all_roles(self):
         return (
             Adapter.grid(),
-            Adapter.pv("pv1", exports=True),   # producing -> source
-            Adapter.pv("pv2"),                 # standby   -> sink
-            Adapter.battery("bat1"),           # discharging -> source
-            Adapter.battery("bat2"),           # charging  -> sink
-            Adapter.consumer("cons1"),         # load      -> sink
-            Adapter.consumer("cons2"),         # idle      -> neither
+            Adapter.pv("pv1", exports=True),  # producing -> source
+            Adapter.pv("pv2"),  # standby   -> sink
+            Adapter.battery("bat1"),  # discharging -> source
+            Adapter.battery("bat2"),  # charging  -> sink
+            Adapter.consumer("cons1"),  # load      -> sink
+            Adapter.consumer("cons2"),  # idle      -> neither
         )
 
     @state
     def midday_mixed(self):
         return State(
-            grid=500, pv1=3000, pv2=-15, bat1=800, bat2=-600,
-            cons1=-900, cons2=0, price=0.30,
+            grid=500,
+            pv1=3000,
+            pv2=-15,
+            bat1=800,
+            bat2=-600,
+            cons1=-900,
+            cons2=0,
+            price=0.30,
         )
 
     def test_sources_include_importing_grid(self, power_insight):
@@ -76,7 +88,9 @@ class TestFlowPartition(EngineScenario):
         )
 
     def test_idle_adapter_is_in_no_flow_group(self, power_insight):
-        grouped = _uids(power_insight.source_adapters) | _uids(power_insight.sink_adapters)
+        grouped = _uids(power_insight.source_adapters) | _uids(
+            power_insight.sink_adapters
+        )
         assert "cons2" not in grouped
 
     def test_gross_power_is_the_source_total(self, power_insight):

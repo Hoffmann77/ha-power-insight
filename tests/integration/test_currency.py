@@ -1,4 +1,5 @@
 """Tests for currency handling — sensor units and config-flow input units."""
+
 from __future__ import annotations
 
 import types
@@ -38,6 +39,7 @@ def _unit(hass: HomeAssistant, entry: MockConfigEntry, suffix: str) -> str | Non
 # _resolve_currency_unit (pure helper)
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_currency_unit_substitutes() -> None:
     hass = types.SimpleNamespace(config=types.SimpleNamespace(currency="GBP"))
     assert _resolve_currency_unit("EUR/h", hass) == "GBP/h"
@@ -58,14 +60,15 @@ def test_resolve_currency_unit_falls_back_to_eur() -> None:
 # Sensor units follow hass.config.currency
 # ---------------------------------------------------------------------------
 
+
 async def test_sensor_units_follow_currency(hass: HomeAssistant) -> None:
     """Rate, total and price sensors report the configured currency."""
     await hass.config.async_update(currency="USD")
 
     grid = make_grid_subentry_data()
-    grid["data"]["adapter"]["config"][
-        "grid_electricity_price_entity"
-    ] = "sensor.grid_price"
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -85,14 +88,13 @@ async def test_sensor_units_follow_currency(hass: HomeAssistant) -> None:
     # Accumulated total (EUR -> USD)
     assert _unit(hass, entry, f"{PV_SUB_ID}_total_operating_cost") == "USD"
     # Price sensor (EUR/kWh -> USD/kWh)
-    assert (
-        _unit(hass, entry, "combined_levelized_price_of_electricity") == "USD/kWh"
-    )
+    assert _unit(hass, entry, "combined_levelized_price_of_electricity") == "USD/kWh"
 
 
 # ---------------------------------------------------------------------------
 # Config-flow money selectors follow the currency
 # ---------------------------------------------------------------------------
+
 
 def _selector_for(schema, field_name):
     for marker, sel in schema.schema.items():
@@ -111,6 +113,4 @@ def test_money_selectors_use_currency() -> None:
 
 def test_money_selectors_default_currency() -> None:
     schema = build_schema(PV_SYSTEM_FIELDS, "config")
-    assert _selector_for(schema, "lifetime_cost").config[
-        "unit_of_measurement"
-    ] == "EUR"
+    assert _selector_for(schema, "lifetime_cost").config["unit_of_measurement"] == "EUR"

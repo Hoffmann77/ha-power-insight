@@ -1,4 +1,5 @@
 """Tests for the per-scope options form and adapter field audit."""
+
 from __future__ import annotations
 
 import pytest
@@ -33,6 +34,7 @@ pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 # --- Preset selections only expose supported leaves, never CO2 ---
 
+
 def test_preset_selections_have_no_co2_options() -> None:
     for preset, leaves in PRESET_SELECTIONS.items():
         co2_leaves = {leaf for leaf in leaves if "co2" in leaf}
@@ -50,6 +52,7 @@ def test_preset_selections_are_subsets_of_all_supported() -> None:
 
 
 # --- Fresh-install defaults are sane and scope-filtered ---
+
 
 def test_default_scopes_are_subsets_of_support() -> None:
     scopes = default_scopes()
@@ -77,6 +80,7 @@ def test_all_presets_produce_valid_scopes() -> None:
 
 # --- Levelized cost savings land only where they are supported ---
 
+
 def test_levelized_cost_savings_in_extended() -> None:
     """The Extended preset enables the levelized cost-savings rate + accumulation."""
     leaves = PRESET_SELECTIONS[PRESET_EXTENDED]
@@ -101,6 +105,7 @@ def test_levelized_cost_savings_land_in_supporting_scopes_only() -> None:
 
 
 # --- UI form round-trips ---
+
 
 def test_scope_ui_round_trip() -> None:
     """scope_leaves_to_ui_defaults → scope_ui_to_leaves must be lossless."""
@@ -127,16 +132,20 @@ def test_empty_leaf_set_round_trip() -> None:
     for scope in SCOPES:
         ui_defaults = scope_leaves_to_ui_defaults(scope, set())
         recovered = scope_ui_to_leaves(scope, ui_defaults)
-        assert recovered == [], f"{scope!r}: empty leaves → non-empty recovered: {recovered}"
+        assert recovered == [], (
+            f"{scope!r}: empty leaves → non-empty recovered: {recovered}"
+        )
 
 
 # --- Battery power entity is required ---
+
 
 def test_battery_power_entity_required() -> None:
     assert BATTERY_FIELDS[CONF_POWER_ENTITY].required is True
 
 
 # --- Hybrid: lifetime inputs optional under presets, required under custom ---
+
 
 def _options_with_levelized(preset: str) -> dict:
     return {

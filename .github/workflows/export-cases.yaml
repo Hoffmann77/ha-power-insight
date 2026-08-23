@@ -1,0 +1,98 @@
+name: Export reference cases
+
+# Re-generate docs/spec/cases/ from the reference-case tests, and commit the
+# result to the branch you run this on.
+#
+# The source of truth is tests/engine/reference/*.py; the JSON under
+# docs/spec/cases/ is a projection of it that the documentation site imports.
+# Normally you re-export locally after filling in a value:
+#
+#     uv run --group engine python tools/export_cases.py
+#
+# and `test_published_cases_are_current` goes red if you forget. This workflow
+# is the button for when you forgot — press it from Actions -> Export reference
+# cases -> Run workflow, choosing the branch.
+#
+# Deliberately manual. Running it on every push would mean bot commits landing
+# on branches while you are working on them, and the staleness test already
+# catches the mistake within seconds of a normal test run.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what would change; commit nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Never let two exports race for the same branch. Not cancel-in-progress: a run
+# that is mid-push should finish rather than leave a half-done commit.
+concurrency:
+  group: export-cases-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A real branch checkout rather than a detached head, so the commit
+          # below has somewhere to go.
+          ref: ${{ github.ref_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version-file: pyproject.toml
+
+      - name: Install dependencies
+        run: uv sync --group engine
+
+      - name: Export the reference cases
+        run: uv run --group engine python tools/export_cases.py
+
+      - name: Report what changed
+        id: diff
+        run: |
+          set -euo pipefail
+          {
+            echo "### Reference cases"
+            echo
+            derived=$(python -c "import json;print(json.load(open('docs/spec/cases/coverage.json'))['totals']['derived'])")
+            echo "\`$derived\` derived values published from \`${{ github.ref_name }}\`."
+            echo
+            if git diff --quiet -- docs/spec/cases; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "The published cases were already up to date — nothing to commit."
+            else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              echo "Files re-generated:"
+              echo
+              echo '```'
+              git diff --stat -- docs/spec/cases
+              echo '```'
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/spec/cases
+          git commit -m "docs: re-export the reference cases"
+          # A plain push, never a force: if the branch moved while this ran,
+          # failing loudly is right — the export is cheap to repeat, and
+          # clobbering somebody's commit is not.
+          git push origin HEAD:"${{ github.ref_name }}"
+
+      - name: Note that nothing was committed
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run == true
+        run: |
+          echo "Dry run: the export is stale, but nothing was committed." \
+            | tee -a "$GITHUB_STEP_SUMMARY"

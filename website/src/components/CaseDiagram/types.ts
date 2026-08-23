@@ -1,5 +1,6 @@
 /**
- * The reference-case JSON contract (see docs/spec/reference-case.schema.json).
+ * The reference-case JSON contract, as published by `tools/export_cases.py`
+ * from the Python cases in `tests/engine/reference/`.
  *
  * Every number in a case file is an *exact rational string* — "400", "-600",
  * "8/15", "3/20" — never a JSON float. That is the whole point of the format:
@@ -36,36 +37,18 @@ export interface Adapter {
   config: AdapterConfig;
 }
 
-export interface DerivationStep {
-  text: string;
-  detail?: string;
-  math?: string;
-  result?: string;
-}
-
 /**
- * How a slot came to hold what it holds — and the only thing that says whether
- * a human has filled it in.
+ * One value a case claims for one property.
  *
- * Expectation values are literal, so a derived answer of "there is no value
- * here" is a plain `null` and is indistinguishable from an empty slot by its
- * value alone. Read the status, never the value, to decide which you have.
- *
- * `pending` is the default and, for now, almost everything.
+ * Only derived values are published — a property nobody has worked out for
+ * this snapshot is simply absent from the list, because the corpus publishes
+ * answers rather than an inventory of the questions. So a `null` here is not
+ * an empty slot: it is somebody deriving that the engine should report nothing
+ * at all, which is a claim like any other.
  */
-export interface Certification {
-  status: 'pending' | 'verified' | 'disputed';
-  by?: string;
-  date?: string;
-  method?: string;
-  engine_commit?: string;
-}
-
 export interface Expectation {
   property: string;
   value: ValueTree;
-  derivation: DerivationStep[];
-  certification: Certification;
 }
 
 export interface CaseState {
@@ -102,7 +85,7 @@ export interface PropertyDoc {
   formula?: string;
   depends_on?: string[];
   answer_shape?: string;
-  worksheet_steps?: string[];
+  derivation_steps?: string[];
   note?: string;
 }
 
@@ -140,12 +123,9 @@ export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
 export interface PropertyCoverage {
   title: string;
   layer: number;
-  /** Slots this property has across the corpus — one per snapshot. */
-  slots: number;
-  /** Slots a human has filled in, disputed ones included. */
+  /** Values published for this property across the corpus. */
   derived: number;
-  disputed: number;
-  /** Cases where at least one slot has been derived. */
+  /** Cases that publish at least one value for it. */
   derived_in: string[];
 }
 
@@ -153,7 +133,6 @@ export interface CaseCoverage {
   case: string;
   case_title: string;
   decides: string[];
-  slots: number;
   derived: number;
 }
 
@@ -163,9 +142,7 @@ export interface Coverage {
   decisions: CaseCoverage[];
   properties: {[name: string]: PropertyCoverage};
   totals: {
-    slots: number;
     derived: number;
-    disputed: number;
     /** Properties with no derived value anywhere yet. */
     untouched: string[];
   };

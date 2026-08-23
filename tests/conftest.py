@@ -11,6 +11,7 @@ installed. If that harness is absent we drop the integration tier from
 collection instead of failing at import time, so a minimal ``pytest`` +
 engine environment still exercises the calculation engine.
 """
+
 from __future__ import annotations
 
 collect_ignore_glob: list[str] = []
