@@ -812,11 +812,6 @@ class TestGrid2Pv3Bat2Cons(EngineScenario):
         assert (
             power_insight.gross_power_standby_ratio == 0.0125
         )  # 50/4000  # Calculated by claude
-        # Of what stayed home and was not stored (4000 - 1200 - 0 = 2800), the
-        # fraction actually used rather than lost to standby: 2750/2800.
-        assert power_insight.gross_power_applicable_consumption_ratio == pytest.approx(
-            55 / 56
-        )  # Calculated by claude
 
     # -- Source provenance (single pass; exporting grid is itself a sink) --
 

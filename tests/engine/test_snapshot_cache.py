@@ -79,9 +79,10 @@ def test_a_reading_going_unavailable_invalidates() -> None:
     engine.set_value("sensor.pv1_power", None)
 
     # An unavailable inflow sensor makes gross power unknown, so provenance is
-    # withdrawn rather than served stale from before the dropout.
+    # withdrawn rather than served stale from before the dropout. It collapses to
+    # None ("we can't tell"), not an empty row set ("nothing is drawing").
     assert engine.gross_power is None
-    assert engine.sink_adapters_source_shares == {}
+    assert engine.sink_adapters_source_shares is None
 
 
 def test_registering_an_adapter_invalidates() -> None:

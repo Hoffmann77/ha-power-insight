@@ -100,10 +100,6 @@ class TestGroupCaptivity(ReferenceCase):
     def test_hall_tight_pair_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_hall_tight_pair_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -122,8 +118,8 @@ class TestGroupCaptivity(ReferenceCase):
     def test_hall_tight_pair_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_hall_tight_pair_gross_power_applicable_consumption_ratio(self):
+    @expect("source_adapters_consumption_power")
+    def test_hall_tight_pair_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")
@@ -233,10 +229,6 @@ class TestGroupCaptivity(ReferenceCase):
     def test_unsatisfiable_overlap_home_base_load_source_shares(self):
         return TODO
 
-    @expect("sink_adapters_restriction_deficit")
-    def test_unsatisfiable_overlap_sink_adapters_restriction_deficit(self):
-        return TODO
-
     # Layer 3 — Channel split and per-source attribution.
 
     @expect("gross_power_export_ratio")
@@ -255,8 +247,8 @@ class TestGroupCaptivity(ReferenceCase):
     def test_unsatisfiable_overlap_gross_power_standby_ratio(self):
         return TODO
 
-    @expect("gross_power_applicable_consumption_ratio")
-    def test_unsatisfiable_overlap_gross_power_applicable_consumption_ratio(self):
+    @expect("source_adapters_consumption_power")
+    def test_unsatisfiable_overlap_source_adapters_consumption_power(self):
         return TODO
 
     @expect("source_adapters_export_power")

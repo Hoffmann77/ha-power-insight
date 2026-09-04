@@ -154,20 +154,6 @@
       ]
     },
 
-    "sink_adapters_restriction_deficit": {
-      "title": "Restriction deficit",
-      "unit": "W",
-      "layer": 2,
-      "definition": "Watts a sink was shown drawing from outside its allowed sources. Zero almost always: a non-zero figure means the meter disagrees with the configured restriction, not that the engine failed.",
-      "formula": null,
-      "depends_on": ["sink_adapters_source_shares"],
-      "answer_shape": "map_derived_keys",
-      "derivation_steps": [
-        "For each restricted sink, add up what it was attributed from sources outside its allowed set.",
-        "List only the sinks where that is not zero. An unrestricted sink can never have one."
-      ]
-    },
-
     "gross_power_export_ratio": {
       "title": "Export ratio",
       "unit": "ratio",
@@ -212,23 +198,19 @@
       "derivation_steps": ["Divide standby by gross power."]
     },
 
-    "gross_power_applicable_consumption_ratio": {
-      "title": "Applicable self-consumption ratio",
-      "unit": "ratio",
+    "source_adapters_consumption_power": {
+      "title": "Self-consumed power per source",
+      "unit": "W",
       "layer": 3,
-      "definition": "Of the power that stayed home and was not stored, the fraction actually used rather than lost to standby. Reads 1.0 when there is no standby draw.",
-      "formula": "combined_consumption / (gross_power − export − charging)",
-      "depends_on": [
-        "gross_power",
-        "combined_consumption",
-        "combined_grid_export",
-        "combined_charging_power"
-      ],
-      "answer_shape": "scalar",
+      "definition": "Watts of each source's output that was self-consumed — the CON channel, per source. The home base load is served through this channel like any other consumer, so for a grid-only house the whole draw shows up here against the grid.",
+      "formula": null,
+      "depends_on": ["sink_adapters_source_shares", "combined_consumption"],
+      "answer_shape": "map_fixed_keys",
       "derivation_steps": [
-        "Take gross power and set aside export and charging.",
-        "Divide self-consumption by what is left."
-      ]
+        "Take the consumption channel — the metered loads plus the home base load — as sinks with their own provenance rows.",
+        "Sum, per source, the watts those rows drew from it."
+      ],
+      "note": "Returns nothing at all (None) when gross power is unavailable, mirroring the other per-source channel splits."
     },
 
     "source_adapters_export_power": {

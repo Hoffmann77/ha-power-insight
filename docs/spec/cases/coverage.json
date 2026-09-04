@@ -18,9 +18,9 @@
         "With no local device, the whole gross power is the unmetered home base load.",
         "A sink with one available source has a provenance row of exactly one.",
         "Marginal and levelized cost agree while the grid is the only source.",
-        "An unavailable reading collapses the derived values rather than defaulting to zero."
+        "An unavailable meter collapses everything derived from it to nothing, while a total over an empty device set (no PV, no battery) stays zero."
       ],
-      "derived": 20
+      "derived": 78
     },
     {
       "case": "pv-self-consumption",
@@ -39,7 +39,6 @@
       "decides": [
         "An exporting grid is a sink, not a source with a negative reading.",
         "Export compensation is earned by the sources the export was drawn from.",
-        "The applicable self-consumption ratio measures only what stayed home.",
         "Zero gross power guards to zero rather than dividing by zero."
       ],
       "derived": 0
@@ -110,7 +109,7 @@
     "gross_power": {
       "title": "Gross power",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -118,7 +117,7 @@
     "combined_grid_import": {
       "title": "Grid import",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -126,7 +125,7 @@
     "combined_grid_export": {
       "title": "Grid export",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -134,7 +133,7 @@
     "combined_production": {
       "title": "PV production",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -142,7 +141,7 @@
     "combined_charging_power": {
       "title": "Charging power",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -150,7 +149,7 @@
     "combined_discharging_power": {
       "title": "Discharging power",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -158,7 +157,7 @@
     "combined_standby_power": {
       "title": "Standby power",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -166,7 +165,7 @@
     "combined_consumption": {
       "title": "Self-consumption",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -174,7 +173,7 @@
     "home_base_load_power": {
       "title": "Home base load",
       "layer": 1,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -182,27 +181,23 @@
     "sink_adapters_source_shares": {
       "title": "Source provenance",
       "layer": 2,
-      "derived": 0,
-      "derived_in": []
-    },
-    "home_base_load_source_shares": {
-      "title": "Home base load provenance",
-      "layer": 2,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
     },
-    "sink_adapters_restriction_deficit": {
-      "title": "Restriction deficit",
+    "home_base_load_source_shares": {
+      "title": "Home base load provenance",
       "layer": 2,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "gross_power_export_ratio": {
       "title": "Export ratio",
       "layer": 3,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -210,7 +205,7 @@
     "gross_power_consumption_ratio": {
       "title": "Self-consumption ratio",
       "layer": 3,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -218,7 +213,7 @@
     "gross_power_charging_ratio": {
       "title": "Charging ratio",
       "layer": 3,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -226,15 +221,15 @@
     "gross_power_standby_ratio": {
       "title": "Standby ratio",
       "layer": 3,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
     },
-    "gross_power_applicable_consumption_ratio": {
-      "title": "Applicable self-consumption ratio",
+    "source_adapters_consumption_power": {
+      "title": "Self-consumed power per source",
       "layer": 3,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -242,25 +237,31 @@
     "source_adapters_export_power": {
       "title": "Exported power per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "source_adapters_export_shares": {
       "title": "Export share per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "source_adapters_standby_power": {
       "title": "Standby power per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "combined_coe_rate": {
       "title": "Cost of electricity rate",
       "layer": 4,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -268,7 +269,7 @@
     "combined_lcoe_rate": {
       "title": "Levelized cost of electricity rate",
       "layer": 4,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -276,7 +277,7 @@
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
       "layer": 4,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -284,7 +285,7 @@
     "combined_saving_rate": {
       "title": "Cost saving rate",
       "layer": 4,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -292,7 +293,7 @@
     "combined_export_compensation_rate": {
       "title": "Export compensation rate",
       "layer": 4,
-      "derived": 1,
+      "derived": 3,
       "derived_in": [
         "grid-only"
       ]
@@ -300,26 +301,22 @@
     "source_adapters_dynamic_coe": {
       "title": "Marginal price per source",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     },
     "source_adapters_dynamic_lcoe": {
       "title": "Levelized price per source",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 3,
+      "derived_in": [
+        "grid-only"
+      ]
     }
   },
   "totals": {
-    "derived": 20,
-    "untouched": [
-      "sink_adapters_restriction_deficit",
-      "sink_adapters_source_shares",
-      "source_adapters_dynamic_coe",
-      "source_adapters_dynamic_lcoe",
-      "source_adapters_export_power",
-      "source_adapters_export_shares",
-      "source_adapters_standby_power"
-    ]
+    "derived": 78,
+    "untouched": []
   }
 }

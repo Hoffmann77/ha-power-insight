@@ -964,9 +964,13 @@ class PowerInsight:
         proportion to their draw — which means two sinks with the same
         restriction always get the same row, whatever their draws.
 
-        Empty when gross power is unavailable or nothing is providing. See
-        ``docs/dev/engine-calculations.md`` for the model.
+        ``None`` when gross power is unavailable — the provenance is unknowable,
+        not empty; ``{}`` only when the grid is present but nothing is providing.
+        See ``docs/dev/engine-calculations.md`` for the model.
         """
+        if self.gross_power is None:
+            return None
+
         allocation, _ = self._source_allocation
 
         shares = {}
@@ -1026,29 +1030,6 @@ class PowerInsight:
     def gross_power_charging_ratio(self) -> float | None:
         """Fraction of gross power charged into storage."""
         return self._gross_ratio(self.combined_charging_power)
-
-    # -------------------------------------------------------------->
-    # APPLICABLE GROSS POWER RATIOS
-    # -------------------------------------------------------------->
-
-    @property
-    def gross_power_applicable_consumption_ratio(self) -> float | None:
-        """Self-consumption ratio excluding export and charging.
-
-        Of the *applicable* gross power — what is left once export and charging
-        are set aside (``gross − export − charging``, i.e. consumption plus
-        standby) — the fraction that is actually self-consumed. It answers "of
-        the power that stayed home and was not stored, how much did I use rather
-        than lose to standby?", so it reads 1.0 with no standby draw.
-        """
-        gross = self.gross_power
-        export = self.combined_grid_export
-        charging = self.combined_charging_power
-        consumption = self.combined_consumption
-        if None in (gross, export, charging, consumption):
-            return None
-
-        return self._divide(consumption, gross - export - charging)
 
     # -------------------------------------------------------------->
     # MONETARY CORE
@@ -1241,9 +1222,12 @@ class PowerInsight:
         charging or drawing standby costs, and idle reads ``0.0`` rather than
         going absent — a sensor should not flip unavailable because its device
         went quiet.
+
+        ``None`` when gross power is unavailable, so the combined rates built on
+        this collapse rather than summing an empty mapping to ``0``.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
         rates: dict[str, float | None] = {}
         for adapter in self.prod_adapters:
@@ -1264,11 +1248,19 @@ class PowerInsight:
     def _adapter_financial_return_rates(
         self, *, levelized: bool, corrected: bool = False,
     ) -> dict[str, float | None]:
-        """Return ``{uid: EUR/h}`` savings plus export earnings, less its cost."""
-        rates: dict[str, float | None] = {}
-        for uid, saving in self._adapter_saving_rates(
+        """Return ``{uid: EUR/h}`` savings plus export earnings, less its cost.
+
+        ``None`` when gross power is unavailable, propagated from
+        ``_adapter_saving_rates``.
+        """
+        saving_rates = self._adapter_saving_rates(
             levelized=levelized, corrected=corrected,
-        ).items():
+        )
+        if saving_rates is None:
+            return None
+
+        rates: dict[str, float | None] = {}
+        for uid, saving in saving_rates.items():
             adapter = self.get_adapter_by_uid(uid)
             compensation = self._export_compensation_rate(adapter)
             if saving is None or compensation is None:
@@ -1290,23 +1282,32 @@ class PowerInsight:
 
         return rates
 
-    def _channel_power(self, channel: str) -> dict:
-        """Return ``{source_uid: watts}`` routed into ``channel``."""
+    def _channel_power(self, channel: str) -> dict | None:
+        """Return ``{source_uid: watts}`` routed into ``channel``.
+
+        ``None`` when gross power is unavailable — the whole per-source split is
+        unknowable then, not empty, so it collapses like every other
+        grid-derived quantity rather than reading as "no source contributed".
+        """
         if self.gross_power is None:
-            return {}
+            return None
 
         return dict(self._channel_source_power[channel])
 
-    def _channel_shares(self, channel: str) -> dict:
+    def _channel_shares(self, channel: str) -> dict | None:
         """Return each source's share of ``channel``'s total watts."""
         watts = self._channel_power(channel)
+        if watts is None:
+            return None
         total = sum(watts.values())
 
         return {uid: self._divide(value, total) for uid, value in watts.items()}
 
-    def _channel_ratios(self, channel: str) -> dict:
+    def _channel_ratios(self, channel: str) -> dict | None:
         """Return the fraction of each source's own output going to ``channel``."""
         watts = self._channel_power(channel)
+        if watts is None:
+            return None
         if not watts:
             return {}
 
@@ -1330,10 +1331,14 @@ class PowerInsight:
 
     def _own_draw_cost_rates(
         self, *, levelized: bool, corrected: bool = False,
-    ) -> dict:
-        """Return ``{uid: EUR/h}`` for each PV/battery's own draw, 0.0 if none."""
+    ) -> dict | None:
+        """Return ``{uid: EUR/h}`` for each PV/battery's own draw, 0.0 if none.
+
+        ``None`` when gross power is unavailable, so the combined operating-cost
+        rates built on this collapse rather than summing to ``0``.
+        """
         if self.gross_power is None:
-            return {}
+            return None
 
         return {
             a.uid: (
@@ -1424,8 +1429,15 @@ class PowerInsight:
 
         return out
 
-    def _sum_rates(self, rates: dict[str, float | None]) -> float | None:
-        """Sum a rate mapping, propagating ``None`` from any missing member."""
+    def _sum_rates(self, rates: dict[str, float | None] | None) -> float | None:
+        """Sum a rate mapping, propagating ``None`` from any missing member.
+
+        ``None`` for the mapping itself (an unavailable snapshot) propagates too,
+        so a combined rate reads unavailable rather than summing to ``0`` — the
+        distinction between "we can't tell" and "genuinely nothing".
+        """
+        if rates is None:
+            return None
         total = 0.0
         for value in rates.values():
             if value is None:
@@ -1831,12 +1843,25 @@ class PowerInsight:
         zero because that energy's cost was booked when it was charged. The
         blended mix a battery is charging on right now is on the sink side, as
         ``sink_adapters_coo_rates``.
+
+        ``None`` when gross power is unavailable — no source is delivering a
+        knowable price then.
         """
+        if self.gross_power is None:
+            return None
+
         return {a.uid: a.coe for a in self.source_adapters}
 
     @property
     def source_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
-        """Blended levelized cost of electricity per source (EUR/kWh)."""
+        """Blended levelized cost of electricity per source (EUR/kWh).
+
+        ``None`` when gross power is unavailable, mirroring
+        ``source_adapters_dynamic_coe``.
+        """
+        if self.gross_power is None:
+            return None
+
         return {a.uid: a.lcoe for a in self.source_adapters}
 
     # -------------------------------------------------------------->
@@ -1914,8 +1939,15 @@ class PowerInsight:
         return sum(allocation.get(_HOME, {}).values())
 
     @property
-    def home_base_load_source_shares(self) -> dict:
-        """The home base load's own provenance row (``{source_uid: share}``)."""
+    def home_base_load_source_shares(self) -> dict | None:
+        """The home base load's own provenance row (``{source_uid: share}``).
+
+        ``None`` when gross power is unavailable, mirroring
+        ``sink_adapters_source_shares``.
+        """
+        if self.gross_power is None:
+            return None
+
         allocation, _ = self._source_allocation
         row = allocation.get(_HOME)
         if not row:

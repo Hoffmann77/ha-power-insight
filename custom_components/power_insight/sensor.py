@@ -2112,13 +2112,24 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
 
     @property
     def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        value = self.entity_description.value_fn(self.power_insight)
-        value = get_value(self.device_adapter.uid, value)
-        if value is not None:
-            value = self.entity_description.transform_fn(value)
-            if self.entity_description.apply_correction_factor:
-                value = value * self.device_adapter.correction_factor
+        """Return the state of the sensor.
+
+        A per-source map absent this adapter means it contributed nothing to
+        that channel this snapshot, which is 0 — not unavailable. The value goes
+        unavailable only when the whole map is None (an inflow meter down, so
+        gross power is unknowable) or this adapter's own reading is None. That
+        split is why a missing key reads 0 here rather than None: an idle grid
+        publishes ``{}``, but a dropped-out sensor publishes ``None``.
+        """
+        mapping = self.entity_description.value_fn(self.power_insight)
+        if mapping is None or self.device_adapter.power is None:
+            return None
+        value = mapping.get(self.device_adapter.uid, 0.0)
+        if value is None:
+            return None
+        value = self.entity_description.transform_fn(value)
+        if self.entity_description.apply_correction_factor:
+            value = value * self.device_adapter.correction_factor
         return value
 
     @property
@@ -2165,12 +2176,22 @@ class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
 
     @property
     def native_value(self) -> float | None:
-        """Return the state of the sensor."""
-        value = self.entity_description.value_fn(self.power_insight)
-        value = get_value(self.device_adapter.uid, value)
-        value = get_value(self.dynamic_adapter.uid, value)
-        if value is not None:
-            value = self.entity_description.transform_fn(value)
+        """Return the state of the sensor.
+
+        As :meth:`PowerInsightAdapterSensor.native_value`, but over the nested
+        ``{device_uid: {dynamic_uid: value}}`` map: a device or source absent
+        from an otherwise-present map contributed 0 to this pairing, so it reads
+        0 rather than unavailable. It goes unavailable only when the whole map is
+        None (gross power unknowable) or this device's own reading is None.
+        """
+        mapping = self.entity_description.value_fn(self.power_insight)
+        if mapping is None or self.device_adapter.power is None:
+            return None
+        row = mapping.get(self.device_adapter.uid)
+        value = 0.0 if row is None else row.get(self.dynamic_adapter.uid, 0.0)
+        if value is None:
+            return None
+        value = self.entity_description.transform_fn(value)
         return value
 
 
