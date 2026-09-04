@@ -26,17 +26,31 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
+`reference/` is the **main** engine test suite: the hand-derived corpus, and the
+place a new expectation belongs. The files beside it are not a second pass over
+the same ground — each covers something the corpus cannot reach, and a value
+assertion that the corpus does cover belongs in the corpus, not here:
+
+- `reference/` — the hand-derived reference corpus, published to the docs site
+  (see below). Limited by construction to the properties catalogued in
+  `docs/spec/properties.json`.
 - `test_source_shares.py` — the three-tier `sink_adapters_source_shares`
-  power-provenance attribution (the richest engine logic).
-- `test_flow_view.py` — the dynamic source/sink partition, `gross_power`, the
-  gross-power share vectors, and `None`/zero-gross guards.
-- `test_engine_stubs.py` — skipped stubs for property families the engine has
-  not implemented yet (combined rates/prices, per-source attribution), each with
-  a ready topology/state to fill in.
+  power-provenance attribution (the richest engine logic), for the wirings the
+  corpus has no case for: sinks anchored to the **grid** rather than to a PV
+  string, and a short import that must be rationed between them.
+- `test_full_topology.py` — one rich prosumer home across two snapshots. The
+  only coverage of the ~60 engine properties the catalog does not list, so it
+  stays until the catalog grows to meet them.
+- `test_flow_view.py` — the dynamic source/sink partition and the gross-power
+  share vectors: set membership, index order, and the `None`-vs-empty and
+  zero-gross guards. Structure rather than published values, so there is no
+  catalogued property to state it as.
+- `test_source_shares_invariants.py` — what must hold for *every* wiring, over
+  a few hundred generated topologies that find their own counterexamples.
+- `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
+  reading it was computed from. A question about time, not about values.
 - `test_scenario_framework.py` — self-tests for the framework's validation and
   source-order binding.
-- `reference/` — the hand-derived reference corpus, published to the docs site
-  (see below).
 
 Expected values are hand-derived, compared with `pytest.approx`: exact values
 (`0.5`, `2/3`) at the default tolerance, rounded shares/ratios to three decimals

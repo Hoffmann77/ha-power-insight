@@ -434,3 +434,37 @@ def test_restrictions_are_honoured_whenever_a_feasible_allocation_exists() -> No
         feasible,
         "A restriction may only be broken when no allocation could have honoured it.",
     )
+
+
+def test_gross_power_channel_ratios_partition_gross_power() -> None:
+    """The four channel ratios split gross power exactly, so they sum to 1.
+
+    Export / consumption / charging / standby are the only ways power leaves the
+    system, and CON is the residual of the other three, so the four fractions
+    must account for gross power and nothing else. Skipped for a snapshot where
+    gross power is zero (nothing to partition) or unavailable.
+    """
+    failures = []
+    checked = 0
+    for case in _cases():
+        engine = Cell(case.topology, case.state).build_engine()
+        ratios = (
+            engine.gross_power_export_ratio,
+            engine.gross_power_consumption_ratio,
+            engine.gross_power_charging_ratio,
+            engine.gross_power_standby_ratio,
+        )
+        if not engine.gross_power or any(r is None for r in ratios):
+            continue
+        checked += 1
+        total = sum(ratios)
+        if abs(total - 1.0) > 1e-9:
+            failures.append(
+                f"ratios sum to {total:.9f} "
+                f"(exp={ratios[0]:.4f} con={ratios[1]:.4f} "
+                f"chg={ratios[2]:.4f} stb={ratios[3]:.4f}); {case.describe()}"
+            )
+    assert checked, "generator produced no snapshot with non-zero gross power"
+    _report(
+        failures, checked, "The four gross-power channel ratios must sum to 1."
+    )
