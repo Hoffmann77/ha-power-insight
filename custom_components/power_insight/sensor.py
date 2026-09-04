@@ -1471,6 +1471,8 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
     "consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,           # grid
     "self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,      # pv / storage
+    "charging_power": CONF_ENABLE_DISTRIBUTION_POWER,              # grid / pv / storage
+    "standby_power": CONF_ENABLE_DISTRIBUTION_POWER,               # grid
     "combined_self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_charging_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_standby_power": CONF_ENABLE_DISTRIBUTION_POWER,
