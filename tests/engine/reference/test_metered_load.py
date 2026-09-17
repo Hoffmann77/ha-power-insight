@@ -122,6 +122,42 @@ class TestMeteredLoad(ReferenceCase):
     def test_load_and_base_source_adapters_standby_power(self):
         return TODO
 
+    @expect("source_adapters_charging_power")
+    def test_load_and_base_source_adapters_charging_power(self):
+        return TODO
+
+    @expect("source_adapters_consumption_ratios")
+    def test_load_and_base_source_adapters_consumption_ratios(self):
+        return TODO
+
+    @expect("source_adapters_export_ratios")
+    def test_load_and_base_source_adapters_export_ratios(self):
+        return TODO
+
+    @expect("source_adapters_charging_ratios")
+    def test_load_and_base_source_adapters_charging_ratios(self):
+        return TODO
+
+    @expect("source_adapters_standby_ratios")
+    def test_load_and_base_source_adapters_standby_ratios(self):
+        return TODO
+
+    @expect("source_adapters_consumption_shares")
+    def test_load_and_base_source_adapters_consumption_shares(self):
+        return TODO
+
+    @expect("source_adapters_charging_shares")
+    def test_load_and_base_source_adapters_charging_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_shares")
+    def test_load_and_base_source_adapters_standby_shares(self):
+        return TODO
+
+    @expect("sink_adapters_consumption_shares")
+    def test_load_and_base_sink_adapters_consumption_shares(self):
+        return TODO
+
     # Layer 4 — The monetary model.
 
     @expect("combined_coe_rate")
@@ -150,6 +186,90 @@ class TestMeteredLoad(ReferenceCase):
 
     @expect("source_adapters_dynamic_lcoe")
     def test_load_and_base_source_adapters_dynamic_lcoe(self):
+        return TODO
+
+    @expect("source_adapters_coe_rate")
+    def test_load_and_base_source_adapters_coe_rate(self):
+        return TODO
+
+    @expect("source_adapters_export_compensation_rates")
+    def test_load_and_base_source_adapters_export_compensation_rates(self):
+        return TODO
+
+    @expect("source_adapters_coo_rates")
+    def test_load_and_base_source_adapters_coo_rates(self):
+        return TODO
+
+    @expect("source_adapters_lcoo_rates")
+    def test_load_and_base_source_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_coo_rates")
+    def test_load_and_base_sink_adapters_coo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_load_and_base_sink_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_load_and_base_sink_adapters_avoided_cost_rates(self):
+        return TODO
+
+    @expect("home_base_load_avoided_cost_rate")
+    def test_load_and_base_home_base_load_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_coe")
+    def test_load_and_base_combined_coe(self):
+        return TODO
+
+    @expect("combined_lcoe")
+    def test_load_and_base_combined_lcoe(self):
+        return TODO
+
+    @expect("combined_consumption_cost_rate")
+    def test_load_and_base_combined_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_consumption_cost_rate")
+    def test_load_and_base_combined_levelized_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_charging_cost_rate")
+    def test_load_and_base_combined_charging_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_export_cost_rate")
+    def test_load_and_base_combined_levelized_export_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_standby_cost_rate")
+    def test_load_and_base_combined_levelized_standby_cost_rate(self):
+        return TODO
+
+    @expect("combined_device_operating_cost_rate")
+    def test_load_and_base_combined_device_operating_cost_rate(self):
+        return TODO
+
+    @expect("adapters_saving_rates")
+    def test_load_and_base_adapters_saving_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_saving_rates")
+    def test_load_and_base_adapters_levelized_saving_rates(self):
+        return TODO
+
+    @expect("adapters_financial_return_rates")
+    def test_load_and_base_adapters_financial_return_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_financial_return_rates")
+    def test_load_and_base_adapters_levelized_financial_return_rates(self):
+        return TODO
+
+    @expect("combined_financial_return_rate")
+    def test_load_and_base_combined_financial_return_rate(self):
         return TODO
 
     # ----------------------------------------------------------------------
@@ -243,6 +363,42 @@ class TestMeteredLoad(ReferenceCase):
     def test_over_metered_source_adapters_standby_power(self):
         return TODO
 
+    @expect("source_adapters_charging_power")
+    def test_over_metered_source_adapters_charging_power(self):
+        return TODO
+
+    @expect("source_adapters_consumption_ratios")
+    def test_over_metered_source_adapters_consumption_ratios(self):
+        return TODO
+
+    @expect("source_adapters_export_ratios")
+    def test_over_metered_source_adapters_export_ratios(self):
+        return TODO
+
+    @expect("source_adapters_charging_ratios")
+    def test_over_metered_source_adapters_charging_ratios(self):
+        return TODO
+
+    @expect("source_adapters_standby_ratios")
+    def test_over_metered_source_adapters_standby_ratios(self):
+        return TODO
+
+    @expect("source_adapters_consumption_shares")
+    def test_over_metered_source_adapters_consumption_shares(self):
+        return TODO
+
+    @expect("source_adapters_charging_shares")
+    def test_over_metered_source_adapters_charging_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_shares")
+    def test_over_metered_source_adapters_standby_shares(self):
+        return TODO
+
+    @expect("sink_adapters_consumption_shares")
+    def test_over_metered_sink_adapters_consumption_shares(self):
+        return TODO
+
     # Layer 4 — The monetary model.
 
     @expect("combined_coe_rate")
@@ -271,4 +427,88 @@ class TestMeteredLoad(ReferenceCase):
 
     @expect("source_adapters_dynamic_lcoe")
     def test_over_metered_source_adapters_dynamic_lcoe(self):
+        return TODO
+
+    @expect("source_adapters_coe_rate")
+    def test_over_metered_source_adapters_coe_rate(self):
+        return TODO
+
+    @expect("source_adapters_export_compensation_rates")
+    def test_over_metered_source_adapters_export_compensation_rates(self):
+        return TODO
+
+    @expect("source_adapters_coo_rates")
+    def test_over_metered_source_adapters_coo_rates(self):
+        return TODO
+
+    @expect("source_adapters_lcoo_rates")
+    def test_over_metered_source_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_coo_rates")
+    def test_over_metered_sink_adapters_coo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_over_metered_sink_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_over_metered_sink_adapters_avoided_cost_rates(self):
+        return TODO
+
+    @expect("home_base_load_avoided_cost_rate")
+    def test_over_metered_home_base_load_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_coe")
+    def test_over_metered_combined_coe(self):
+        return TODO
+
+    @expect("combined_lcoe")
+    def test_over_metered_combined_lcoe(self):
+        return TODO
+
+    @expect("combined_consumption_cost_rate")
+    def test_over_metered_combined_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_consumption_cost_rate")
+    def test_over_metered_combined_levelized_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_charging_cost_rate")
+    def test_over_metered_combined_charging_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_export_cost_rate")
+    def test_over_metered_combined_levelized_export_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_standby_cost_rate")
+    def test_over_metered_combined_levelized_standby_cost_rate(self):
+        return TODO
+
+    @expect("combined_device_operating_cost_rate")
+    def test_over_metered_combined_device_operating_cost_rate(self):
+        return TODO
+
+    @expect("adapters_saving_rates")
+    def test_over_metered_adapters_saving_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_saving_rates")
+    def test_over_metered_adapters_levelized_saving_rates(self):
+        return TODO
+
+    @expect("adapters_financial_return_rates")
+    def test_over_metered_adapters_financial_return_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_financial_return_rates")
+    def test_over_metered_adapters_levelized_financial_return_rates(self):
+        return TODO
+
+    @expect("combined_financial_return_rate")
+    def test_over_metered_combined_financial_return_rate(self):
         return TODO

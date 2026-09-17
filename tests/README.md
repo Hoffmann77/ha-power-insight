@@ -73,13 +73,24 @@ Concentrating every value in `reference/` means the corpus is now the *only*
 thing asserting one, and eight of its nine cases are still `TODO`. Two gaps are
 open until it catches up, both worth closing before a release:
 
-1. **Properties the catalog does not list.** 64 engine properties reach a user's
-   sensor; 26 are catalogued. The per-device monetary families
-   (`source_adapters_coo_rates`, `sink_adapters_avoided_cost_rates`,
-   `adapters_saving_rates`, the charging/consumption/standby ratios and shares),
-   the blended prices (`combined_coe`, `combined_lcoe`) and the `*_corrected`
-   variants the sensors actually publish are all outside it — so no reference
-   case can name them yet. Growing the catalog is what re-covers them.
+1. **Derivations.** 64 engine properties reach a user's sensor and the catalog
+   now names 50 of them, so every one has a `return TODO` stub waiting in all
+   nine cases — 1266 in total. Until a stub is filled the property has no
+   assertion anywhere, so the count of skips *is* the size of the gap.
+
+   Fourteen sensor-facing properties are deliberately left out of the catalog,
+   and adding them would be a mistake rather than progress:
+   - `source_entities_power` / `source_entities_price` are entity-id lists, not
+     values, and `sink_adapters_restriction_deficit` is a sensor attribute.
+   - the eight `*_corrected` variants equal their base property exactly unless
+     somebody has edited a lifetime cost, and every case uses the default
+     factor of 1.0 — so cataloguing them would scaffold 192 stubs whose answer
+     is another stub's answer, while still never exercising the correction
+     arithmetic. Testing that needs a case with a factor other than 1.0, which
+     also needs `Adapter.battery()` to accept one (only `Adapter.pv()` does).
+     The integration tier covers the behaviour today in
+     `test_correction_flow.py`.
+   - the three `*_components` are accumulator plumbing, never displayed.
 2. **Grid-anchored restrictions.** No case wires a sink with
    `charge_from=("grid", …)`, so the three-tier priority/home/leftover
    allocation — a battery anchored to the grid competing with a flexible sink
