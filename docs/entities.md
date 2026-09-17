@@ -135,6 +135,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Charging share | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Distribution shares · charge source |
 | Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
 | Standby share | % | This system's share of all standby power in the home. | Distribution shares |
+| Standby power | W | Watts of this system's output currently feeding another device's standby draw. | Distribution (W) |
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |

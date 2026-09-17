@@ -868,6 +868,16 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
+        key="standby_power",
+        name="Standby power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.source_adapters_standby_power,
+    ),
+    PowerInsightSensorDescription(
         key="financial_return_rate",
         name="Financial return rate",
         icon="mdi:currency-eur",
@@ -1186,6 +1196,16 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.source_adapters_standby_shares,
         transform_fn=lambda val: val * 100,
+    ),
+    PowerInsightSensorDescription(
+        key="standby_power",
+        name="Standby power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.source_adapters_standby_power,
     ),
     PowerInsightSensorDescription(
         key="financial_return_rate",
