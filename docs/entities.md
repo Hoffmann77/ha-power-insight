@@ -188,3 +188,11 @@ Per consumer device. Consumer support is still under development. See
 | Power share from &lt;source&gt; (one per source) | % | Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's *Charging share from &lt;source&gt;*. | Power source shares |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
+
+### Accumulated totals
+
+| Sensor | Unit | Meaning | Enabled by |
+|---|---|---|---|
+| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
+| Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Accumulate levelized costs |
+| Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Accumulate savings |
