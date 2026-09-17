@@ -1,16 +1,26 @@
-"""Flow-view scenarios: the dynamic source/sink partition and gross power.
+"""Flow-view scenarios: the dynamic source/sink partition and its share vectors.
 
 The engine classifies every adapter each snapshot by its signed power
 (:class:`FlowRole`) and groups them into ``source_adapters`` / ``sink_adapters``
 (grid folded in direction-aware) plus the behind-the-meter ``local_*`` subsets.
-``gross_power`` is the source total, and ``source_/sink_adapters_gross_power_shares``
-express each adapter as a fraction of it. These underpin the source-share
-attribution, so they get pinned down on their own.
+``source_/sink_adapters_gross_power_shares`` express each adapter as a fraction
+of gross power. These underpin the source-share attribution, so they get pinned
+down on their own.
+
+Everything here is deliberately *not* a published value, which is why it lives
+outside ``reference/`` rather than in it. The grouping properties return adapter
+objects and the share properties return a ``(vector, uid index)`` pair — neither
+is a shape ``docs/spec/properties.json`` can catalogue or a sensor can render,
+so there is no property name to state these under and no reference case that
+could assert them. What *is* a published value is asserted only by the corpus:
+that ``gross_power`` totals its sources, goes ``None`` when an inflow meter
+drops out, and reads 0 under pure export are the reference cases' to make, and
+this file no longer repeats them.
 
 Two aspects, one class each:
 
-* :class:`TestFlowPartition` — group membership, ``gross_power`` value, and
-  ``None`` propagation when an inflow sensor drops out.
+* :class:`TestFlowPartition` — group membership and disjointness, and the empty
+  share vectors when an inflow sensor drops out.
 * :class:`TestGrossPowerShares` — the share vectors: sources sum to 1, sinks need
   not (the remainder is the unmetered home load), and the zero-gross guard.
 
@@ -93,13 +103,10 @@ class TestFlowPartition(EngineScenario):
         )
         assert "cons2" not in grouped
 
-    def test_gross_power_is_the_source_total(self, power_insight):
-        # grid 500 + pv1 3000 + bat1 800 = 4300 W (sinks do not count).
-        assert power_insight.gross_power == pytest.approx(4300.0)
-
     # -----------------------------------------------------------------------
-    # Block 2 — an inflow sensor is unavailable. gross_power cannot be trusted,
-    # so it (and everything gated on it) propagates None / empty.
+    # Block 2 — an inflow sensor is unavailable, so the share vectors cannot be
+    # built and collapse to empty. (That ``gross_power`` itself goes None is a
+    # published value, asserted by the pv-self-consumption reference case.)
     # -----------------------------------------------------------------------
 
     @topology
@@ -115,18 +122,10 @@ class TestFlowPartition(EngineScenario):
         # pv2's sensor has dropped out (None) -> the gross total is unreliable.
         return State(grid=500, pv1=1000, pv2=None, price=0.30)
 
-    def test_gross_power_is_none(self, power_insight):
-        assert power_insight.gross_power is None
-
     def test_source_shares_vector_is_empty(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
         assert index == []
         assert arr == []
-
-    def test_source_shares_dict_is_none(self, power_insight):
-        # Provenance is unknowable with an inflow sensor down, so the map
-        # collapses to None ("we can't tell"), not {} ("nothing is drawing").
-        assert power_insight.sink_adapters_source_shares is None
 
 
 class TestGrossPowerShares(EngineScenario):
@@ -176,9 +175,6 @@ class TestGrossPowerShares(EngineScenario):
     def export_with_idle_pv(self):
         # Grid exports 500 W while pv1 is idle: no source, gross 0 W, one sink.
         return State(grid=-500, pv1=0, price=0.30)
-
-    def test_gross_power_is_zero(self, power_insight):
-        assert power_insight.gross_power == pytest.approx(0.0)
 
     def test_zero_gross_sink_share_guards_to_zero(self, power_insight):
         arr, index = power_insight.sink_adapters_gross_power_shares

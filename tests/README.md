@@ -26,31 +26,37 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
-`reference/` is the **main** engine test suite: the hand-derived corpus, and the
-place a new expectation belongs. The files beside it are not a second pass over
-the same ground — each covers something the corpus cannot reach, and a value
-assertion that the corpus does cover belongs in the corpus, not here:
+`reference/` is the **only** place an engine value is asserted. Every expectation
+about what a property *equals* belongs there, and nothing beside it may restate
+one — not on a different wiring, not as an edge case, not "for defence in depth".
+If a reference case could assert it, only a reference case does.
+
+The four files beside the corpus survive because no reference case could express
+them, whatever the catalog grows to:
 
 - `reference/` — the hand-derived reference corpus, published to the docs site
-  (see below). Limited by construction to the properties catalogued in
+  (see below). Every value expectation, for the properties catalogued in
   `docs/spec/properties.json`.
-- `test_source_shares.py` — the three-tier `sink_adapters_source_shares`
-  power-provenance attribution (the richest engine logic), for the wirings the
-  corpus has no case for: sinks anchored to the **grid** rather than to a PV
-  string, and a short import that must be rationed between them.
-- `test_full_topology.py` — one rich prosumer home across two snapshots. The
-  only coverage of the ~60 engine properties the catalog does not list, so it
-  stays until the catalog grows to meet them.
-- `test_flow_view.py` — the dynamic source/sink partition and the gross-power
-  share vectors: set membership, index order, and the `None`-vs-empty and
-  zero-gross guards. Structure rather than published values, so there is no
-  catalogued property to state it as.
+- `test_flow_view.py` — the source/sink partition and the gross-power share
+  vectors. The grouping properties return adapter *objects* and the share
+  properties return a `(vector, uid index)` pair; neither is a shape the catalog
+  can describe or a sensor can render, so there is no property name to state
+  them under. Membership, disjointness and index order only.
 - `test_source_shares_invariants.py` — what must hold for *every* wiring, over
-  a few hundred generated topologies that find their own counterexamples.
+  a few hundred generated topologies that find their own counterexamples. A
+  fixed case states one value; it cannot state "for all".
 - `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
-  reading it was computed from. A question about time, not about values.
+  reading it was computed from. A question about time: a reference case builds
+  one engine and reads it once, so it cannot see a stale answer.
 - `test_scenario_framework.py` — self-tests for the framework's validation and
-  source-order binding.
+  source-order binding. The corpus runs *on* this machinery and so cannot test
+  it.
+
+Two files were removed once the corpus became the sole owner of values:
+`test_full_topology.py` (one rich home, every property) and
+`test_source_shares.py` (provenance under grid-anchored restrictions). Both held
+only value assertions, so both were the corpus's work sitting in the wrong file.
+Their content is not lost but *owed*: see the coverage note below.
 
 Expected values are hand-derived, compared with `pytest.approx`: exact values
 (`0.5`, `2/3`) at the default tolerance, rounded shares/ratios to three decimals
@@ -61,11 +67,33 @@ Expected values are hand-derived, compared with `pytest.approx`: exact values
 uv run --group engine pytest tests/engine   # HA harness not required
 ```
 
+### Coverage the corpus still owes
+
+Concentrating every value in `reference/` means the corpus is now the *only*
+thing asserting one, and eight of its nine cases are still `TODO`. Two gaps are
+open until it catches up, both worth closing before a release:
+
+1. **Properties the catalog does not list.** 64 engine properties reach a user's
+   sensor; 26 are catalogued. The per-device monetary families
+   (`source_adapters_coo_rates`, `sink_adapters_avoided_cost_rates`,
+   `adapters_saving_rates`, the charging/consumption/standby ratios and shares),
+   the blended prices (`combined_coe`, `combined_lcoe`) and the `*_corrected`
+   variants the sensors actually publish are all outside it — so no reference
+   case can name them yet. Growing the catalog is what re-covers them.
+2. **Grid-anchored restrictions.** No case wires a sink with
+   `charge_from=("grid", …)`, so the three-tier priority/home/leftover
+   allocation — a battery anchored to the grid competing with a flexible sink
+   over a short import — has no case that reaches it. One new case closes this.
+
+Until then the generated-topology invariants are the only thing standing over
+the provenance solve, and they check shape and conservation, not specific
+values.
+
 ### The reference corpus (`engine/reference/`)
 
-The scenario files above are the regression net: they pin what the engine does
-so a change that moves a number goes red. The **reference corpus** answers a
-different question — whether what the engine does is *right*.
+The scenario files above cover what a value assertion cannot express. The
+**reference corpus** holds every value, and answers the question that matters —
+whether what the engine does is *right*.
 
 It is nine small homes, one module per case. Each is an ordinary scenario class
 whose `@expect` methods claim values somebody worked out **by hand from the
