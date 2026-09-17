@@ -135,6 +135,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Charging share | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Distribution shares · charge source |
 | Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
 | Standby share | % | This system's share of all standby power in the home. | Distribution shares |
+| Standby power | W | Watts of this system's output currently feeding another device's standby draw. | Distribution (W) |
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |
@@ -187,3 +188,11 @@ Per consumer device. Consumer support is still under development. See
 | Power share from &lt;source&gt; (one per source) | % | Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's *Charging share from &lt;source&gt;*. | Power source shares |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
+
+### Accumulated totals
+
+| Sensor | Unit | Meaning | Enabled by |
+|---|---|---|---|
+| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
+| Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Accumulate levelized costs |
+| Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Accumulate savings |

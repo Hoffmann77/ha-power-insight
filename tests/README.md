@@ -26,17 +26,37 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
-- `test_source_shares.py` — the three-tier `sink_adapters_source_shares`
-  power-provenance attribution (the richest engine logic).
-- `test_flow_view.py` — the dynamic source/sink partition, `gross_power`, the
-  gross-power share vectors, and `None`/zero-gross guards.
-- `test_engine_stubs.py` — skipped stubs for property families the engine has
-  not implemented yet (combined rates/prices, per-source attribution), each with
-  a ready topology/state to fill in.
-- `test_scenario_framework.py` — self-tests for the framework's validation and
-  source-order binding.
+`reference/` is the **only** place an engine value is asserted. Every expectation
+about what a property *equals* belongs there, and nothing beside it may restate
+one — not on a different wiring, not as an edge case, not "for defence in depth".
+If a reference case could assert it, only a reference case does.
+
+The four files beside the corpus survive because no reference case could express
+them, whatever the catalog grows to:
+
 - `reference/` — the hand-derived reference corpus, published to the docs site
-  (see below).
+  (see below). Every value expectation, for the properties catalogued in
+  `docs/spec/properties.json`.
+- `test_flow_view.py` — the source/sink partition and the gross-power share
+  vectors. The grouping properties return adapter *objects* and the share
+  properties return a `(vector, uid index)` pair; neither is a shape the catalog
+  can describe or a sensor can render, so there is no property name to state
+  them under. Membership, disjointness and index order only.
+- `test_source_shares_invariants.py` — what must hold for *every* wiring, over
+  a few hundred generated topologies that find their own counterexamples. A
+  fixed case states one value; it cannot state "for all".
+- `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
+  reading it was computed from. A question about time: a reference case builds
+  one engine and reads it once, so it cannot see a stale answer.
+- `test_scenario_framework.py` — self-tests for the framework's validation and
+  source-order binding. The corpus runs *on* this machinery and so cannot test
+  it.
+
+Two files were removed once the corpus became the sole owner of values:
+`test_full_topology.py` (one rich home, every property) and
+`test_source_shares.py` (provenance under grid-anchored restrictions). Both held
+only value assertions, so both were the corpus's work sitting in the wrong file.
+Their content is not lost but *owed*: see the coverage note below.
 
 Expected values are hand-derived, compared with `pytest.approx`: exact values
 (`0.5`, `2/3`) at the default tolerance, rounded shares/ratios to three decimals
@@ -47,11 +67,44 @@ Expected values are hand-derived, compared with `pytest.approx`: exact values
 uv run --group engine pytest tests/engine   # HA harness not required
 ```
 
+### Coverage the corpus still owes
+
+Concentrating every value in `reference/` means the corpus is now the *only*
+thing asserting one, and eight of its nine cases are still `TODO`. Two gaps are
+open until it catches up, both worth closing before a release:
+
+1. **Derivations.** 64 engine properties reach a user's sensor and the catalog
+   now names 50 of them, so every one has a `return TODO` stub waiting in all
+   nine cases — 1266 in total. Until a stub is filled the property has no
+   assertion anywhere, so the count of skips *is* the size of the gap.
+
+   Fourteen sensor-facing properties are deliberately left out of the catalog,
+   and adding them would be a mistake rather than progress:
+   - `source_entities_power` / `source_entities_price` are entity-id lists, not
+     values, and `sink_adapters_restriction_deficit` is a sensor attribute.
+   - the eight `*_corrected` variants equal their base property exactly unless
+     somebody has edited a lifetime cost, and every case uses the default
+     factor of 1.0 — so cataloguing them would scaffold 192 stubs whose answer
+     is another stub's answer, while still never exercising the correction
+     arithmetic. Testing that needs a case with a factor other than 1.0, which
+     also needs `Adapter.battery()` to accept one (only `Adapter.pv()` does).
+     The integration tier covers the behaviour today in
+     `test_correction_flow.py`.
+   - the three `*_components` are accumulator plumbing, never displayed.
+2. **Grid-anchored restrictions.** No case wires a sink with
+   `charge_from=("grid", …)`, so the three-tier priority/home/leftover
+   allocation — a battery anchored to the grid competing with a flexible sink
+   over a short import — has no case that reaches it. One new case closes this.
+
+Until then the generated-topology invariants are the only thing standing over
+the provenance solve, and they check shape and conservation, not specific
+values.
+
 ### The reference corpus (`engine/reference/`)
 
-The scenario files above are the regression net: they pin what the engine does
-so a change that moves a number goes red. The **reference corpus** answers a
-different question — whether what the engine does is *right*.
+The scenario files above cover what a value assertion cannot express. The
+**reference corpus** holds every value, and answers the question that matters —
+whether what the engine does is *right*.
 
 It is nine small homes, one module per case. Each is an ordinary scenario class
 whose `@expect` methods claim values somebody worked out **by hand from the
