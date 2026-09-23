@@ -424,5 +424,34 @@
         }
       }
     }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "minimal": "Minimal",
+        "recommended": "Recommended",
+        "extended": "Extended",
+        "custom": "Custom"
+      }
+    },
+    "calculation_method": {
+      "options": {
+        "none": "None",
+        "standard": "Standard",
+        "levelized": "Levelized",
+        "both": "Both"
+      }
+    },
+    "source_mode": {
+      "options": {
+        "mix": "Whole mix",
+        "devices": "Specific devices"
+      }
+    }
+  },
+  "exceptions": {
+    "set_value_not_total": {
+      "message": "{entity_id} is not a total sensor. Set value only works on sensors that add up over time."
+    }
   }
 }

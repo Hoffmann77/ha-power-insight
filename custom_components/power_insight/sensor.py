@@ -2024,7 +2024,10 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         raise ServiceValidationError(
             "set_value is only supported on accumulation (total) sensors. "
             f"'{self.entity_id}' is an instantaneous measurement sensor "
-            "and does not hold a running total."
+            "and does not hold a running total.",
+            translation_domain=DOMAIN,
+            translation_key="set_value_not_total",
+            translation_placeholders={"entity_id": self.entity_id},
         )
 
 
