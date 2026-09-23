@@ -59,7 +59,7 @@ from tests.engine.reference.test_metered_load import TestMeteredLoad
 from tests.engine.reference.test_mixed_export_house import TestMixedExportHouse
 from tests.engine.reference.test_pv_export import TestPvExport
 from tests.engine.reference.test_pv_self_consumption import TestPvSelfConsumption
-from tests.engine.reference.test_split_array import TestSplitArray
+from tests.engine.reference.test_two_pv_systems import TestTwoPvSystems
 
 #: Every reference case, in ladder order. The order is the corpus's argument,
 #: not an accident — see the module docstring.
@@ -72,7 +72,7 @@ REFERENCE_CASES: tuple[type[ReferenceCase], ...] = (
     TestBatteryBasics,
     TestCaptiveBattery,
     TestGroupCaptivity,
-    TestSplitArray,
+    TestTwoPvSystems,
     TestMixedExportHouse,
 )
 

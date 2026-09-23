@@ -1,0 +1,87 @@
+---
+title: Two PV systems
+description: "Two equal PV systems, east and west, and a smaller third on the carport. A plug may run on east or west but not on the carport. Everything else is exported, and there is no unmetered base load, so every watt in the house is spoken for."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('two-pv-systems');
+
+# Two PV systems
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and the values derived for that snapshot are listed underneath. Only
+derived values appear, so a short table means the hand-checking has not got far
+here; a snapshot whose provenance is still undecided has no flows to draw.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+[Group captivity](./group-captivity.mdx) is about a *group of sinks* that
+together need a set of sources. This case is its mirror image: *one sink* that
+needs a group of sources — east and west together — without needing either one
+in particular.
+
+That is exactly what a solver reasoning one source at a time cannot see. Ask
+"what must the plug take from east?" and the answer is nothing, because west
+could cover it; ask the same of west and the answer is again nothing. So
+nothing is set aside for the plug on either system, even though it needs 400 W
+of the pair.
+
+The whole answer fits in one table — watts from each PV system to each sink:
+
+| | east | west | carport | total |
+|---|---|---|---|---|
+| export | 800 | 800 | 200 | 1800 |
+| plug | 200 | 200 | 0 | 400 |
+| **total** | **1000** | **1000** | **200** | |
+
+Meanwhile the export *does* have something set aside: the carport may feed
+nothing else, so all 200 W of it must go to the export in any valid
+allocation. The engine used to offer the export a share of all three systems,
+find the offers added up to more than its 1800 W, and scale every offer down by
+the same factor — including the 200 W it had to take from the carport. It took
+180 W, and the 20 W of carport power it left behind could go nowhere but the
+plug, which may not use it. The plug was shown drawing 20 W from the carport
+and a restriction deficit was reported for a configuration that had nothing
+wrong with it.
+
+Merge east and west into one 2000 W system and none of this happens: the plug
+then needs all 400 W from that one system, which is set aside for it up front.
+Whether an installation is metered as one PV system or two should not change
+the numbers.
+
+The fix is that offers are still scaled down together — which keeps each sink's
+split in proportion to what its sources have left — but never below what a
+source *must* carry in every valid allocation.
+
+This needs no base load to go wrong only because with one, the slack hides the
+mistake. In the snapshot above every watt is spoken for, so there is nowhere
+for a misplaced watt to go.

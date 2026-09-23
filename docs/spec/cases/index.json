@@ -86,9 +86,9 @@
       "derived": 0
     },
     {
-      "id": "split-array",
-      "title": "Split array",
-      "file": "split-array.json",
+      "id": "two-pv-systems",
+      "title": "Two PV systems",
+      "file": "two-pv-systems.json",
       "states": [
         "every_watt_spoken_for"
       ],

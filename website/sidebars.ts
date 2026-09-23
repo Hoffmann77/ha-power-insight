@@ -38,7 +38,7 @@ const sidebars: SidebarsConfig = {
         'spec/battery-basics',
         'spec/captive-battery',
         'spec/group-captivity',
-        'spec/split-array',
+        'spec/two-pv-systems',
         'spec/mixed-export-house',
       ],
     },

@@ -45,7 +45,7 @@ hand-derived number:
   when a property is added to the catalog without one.
 - `test_laws.py` — how all properties must move together under a change whose
   effect is known in advance: scaling power, scaling prices, renaming and
-  reordering devices, adding idle devices, splitting an array into strings, a
+  reordering devices, adding idle devices, splitting a PV system in two, a
   meter dropping out, and the model's conservation laws. The catalog's `unit`
   says how each property must react. Known breaches are held strictly (an
   `xfail(strict=True)`, a `PUBLISH_WHILE_UNAVAILABLE` list), so a fix fails the

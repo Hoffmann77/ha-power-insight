@@ -185,12 +185,14 @@ allocation, because no other sink may take them. Scaling stops at the reserve.
 
 Scaling it away strands the difference on a source only this sink could use,
 and some *other* sink then has its restriction relaxed for a configuration
-with nothing wrong in it. The symptom is registration-dependent: a plug allowed
-both strings of one array reported a deficit that disappears when the array is
-registered as one device, because a single device carries the plug's reserve
-up front while two interchangeable strings carry none each.
+with nothing wrong in it. It takes a sink allowed several PV systems, none of
+which it needs in particular: a plug allowed east or west has no reserve on
+either, so it was the export's reserve on a third system that got cut — and
+the plug was then shown drawing from that third system, with a deficit. Merge
+east and west into one system and it did not happen, because the plug's need
+then lands on that one system as a reserve.
 
-Pinned by [`split-array / every_watt_spoken_for`](../spec/split-array.mdx).
+Pinned by [`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx).
 
 :::
 

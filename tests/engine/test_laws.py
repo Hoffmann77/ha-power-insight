@@ -186,7 +186,7 @@ def test_names_and_registration_order_do_not_matter() -> None:
 
 
 def test_an_idle_device_changes_nothing() -> None:
-    """A PV string, a battery and a plug all reading 0 W join the home. Every
+    """A PV system, a battery and a plug all reading 0 W join the home. Every
     result is as before; the only new entries are theirs, and read 0."""
     idle = {"idle_pv": Adapter.pv("idle_pv"), "idle_bat": Adapter.battery("idle_bat"),
             "idle_plug": Adapter.consumer("idle_plug")}
@@ -227,19 +227,20 @@ def test_an_idle_device_changes_nothing() -> None:
         "Open: the allocation is not split-invariant. With a sink restricted "
         "to *several* sources and an unmetered base load in the house, the "
         "export no longer splits in proportion to what each source has left "
-        "once one source becomes two. Repro: grid=-1300, pv0a=pv0b=1000, "
-        "pv1=200, plug=-400[pv0a, pv0b] gives the export 0.886 from pv0, not "
-        "1600/1800. (The spurious deficit this law also found is fixed and "
-        "pinned by the split-array reference case.)"
+        "once one source becomes two. Repro: grid=-1300, east=west=1000, "
+        "carport=200, plug=-400[east, west] gives the export 0.886 from east "
+        "and west together, where one 2000 W system gets 1600/1800. (The "
+        "spurious deficit this law also found is fixed and "
+        "pinned by the two-pv-systems reference case.)"
     ),
 )
-def test_splitting_an_array_into_two_strings_changes_nothing_in_total() -> None:
-    """One producing PV array re-registered as two identical half-size strings.
+def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
+    """One producing PV system replaced by two identical half-size ones.
 
     Whole-home results must not move, and for every result keyed by source the
     two halves must add back up to what the single array had. A user should not
-    get different numbers for registering one inverter's two MPP trackers
-    separately.
+    get different numbers for metering one installation as one PV system or as
+    two (an inverter reporting each MPP tracker, say).
     """
     # Results read *down* a source (its own ratios, its price) are the same for
     # each half rather than adding up.
@@ -294,7 +295,7 @@ def test_splitting_an_array_into_two_strings_changes_nothing_in_total() -> None:
         }
         return differences(before, merged)
 
-    check("Splitting an array into two strings must not change any total.",
+    check("Splitting a PV system in two must not change any total.",
           candidates, compare)
 
 

@@ -126,7 +126,7 @@ def _make_home(rng: random.Random) -> Home | None:
         readings[uid] = -draw
     readings.update(sources)
     readings.setdefault("grid", 0)
-    # A standby PV string that happened to draw nothing is simply idle.
+    # A standby PV system that happened to draw nothing is simply idle.
 
     # Restrictions may name the grid: the grid-anchored allocation tier.
     targets = ["grid", *pv, *bat]
