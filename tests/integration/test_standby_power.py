@@ -88,7 +88,7 @@ async def test_standby_power_exists_for_pv_and_battery(
 async def test_standby_power_reports_the_supplying_sources_watts(
     hass: HomeAssistant,
 ) -> None:
-    """A PV string in standby is a sink; the watts feeding it are attributed.
+    """A PV system in standby is a sink; the watts feeding it are attributed.
 
     ``pv2`` draws 100 W of standby while ``pv1`` produces and the grid imports,
     so the standby channel carries 100 W split across the two sources. Each

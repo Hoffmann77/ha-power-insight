@@ -270,6 +270,34 @@ def _tight_set(supply: dict, demand: dict, allowed: dict) -> tuple:
     return group, sources
 
 
+def _scale_to_need(offers: dict, floors: dict, need: float) -> dict:
+    """Scale ``offers`` down together until they total ``need``, never below a floor.
+
+    Finds the one factor ``t`` for which ``Σ max(floor, offer × t)`` is the
+    need: the offers shrink in proportion, and any that would drop below its
+    floor stops there while the rest keep shrinking. Offers already within the
+    need are returned whole. Each floor is at most its offer.
+    """
+    if sum(offers.values()) <= need + _EPS:
+        return dict(offers)
+    if sum(floors.values()) >= need - _EPS:
+        # Only the floors fit, and not all of them: share the need between
+        # them. A feasible plan never gets here — its reserves fit its draw.
+        total = sum(floors.values())
+        return {s: (f * need / total if total > _EPS else 0.0) for s, f in floors.items()}
+
+    pinned: set = set()
+    while True:
+        free = sum(o for s, o in offers.items() if s not in pinned)
+        if free <= _EPS:
+            return dict(floors)  # only reachable through rounding
+        t = (need - sum(floors[s] for s in pinned)) / free
+        newly = {s for s, o in offers.items() if s not in pinned and o * t < floors[s]}
+        if not newly:
+            return {s: floors[s] if s in pinned else o * t for s, o in offers.items()}
+        pinned |= newly
+
+
 def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
     """Serve restricted sinks from a block: grid first, then local generation.
 
@@ -297,7 +325,11 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
         return {} if found is None else found
 
     def serve(source_uid, claimants, reserved):
-        """Give out one source: reserves first, remainder proportional to draw."""
+        """Give out one source: reserves first, remainder proportional to draw.
+
+        Returns ``{claimant: (reserve, share of the spare)}``. The two are kept
+        apart because ``commit`` treats them differently.
+        """
         total_reserved = sum(reserved.values())
         if total_reserved > pool[source_uid]:
             scale = pool[source_uid] / total_reserved
@@ -306,19 +338,28 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
         rest = {u: outstanding[u] - reserved[u] for u in claimants}
         total_rest = sum(rest.values())
         return {
-            u: reserved[u] + (spare * rest[u] / total_rest if total_rest else 0.0)
+            u: (reserved[u], spare * rest[u] / total_rest if total_rest else 0.0)
             for u in claimants
         }
 
     def commit(uid, offers):
-        """Take the offers, scaled down if they exceed what the sink still needs."""
-        wanted = sum(offers.values())
-        if wanted <= _EPS:
-            return False
-        scale = min(1.0, outstanding[uid] / wanted)
+        """Take the offers, scaled down if they exceed what the sink still needs.
+
+        A sink with several sources is offered a share by each, so the offers
+        can add up to more than it needs. They are scaled down together, which
+        keeps the split in proportion to what each source has left — but never
+        below a reserve. Every valid plan carries the reserves, and one scaled
+        away leaves that watt stranded on a source only this sink may use, which
+        relaxes some *other* sink's restriction for no reason.
+        """
+        takes = _scale_to_need(
+            {s: reserve + spare for s, (reserve, spare) in offers.items()},
+            {s: reserve for s, (reserve, _) in offers.items()},
+            outstanding[uid],
+        )
         moved = False
-        for source_uid, offer in offers.items():
-            taken = min(offer * scale, pool[source_uid])
+        for source_uid, take in takes.items():
+            taken = min(take, pool[source_uid])
             if taken <= _EPS:
                 continue
             allocation[uid][source_uid] += taken
@@ -948,7 +989,7 @@ class PowerInsight:
         allowed happens to be idle.
 
         Two guarantees hold for every snapshot, and are checked over random
-        topologies by ``tests/engine/test_source_shares_invariants.py``:
+        topologies by ``tests/engine/automatic/test_source_shares_invariants.py``:
 
         * **Sources balance.** The watts attributed to a source across all sinks
           equal its reading. No source is over-drawn and none is left over.

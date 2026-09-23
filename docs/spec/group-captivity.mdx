@@ -1,6 +1,6 @@
 ---
 title: Group captivity
-description: "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
+description: "Two batteries are each allowed both PV systems, and neither is individually stuck \u2014 but together they need every watt the two PV systems make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
 ---
 
 import {referenceCase, PROPERTIES} from './cases/all';
@@ -11,10 +11,10 @@ export const CASE = referenceCase('group-captivity');
 
 {CASE.summary}
 
-## What this case pins down
+## What this case shows
 
 <ul>
-  {CASE.decides.map((d) => (
+  {CASE.shows.map((d) => (
     <li key={d}>{d}</li>
   ))}
 </ul>
@@ -26,9 +26,10 @@ export const CASE = referenceCase('group-captivity');
 Each card above is one snapshot of this wiring. The tabs under them re-label the
 same picture with a different layer of the engine — the readings, where each
 sink's power came from, how the gross power split between channels, and what it
-all cost — and the values derived for that snapshot are listed underneath. Only
-derived values appear, so a short table means the hand-checking has not got far
-here; a snapshot whose provenance is still undecided has no flows to draw.
+all cost — and every value the engine computed for that snapshot is listed
+underneath. They are recomputed from the readings whenever the engine changes,
+and frozen with each docs version, so this page shows what this version of the
+engine does.
 
 {CASE.states.map((s) => (
   <div key={s.id} style={{marginBottom: '1.25rem'}}>
@@ -48,9 +49,9 @@ here; a snapshot whose provenance is still undecided has no flows to draw.
 This is the case the max-flow solver exists for, and it is worth walking
 through slowly.
 
-`bat_a` and `bat_b` may each charge from either string. Neither is individually
-stuck — either string could cover either battery. But together they draw exactly
-what the two strings make, so as a *pair* they need every local watt. Any
+`bat_a` and `bat_b` may each charge from either PV system. Neither is
+individually stuck — either PV system could cover either battery. But together
+they draw exactly what the two PV systems make, so as a *pair* they need every local watt. Any
 allocation that gives local power to somebody else leaves one of them short.
 
 Asking "what must **this** sink take from this source?" one sink at a time

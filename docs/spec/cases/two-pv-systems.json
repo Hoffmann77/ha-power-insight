@@ -1,0 +1,414 @@
+{
+  "id": "two-pv-systems",
+  "title": "Two PV systems",
+  "summary": "Two equal PV systems, east and west, and a smaller third on the carport. A plug may run on east or west but not on the carport. Everything else is exported, and there is no unmetered base load, so every watt in the house is spoken for.\n\nThe plug needs 400 W from east and west together, but neither system in particular \u2014 either one alone could cover it. That is easy to get wrong: a solver that reasons one source at a time finds nothing it must set aside for the plug on east, nothing on west, and can hand the export watts the plug needed.",
+  "shows": [
+    "A restriction naming several PV systems is honoured jointly: a load allowed two systems is served from them whenever together they can cover it, even though it needs neither in particular.",
+    "A sink spreads its draw over the systems it may use in proportion to what each has left, so two equal systems each carry half of it."
+  ],
+  "topology": [
+    {
+      "uid": "grid",
+      "kind": "grid",
+      "config": {
+        "has_price_entity": true
+      }
+    },
+    {
+      "uid": "east",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "west",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "carport",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "plug",
+      "kind": "consumer",
+      "config": {
+        "power_from_adapters": [
+          "east",
+          "west"
+        ]
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "every_watt_spoken_for",
+      "note": "East and west make 1000 W each and the carport 200 W. The plug draws 400 W and the other 1800 W is exported. The carport's power can only go to the export, so the export takes all of it, and east and west cover the rest of the export and the whole plug \u2014 exactly.",
+      "readings": {
+        "grid": "-1800",
+        "east": "1000",
+        "west": "1000",
+        "carport": "200",
+        "plug": "-400"
+      },
+      "price": "3/10",
+      "results": [
+        {
+          "property": "gross_power",
+          "value": "2200"
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "0"
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "1800"
+        },
+        {
+          "property": "combined_production",
+          "value": "2200"
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_consumption",
+          "value": "400"
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "0"
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "grid": {
+              "east": "4/9",
+              "west": "4/9",
+              "carport": "1/9"
+            },
+            "plug": {
+              "east": "1/2",
+              "west": "1/2",
+              "carport": "0"
+            }
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": "9/11"
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": "2/11"
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_consumption_power",
+          "value": {
+            "east": "200",
+            "west": "200",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {
+            "east": "800",
+            "west": "800",
+            "carport": "200"
+          }
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {
+            "east": "4/9",
+            "west": "4/9",
+            "carport": "1/9"
+          }
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_charging_power",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_consumption_ratios",
+          "value": {
+            "east": "1/5",
+            "west": "1/5",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_ratios",
+          "value": {
+            "east": "4/5",
+            "west": "4/5",
+            "carport": "1"
+          }
+        },
+        {
+          "property": "source_adapters_charging_ratios",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_standby_ratios",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_consumption_shares",
+          "value": {
+            "east": "1/2",
+            "west": "1/2",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_charging_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_standby_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_consumption_shares",
+          "value": {
+            "plug": "1"
+          }
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "11/50"
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "3/25"
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "3/25"
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {
+            "east": "1/10",
+            "west": "1/10",
+            "carport": "1/10"
+          }
+        },
+        {
+          "property": "source_adapters_coe_rate",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_compensation_rates",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_coo_rates",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_lcoo_rates",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_coo_rates",
+          "value": {
+            "grid": "0",
+            "plug": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_lcoo_rates",
+          "value": {
+            "grid": "9/50",
+            "plug": "1/25"
+          }
+        },
+        {
+          "property": "sink_adapters_avoided_cost_rates",
+          "value": {
+            "plug": "3/25"
+          }
+        },
+        {
+          "property": "home_base_load_avoided_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_coe",
+          "value": "0"
+        },
+        {
+          "property": "combined_lcoe",
+          "value": "1/10"
+        },
+        {
+          "property": "combined_consumption_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_consumption_cost_rate",
+          "value": "1/25"
+        },
+        {
+          "property": "combined_charging_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_export_cost_rate",
+          "value": "9/50"
+        },
+        {
+          "property": "combined_levelized_standby_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_device_operating_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "adapters_saving_rates",
+          "value": {
+            "east": "3/50",
+            "west": "3/50",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "adapters_levelized_saving_rates",
+          "value": {
+            "east": "1/25",
+            "west": "1/25",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "adapters_financial_return_rates",
+          "value": {
+            "east": "3/50",
+            "west": "3/50",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "adapters_levelized_financial_return_rates",
+          "value": {
+            "east": "-1/25",
+            "west": "-1/25",
+            "carport": "-1/50"
+          }
+        },
+        {
+          "property": "combined_financial_return_rate",
+          "value": "3/25"
+        }
+      ]
+    }
+  ]
+}

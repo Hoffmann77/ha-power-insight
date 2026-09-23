@@ -3,7 +3,7 @@ import clsx from 'clsx';
 
 import styles from './styles.module.css';
 import {fmtUnit, humanize} from './rational';
-import type {Expectation, PropertyCatalog, PropertyDoc, ValueTree} from './types';
+import type {Result, PropertyCatalog, PropertyDoc, ValueTree} from './types';
 
 /**
  * Every value the engine published for this snapshot, in one table.
@@ -23,9 +23,8 @@ function scalarCell(
   stored: string | null,
   doc: PropertyDoc | undefined,
 ): React.ReactElement {
-  // A published null is a claim, not a gap: the model says the engine should
-  // report nothing at all here, usually because a reading it needs is
-  // unavailable. Slots nobody has derived never reach this component.
+  // A published null is the engine reporting nothing at all here, usually
+  // because a reading it needs is unavailable.
   if (stored === null) {
     return <b className={styles.vunavail}>unavailable</b>;
   }
@@ -67,14 +66,14 @@ function breakdown(
 }
 
 function Row({
-  expectation,
+  result,
   doc,
 }: {
-  expectation: Expectation;
+  result: Result;
   doc: PropertyDoc | undefined;
 }): React.ReactElement {
   const [open, setOpen] = useState(false);
-  const {property, value} = expectation;
+  const {property, value} = result;
   const isMap = value !== null && typeof value === 'object';
   const explainable = Boolean(doc?.definition);
 
@@ -110,29 +109,29 @@ function Row({
 
 export interface ValueLedgerProps {
   title: string;
-  expectations: Expectation[];
+  results: Result[];
   catalog: PropertyCatalog | undefined;
 }
 
 export default function ValueLedger({
   title,
-  expectations,
+  results,
   catalog,
 }: ValueLedgerProps): React.ReactElement {
   return (
     <section className={styles.values} aria-label={`${title} — published values`}>
       <p className={styles.vtitle}>{title}</p>
-      {expectations.length ? (
-        expectations.map((e) => (
+      {results.length ? (
+        results.map((e) => (
           <Row
             key={e.property}
-            expectation={e}
+            result={e}
             doc={catalog?.properties?.[e.property]}
           />
         ))
       ) : (
         <div className={styles.vnone}>
-          Nothing in this layer has been derived for this snapshot yet.
+          The engine publishes nothing in this layer for this snapshot.
         </div>
       )}
     </section>

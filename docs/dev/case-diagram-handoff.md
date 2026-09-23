@@ -7,7 +7,7 @@ A design brief for an interactive power-flow graphic to embed in these docs.
 Power Insight is a Home Assistant integration that answers questions like
 *"where did the power my battery just charged with actually come from?"* and
 *"what did that save me?"*. The hard part is a pure-Python calculation engine
-that, every snapshot, splits the house's power between grid, PV strings,
+that, every snapshot, splits the house's power between grid, PV systems,
 batteries, consumers and the unmetered base load — honouring per-device rules
 like *"this battery may only charge from solar"*.
 
@@ -77,9 +77,8 @@ drawn, and visibly distinguished from real devices.
 ## Data contract
 
 One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them in
-ladder order and `coverage.json` recording how far the derivation programme has
-got. The diagram component needs neither of the latter two — they drive the
-tables on the section index — but `index.json` is the authority on case order.
+ladder order. Every state carries every catalogued property as the engine
+computed it (`results`).
 
 Read `group-captivity.json` and `mixed-export-house.json` first — between them
 they exercise every shape. `grid-only.json` is the other end of the range: a
@@ -90,7 +89,7 @@ single adapter, and still a slot for every property.
   "id": "group-captivity",
   "title": "Group captivity",
   "summary": "…prose for the page…",
-  "decides": ["…the modelling choices this case pins…"],
+  "shows": ["…what this case shows about the engine…"],
 
   "topology": [
     { "uid": "grid",  "kind": "grid",    "config": { "has_price_entity": true } },
@@ -105,7 +104,7 @@ single adapter, and still a slot for every property.
       "note": "…one line on what makes this snapshot interesting…",
       "readings": { "grid": "200", "east": "100", "bat_a": "-100" },
       "price": "3/10",
-      "expectations": [
+      "results": [
         { "property": "gross_power", "value": "400" },
         { "property": "combined_grid_export", "value": null }
       ]
@@ -131,31 +130,22 @@ flow(source → home) = home_base_load_source_shares[source]      × home_base_l
 ```
 
 **These files are generated, and are not the source of truth.** The cases live
-in `tests/engine/reference/` as pytest scenario classes; each one publishes
-itself into this JSON via `tools/export_cases.py`. Edit the Python and
-re-export — an edit to a `.json` file here is overwritten on the next run.
+in `tests/engine/reference/` as small classes — wiring, readings and prose — and
+`tools/snapshot.py` passes each snapshot through the engine and writes this
+JSON. Edit the Python and re-run it — an edit to a `.json` file here is
+overwritten on the next run.
 
-**Only derived values are published.** No value in the corpus comes from the
-engine: each is worked out by hand from the model. A property nobody has
-derived for a snapshot is simply **absent from `expectations`** rather than
-present-and-empty, so `expectations` is a short list of answers, not a fixed
-inventory of every metric. Expect most snapshots to publish very few — often
-none — including the share matrices the diagram needs: **a snapshot with no
-derived provenance has no edges to draw**, and the design has to look
+**Every value comes from the engine.** Each snapshot's `results` holds every
+catalogued property, as the engine computed it at the commit the docs were
+built from.
+
+**A published `null` is the engine reporting nothing at all,** usually because a
+reading upstream is unavailable — then the share matrices are `null` too, and a
+snapshot with no provenance has no edges to draw. The design has to look
 deliberate in that state rather than broken.
 
-**A published `null` is a claim, not a gap.** It means the model says the
-engine should report nothing at all here, usually because a reading upstream is
-unavailable. Slots nobody has derived never appear at all, so there is no
-ambiguity to resolve — if it is in the list, somebody derived it.
-
-The design should surface those distinctions honestly — a reader deserves to
-know which numbers a human has checked. A small badge is enough; please don't let it
-dominate.
-
-**Don't assume a fixed property list.** Every state carries a slot for the
-whole catalog today, but that is a property of the current scaffold rather than
-a guarantee — so render what is present.
+**Don't assume a fixed property list.** Render what is present: the catalog
+grows.
 
 ## Embedding — as built
 

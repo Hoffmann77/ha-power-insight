@@ -21,20 +21,6 @@
     "faq",
     {
       "type": "category",
-      "label": "Anchor cases",
-      "link": {
-        "type": "doc",
-        "id": "spec/index"
-      },
-      "items": [
-        "spec/a-001",
-        "spec/a-002",
-        "spec/a-003",
-        "spec/a-004"
-      ]
-    },
-    {
-      "type": "category",
       "label": "Development",
       "items": [
         "dev/engine-calculations",

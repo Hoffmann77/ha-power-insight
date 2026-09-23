@@ -1,14 +1,10 @@
 ---
 title: Reference cases
-description: Worked examples that pin down how the Power Insight engine attributes power.
+description: Small, fixed homes shown with everything the Power Insight engine computes for them.
 ---
 
 import DocCardList from '@theme/DocCardList';
-import {REFERENCE_CASES, COVERAGE_TABLE, PROPERTIES} from './cases/all';
-
-export const RUNG = Object.fromEntries(
-  COVERAGE_TABLE.order.map((id, i) => [id, i]),
-);
+import {REFERENCE_CASES, PROPERTIES} from './cases/all';
 
 # Reference cases
 
@@ -16,74 +12,63 @@ Some of what the engine reports is plain arithmetic. Some of it is a **modelling
 choice** — a place where more than one answer is defensible, and Power Insight
 picks one.
 
-Those choices are what this section is for. Each **reference case** is a small,
-deliberately-chosen wiring, so you can disagree with the *model* without reading
-a line of Python.
+Each **reference case** is a small, deliberately-chosen home: one wiring and a
+few snapshots of its readings. Every page shows what the engine computes for
+those readings — every property it publishes, in every layer — so you can see
+the model at work, and disagree with it, without reading a line of Python.
 
-**No value on these pages comes from the engine.** Each one is worked out by
-hand from the model, on paper, without the engine's answer in view — and the
-engine is then asserted against the result in CI, so a change to the code that
-contradicts a published page fails the build.
+**Every value on these pages comes from the engine.** The readings are fixed;
+the results are recomputed whenever the engine changes, and frozen with each
+version of these docs. An older version of the docs therefore shows what the
+engine did at that version, and comparing two versions shows exactly what
+changed.
 
-That direction is the whole point. A corpus generated from the implementation
-can only ever record what the code already does, which makes asserting it back
-a tautology: a bug faithfully captured is still a bug, now with a documentation
-page vouching for it. Values derived independently can say the code is *wrong*.
-
-The cost is that it is slow, and the corpus starts empty. Most properties below
-have no value yet, and diagrams whose provenance rows are undecided have no
-flows to draw. That is the honest state of the work rather than a defect in the
-page.
+Whether the engine's answers are *right* is checked elsewhere: every modelling
+decision has a small test worked out by hand, and every property's formula is
+checked against the engine over hundreds of generated homes. A decision that
+changes shows up here as moved numbers, and there as a failing test.
 
 ## The cases
 
-The corpus is a **ladder**. It starts at a house with one meter in it and adds
+The cases form a **ladder**. It starts at a house with one meter in it and adds
 exactly one device — or flips exactly one configuration flag — per rung, so a
 diagram is always the previous diagram plus one thing. Read it in order and
-nothing arrives unexplained. Two rules keep it from sprawling:
+nothing arrives unexplained.
 
-- A case earns its place only if it settles a decision **no lower rung can
-  express**. Where a decision *is* expressible lower down it belongs lower down,
-  because a value derived by hand across three devices takes a minute and the
-  same rule across six takes an afternoon.
-- A snapshot earns its place only if it moves a published value that no other
-  snapshot of its case moves.
-
-The last two cases break the one-thing-at-a-time growth deliberately. They are
+The last three cases break the one-thing-at-a-time growth deliberately. They are
 **specialists**: Hall's condition quantifies over *subsets* of sinks and cannot
-be shown with fewer than two sources and two restricted sinks, and unequal
-export permissions mean nothing without two dischargers that differ. Neither is
-the first home of any decision — they are there to check that the rules below
-them still hold when they all apply at once.
+be shown with fewer than two sources and two restricted sinks; its mirror image,
+one sink allowed a *group* of sources, needs a competitor for that group and a
+source only the competitor may use; and unequal export permissions mean nothing
+without two dischargers that differ. They are allowed to be large because what
+they show cannot be shown in anything smaller.
 
 <DocCardList />
 
-### What each case settles
+### What each case shows
 
 <table>
   <thead>
     <tr>
       <th>Rung</th>
       <th>Case</th>
-      <th>Decides</th>
-      <th>Derived</th>
+      <th>Shows</th>
     </tr>
   </thead>
   <tbody>
-    {COVERAGE_TABLE.decisions.map((d, i) => (
-      <tr key={d.case}>
+    {REFERENCE_CASES.map((c, i) => (
+      <tr key={c.id}>
         <td>{i}</td>
         <td>
-          <a href={`${d.case}`}>{d.case_title}</a>
+          <a href={`${c.id}`}>{c.title}</a>
         </td>
         <td>
           <ul style={{margin: 0, paddingLeft: '1.1rem'}}>
-            {d.decides.map((line) => (
+            {c.shows.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
         </td>
-        <td>{d.derived || '—'}</td>
       </tr>
     ))}
   </tbody>
@@ -109,10 +94,10 @@ Click it again, or anywhere else on the diagram, to step back out.
 ### The four layers
 
 The engine computes in layers, and the tab row steps through them. Each one
-re-labels the same picture and lists the values derived for that snapshot
-underneath, each with its exact fraction next to the figure you would intuit.
-Only derived values are listed: a property missing from a layer is one nobody
-has worked out here yet, not one the engine reports nothing for.
+re-labels the same picture and lists every value the engine computed for that
+snapshot underneath, each with its exact fraction next to the figure you would
+intuit. A value shown as *unavailable* is the engine publishing nothing at all,
+usually because a reading it needs has dropped out.
 
 | Layer | The question it answers |
 | --- | --- |
@@ -127,16 +112,14 @@ checked against a real value.
 
 ## How a value gets here
 
-**Every case on these pages is a test.** Somebody works a value out from the
-model — the wiring, the readings, and the definition of the property, with the
-engine's answer not in view — and writes it as a method on the case's class in
-`tests/engine/reference/`, directly under the readings it was derived from:
+Each case is a small class in `tests/engine/reference/`: the wiring, the
+readings, and the prose you are reading, and nothing else.
 
 ```python
-class TestGridOnly(ReferenceCase):
+class GridOnly(ReferenceCase):
     """One meter and nothing else. ...
 
-    Decides:
+    Shows:
 
     * With no local device, the whole gross power is the home base load.
     """
@@ -152,74 +135,14 @@ class TestGridOnly(ReferenceCase):
     def import_only(self):
         """The house runs on the grid alone; every watt is base load."""
         return State(grid=1200, price=F(3, 10))
-
-    @expect("gross_power")
-    def test_import_only_gross_power(self):
-        return 1200
 ```
 
-That is the whole source. This page is generated from it: the summary you are
-reading is the class docstring, the caption under each snapshot card is its
-`@state` docstring, and every value in the tables is what an `@expect` method
-returned. Nothing is written twice, so nothing can drift — and the snapshot
-being described here is by construction the one being asserted.
-
-Every snapshot already has a method for every property, most of them still
-returning a `TODO` placeholder. Those skip and publish nothing, which is why
-these pages are mostly empty: deriving a value is replacing one `TODO` with a
-number.
-
-From then on CI runs each `@expect` as a test against a freshly built engine.
-There are two outcomes and no third: either the engine agrees, or the build goes
-red — and a red build means *either* the engine is broken *or* the derivation
-was. The corpus holds no opinion about which; working that out is the
-interesting part, and it ends with one of the two being fixed rather than with a
-disagreement being filed. Nothing about this is fast, and it is not meant to
-be.
-
-## Coverage
-
-Where the derivation programme has got to, generated with the cases so it cannot
-drift from them: how many values each property has across the corpus, and which
-rungs they are on.
-
-It reads as almost entirely empty, and will for a long while. That is the point
-of publishing it: you can see exactly how far the hand-checking has got, and a
-property with no values anywhere is one the engine is not being held to.
-
-<table>
-  <thead>
-    <tr>
-      <th>Property</th>
-      <th>Layer</th>
-      <th>Values</th>
-      <th>On rung</th>
-    </tr>
-  </thead>
-  <tbody>
-    {Object.entries(COVERAGE_TABLE.properties).map(([name, c]) => (
-      <tr key={name}>
-        <td>
-          <code>{name}</code>
-        </td>
-        <td>{c.layer}</td>
-        <td>{c.derived || '—'}</td>
-        <td>{c.derived_in.map((id) => RUNG[id]).join(' · ') || '—'}</td>
-      </tr>
-    ))}
-  </tbody>
-</table>
-
-<p>
-  <strong>{COVERAGE_TABLE.totals.derived}</strong> values have been derived
-  across the corpus.
-  {COVERAGE_TABLE.totals.untouched.length ===
-    Object.keys(COVERAGE_TABLE.properties).length &&
-    ' Nothing has been derived yet — the corpus is a worklist and nothing more.'}
-</p>
-
-The corpus is **closed** when every property here has one derived ordinary
-value and one derived degenerate value. Until then the table is the worklist.
+The summary at the top of a case page is the class docstring, the caption under
+each snapshot card is its `@state` docstring, and every value in the tables is
+what the engine returns for those readings. A tool passes each snapshot through
+the engine and writes the results next to these pages; CI fails any change to
+the engine that moves a published number without re-publishing it, so the
+numbers here are always the engine's own for this version of the docs.
 
 ## Open questions
 

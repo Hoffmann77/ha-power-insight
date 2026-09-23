@@ -78,9 +78,8 @@ Authoring surface
 * :func:`scenario_blocks` — reads a scenario class back out as its
   ``(topology, state, expectations)`` blocks, using the same source-order rules
   the tests bind by, without running pytest or building an engine. This is how
-  ``tests/engine/reference/`` publishes itself to the documentation site: the
-  page and the assertion cannot describe a snapshot differently, because they
-  come from the same walk of the same class.
+  the reference cases in ``tests/engine/reference/`` read their wiring and
+  snapshots out for the documentation site.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -443,9 +442,8 @@ def state(fn: Callable[[Any], State]) -> Callable[[Any], State]:
 def matches(expected: Any, actual: Any, *, abs_tol: float | None = None) -> bool:
     """Whether an engine attribute equals a hand-written expected value.
 
-    The single comparator for the whole engine tier. Both the scenario tests
-    and the reference corpus go through it, so "did the engine give the right
-    answer" means one thing here rather than two.
+    The single comparator for the whole engine tier, so "did the engine give
+    the right answer" means one thing everywhere.
 
     Maps compare key set first, at every level: a leaked or missing row is a
     real disagreement, not a rounding one. ``None`` is a value in its own right
@@ -512,35 +510,10 @@ def _assert_attribute_matches(
     )
 
 
-class _Todo:
-    """A value nobody has worked out yet — see :data:`TODO`."""
-
-    def __repr__(self) -> str:  # pragma: no cover - debugging aid
-        return "TODO"
-
-    def __bool__(self) -> bool:
-        # Never let ``if expected:`` quietly treat an unfilled stub as a value.
-        raise TypeError("TODO is not a value — it marks one nobody has written yet")
-
-
-#: Placeholder for an expectation that has not been derived yet::
-#:
-#:     @expect("gross_power")
-#:     def test_import_only_gross_power(self):
-#:         return TODO
-#:
-#: The test skips instead of failing, and nothing is published for it. Replace
-#: it with the value you worked out and the test starts holding the engine to
-#: it. A stub is a worklist entry, and an honest one: it asserts nothing,
-#: because nobody has yet claimed anything.
-TODO = _Todo()
-
-
 def expect_attribute(
     attribute: str,
     *,
     abs_tol: float | None = None,
-    todo_reason: str | None = None,
 ) -> Callable[[Callable], Callable]:
     """Turn a method that *returns* an expected value into a bound scenario test.
 
@@ -562,17 +535,11 @@ def expect_attribute(
     when the expected map lists rounded literals); the default keeps
     ``pytest.approx``'s relative tolerance for expectations pinned as exact
     fractions.
-
-    Returning :data:`TODO` skips the test — an expectation nobody has written
-    yet. ``todo_reason`` is what the skip says, and is the place to put whatever
-    helps somebody sit down and derive it.
     """
 
     def decorator(fn: Callable) -> Callable:
         def wrapper(self: Any, power_insight: Any, state: State) -> None:
             expected = fn(self)
-            if isinstance(expected, _Todo):
-                pytest.skip(todo_reason or f"no value derived yet for {attribute}")
             actual = getattr(power_insight, attribute)
             _assert_attribute_matches(
                 actual, expected, abs_tol=abs_tol, attribute=attribute, state=state
@@ -674,8 +641,7 @@ class EngineScenario:
 # readings, and — through ``@expect_attribute`` — what each property should be.
 # ``scenario_blocks`` walks that structure with the *same* source-order rules
 # the tests bind by, so anything generated from a scenario (the published
-# reference cases, say) cannot describe a snapshot differently from the way it
-# is asserted.
+# reference cases, say) reads the snapshots exactly as the tests bind them.
 #
 # Nothing here builds or touches an engine. Expected values come from calling
 # the ``@expect_attribute`` methods, which take only ``self``.
@@ -694,17 +660,12 @@ class Expectation:
 class Block:
     """One ``@topology`` + ``@state`` pair, and the expectations bound to it.
 
-    ``expectations`` holds the values somebody has actually written.
-    ``pending`` names the properties whose method is still ``return TODO`` —
-    declared, skipped, and claiming nothing. The split is the point: a caller
-    publishing answers wants the first, and a caller checking the worklist is
-    complete wants both.
+    ``expectations`` holds the value each ``@expect_attribute`` method claims.
     """
 
     topology: Topology
     state: State
-    expectations: tuple[Expectation, ...]
-    pending: tuple[str, ...] = ()
+    expectations: tuple[Expectation, ...] = ()
 
     @property
     def cell(self) -> Cell:
@@ -732,10 +693,9 @@ def scenario_blocks(cls: type) -> list[Block]:
     exactly the rule :func:`bind_cell` uses, so a block here is the same
     snapshot the corresponding tests run against.
 
-    A ``@state`` nothing has been derived for yet still gets a block, with no
-    expectations. It is a real snapshot of a real wiring; that nobody has
-    worked out a value for it is a fact about the worklist, not about whether
-    the snapshot exists.
+    A ``@state`` with no ``@expect_attribute`` method under it still gets a
+    block, with no expectations — the reference cases are made of nothing
+    else.
 
     Plain ``test_`` methods are skipped: they assert something bespoke rather
     than claiming a value for a named property, so there is nothing to read
@@ -746,7 +706,6 @@ def scenario_blocks(cls: type) -> list[Block]:
     state_methods = _role_methods(cls, "state")
 
     bound: dict[str, list[Expectation]] = {name: [] for _, name, _ in state_methods}
-    pending: dict[str, list[str]] = {name: [] for _, name, _ in state_methods}
     for lineno, name, fn in _expect_methods(cls):
         where = f"{cls.__name__}.{name}"
         state_name, _ = _nearest_above(state_methods, lineno, role="state", where=where)
@@ -755,11 +714,7 @@ def scenario_blocks(cls: type) -> list[Block]:
         # reading a scenario back out must never build one.
         derive = getattr(fn, "_scenario_test_fn", fn)
         value = derive(inst)
-        if isinstance(value, _Todo):
-            # A stub claims nothing, so it is worklist rather than content.
-            pending[state_name].append(fn._scenario_attribute)
-        else:
-            bound[state_name].append(Expectation(fn._scenario_attribute, value, name))
+        bound[state_name].append(Expectation(fn._scenario_attribute, value, name))
 
     blocks = []
     for lineno, state_name, state_fn in state_methods:
@@ -774,7 +729,7 @@ def scenario_blocks(cls: type) -> list[Block]:
         object.__setattr__(st, "name", state_name)
         check_compatible(topo, st)
         blocks.append(
-            Block(topo, st, tuple(bound[state_name]), tuple(pending[state_name]))
+            Block(topo, st, tuple(bound[state_name]))
         )
     return blocks
 

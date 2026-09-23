@@ -21,7 +21,7 @@ minimum cut degenerate.
 ## Context
 
 Home energy integration. Every few seconds we get a snapshot of instantaneous
-power readings (watts) from a house: a grid meter, some PV strings, some
+power readings (watts) from a house: a grid meter, some PV systems, some
 batteries, some individually-metered appliances. From that snapshot the engine
 answers, for every device currently *drawing* power, **where that power came
 from** — `{sink: {source: share}}`, each row summing to 1. Those shares drive
@@ -34,7 +34,7 @@ The property is `PowerInsight.sink_adapters_source_shares`
 
 One snapshot gives:
 
-- **Sources** `k` with output `s_k > 0` — grid import, producing PV strings,
+- **Sources** `k` with output `s_k > 0` — grid import, producing PV systems,
   discharging batteries.
 - **Sinks** `u` with draw `d_u > 0` — grid export, charging batteries, appliance
   loads, PV standby.
@@ -77,7 +77,7 @@ affordable; with it, correctness rather than cost decides the design.
 ## Requirements
 
 **Hard invariants** (a property test over 250 seeded random topologies checks
-all four — `tests/engine/test_source_shares_invariants.py`):
+all four — `tests/engine/automatic/test_source_shares_invariants.py`):
 
 1. Every row sums to 1, or to 0 when every allowed source is idle.
 2. No source is attributed beyond its reading.
@@ -301,6 +301,6 @@ That loader is the only one in the test suite, so it is a single-site change.
 
 - `custom_components/power_insight/power_insight.py` — `sink_adapters_source_shares`
 - `tests/engine/test_source_shares.py` — hand-derived edge cases (4 currently red, by design)
-- `tests/engine/test_source_shares_invariants.py` — the four invariants over 250 random topologies
+- `tests/engine/automatic/test_source_shares_invariants.py` — the four invariants over 250 random topologies
 - `tests/engine/test_full_topology.py` — the reference scenario and its expected values
 - `docs/dev/engine-calculations.md` — the currently-documented model (describes the older tier order, needs rewriting once this lands)

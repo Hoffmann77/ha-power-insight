@@ -242,9 +242,9 @@ devices drawing power at the same instant can show different source mixes:
 - The mix shifts with your **household load**: the more your home consumes
   directly, the less local generation reaches a flexible battery, so its grid
   share rises — even though nothing about the battery itself changed.
-- Two PV strings of different sizes show it too: a battery drawing from the
-  larger string keeps more solar (a lower grid share) than one drawing from a
-  smaller string, because more of the larger string survives the earlier steps.
+- Two PV systems of different sizes show it too: a battery drawing from the
+  larger one keeps more solar (a lower grid share) than one drawing from the
+  smaller, because more of the larger system survives the earlier steps.
 
 The **round-trip efficiency** is used to account for the energy lost in a
 charge/discharge cycle when attributing these costs.

@@ -13,7 +13,7 @@
 import {fmtEur, fmtPct, fmtW, rat} from './rational';
 import type {
   Channel,
-  Expectation,
+  Result,
   LayerId,
   NodeKind,
   ReferenceCase,
@@ -28,9 +28,8 @@ export interface FlowNode {
   config: ReferenceCase['topology'][number]['config'] | null;
   /**
    * Signed watts as read (the virtual home node is stored negative). Null on
-   * the home node when its size has not been derived — a real device always
-   * has a reading, because readings are inputs to the corpus rather than
-   * answers in it.
+   * the home node when the engine publishes no base load — a real device
+   * always has a reading, because readings are the inputs of a case.
    */
   reading: number | null;
   role: Role;
@@ -73,7 +72,7 @@ export interface FlowModel {
   /** Null until somebody derives it. */
   gross: number | null;
   channels: ChannelSlice[];
-  byProperty: Map<string, Expectation>;
+  byProperty: Map<string, Result>;
 }
 
 /** Where an idle device sits when it has no flow to place it. */
@@ -126,12 +125,12 @@ function asNested(v: ValueTree | undefined): {[k: string]: {[k: string]: string}
   return out;
 }
 
-export function indexExpectations(state: CaseState): Map<string, Expectation> {
-  return new Map(state.expectations.map((e) => [e.property, e]));
+export function indexResults(state: CaseState): Map<string, Result> {
+  return new Map(state.results.map((e) => [e.property, e]));
 }
 
 export function valueOf(
-  byProperty: Map<string, Expectation>,
+  byProperty: Map<string, Result>,
   property: string,
 ): ValueTree | undefined {
   return byProperty.get(property)?.value;
@@ -147,24 +146,11 @@ export function valueOf(
  * nobody made.
  */
 export function scalar(
-  byProperty: Map<string, Expectation>,
+  byProperty: Map<string, Result>,
   property: string,
 ): number | null {
   const v = valueOf(byProperty, property);
   return typeof v === 'string' ? rat(v) : null;
-}
-
-/** Whether this snapshot publishes a value for `property` at all. */
-export function hasValue(
-  byProperty: Map<string, Expectation>,
-  property: string,
-): boolean {
-  return byProperty.has(property);
-}
-
-/** How many values the case publishes across all its snapshots. */
-export function derivedCount(c: ReferenceCase): number {
-  return c.states.reduce((n, st) => n + st.expectations.length, 0);
 }
 
 /**
@@ -190,7 +176,7 @@ function channelOf(kind: NodeKind, role: Role): Channel | null {
 }
 
 export function buildModel(c: ReferenceCase, st: CaseState): FlowModel {
-  const byProperty = indexExpectations(st);
+  const byProperty = indexResults(st);
 
   const nodes: FlowNode[] = c.topology.map((d) => {
     const reading = rat(st.readings[d.uid] ?? '0');
@@ -209,8 +195,8 @@ export function buildModel(c: ReferenceCase, st: CaseState): FlowModel {
 
   // The unmetered home base load competes for power like any other sink, but
   // has no adapter — it exists only in its own properties.
-  // Structural, so it is drawn whether or not anyone has derived its size —
-  // but with no reading until they have, rather than a fabricated zero.
+  // Structural, so it is drawn even when the engine publishes no size for it
+  // — but then with no reading, rather than a fabricated zero.
   const hbl = scalar(byProperty, 'home_base_load_power');
   nodes.push({
     uid: 'home',

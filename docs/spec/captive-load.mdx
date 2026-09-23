@@ -1,6 +1,6 @@
 ---
 title: Captive load
-description: "The same three devices, with the consumer now restricted to the string. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published."
+description: "The same three devices, with the consumer now restricted to the PV system. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published."
 ---
 
 import {referenceCase, PROPERTIES} from './cases/all';
@@ -11,10 +11,10 @@ export const CASE = referenceCase('captive-load');
 
 {CASE.summary}
 
-## What this case pins down
+## What this case shows
 
 <ul>
-  {CASE.decides.map((d) => (
+  {CASE.shows.map((d) => (
     <li key={d}>{d}</li>
   ))}
 </ul>
@@ -26,9 +26,10 @@ export const CASE = referenceCase('captive-load');
 Each card above is one snapshot of this wiring. The tabs under them re-label the
 same picture with a different layer of the engine — the readings, where each
 sink's power came from, how the gross power split between channels, and what it
-all cost — and the values derived for that snapshot are listed underneath. Only
-derived values appear, so a short table means the hand-checking has not got far
-here; a snapshot whose provenance is still undecided has no flows to draw.
+all cost — and every value the engine computed for that snapshot is listed
+underneath. They are recomputed from the readings whenever the engine changes,
+and frozen with each docs version, so this page shows what this version of the
+engine does.
 
 {CASE.states.map((s) => (
   <div key={s.id} style={{marginBottom: '1.25rem'}}>
@@ -47,10 +48,10 @@ here; a snapshot whose provenance is still undecided has no flows to draw.
 
 Three adapters is the smallest wiring in which a restriction can be honoured,
 and — one reading later — the smallest in which one can fail. Both belong here
-rather than further up the ladder, because a deficit derived by hand across
-three devices is a napkin and the same rule across six is an afternoon.
+rather than further up the ladder, because with three devices you can follow
+every watt of the deficit by eye.
 
-When the string covers the captive load, the rule is visible in one line:
+When the PV system covers the captive load, the rule is visible in one line:
 `cons1` runs on solar alone, and the *unrestricted* base load is pushed onto the
 grid to make room. A naive implementation that shared each source in proportion
 would hand `cons1` a slice of grid power it is not permitted to touch, and give

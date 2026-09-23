@@ -107,7 +107,7 @@ def test_a_sequence_of_changes_never_serves_a_stale_answer() -> None:
         ("bat_solar", -1200),  # battery charges harder
         ("grid", 200),  # import falls away
         ("grid", -600),  # ... and turns into export
-        ("pv2", -50),  # a string drops into standby
+        ("pv2", -50),  # a PV system drops into standby
         ("cons1", 0),  # a load switches off entirely
         ("bat_flex", 900),  # a battery starts discharging
     ]

@@ -11,7 +11,7 @@
 /** An exact rational, as stored. `null` models an unavailable reading. */
 export type Rat = string | null;
 
-/** A stored expectation value: a scalar, or a (possibly nested) map of them. */
+/** A published value: a scalar, or a (possibly nested) map of them. */
 export type ValueTree = Rat | {[key: string]: ValueTree};
 
 export type AdapterKind = 'grid' | 'pv' | 'battery' | 'consumer';
@@ -38,15 +38,13 @@ export interface Adapter {
 }
 
 /**
- * One value a case claims for one property.
+ * One property as the engine computed it for a snapshot.
  *
- * Only derived values are published — a property nobody has worked out for
- * this snapshot is simply absent from the list, because the corpus publishes
- * answers rather than an inventory of the questions. So a `null` here is not
- * an empty slot: it is somebody deriving that the engine should report nothing
- * at all, which is a claim like any other.
+ * Every catalogued property is published for every snapshot. A `null` value is
+ * the engine publishing nothing at all — usually because a reading it needs is
+ * unavailable.
  */
-export interface Expectation {
+export interface Result {
   property: string;
   value: ValueTree;
 }
@@ -58,15 +56,16 @@ export interface CaseState {
   open_question?: string;
   readings: {[uid: string]: Rat};
   price: Rat;
-  expectations: Expectation[];
+  /** Every catalogued property, as the engine computed it. */
+  results: Result[];
 }
 
 export interface ReferenceCase {
   id: string;
   title: string;
   summary: string;
-  /** The modelling choices this case pins down. */
-  decides: string[];
+  /** What this case shows about the engine. */
+  shows: string[];
   topology: Adapter[];
   states: CaseState[];
 }
@@ -109,41 +108,3 @@ export type Role = 'source' | 'sink' | 'idle';
 
 /** Which channel of the gross-power split a sink belongs to. */
 export type Channel = 'export' | 'charging' | 'consumption' | 'standby';
-
-/**
- * The generated coverage table (`docs/spec/cases/coverage.json`): which rungs
- * of the ladder each property is actually settled by, and which modelling
- * decision each case carries.
- *
- * `settledBy` is the load-bearing field, and it is deliberately not a count of
- * appearances. Almost every property has *some* value on the first rung, so
- * "where does it first appear" says nothing; the rungs listed here are the
- * ones that each published a value no earlier rung had.
- */
-export interface PropertyCoverage {
-  title: string;
-  layer: number;
-  /** Values published for this property across the corpus. */
-  derived: number;
-  /** Cases that publish at least one value for it. */
-  derived_in: string[];
-}
-
-export interface CaseCoverage {
-  case: string;
-  case_title: string;
-  decides: string[];
-  derived: number;
-}
-
-export interface Coverage {
-  /** Case ids in ladder order. */
-  order: string[];
-  decisions: CaseCoverage[];
-  properties: {[name: string]: PropertyCoverage};
-  totals: {
-    derived: number;
-    /** Properties with no derived value anywhere yet. */
-    untouched: string[];
-  };
-}

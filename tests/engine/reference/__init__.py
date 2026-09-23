@@ -1,76 +1,58 @@
-"""The reference corpus: nine small homes the engine is specified against.
+"""The reference cases: ten fixed homes shown with everything the engine computes.
 
-Each module here is one case — an ordinary scenario class (``@topology`` /
-``@state`` / source-order binding, exactly like every other engine test) whose
-``@expect`` methods claim values somebody worked out **by hand from the
-model**. Two things read them:
+Each module here is one case — a wiring (``@topology``), a few snapshots of
+readings (``@state``), and prose in docstrings. Nothing in them is asserted:
+``tools/snapshot.py`` passes every snapshot through the engine and writes
+the results, for every catalogued property, to ``docs/spec/cases/*.json`` for
+the documentation site. ``test_corpus.py`` fails whenever that output is out of
+step with the engine, so each commit — and each docs version cut from one —
+carries exactly the numbers its own engine produces.
 
-* pytest, which runs each claim as a test. That is the direction that means
-  something: the values are derived from the model, not read back from the
-  code, so a disagreement is evidence rather than a tautology.
-* ``tools/export_cases.py``, which calls :meth:`ReferenceCase.publish` on each
-  class and writes ``docs/spec/cases/*.json`` for the documentation site. The
-  export walks the same source-order binding the tests bind by, so a published
-  page cannot describe a snapshot differently from the way it is asserted.
+Whether those numbers are *right* is asked elsewhere: each engine decision by a
+hand-derived block in ``tests/engine/manual/``, every property's formula and
+the laws they obey in ``tests/engine/automatic/``.
 
-Write answers by hand. An answer copied out of a failing test's ``actual:``
-line records what the code already does, which proves nothing and quietly turns
-the corpus into a changelog. If you cannot derive a value, write no method for
-it — nothing is published and nothing is asserted.
-
-The corpus is a **ladder**, and ``REFERENCE_CASES`` is in ladder order. Each
-case is the smallest wiring that can express the decision it settles, and every
+The cases form a **ladder**, and ``REFERENCE_CASES`` is in ladder order. Each
+case is the smallest wiring that can show what it is there to show, and every
 rung adds exactly one device or flips exactly one configuration flag against
-the rung above it. Two rules keep it finite, and both are load-bearing:
+the rung above it, so a reader meets one new thing at a time. A snapshot earns
+its place by showing something no other snapshot of its case does.
 
-* A case earns its place only if it settles a decision no lower rung can
-  express. Where a decision *is* expressible lower down, it belongs lower down
-  — a restriction deficit derived by hand across three adapters is a napkin;
-  across six it is an afternoon.
-* A snapshot earns its place only if it moves a published value that no other
-  snapshot of its case moves.
-
-The last two cases break the one-device-at-a-time growth on purpose. They are
-specialists: Hall's condition quantifies over *subsets* of sinks and cannot be
-shown with fewer than two sources and two restricted sinks, and the mixed
-export permissions only mean anything with two dischargers that differ. They
-are the only cases allowed to be large, and neither is the first home of any
-decision.
+The last three cases break the one-device-at-a-time growth on purpose. They
+are specialists: Hall's condition quantifies over *subsets* of sinks and cannot
+be shown with fewer than two sources and two restricted sinks; its mirror image
+— one sink allowed a *group* of sources, none of which it needs on its own —
+needs a second restricted sink competing for the group and a source only that
+competitor may use; and the mixed export permissions only mean anything with
+two dischargers that differ. They are the only cases allowed to be large.
 """
 
 from __future__ import annotations
 
-from tests.engine.reference.case import (
-    CATALOG,
-    PROPERTIES,
-    TODO,
-    TOLERANCE,
-    F,
-    ReferenceCase,
-    expect,
-)
-from tests.engine.reference.test_battery_basics import TestBatteryBasics
-from tests.engine.reference.test_captive_battery import TestCaptiveBattery
-from tests.engine.reference.test_captive_load import TestCaptiveLoad
-from tests.engine.reference.test_grid_only import TestGridOnly
-from tests.engine.reference.test_group_captivity import TestGroupCaptivity
-from tests.engine.reference.test_metered_load import TestMeteredLoad
-from tests.engine.reference.test_mixed_export_house import TestMixedExportHouse
-from tests.engine.reference.test_pv_export import TestPvExport
-from tests.engine.reference.test_pv_self_consumption import TestPvSelfConsumption
+from tests.engine.reference.battery_basics import BatteryBasics
+from tests.engine.reference.captive_battery import CaptiveBattery
+from tests.engine.reference.captive_load import CaptiveLoad
+from tests.engine.reference.case import CATALOG, PROPERTIES, F, ReferenceCase
+from tests.engine.reference.grid_only import GridOnly
+from tests.engine.reference.group_captivity import GroupCaptivity
+from tests.engine.reference.metered_load import MeteredLoad
+from tests.engine.reference.mixed_export_house import MixedExportHouse
+from tests.engine.reference.pv_export import PvExport
+from tests.engine.reference.pv_self_consumption import PvSelfConsumption
+from tests.engine.reference.two_pv_systems import TwoPvSystems
 
-#: Every reference case, in ladder order. The order is the corpus's argument,
-#: not an accident — see the module docstring.
+#: Every reference case, in ladder order — see the module docstring.
 REFERENCE_CASES: tuple[type[ReferenceCase], ...] = (
-    TestGridOnly,
-    TestPvSelfConsumption,
-    TestPvExport,
-    TestMeteredLoad,
-    TestCaptiveLoad,
-    TestBatteryBasics,
-    TestCaptiveBattery,
-    TestGroupCaptivity,
-    TestMixedExportHouse,
+    GridOnly,
+    PvSelfConsumption,
+    PvExport,
+    MeteredLoad,
+    CaptiveLoad,
+    BatteryBasics,
+    CaptiveBattery,
+    GroupCaptivity,
+    TwoPvSystems,
+    MixedExportHouse,
 )
 
 _BY_ID = {case.case_id: case for case in REFERENCE_CASES}
@@ -92,10 +74,7 @@ __all__ = [
     "CATALOG",
     "PROPERTIES",
     "REFERENCE_CASES",
-    "TODO",
-    "TOLERANCE",
     "F",
     "ReferenceCase",
-    "expect",
     "reference_case",
 ]

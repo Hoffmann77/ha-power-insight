@@ -8,7 +8,7 @@ import ValueLedger from './ValueLedger';
 import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
 import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
-import {costOf, buildModel, hasValue, roleText} from './model';
+import {costOf, buildModel, roleText, valueOf} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
 import type {
   AdapterConfig,
@@ -157,7 +157,7 @@ export default function CaseDiagram({
   );
 
   const byLayer = useMemo(
-    () => (activeState ? groupByLayer(activeState.expectations, properties) : null),
+    () => (activeState ? groupByLayer(activeState.results, properties) : null),
     [activeState, properties],
   );
 
@@ -190,13 +190,11 @@ export default function CaseDiagram({
   const selected: FlowNode | null =
     model.nodes.find((n) => n.uid === selectedUid) ?? null;
 
-  const stateDerived = activeState.expectations.length;
-
   /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
     // A node with no reading contributes nothing to the bar rather than a
-    // zero-width segment: the home base load has no derived size yet on most
-    // snapshots, and it must not be drawn as though it were measured at zero.
+    // zero-width segment: when the engine publishes no base load (a reading it
+    // needs is unavailable), it must not be drawn as though measured at zero.
     const watts = (n: FlowNode) => (n.reading === null ? 0 : Math.abs(n.reading));
     const totalW = list.reduce((a, n) => a + watts(n), 0);
     if (!totalW) {
@@ -360,12 +358,15 @@ export default function CaseDiagram({
     });
   };
 
-  const sharesDerived = hasValue(
-    model.byProperty,
-    selected?.virtual
-      ? 'home_base_load_source_shares'
-      : 'sink_adapters_source_shares',
-  );
+  // Every property is published; a snapshot with an unavailable reading
+  // publishes its provenance as nothing at all.
+  const sharesKnown =
+    valueOf(
+      model.byProperty,
+      selected?.virtual
+        ? 'home_base_load_source_shares'
+        : 'sink_adapters_source_shares',
+    ) != null;
 
   return (
     <div className={styles.root}>
@@ -509,8 +510,8 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
-                    {!sharesDerived && (
-                      <span className={styles.vpending}>not yet derived</span>
+                    {!sharesKnown && (
+                      <span className={styles.vpending}>unavailable</span>
                     )}
                   </p>
                   {flowRows(
@@ -524,8 +525,8 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its output went{' '}
-                    {!sharesDerived && (
-                      <span className={styles.vpending}>not yet derived</span>
+                    {!sharesKnown && (
+                      <span className={styles.vpending}>unavailable</span>
                     )}
                   </p>
                   {flowRows(
@@ -563,14 +564,13 @@ export default function CaseDiagram({
 
       <ValueLedger
         title={`${layer} · ${layerTitle(layer, properties)}`}
-        expectations={byLayer[layer]}
+        results={byLayer[layer]}
         catalog={properties}
       />
 
       <p className={styles.certline}>
-        {stateDerived === 1
-          ? '1 value derived by hand for this snapshot'
-          : `${stateDerived} values derived by hand for this snapshot`}
+        Every value is what the engine computed for these readings at this
+        version of the docs.
       </p>
     </div>
   );

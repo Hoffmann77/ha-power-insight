@@ -27,7 +27,7 @@ const sidebars: SidebarsConfig = {
       label: 'Reference cases',
       link: {type: 'doc', id: 'spec/index'},
       // Ladder order: each rung adds one device or flips one flag against the
-      // rung above it. The last two are the specialists. Keep in step with
+      // rung above it. The last three are the specialists. Keep in step with
       // REFERENCE_CASES in docs/spec/cases/all.ts.
       items: [
         'spec/grid-only',
@@ -38,6 +38,7 @@ const sidebars: SidebarsConfig = {
         'spec/battery-basics',
         'spec/captive-battery',
         'spec/group-captivity',
+        'spec/two-pv-systems',
         'spec/mixed-export-house',
       ],
     },

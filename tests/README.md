@@ -17,187 +17,169 @@ network tier or golden-reference tier.
 
 Pure-Python tests for the `PowerInsight` calculation engine. They import
 `custom_components/power_insight/power_insight.py` directly via `importlib`,
-so they need **no Home Assistant** and run in a fraction of a second.
+so they need **no Home Assistant** and run in a few seconds.
 
-All engine tests use the **source-order scenario framework**
-(`scenario_framework.py`, wired in `conftest.py`). A scenario is a class that
-concentrates on one aspect of the engine; inside it, methods appear in repeating
+Engine tests use the **source-order scenario framework** (`scenario_framework.py`,
+wired in `conftest.py`). A scenario is a class whose methods come in repeating
 blocks of `@topology` → `@state` → `test_` methods, and each test binds to the
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
-`reference/` is the **only** place an engine value is asserted. Every expectation
-about what a property *equals* belongs there, and nothing beside it may restate
-one — not on a different wiring, not as an edge case, not "for defence in depth".
-If a reference case could assert it, only a reference case does.
+The strategy is to **assume the engine is right** rather than try to derive
+every output by hand, and to layer three kinds of check on top of that
+assumption, plus the docs showcase:
 
-The four files beside the corpus survive because no reference case could express
-them, whatever the catalog grows to:
+| Directory | Question | Values written by hand |
+| --- | --- | --- |
+| `manual/` | Does each modelling decision we know about still hold? | a few per decision |
+| `automatic/` | Does every property obey its formula and the model's laws, in any home? | none |
+| `frozen/` | Did this change move any engine output at all? | none — recorded from the engine |
+| `reference/` | What does the engine compute for these fixed homes? (docs showcase) | none — nothing is asserted |
 
-- `reference/` — the hand-derived reference corpus, published to the docs site
-  (see below). Every value expectation, for the properties catalogued in
-  `docs/spec/properties.json`.
-- `test_flow_view.py` — the source/sink partition and the gross-power share
-  vectors. The grouping properties return adapter *objects* and the share
-  properties return a `(vector, uid index)` pair; neither is a shape the catalog
-  can describe or a sensor can render, so there is no property name to state
-  them under. Membership, disjointness and index order only.
-- `test_source_shares_invariants.py` — what must hold for *every* wiring, over
-  a few hundred generated topologies that find their own counterexamples. A
-  fixed case states one value; it cannot state "for all".
-- `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
-  reading it was computed from. A question about time: a reference case builds
-  one engine and reads it once, so it cannot see a stale answer.
-- `test_scenario_framework.py` — self-tests for the framework's validation and
-  source-order binding. The corpus runs *on* this machinery and so cannot test
-  it.
+`manual/` is where knowledge accumulates: every time a decision is discovered,
+it gets a block. `automatic/` generalises what the formulas and laws say to
+hundreds of homes. `frozen/` catches everything else by noticing *change* —
+it cannot say an output is right, only that it moved, which is exactly what a
+reviewer needs to see.
 
-Two files were removed once the corpus became the sole owner of values:
-`test_full_topology.py` (one rich home, every property) and
-`test_source_shares.py` (provenance under grid-anchored restrictions). Both held
-only value assertions, so both were the corpus's work sitting in the wrong file.
-Their content is not lost but *owed*: see the coverage note below.
+### Changing the engine
 
-Expected values are hand-derived, compared with `pytest.approx`: exact values
-(`0.5`, `2/3`) at the default tolerance, rounded shares/ratios to three decimals
-(`abs=1e-3`). The engine's own modelling decisions are recorded in
-[`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md).
+1. Make the change and run `uv run --group engine pytest tests/engine`.
+2. If `frozen/` fails, it lists every output that moved, in which home. If
+   nothing should have moved, that list is your bug report.
+3. If the moves are intended, accept them — this re-freezes the snapshots and
+   re-publishes the docs results in one go:
+
+   ```bash
+   uv run --group engine python tools/snapshot.py
+   ```
+
+   Commit the regenerated files with the change. The PR diff then shows every
+   moved output, and the PR template asks you to say why they moved.
+4. If the change settles a modelling decision — a moved output that is now
+   *meant* to be that way — add a hand-derived block to `manual/` and a note
+   to [`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md),
+   so the decision is enforced even if the snapshots are re-frozen later.
+
+In CI, a failing engine job puts the same table of moved outputs in the job
+summary.
 
 ```bash
 uv run --group engine pytest tests/engine   # HA harness not required
 ```
 
-### Coverage the corpus still owes
+### `automatic/` — value-free checks over generated homes
 
-Concentrating every value in `reference/` means the corpus is now the *only*
-thing asserting one, and eight of its nine cases are still `TODO`. Two gaps are
-open until it catches up, both worth closing before a release:
+Nothing here holds an expected number; each check is true of *every* home, and
+runs over a few hundred seeded random ones (`random_homes.py` — varied prices,
+LCOE/LCOS, export permissions, restrictions that name the grid, and a tenth
+with readings that slightly overdraw, as unsynchronised sensors do).
 
-1. **Derivations.** 64 engine properties reach a user's sensor and the catalog
-   now names 50 of them, so every one has a `return TODO` stub waiting in all
-   nine cases — 1266 in total. Until a stub is filled the property has no
-   assertion anywhere, so the count of skips *is* the size of the gap.
+- `test_identities.py` — one executable formula per catalogued property, in
+  terms of the readings, the configuration and the published properties it
+  depends on. Because each identity is stated over its *published* inputs, the
+  checks chain: only the provenance allocation (`sink_adapters_source_shares`)
+  is left as a root. A guard test fails when a property is added to the catalog
+  without an identity.
+- `test_laws.py` — how all properties must move together under a change whose
+  effect is known in advance: scaling power, scaling prices, renaming and
+  reordering devices, adding idle devices, splitting a PV system in two, a
+  meter dropping out, and the model's conservation laws. The catalog's `unit`
+  says how each property must react. Known breaches are held strictly (an
+  `xfail(strict=True)`, a `PUBLISH_WHILE_UNAVAILABLE` list), so a fix fails
+  the test until the marker is removed.
+- `test_source_shares_invariants.py` — the provenance root's own guarantees:
+  rows are normalised, no source is over-drawn, and a restriction is only broken
+  when no allocation could honour it (decided by an independent max-flow
+  oracle).
 
-   Fourteen sensor-facing properties are deliberately left out of the catalog,
-   and adding them would be a mistake rather than progress:
-   - `source_entities_power` / `source_entities_price` are entity-id lists, not
-     values, and `sink_adapters_restriction_deficit` is a sensor attribute.
-   - the eight `*_corrected` variants equal their base property exactly unless
-     somebody has edited a lifetime cost, and every case uses the default
-     factor of 1.0 — so cataloguing them would scaffold 192 stubs whose answer
-     is another stub's answer, while still never exercising the correction
-     arithmetic. Testing that needs a case with a factor other than 1.0, which
-     also needs `Adapter.battery()` to accept one (only `Adapter.pv()` does).
-     The integration tier covers the behaviour today in
-     `test_correction_flow.py`.
-   - the three `*_components` are accumulator plumbing, never displayed.
-2. **Grid-anchored restrictions.** No case wires a sink with
-   `charge_from=("grid", …)`, so the three-tier priority/home/leftover
-   allocation — a battery anchored to the grid competing with a flexible sink
-   over a short import — has no case that reaches it. One new case closes this.
+### `manual/` — one hand-derived harness per engine decision
 
-Until then the generated-topology invariants are the only thing standing over
-the provenance solve, and they check shape and conservation, not specific
-values.
+Each module covers one area with one class — `test_power_flow.py`
+(`TestPowerFlow`: where each sink's power comes from), `test_money.py`
+(`TestMoney`: what it costs, saves, and who gets the credit),
+`test_edge_readings.py` (`TestEdgeReadings`: missing and degenerate readings)
+— and each decision is one block in it: the smallest `@topology` and `@state` that tell the decision
+apart from its alternatives, then `@expect_attribute` claims derived **by
+hand** from the decision, never read back from the engine. The `@state`
+docstring names the decision and its note in
+[`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md), so a
+red test here reads as "this decision no longer holds". Any engine property can
+be claimed, catalogued or not (the restriction deficit, say).
 
-### The reference corpus (`engine/reference/`)
+**Add a block whenever a decision is made** — together with its note, and with
+the engine fix when the decision was found as a bug. `test_decisions.py`
+enforces it: every `Decision:` note in `engine-calculations.md` must end with
+`Pinned by `TestX` in …` (a class that exists here) or `Not pinned in the
+engine tier:` and a reason, and every block's `@state` docstring must open with
+the decision it pins. A red block means either
+the engine or the derivation is wrong; resolving which is a human call. Never
+paste an answer out of a failing test's `actual:` line.
 
-The scenario files above cover what a value assertion cannot express. The
-**reference corpus** holds every value, and answers the question that matters —
-whether what the engine does is *right*.
+### `frozen/` — has any engine output moved?
 
-It is nine small homes, one module per case. Each is an ordinary scenario class
-whose `@expect` methods claim values somebody worked out **by hand from the
-model**, with the engine's answer not in view:
+`snapshots/reference.json` and `snapshots/generated.json` record every
+catalogued output — plus the restriction deficit — for every reference-case
+snapshot and for 60 fixed generated homes. `test_frozen.py` recomputes them and
+fails with a table of whatever moved. `store.py` holds the machinery:
 
-```python
-class TestGridOnly(ReferenceCase):
-    """One meter and nothing else. ...
+- Generated homes' *inputs* are stored in the file and replayed, never
+  re-drawn, so changing the random generator cannot make the snapshot noisy.
+  Re-drawing is deliberate: `tools/snapshot.py --redraw`.
+- Values are stored to 12 significant digits and compared at a relative
+  tolerance of 1e-9, so float noise from a refactor is not a change.
+- A frozen corpus only notices what its homes exercise. The reserve bug fixed
+  alongside `two-pv-systems` moved outputs in that one home and in none of the
+  60 generated ones. When a bug is found, give its home a place in the
+  reference cases (and its decision a block in `manual/`), so the snapshot
+  covers it from then on.
 
-    Decides:
+### `reference/` — the fixed homes shown in the docs
 
-    * With no local device, the whole gross power is the home base load.
-    """
+Ten small homes, one module per case: a wiring, a few snapshots of readings,
+and prose in docstrings. They assert nothing. `tools/snapshot.py` passes every
+snapshot through the engine and writes every catalogued property to
+`docs/spec/cases/*.json`, which the docs site renders. The JSON is committed,
+and `reference/test_corpus.py` fails when it no longer matches the engine, so a
+docs version cut from any commit freezes that commit's own results.
 
-    case_id = "grid-only"
-    title = "Grid only"
+The prose lives in docstrings: a case class's is the page summary (everything
+above its `Shows:` list), and a `@state`'s is the caption under its snapshot
+card, where a paragraph opening `Open question:` becomes a callout.
 
-    @topology
-    def wiring(self):
-        return (Adapter.grid(),)
+If you cannot run the command locally, **Actions → Update engine snapshots →
+Run workflow** does it on the branch you pick and commits the result (tick *dry
+run* to only see what moved). It is manual on purpose: re-freezing is accepting
+that outputs moved, a decision for the reviewer, not something to automate. A
+commit pushed by that workflow uses `GITHUB_TOKEN`, and GitHub does not start
+new workflow runs for those, so re-run the checks from the Actions tab (or push
+anything else) if your PR needs green checks to merge.
 
-    @state
-    def import_only(self):
-        """The house runs on the grid alone; every watt is base load."""
-        return State(grid=1200, price=F(3, 10))
+### Beside the three
 
-    @expect("gross_power")
-    def test_import_only_gross_power(self):
-        return 1200
-```
+- `test_flow_view.py` — the source/sink partition and the gross-power share
+  vectors. These return adapter *objects* and `(vector, uid index)` pairs,
+  which no catalogued property describes. Membership, disjointness and index
+  order only.
+- `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
+  reading it was computed from: a question about time, which no single
+  snapshot can ask.
+- `test_scenario_framework.py` — self-tests for the framework's validation and
+  source-order binding.
 
-`@expect("<property>")` is `expect_attribute` with the tolerance the property's
-unit deserves, looked up from `docs/spec/properties.json` — so a misspelled
-name raises at import rather than passing silently. Return `None` to claim the
-engine should publish *nothing at all* here; that is asserted just as strictly
-as a number and never matches a zero.
+### Known gaps
 
-**Every snapshot already has a method for every property**, in the catalog's
-dependency order, most of them still reading `return TODO`. A stub skips rather
-than fails and publishes nothing — it claims nothing, because nobody has
-claimed anything. Filling one in is a one-line edit:
-
-```python
-    @expect("gross_power")
-    def test_import_only_gross_power(self):
-        return TODO      # <- replace with the value you worked out
-```
-
-The skip carries the property's definition, formula and steps straight from the
-catalog, so running a case with `-rs` is a worklist with the instructions in it:
-
-```bash
-uv run --group engine pytest tests/engine/reference/test_grid_only.py -rs
-```
-
-`reference/test_corpus.py` keeps that scaffold complete: add a property to the
-catalog and every snapshot tells you it needs a method, rather than the gap
-going unnoticed.
-
-A red test means **either** the engine is broken **or** the derivation was, and
-the corpus has no opinion about which — that call is yours, and it is the whole
-point. There is no third state to park a disagreement in.
-
-Never paste an answer out of a failing test's `actual:` line. That records what
-the code already does, which proves nothing and quietly turns the corpus into a
-changelog.
-
-**The same classes are the documentation.** `ReferenceCase.publish()` reads a
-case back out — wiring, readings, prose, and every claimed value — using the
-same source-order binding pytest binds by, so a published page cannot describe
-a snapshot differently from the way it is asserted. The prose lives in
-docstrings: the class's is the page summary (everything above its `Decides:`
-list), and a `@state`'s is the caption under its snapshot card, where a
-paragraph opening `Open question:` becomes a callout.
-
-`tools/export_cases.py` writes that out to `docs/spec/cases/*.json`, and
-`reference/test_corpus.py` fails if what is on disk no longer matches:
-
-```bash
-uv run --group engine python tools/export_cases.py           # re-export
-uv run --group engine python tools/export_cases.py --check   # just check
-```
-
-If you filled a value in and forgot to re-export, **Actions → Export reference
-cases → Run workflow** does it on the branch you pick and commits the result.
-It is manual on purpose: an automatic export would land bot commits on branches
-while you are working on them, and the staleness test already catches the
-mistake in seconds. Tick *dry run* to see what would change without committing.
-
-One wrinkle worth knowing: a commit pushed by that workflow uses `GITHUB_TOKEN`,
-and GitHub does not start new workflow runs for those. The new head lands with
-no checks against it, so re-run them from the Actions tab (or push anything
-else) if your PR needs green checks to merge.
+- **Correction factors.** The eight `*_corrected` properties are not in the
+  catalog, and no engine test sets a factor other than 1.0; the integration
+  tier covers them in `test_correction_flow.py`.
+- **Open finding** held by `manual/test_power_flow.py`: two sinks with the
+  same restriction can get different rows when the draws exactly exhaust the
+  sources (strict xfail on the `unequal_draws` block).
+- **Open findings** held by `test_laws.py`: the proportional split still drifts
+  when a PV system is split in two with a base load present (the strict xfail),
+  six properties still publish while a meter is unavailable
+  (`PUBLISH_WHILE_UNAVAILABLE`), and readings that overdraw break source
+  balance, so the conservation law only checks balanced homes.
 
 ## Integration tier (`integration/`)
 
