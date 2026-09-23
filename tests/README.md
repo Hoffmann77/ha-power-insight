@@ -31,8 +31,27 @@ about what a property *equals* belongs there, and nothing beside it may restate
 one — not on a different wiring, not as an edge case, not "for defence in depth".
 If a reference case could assert it, only a reference case does.
 
-The four files beside the corpus survive because no reference case could express
-them, whatever the catalog grows to:
+The files beside the corpus survive because no reference case could express
+them, whatever the catalog grows to. Two of them are a prototype of a
+value-free strategy that checks every catalogued property without a single
+hand-derived number:
+
+- `test_identities.py` — one executable formula per catalogued property, in
+  terms of the readings, the configuration and the published properties it
+  depends on, checked over ~200 random homes (`random_homes.py`). Because each
+  identity is stated over its *published* inputs, the checks chain: only the
+  provenance allocation (`sink_adapters_source_shares`) is left as a root.
+  `test_every_catalogued_property_has_exactly_one_identity_or_is_a_root` fails
+  when a property is added to the catalog without one.
+- `test_laws.py` — how all properties must move together under a change whose
+  effect is known in advance: scaling power, scaling prices, renaming and
+  reordering devices, adding idle devices, splitting an array into strings, a
+  meter dropping out, and the model's conservation laws. The catalog's `unit`
+  says how each property must react. Known breaches are held strictly (an
+  `xfail(strict=True)`, a `PUBLISH_WHILE_UNAVAILABLE` list), so a fix fails the
+  test until the marker is removed.
+
+The rest:
 
 - `reference/` — the hand-derived reference corpus, published to the docs site
   (see below). Every value expectation, for the properties catalogued in
