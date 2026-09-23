@@ -22,8 +22,9 @@ sensors. More consumer sensors are planned.
 
 ### Power entity
 
-> Sensor that reports this device's power in W, kW or MW. Positive = power drawn
-> by the consumer.
+> Sensor that reports this device's power in W, kW or MW. Negative = power drawn
+> by the consumer. Most smart plugs report their draw as a positive value — turn
+> on **Invert power direction** for those.
 
 ### Invert power direction
 
