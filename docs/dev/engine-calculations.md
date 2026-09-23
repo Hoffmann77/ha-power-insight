@@ -71,9 +71,9 @@ solve:
 
 A set of sinks can collectively exhaust the sources it is allowed while no
 single member is individually stuck. Two batteries each restricted to
-(east, west) and each drawing 100 W are individually fine — either string
+(east, west) and each drawing 100 W are individually fine — either PV system
 could cover either battery — but together they need every watt the two
-strings make, so a third sink allowed to use east must not touch it.
+PV systems make, so a third sink allowed to use east must not touch it.
 
 Asking "what must *this* sink take from this source?" one sink at a time
 cannot see that, and no local patch fixes it: it is Hall's condition, which
@@ -148,15 +148,15 @@ draw is reported as the deficit.
 :::note[Decision: the sink with somewhere else to go is the one that yields]
 
 Restrictions can conflict badly enough that *no* allocation honours them all,
-and then more than one way of breaking them costs the same. Two strings of
-100 W each; `bat_a` and `bat_b` allowed both and drawing 100 W each; `bat_c`
-allowed only the east string and drawing 100 W. Captive demand is 300 W
+and then more than one way of breaking them costs the same. Two PV systems of
+100 W each, east and west; `bat_a` and `bat_b` allowed both and drawing 100 W
+each; `bat_c` allowed only east and drawing 100 W. Captive demand is 300 W
 against 200 W of local supply, so 100 W of restriction must break — but it
 could break on `bat_c` alone, or 50 W each on `bat_a` and `bat_b`, and both
 come to the same total.
 
-The engine serves the **most constrained sink first**: `bat_c` takes the east
-string outright and the deficit falls on `bat_a` and `bat_b`, evenly.
+The engine serves the **most constrained sink first**: `bat_c` takes east
+outright and the deficit falls on `bat_a` and `bat_b`, evenly.
 
 Two reasons. It tells the more plausible story — a device with exactly one
 permitted source, and that source producing, is almost certainly using it,
@@ -200,17 +200,17 @@ Pinned by [`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx)
 `bat_1` on grid+`pv_1` and `bat_2` on grid+`pv_2` drawing 400 W each; `bat_3`
 and `cons_1` on PV only, 500 W each; home base load 200 W.
 
-- Neither `bat_1` nor `bat_2` is forced onto the grid — either string could
+- Neither `bat_1` nor `bat_2` is forced onto the grid — either PV system could
   cover its own battery on its own — so neither reserves any of it, and the
   400 W import splits in proportion to their (equal) draws: 200 W each.
-- Each covers its remaining 200 W from its own string, so both read
-  `grid 0.5` / own string `0.5`.
+- Each covers its remaining 200 W from its own PV system, so both read
+  `grid 0.5` / own PV system `0.5`.
 - That leaves `pv_1 800` + `pv_2 400` for `bat_3` 500 + `cons_1` 500 + home 200,
   which is exactly 1200 W, so those three read `pv_1 2/3`, `pv_2 1/3`.
 - Columns balance to the watt: grid 400, `pv_1` 1000, `pv_2` 600.
 
-The asymmetry between an abundant and a scarce string is real, but it lands on
-*which* string each battery keeps — not on how they divide a shared import.
+The asymmetry between an abundant and a scarce PV system is real, but it lands
+on *which* PV system each battery keeps — not on how they divide a shared import.
 
 ## The monetary model
 
@@ -460,6 +460,11 @@ The engine tests use the source-order scenario framework (see
 Expected values are **hand-derived from first principles**, not read back from
 the engine, so a regression in the model flips a test red rather than silently
 rewriting the "expected" answer.
+
+Every decision on this page gets an explicit harness in `tests/engine/manual/`:
+one block per decision, the smallest wiring that tells it apart from its
+alternatives, with values derived by hand from the decision. When a decision is
+added here, its block is added there.
 
 **Approximation policy.** Share and ratio expectations are compared with
 `pytest.approx(..., abs=1e-3)` — they must agree to **three decimal places**

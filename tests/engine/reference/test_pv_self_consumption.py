@@ -7,9 +7,9 @@ from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
 class TestPvSelfConsumption(ReferenceCase):
-    """One string added to the grid, and nothing restricted. Two sources are
+    """One PV system added to the grid, and nothing restricted. Two sources are
     enough for the raw proportional mix, for the divergence between what power
-    costs now and what it costs levelized, and for a string that is drawing
+    costs now and what it costs levelized, and for a PV system that is drawing
     rather than producing.
 
     Decides:
@@ -34,7 +34,7 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @state
     def sunny_partial(self):
-        """Grid and string both supplying; the base load takes them in proportion."""
+        """Grid and PV system both supplying; the base load takes them in proportion."""
         return State(grid=800, pv1=600, price=F(3, 10))
 
     # Layer 1 — Readings and totals.
@@ -273,7 +273,7 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @state
     def pv_covers_all(self):
-        """The string covers the house exactly. The grid is present but
+        """The PV system covers the house exactly. The grid is present but
         contributes nothing.
         """
         return State(grid=0, pv1=600, price=F(3, 10))
@@ -755,7 +755,7 @@ class TestPvSelfConsumption(ReferenceCase):
 
     @state
     def pv_unavailable(self):
-        """The string's sensor has dropped out; the grid still reads, but the
+        """The PV system's sensor has dropped out; the grid still reads, but the
         total cannot be trusted.
         """
         return State(grid=1000, pv1=None, price=F(3, 10))

@@ -7,7 +7,7 @@ A design brief for an interactive power-flow graphic to embed in these docs.
 Power Insight is a Home Assistant integration that answers questions like
 *"where did the power my battery just charged with actually come from?"* and
 *"what did that save me?"*. The hard part is a pure-Python calculation engine
-that, every snapshot, splits the house's power between grid, PV strings,
+that, every snapshot, splits the house's power between grid, PV systems,
 batteries, consumers and the unmetered base load — honouring per-device rules
 like *"this battery may only charge from solar"*.
 

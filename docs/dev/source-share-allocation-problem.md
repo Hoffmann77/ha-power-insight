@@ -21,7 +21,7 @@ minimum cut degenerate.
 ## Context
 
 Home energy integration. Every few seconds we get a snapshot of instantaneous
-power readings (watts) from a house: a grid meter, some PV strings, some
+power readings (watts) from a house: a grid meter, some PV systems, some
 batteries, some individually-metered appliances. From that snapshot the engine
 answers, for every device currently *drawing* power, **where that power came
 from** — `{sink: {source: share}}`, each row summing to 1. Those shares drive
@@ -34,7 +34,7 @@ The property is `PowerInsight.sink_adapters_source_shares`
 
 One snapshot gives:
 
-- **Sources** `k` with output `s_k > 0` — grid import, producing PV strings,
+- **Sources** `k` with output `s_k > 0` — grid import, producing PV systems,
   discharging batteries.
 - **Sinks** `u` with draw `d_u > 0` — grid export, charging batteries, appliance
   loads, PV standby.

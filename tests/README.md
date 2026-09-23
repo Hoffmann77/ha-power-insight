@@ -26,13 +26,25 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
-`reference/` is the **only** place an engine value is asserted. Every expectation
-about what a property *equals* belongs there, and nothing beside it may restate
-one — not on a different wiring, not as an edge case, not "for defence in depth".
-If a reference case could assert it, only a reference case does.
+Hand-derived engine values are asserted in exactly two places, and they answer
+different questions:
 
-The files beside the corpus survive because no reference case could express
-them, whatever the catalog grows to. Two of them are a prototype of a
+- `manual/` — one explicit harness per **engine decision**. Each module covers
+  one area (`test_power_flow.py`: where each sink's power comes from) with one
+  class, and each decision is one block in it: the smallest `@topology` and
+  `@state` that tell the decision apart from its alternatives, then
+  `@expect_attribute` claims derived by hand from the decision. The `@state`
+  docstring names the decision and the note in
+  [`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md) that
+  states it, so a red test here reads as "this decision no longer holds". Any
+  engine property can be claimed, catalogued or not (the restriction deficit,
+  say). **Add a block whenever a decision is made** — typically together with
+  the note, and with the engine fix when the decision was found as a bug.
+- `reference/` — the documentation corpus: small homes published to the docs
+  site, each snapshot declaring every catalogued property (see below).
+
+The files beside them survive because no fixed case could express them. Two of
+them are a prototype of a
 value-free strategy that checks every catalogued property without a single
 hand-derived number:
 

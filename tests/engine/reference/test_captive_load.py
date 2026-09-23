@@ -7,7 +7,7 @@ from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
 class TestCaptiveLoad(ReferenceCase):
-    """The same three devices, with the consumer now restricted to the string.
+    """The same three devices, with the consumer now restricted to the PV system.
     This is the smallest wiring in which a restriction can be honoured at all —
     and the smallest in which one can fail, which is where the restriction
     deficit is first published.

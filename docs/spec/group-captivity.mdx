@@ -1,6 +1,6 @@
 ---
 title: Group captivity
-description: "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
+description: "Two batteries are each allowed both PV systems, and neither is individually stuck \u2014 but together they need every watt the two PV systems make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
 ---
 
 import {referenceCase, PROPERTIES} from './cases/all';
@@ -48,9 +48,9 @@ here; a snapshot whose provenance is still undecided has no flows to draw.
 This is the case the max-flow solver exists for, and it is worth walking
 through slowly.
 
-`bat_a` and `bat_b` may each charge from either string. Neither is individually
-stuck — either string could cover either battery. But together they draw exactly
-what the two strings make, so as a *pair* they need every local watt. Any
+`bat_a` and `bat_b` may each charge from either PV system. Neither is
+individually stuck — either PV system could cover either battery. But together
+they draw exactly what the two PV systems make, so as a *pair* they need every local watt. Any
 allocation that gives local power to somebody else leaves one of them short.
 
 Asking "what must **this** sink take from this source?" one sink at a time

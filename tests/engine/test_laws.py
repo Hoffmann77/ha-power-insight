@@ -13,8 +13,8 @@ and per-kWh prices do not. Money scales with price; watts, shares and ratios do
 not.
 
 Laws catch what identities cannot: a result that depends on something it
-should not (a device's name, the order adapters were registered in, how many
-strings one array was registered as), a lost unit conversion that happens to
+should not (a device's name, the order adapters were registered in, whether
+an installation is metered as one PV system or two), a lost unit conversion that happens to
 cancel in a formula, and whether unavailability propagates the way the model
 promises.
 """

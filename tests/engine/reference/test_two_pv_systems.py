@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tests.engine.reference.case import TODO, F, ReferenceCase, expect
-from tests.engine.scenario_framework import Adapter, State, matches, show, state, topology
+from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
 class TestTwoPvSystems(ReferenceCase):
@@ -113,37 +113,11 @@ class TestTwoPvSystems(ReferenceCase):
     # sink spreads its draw over east and west in proportion to what they have
     # left, and they are equal, so each sink takes half from each.
 
-    #: Who gets how many watts from whom — the whole answer of this case in
-    #: one table. Every row sums to that sink's draw, and every column to that
-    #: PV system's output.
-    DISTRIBUTION = {
-        "grid": {"east": 800, "west": 800, "carport": 200},
-        "plug": {"east": 200, "west": 200, "carport": 0},
-    }
-
-    def test_every_watt_spoken_for_power_distribution(self, power_insight, state):
-        """The watts each sink draws from each PV system, and no deficit.
-
-        The engine publishes provenance as shares; multiplied back by each
-        sink's draw they must give exactly the table above. The plug's
-        restriction can be honoured, so no restriction deficit may be reported.
-        """
-        shares = power_insight.sink_adapters_source_shares
-        watts = {
-            sink: {src: share * -state.readings[sink] for src, share in row.items()}
-            for sink, row in shares.items()
-        }
-        assert matches(self.DISTRIBUTION, watts, abs_tol=1e-6), (
-            f"expected {show(self.DISTRIBUTION)}\n  actual   {show(watts)}"
-        )
-        assert power_insight.sink_adapters_restriction_deficit == {}, (
-            f"a deficit was reported: {power_insight.sink_adapters_restriction_deficit}"
-        )
-
     @expect("sink_adapters_source_shares")
     def test_every_watt_spoken_for_sink_adapters_source_shares(self):
-        """The distribution table, each row over its sink's draw: export 800,
-        800 and 200 of 1800 W; plug 200, 200 and 0 of 400 W."""
+        """Export: 800 W each from east and west and 200 W from the carport,
+        over 1800 W. Plug: 200 W each from east and west and none from the
+        carport, over 400 W — its restriction holds."""
         return {
             "grid": {"east": F(4, 9), "west": F(4, 9), "carport": F(1, 9)},
             "plug": {"east": F(1, 2), "west": F(1, 2), "carport": 0},

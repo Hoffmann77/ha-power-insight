@@ -1,7 +1,7 @@
 {
   "id": "captive-load",
   "title": "Captive load",
-  "summary": "The same three devices, with the consumer now restricted to the string. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published.",
+  "summary": "The same three devices, with the consumer now restricted to the PV system. This is the smallest wiring in which a restriction can be honoured at all \u2014 and the smallest in which one can fail, which is where the restriction deficit is first published.",
   "decides": [
     "A restricted sink is served from its allowed sources before anything unrestricted shares them.",
     "Serving the captive sink first pushes the unrestricted base load onto the grid.",

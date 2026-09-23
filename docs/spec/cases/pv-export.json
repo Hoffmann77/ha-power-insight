@@ -1,7 +1,7 @@
 {
   "id": "pv-export",
   "title": "PV export",
-  "summary": "The same two devices, with the string now permitted to export. Reversing the grid changes its kind rather than its sign: it stops being a source and becomes a sink, which is all it takes to switch on the export channel and its compensation.",
+  "summary": "The same two devices, with the PV system now permitted to export. Reversing the grid changes its kind rather than its sign: it stops being a source and becomes a sink, which is all it takes to switch on the export channel and its compensation.",
   "decides": [
     "An exporting grid is a sink, not a source with a negative reading.",
     "Export compensation is earned by the sources the export was drawn from.",
@@ -30,7 +30,7 @@
   "states": [
     {
       "id": "export_surplus",
-      "note": "The string outruns the house; the surplus leaves through the grid.",
+      "note": "The PV system outruns the house; the surplus leaves through the grid.",
       "readings": {
         "grid": "-400",
         "pv1": "900"
@@ -40,7 +40,7 @@
     },
     {
       "id": "export_all",
-      "note": "Everything the string makes is exported: the home base load is exactly zero.",
+      "note": "Everything the PV system makes is exported: the home base load is exactly zero.",
       "readings": {
         "grid": "-900",
         "pv1": "900"

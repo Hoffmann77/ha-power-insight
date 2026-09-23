@@ -7,7 +7,7 @@ from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
 class TestPvExport(ReferenceCase):
-    """The same two devices, with the string now permitted to export. Reversing
+    """The same two devices, with the PV system now permitted to export. Reversing
     the grid changes its kind rather than its sign: it stops being a source and
     becomes a sink, which is all it takes to switch on the export channel and
     its compensation.
@@ -33,7 +33,7 @@ class TestPvExport(ReferenceCase):
 
     @state
     def export_surplus(self):
-        """The string outruns the house; the surplus leaves through the grid."""
+        """The PV system outruns the house; the surplus leaves through the grid."""
         return State(grid=-400, pv1=900, price=F(1, 4))
 
     # Layer 1 — Readings and totals.
@@ -272,7 +272,7 @@ class TestPvExport(ReferenceCase):
 
     @state
     def export_all(self):
-        """Everything the string makes is exported: the home base load is exactly
+        """Everything the PV system makes is exported: the home base load is exactly
         zero.
         """
         return State(grid=-900, pv1=900, price=F(1, 4))

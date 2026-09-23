@@ -30,8 +30,8 @@ sink, the demand its *other* allowed sources cannot cover — Hall's feasibility
 condition applied one sink at a time. Hall's condition is really about every
 *group* of sinks, and captivity can be a property of a group with no captive
 member: two batteries each restricted to (east, west) and each drawing 100 W are
-individually fine (either string could cover either battery) but jointly need
-every watt the two strings make. Checking sinks one at a time cannot see that,
+individually fine (either PV system could cover either battery) but jointly
+need every watt the two PV systems make. Checking sinks one at a time cannot see that,
 so a third sink allowed to use east may take a slice the pair needed. The oracle
 turns "we know of no counterexample" into a number: how many of N random
 topologies hit it.

@@ -7,8 +7,8 @@ from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
 class TestGroupCaptivity(ReferenceCase):
-    """Two batteries are each allowed both strings, and neither is individually
-    stuck — but together they need every watt the two strings make. Deciding
+    """Two batteries are each allowed both PV systems, and neither is individually
+    stuck — but together they need every watt the two PV systems make. Deciding
     feasibility one sink at a time cannot see that; this is the case the max-
     flow solver exists for.
 

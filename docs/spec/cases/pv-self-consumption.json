@@ -1,7 +1,7 @@
 {
   "id": "pv-self-consumption",
   "title": "PV self-consumption",
-  "summary": "One string added to the grid, and nothing restricted. Two sources are enough for the raw proportional mix, for the divergence between what power costs now and what it costs levelized, and for a string that is drawing rather than producing.",
+  "summary": "One PV system added to the grid, and nothing restricted. Two sources are enough for the raw proportional mix, for the divergence between what power costs now and what it costs levelized, and for a PV system that is drawing rather than producing.",
   "decides": [
     "An unrestricted sink's provenance row is the raw source mix.",
     "PV standby is a sink drawing from the mix, not negative production.",
@@ -31,7 +31,7 @@
   "states": [
     {
       "id": "sunny_partial",
-      "note": "Grid and string both supplying; the base load takes them in proportion.",
+      "note": "Grid and PV system both supplying; the base load takes them in proportion.",
       "readings": {
         "grid": "800",
         "pv1": "600"
@@ -41,7 +41,7 @@
     },
     {
       "id": "pv_covers_all",
-      "note": "The string covers the house exactly. The grid is present but contributes nothing.",
+      "note": "The PV system covers the house exactly. The grid is present but contributes nothing.",
       "readings": {
         "grid": "0",
         "pv1": "600"
@@ -61,7 +61,7 @@
     },
     {
       "id": "pv_unavailable",
-      "note": "The string's sensor has dropped out; the grid still reads, but the total cannot be trusted.",
+      "note": "The PV system's sensor has dropped out; the grid still reads, but the total cannot be trusted.",
       "readings": {
         "grid": "1000",
         "pv1": null

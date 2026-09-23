@@ -1,7 +1,7 @@
 {
   "id": "group-captivity",
   "title": "Group captivity",
-  "summary": "Two batteries are each allowed both strings, and neither is individually stuck \u2014 but together they need every watt the two strings make. Deciding feasibility one sink at a time cannot see that; this is the case the max- flow solver exists for.",
+  "summary": "Two batteries are each allowed both PV systems, and neither is individually stuck \u2014 but together they need every watt the two PV systems make. Deciding feasibility one sink at a time cannot see that; this is the case the max- flow solver exists for.",
   "decides": [
     "Feasibility is a property of groups of sinks, not of single sinks.",
     "A flexible sink must not take local power a tight group needs.",
