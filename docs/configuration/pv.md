@@ -11,57 +11,44 @@ Add it with **Add device → PV system**.
 
 ### Name
 
-> A unique name for this device, for example "Rooftop Solar". Used as the device
-> name in Home Assistant.
+> For example "Rooftop" or "Heat pump". Used in the device and sensor names.
 
-### Power entity
+### Power sensor
 
-> Sensor that reports this device's power in W, kW or MW.
->
-> **Sign convention:** PV — positive = producing, negative = consuming
-> (standby). Use **Invert power direction** if your sensor uses the opposite
-> sign.
+> Sensor with this device's power in W, kW or MW. Positive = producing,
+> negative = drawing (standby).
 
-### Invert power direction
+### Invert power sign
 
-> Turn on if your sensor reports power with the opposite sign to the expected
-> convention.
+> Turn on if your sensor uses the opposite sign.
 
-### Exports power to grid
+### Feeds into the grid
 
-> Turn on if this device can feed surplus power back to the grid. Enables
-> export-compensation tracking when the corresponding option is active.
+> Turn on if this device can feed power into the grid.
 
 Default: **on** for PV systems. When off, the *Production to grid* (+ ratio),
 *Share of grid export* and export-compensation sensors are not created.
 
-### Export compensation rate
+### Export compensation per kWh
 
-> The amount you are paid per kWh of power exported to the grid, in your
-> currency. **Required when export-compensation or savings sensors are enabled.**
+> What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors.
 
 Default: `0.08`. This is your feed-in tariff.
 
 ### Lifetime production
 
-> Total energy in kWh you expect this device to produce over its entire
-> lifetime. Combined with the total lifetime cost to derive the levelized
-> (per-kWh) cost. **Required when any levelized sensor is enabled.**
+> Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors.
 
-### Total lifetime cost
+### Lifetime cost
 
-> Total purchase, installation, and expected maintenance cost of this device over
-> its lifetime, in your currency. Combined with lifetime production to derive the
-> levelized cost per kWh. **Required when any levelized cost sensor is enabled.**
+> Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors.
 
 Together, *lifetime cost ÷ lifetime production* gives this system's
 [**LCOE**](../concepts.md#lcoe-levelized-cost-of-electricity).
 
 ### CO₂ footprint
 
-> Total CO₂ emitted to manufacture and install this device (in kg). Used to
-> derive a levelized CO₂ intensity per kWh produced. Required when any levelized
-> CO₂ sensor is enabled.
+> CO₂ emitted to make and install this device, in kg. Optional; reserved for CO₂ sensors.
 
 :::note
 
@@ -85,7 +72,7 @@ consistent.
 | Production to batteries (+ ratio) · Share of battery charging | W / % / % | *Power distribution* options (only when a battery charges from this system) |
 | Production to system standby (+ ratio) · Share of system standby | W / % / % | *Power distribution* options |
 | Export compensation rate | currency/h | *Export compensation rate* |
-| Total export compensation | currency | *Accumulated export compensation* |
+| Total export compensation | currency | *Total export compensation* |
 | Operating cost rate (+ Total) | currency/h, currency | *Cost method = Standard* (+ *Accumulate*) |
 | Levelized operating cost rate (+ Total) | currency/h, currency | *Cost method = Levelized* (+ *Accumulate*) |
 | Self-consumption cost savings rate | currency/h | *Savings method = Standard* |

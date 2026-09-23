@@ -108,4 +108,4 @@ PV inverter's night draw — so the name must carry the direction.
 The option that creates a sensor should use the same words the entity uses
 (`strings.json` / `translations/*.json`). For example the toggle that creates
 `Total export compensation` is labelled *Total export compensation*, not
-*Accumulated export compensation*.
+*Total export compensation*.

@@ -13,7 +13,7 @@ Power Insight expects instantaneous power sensors with these signs:
 | **PV** | Producing | Consuming (standby) |
 | **Battery** | Discharging | Charging |
 
-If a sensor uses the opposite sign, turn on **Invert power direction** on that
+If a sensor uses the opposite sign, turn on **Invert power sign** on that
 device. Power Insight normalises W / kW / MW automatically, so the unit itself
 doesn't matter — only the sign.
 
@@ -156,7 +156,7 @@ This is why the reconfigure page warns:
 feed-in tariff). It drives:
 
 - **Export compensation rate** (currency/h) = current export power × the rate.
-- **Accumulated export compensation** = that rate integrated over time.
+- **Total export compensation** = that rate integrated over time.
 
 ## How savings and financial return are calculated
 

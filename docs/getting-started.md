@@ -17,20 +17,21 @@ When you add the integration you are asked for two things:
 
 ### Name
 
-> A short name for this energy-mix configuration, for example "Home" or
-> "Office". Used as the device name in Home Assistant.
+> For example "Home". Used as the prefix of every device and sensor name.
 
-### Sensor preset
+### Sensor set
 
-Pick a starting point for which sensors Power Insight creates. Each preset builds
-on the previous one — you can always change this later in the integration's
-**Options**.
+Pick a starting set of sensors. Each set builds on the previous one — you can
+change it at any time in the integration's **Options**.
 
-| Preset | What it adds |
+| Sensor set | What it adds |
 |---|---|
-| **Minimal** | Distribution ratios (%), power-source attribution, and financial-return sensors. A lightweight overview of your energy mix. |
-| **Recommended** | Adds distribution power (W), charging-source attribution, and running totals for export compensation, costs and savings. The sweet spot for most installations. |
-| **Extended** | Also adds real-time cost, savings and export-compensation rate sensors (€/h or $/h) plus levelized cost sensors. Cost sensors need a live price entity on your grid adapter; levelized sensors need lifetime production and cost values per device. |
+| **Minimal** | Power split (%), where each consumer's power comes from, and financial return. |
+| **Recommended** | Adds the power split in W, battery charging sources, and running totals for costs, savings and export compensation. |
+| **Extended** | Adds live cost, savings and export compensation rates (per hour) and each device's share of the home totals. |
+
+Cost, savings and financial return sensors need an electricity price sensor on
+your grid connection; levelized ones also need lifetime values per device.
 
 :::note
 
@@ -50,7 +51,7 @@ to add each part of your energy mix. Four device types are available:
   against the grid.
 - **PV system** — a solar inverter / array.
 - **Battery** — a home battery / storage system.
-- **Electrical consumer** — an appliance, EV charger, heat pump, etc.
+- **Consumer** — an appliance, EV charger, heat pump, etc.
 
 :::warning[Add the grid first]
 

@@ -10,40 +10,36 @@ Add it with **Add device → Battery**.
 
 ### Name
 
-> A unique name for this device, for example "Home Battery". Used as the device
-> name in Home Assistant.
+> For example "Rooftop" or "Heat pump". Used in the device and sensor names.
 
-### Power entity
+### Power sensor
 
-> Sensor that reports this device's power in W, kW or MW.
->
-> **Sign convention:** battery — positive = discharging, negative = charging. Use
-> **Invert power direction** if your sensor uses the opposite sign.
+> Sensor with this device's power in W, kW or MW. Positive = discharging,
+> negative = charging.
 
-### Invert power direction
+### Invert power sign
 
-> Turn on if your sensor reports power with the opposite sign to the expected
-> convention.
+> Turn on if your sensor uses the opposite sign.
 
-### Exports power to grid
+### Feeds into the grid
 
-> Turn on if this device can feed surplus power back to the grid. Enables
-> export-compensation tracking when the corresponding option is active.
+> Turn on if this device can feed power into the grid.
 
 Default: **off** for batteries.
 
-### Export compensation rate
+### Export compensation per kWh
 
-> The amount you are paid per kWh of power exported to the grid, in your
-> currency. Required when export-compensation or savings sensors are enabled.
+> What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors.
 
 Default: `0.0`.
 
-### Charges from
+### Power sources / Charges from
 
-> Select which sources this battery can charge from — the grid and/or specific PV
-> systems you have configured. Power Insight uses this to trace how much of the
-> battery's stored energy came from each source.
+> **Whole mix** — the power comes from all sources in proportion to what they supply.
+>
+> **Specific devices** — only from the sources you select below, e.g. a battery that charges from solar only.
+
+> The sources this battery charges from. Only used with **Specific devices**.
 
 This drives the battery's blended charging cost and its **charging-source-share**
 sensors. Batteries are never selectable as a charge source for another battery.
@@ -56,7 +52,7 @@ stays correct.
 
 :::
 
-### Lifetime production / Total lifetime cost / CO₂ footprint
+### Lifetime production / Lifetime cost / CO₂ footprint
 
 These behave exactly as for a [PV system](pv.md#lifetime-production). Together,
 *lifetime cost ÷ lifetime throughput* gives this battery's
@@ -76,7 +72,7 @@ plus:
 
 | Sensor | Unit | Enabled by |
 |---|---|---|
-| Charging source shares (one per configured source) | % | *Charging source shares (%)* |
+| Charging source shares (one per configured source) | % | *Charging sources (%)* |
 
 These show how much of the battery's current charging power comes from each
 source — for example "currently 70 % from solar, 30 % from the grid". Only
