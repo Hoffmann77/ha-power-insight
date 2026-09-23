@@ -12,16 +12,15 @@ friendly name as **`{device} {entity name}`**:
 
 | Scope | Device name | Example entity name | Full name |
 |---|---|---|---|
-| Hub (whole home) | `PowerInsight` | `Combined cost rate` | *PowerInsight Combined cost rate* |
-| Per adapter | `PowerInsight {device}` | `Export power` | *PowerInsight Rooftop Export power* |
+| Whole home | `{title} Combined` | `Cost rate` | *Home Combined Cost rate* |
+| Per adapter | `{title} {device}` | `Import power` | *Home Grid Import power* |
 
 Consequences for the `name=` string on a `PowerInsightSensorDescription`:
 
 - **Never repeat the device or adapter** in the entity name — it is already the
-  prefix (write `Export power`, not `PV export power`).
-- **Whole-home aggregates carry the `Combined` prefix** (`Combined cost rate`).
-  The hub device is just `PowerInsight`, so the prefix is what distinguishes an
-  aggregate from a same-named per-device sensor at a glance.
+  prefix (write `Production to grid`, not `PV production to grid`).
+- **Whole-home aggregates live on the `{title} Combined` device** and do *not*
+  carry a `Combined` prefix themselves — the device name supplies it.
 - Sentence-case the name (`Export compensation rate`), matching Home Assistant
   conventions.
 
@@ -29,9 +28,13 @@ Consequences for the `name=` string on a `PowerInsightSensorDescription`:
 
 - **`name`** is the display string (above). Changing it is cosmetic.
 - **`key`** feeds the `unique_id` (`{entry}_{key}` for the hub,
-  `{entry}_{uid}_{key}` per adapter) and therefore the **`entity_id`**. Changing
-  a `key` changes the entity id and **breaks history** for existing installs, so
-  keep `key` a stable, lower_snake_case echo of the `name`.
+  `{entry}_{uid}_{key}` per adapter). Changing a `key` orphans the registry
+  entry and **breaks history** for existing installs, so keys stay stable even
+  when the `name` changes — they need not echo it.
+- The **`entity_id`** is generated from the full name once, when the entity is
+  first registered, and is then kept by the entity registry. Renaming `name`
+  therefore leaves existing installs' entity ids alone and only changes the
+  slug new installs get.
 
 When you rename a `key`, also update: the `_SENSOR_OPTION_GATE` map (or the
 sensor silently loses its option gating), `COMBINED_LEDGER_ADAPTER_KEYS` /
@@ -42,11 +45,12 @@ assertions in `tests/`, and the doc tables under `docs/`.
 
 Pick the noun that matches the quantity — do not invent synonyms.
 
-| Suffix | Unit | Meaning |
+| Pattern | Unit | Meaning |
 |---|---|---|
-| `… power` | W | An instantaneous power value. |
+| `… power` | W | An instantaneous power value of the scope itself. |
+| `{Verb} to {destination}` | W | Where a provider's output goes (see below). |
 | `… ratio` | % | A flow as a fraction of the **scope's own power** — a device's own production/throughput, or gross power for the whole home. |
-| `… share` | % | This device's slice of a **home-wide total** for that flow. |
+| `Share of {channel}` | % | This device's slice of a **home-wide total** for that flow. |
 | `… rate` | currency/h | A per-hour money (or CO₂) flow. |
 | `Total …` | currency | A `TOTAL` sensor accumulating a `… rate` over time. |
 | `… from {source}` | % | A dynamic per-source attribution sensor (one per source). |
@@ -55,6 +59,36 @@ Pick the noun that matches the quantity — do not invent synonyms.
 [Power distribution](../concepts.md#the-four-channels) for the precise
 denominators. Prose that describes a `ratio` as "share of total home power" (or
 vice versa) is a bug.
+
+## Power distribution: name the direction
+
+A provider's distribution sensors describe **where its output goes**, never
+what the device consumes itself. A bare `Standby power` on a battery reads as
+the battery's own idle draw, when it actually is battery discharge feeding a
+PV inverter's night draw — so the name must carry the direction.
+
+| Provider | Verb |
+|---|---|
+| Grid | `Import` |
+| PV system | `Production` |
+| Battery | `Discharge` |
+
+| Channel | W | ratio % | share % |
+|---|---|---|---|
+| CON | `{Verb} to home consumption` | `{Verb} to home consumption ratio` | `Share of home consumption` |
+| CHG | `{Verb} to batteries` | `{Verb} to batteries ratio` | `Share of battery charging` |
+| STB | `{Verb} to system standby` | `{Verb} to system standby ratio` | `Share of system standby` |
+| EXP | `{Verb} to grid` | `{Verb} to grid ratio` | `Share of grid export` |
+
+- **home consumption** — household appliances (the CON channel). Not
+  "self-consumption", which users read as the device consuming itself.
+- **system standby** — the idle draw of the energy system's own equipment. The
+  `system` is deliberate: appliances on standby are home consumption.
+- The **Combined** device uses the channel noun without a verb:
+  `Home consumption power`, `Battery charging power`, `System standby power`
+  (+ `… ratio`).
+- The grid's own meter sensors (`Import power`, `Export power`) keep their
+  names — they describe the grid itself, not a destination.
 
 ## Cross-device consistency rules
 

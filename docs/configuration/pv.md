@@ -32,8 +32,8 @@ Add it with **Add device → PV system**.
 > Turn on if this device can feed surplus power back to the grid. Enables
 > export-compensation tracking when the corresponding option is active.
 
-Default: **on** for PV systems. When off, the export power / ratio / share /
-compensation sensors are not created.
+Default: **on** for PV systems. When off, the *Production to grid* (+ ratio),
+*Share of grid export* and export-compensation sensors are not created.
 
 ### Export compensation rate
 
@@ -80,8 +80,10 @@ consistent.
 
 | Sensor | Unit | Enabled by |
 |---|---|---|
-| Export power / ratio / share | W / % / % | *Power distribution* options (needs *Exports power*) |
-| Self-consumption power / ratio / share | W / % / % | *Power distribution* options |
+| Production to grid (+ ratio) · Share of grid export | W / % / % | *Power distribution* options (needs *Exports power*) |
+| Production to home consumption (+ ratio) · Share of home consumption | W / % / % | *Power distribution* options |
+| Production to batteries (+ ratio) · Share of battery charging | W / % / % | *Power distribution* options (only when a battery charges from this system) |
+| Production to system standby (+ ratio) · Share of system standby | W / % / % | *Power distribution* options |
 | Export compensation rate | currency/h | *Export compensation rate* |
 | Total export compensation | currency | *Accumulated export compensation* |
 | Operating cost rate (+ Total) | currency/h, currency | *Cost method = Standard* (+ *Accumulate*) |

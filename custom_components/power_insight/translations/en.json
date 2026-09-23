@@ -46,7 +46,7 @@
       },
       "combined": {
         "title": "Combined sensors",
-        "description": "These sensors aggregate power and costs **across your whole home** — they sum up all your devices and give you a single number for each metric.\n\nFor example, the combined self-consumption power sensor shows how many Watts of locally-produced power (solar + battery discharge) your home is currently using instead of drawing from the grid.",
+        "description": "These sensors aggregate power and costs **across your whole home** — they sum up all your devices and give you a single number for each metric.\n\nFor example, the combined Home consumption power sensor shows how many Watts of locally-produced power (solar + battery discharge) your home is currently using instead of drawing from the grid.",
         "sections": {
           "power_sensors": {
             "name": "Power sensors",

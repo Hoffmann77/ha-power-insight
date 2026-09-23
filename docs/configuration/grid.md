@@ -57,8 +57,9 @@ grid device owns **both sides of the meter**.
 |---|---|---|
 | Import power | W | *Power distribution (W)* |
 | Export power | W | *Power distribution (W)* |
-| Consumption ratio | % | *Power distribution ratios (%)* |
-| Consumption share | % | *Power distribution shares (%)* |
+| Import to home consumption / batteries / system standby | W | *Power distribution (W)* |
+| Import to home consumption / batteries / system standby ratio | % | *Power distribution ratios (%)* |
+| Share of home consumption / battery charging / system standby | % | *Power distribution shares (%)* |
 | Import cost rate | currency/h | *Cost method = Standard* |
 | Total import cost | currency | *Accumulate costs* |
 | Export compensation rate | currency/h | *Export compensation rate* |
