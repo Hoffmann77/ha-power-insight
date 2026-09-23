@@ -86,6 +86,8 @@ so it is split off and solved on its own before anything flexible can take
 supply it needed. `_exact_reserves` asks the group question per pairing, by
 deleting one pairing and re-running the flow.
 
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+
 :::
 
 ### Choosing among valid allocations
@@ -102,6 +104,12 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
+All three are pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`
+— rule 2's "same row" guarantee as a strict expected failure: when the draws
+exactly exhaust the sources, the engine hands a large sink its reserve first
+and the rows diverge (a 100 W and a 300 W load on the same two PV systems read
+9/13 and 10/13 on pv1 instead of 3/4 each).
+
 :::note[Decision: a sink splits over what is *left*, not over total output]
 
 When a restricted sink spreads its draw across the several sources it is
@@ -116,6 +124,8 @@ output would give. Weighting by total output would let a flexible sink
 take supply a captive one still needed, which is the same starvation
 `_tight_set` exists to prevent.
 
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+
 :::
 
 :::note[Decision: feasibility outranks all three]
@@ -124,6 +134,8 @@ They genuinely conflict. In one snapshot the only valid allocation required
 a battery to take *more* grid than the proportional split would have given
 it. When that happens the rules give way — they only ever choose among
 allocations that already work.
+
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
 
 :::
 
@@ -142,6 +154,8 @@ energy manager is not doing what you configured*. A sink whose allowed
 sources are **all idle** is the one exception — it collapses to an all-zeros
 row rather than being forced onto sources the user excluded, and its whole
 draw is reported as the deficit.
+
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
 
 :::
 
@@ -171,7 +185,8 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Shown in [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`. Shown in
+[`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 
 :::
 
@@ -425,6 +440,9 @@ house exporting while only non-exporting sources are running relaxes the
 restriction and reports the amount through
 `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
 charging off the grid does.
+
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py` (an
+export that exporters can cover takes only exporters).
 
 :::
 

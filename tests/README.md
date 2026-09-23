@@ -167,6 +167,9 @@ anything else) if your PR needs green checks to merge.
 - **Correction factors.** The eight `*_corrected` properties are not in the
   catalog, and no engine test sets a factor other than 1.0; the integration
   tier covers them in `test_correction_flow.py`.
+- **Open finding** held by `manual/test_power_flow.py`: two sinks with the
+  same restriction can get different rows when the draws exactly exhaust the
+  sources (strict xfail on the `unequal_draws` block).
 - **Open findings** held by `test_laws.py`: the proportional split still drifts
   when a PV system is split in two with a base load present (the strict xfail),
   six properties still publish while a meter is unavailable
