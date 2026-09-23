@@ -13,7 +13,7 @@ Power Insight expects instantaneous power sensors with these signs:
 | **PV** | Producing | Consuming (standby) |
 | **Battery** | Discharging | Charging |
 
-If a sensor uses the opposite sign, turn on **Invert power direction** on that
+If a sensor uses the opposite sign, turn on **Invert power sign** on that
 device. Power Insight normalises W / kW / MW automatically, so the unit itself
 doesn't matter — only the sign.
 
@@ -26,10 +26,11 @@ gross_power = grid_import + PV_production + battery_discharge
 ```
 
 This is all the power entering your home right now. Power Insight splits it into
-where it goes — **self-consumption**, **export** to the grid, battery
-**charging**, and device **standby** — and exposes each slice in Watts, as a
-**ratio** (% of gross power), and as a **share** (% of a device's own
-throughput).
+where it goes — **home consumption**, **export** to the grid, battery
+**charging**, and **system standby** — and exposes each slice in Watts, as a
+**ratio** (% of the scope's own power: a device's output, or gross power for
+the whole home), and as a **share** (a device's slice of that channel's
+home-wide total).
 
 Every derived quantity is computed lazily from live values, and any sensor
 whose inputs are unavailable simply reports *unavailable* rather than a wrong
@@ -40,21 +41,26 @@ number.
 Gross power leaves the system through exactly four **channels**. Each channel
 has a natural **sink** — the device type that receives that power:
 
-| Abbrev | Channel | Sink device |
-|---|---|---|
-| **EXP** | Export | Grid |
-| **CON** | Self-consumption | Consumers (loads) |
-| **CHG** | Charging | Batteries |
-| **STB** | Standby | PV systems (their own night draw) |
+| Abbrev | Channel | Sink device | Sensor wording |
+|---|---|---|---|
+| **EXP** | Export | Grid | *… to grid* |
+| **CON** | Self-consumption | Consumers (loads) | *… to home consumption* |
+| **CHG** | Charging | Batteries | *… to batteries* |
+| **STB** | Standby | PV systems (their own night draw) | *… to system standby* |
+
+"System standby" is the idle draw of the energy system's own equipment — not
+household appliances on standby, which count as home consumption.
 
 Every **provider** — the devices that *feed* gross power (grid import, PV
 production, battery discharge) — expresses its relationship to a channel two
-ways:
+ways, alongside its power in Watts (*Production to home consumption*):
 
 - **ratio** — of *this provider's own* output, the fraction going to the
-  channel (`channel_power ÷ provider_output`).
+  channel (`channel_power ÷ provider_output`) — *Production to home
+  consumption ratio*.
 - **share** — of *the whole channel's* power, the fraction *this provider*
-  supplied (`provider_contribution ÷ channel_total`).
+  supplied (`provider_contribution ÷ channel_total`) — *Share of home
+  consumption*.
 
 Not every provider feeds every channel. The grid cannot export to itself, so it
 has no EXP sensors; otherwise each provider carries a `_ratio` and a `_share`
@@ -69,7 +75,7 @@ for each channel it can feed:
 CHG is the only channel with explicit routing (a battery's **Charges from**
 list), so it has **two complementary sensor families** — don't confuse them:
 
-- the provider-side aggregate **Charging share** ("X % of *all* charging in the
+- the provider-side aggregate **Share of battery charging** ("X % of *all* charging in the
   home is supplied by the grid"), on the grid/PV/battery device; and
 - the sink-side per-source breakdown **Charging share from &lt;source&gt;**
   ("X % of *this battery's* charging comes from the grid"), on the battery — see
@@ -150,7 +156,7 @@ This is why the reconfigure page warns:
 feed-in tariff). It drives:
 
 - **Export compensation rate** (currency/h) = current export power × the rate.
-- **Accumulated export compensation** = that rate integrated over time.
+- **Total export compensation** = that rate integrated over time.
 
 ## How savings and financial return are calculated
 

@@ -137,7 +137,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_power",
-        name="Self-consumption power",
+        name="Home consumption power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -147,7 +147,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_ratio",
-        name="Self-consumption ratio",
+        name="Home consumption ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -183,7 +183,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_power",
-        name="Charging power",
+        name="Battery charging power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -193,7 +193,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_power",
-        name="Standby power",
+        name="System standby power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -203,7 +203,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_ratio",
-        name="Charging ratio",
+        name="Battery charging ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -214,7 +214,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_ratio",
-        name="Standby ratio",
+        name="System standby ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -346,7 +346,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_cost_rate",
-        name="Standby cost rate",
+        name="Levelized system standby cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -359,7 +359,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_export_cost_rate",
-        name="Export cost rate",
+        name="Levelized export cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -602,7 +602,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_ratio",
-        name="Consumption ratio",
+        name="Import to home consumption ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -613,7 +613,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_share",
-        name="Consumption share",
+        name="Share of home consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -624,7 +624,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_power",
-        name="Consumption power",
+        name="Import to home consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -634,7 +634,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Charging ratio",
+        name="Import to batteries ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -646,7 +646,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Charging share",
+        name="Share of battery charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -658,7 +658,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Charging power",
+        name="Import to batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -669,7 +669,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Standby ratio",
+        name="Import to system standby ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -680,7 +680,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Standby share",
+        name="Share of system standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -691,7 +691,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Standby power",
+        name="Import to system standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -732,7 +732,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
 POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="export_power",
-        name="Export power",
+        name="Production to grid",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -743,7 +743,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
-        name="Export ratio",
+        name="Production to grid ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -755,7 +755,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_share",
-        name="Export share",
+        name="Share of grid export",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -780,7 +780,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
-        name="Self-consumption power",
+        name="Production to home consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -790,7 +790,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
-        name="Self-consumption ratio",
+        name="Production to home consumption ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -801,7 +801,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_share",
-        name="Self-consumption share",
+        name="Share of home consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -812,7 +812,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Charging ratio",
+        name="Production to batteries ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -824,7 +824,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Charging share",
+        name="Share of battery charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -836,7 +836,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Charging power",
+        name="Production to batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -847,7 +847,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Standby ratio",
+        name="Production to system standby ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -858,7 +858,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Standby share",
+        name="Share of system standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -869,7 +869,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Standby power",
+        name="Production to system standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1062,7 +1062,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
 POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="export_power",
-        name="Export power",
+        name="Discharge to grid",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1073,7 +1073,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
-        name="Export ratio",
+        name="Discharge to grid ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1085,7 +1085,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_share",
-        name="Export share",
+        name="Share of grid export",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1110,7 +1110,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
-        name="Self-consumption power",
+        name="Discharge to home consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1120,7 +1120,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
-        name="Self-consumption ratio",
+        name="Discharge to home consumption ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1131,7 +1131,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_share",
-        name="Self-consumption share",
+        name="Share of home consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1142,7 +1142,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Charging ratio",
+        name="Discharge to batteries ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1154,7 +1154,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Charging share",
+        name="Share of battery charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1166,7 +1166,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Charging power",
+        name="Discharge to batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1177,7 +1177,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Standby ratio",
+        name="Discharge to system standby ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1188,7 +1188,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Standby share",
+        name="Share of system standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1199,7 +1199,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Standby power",
+        name="Discharge to system standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -2024,7 +2024,10 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         raise ServiceValidationError(
             "set_value is only supported on accumulation (total) sensors. "
             f"'{self.entity_id}' is an instantaneous measurement sensor "
-            "and does not hold a running total."
+            "and does not hold a running total.",
+            translation_domain=DOMAIN,
+            translation_key="set_value_not_total",
+            translation_placeholders={"entity_id": self.entity_id},
         )
 
 

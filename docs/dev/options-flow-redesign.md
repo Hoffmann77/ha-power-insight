@@ -5,7 +5,7 @@ options flow, gating, migration).
 
 Refinements made during implementation (the code is the source of truth):
 - The single `enable_power_shares` toggle was split into the categories
-  **Power distribution (W)** (`enable_distribution_power`), **Power
+  **Power split (W)** (`enable_distribution_power`), **Power
   distribution ratios** (`enable_distribution_ratios`), **Power distribution
   shares** (`enable_distribution_shares`), **Charging source shares**
   (`enable_charging_source_shares`, battery) and **Power source shares**
@@ -98,7 +98,7 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 
 | Category (label) | Leaf option key | Notes |
 |---|---|---|
-| Power distribution (W) | `enable_distribution_power` | absolute watt split |
+| Power split (W) | `enable_distribution_power` | absolute watt split |
 | Power distribution ratios | `enable_distribution_ratios` | `*_ratio` % (own power split) |
 | Power distribution shares | `enable_distribution_shares` | `*_share` % (share of combined) |
 | Charging source shares | `enable_charging_source_shares` | battery only |
@@ -108,7 +108,7 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 
 | Category (label) | Leaf option key |
 |---|---|
-| Enable debug power entities | `debug_power_entities` |
+| Debug sensors | `debug_power_entities` |
 
 ### Key changes vs today
 
@@ -128,12 +128,12 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 
 | Scope | Categories |
 |---|---|
-| combined | Cost rates · Cost savings rates · Accumulated costs · Accumulated cost savings · Power distribution (W) · Power distribution ratios |
-| grid | Cost rates (Cost only) · Accumulated costs (Cost only) · Export compensation · Power distribution (W) · Power distribution ratios · Power distribution shares |
-| pv_system | Cost rates · Cost savings rates · Export compensation · Accumulated costs · Accumulated cost savings · Power distribution (W) · Power distribution ratios · Power distribution shares |
+| combined | Cost rates · Cost savings rates · Accumulated costs · Accumulated cost savings · Power split (W) · Power distribution ratios |
+| grid | Cost rates (Cost only) · Accumulated costs (Cost only) · Export compensation · Power split (W) · Power distribution ratios · Power distribution shares |
+| pv_system | Cost rates · Cost savings rates · Export compensation · Accumulated costs · Accumulated cost savings · Power split (W) · Power distribution ratios · Power distribution shares |
 | battery | same as pv_system **+ Charging source shares** |
 | consumer | Cost rates · Power source shares |
-| diagnostics | Enable debug power entities |
+| diagnostics | Debug sensors |
 
 ---
 
@@ -144,12 +144,12 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 - Cost savings rates (€/h): `Cost savings`, `Levelized cost savings`
 - Accumulated costs (€): `Cost`, `Levelized cost`
 - Accumulated cost savings (€): `Cost savings`, `Levelized cost savings`
-- Power distribution (W) *(toggle)* — self‑consumption / charging / standby power
+- Power split (W) *(toggle)* — self‑consumption / charging / standby power
 - Power distribution ratios *(toggle)* — export / self‑consumption / charging / standby ratio
 - *(electricity‑price sensors stay always‑on — core readings)*
 
 ### Grid
-- Power distribution (W) *(toggle)* — **import power, export power**
+- Power split (W) *(toggle)* — **import power, export power**
 - Cost rates (€/h): `Cost`
 - Accumulated costs (€): `Cost`
 - Export compensation: `Rate (€/h)`, `Accumulated total (€)`
@@ -157,7 +157,7 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 - Power distribution shares *(toggle)* — consumption share
 
 ### PV systems
-- Power distribution (W) *(toggle)* — export power, self‑consumption power
+- Power split (W) *(toggle)* — export power, self‑consumption power
 - Cost rates (€/h): `Cost`, `Levelized cost`
 - Cost savings rates (€/h): `Cost savings`, `Levelized cost savings`
 - Export compensation: `Rate (€/h)`, `Accumulated total (€)`
@@ -176,7 +176,7 @@ compensation). The sensor-key tables in section 5 reflect the current state.
 - Power source shares *(toggle)* — per‑source `Power share from <source>`
 
 ### Diagnostics
-- Enable debug power entities *(toggle)* — global
+- Debug sensors *(toggle)* — global
 
 ---
 

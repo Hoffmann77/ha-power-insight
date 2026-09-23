@@ -22,65 +22,94 @@ Power Insight is in beta; entity names may change until 1.0.
 Every percentage sensor is one or the other, and the denominator differs:
 
 - **`… ratio`** — a fraction of the **scope's own power**: for a device, its
-  own production/throughput (e.g. *Export ratio* = the fraction of *this PV
-  system's production* that is exported); for the whole home, gross power.
-- **`… share`** — this device's slice of a **home-wide total** (e.g. *Export
-  share* = this system's exports ÷ *all power exported by the home*).
+  own production/throughput (e.g. *Production to grid ratio* = the fraction of
+  *this PV system's production* that is exported); for the whole home, gross
+  power.
+- **`Share of …`** — this device's slice of a **home-wide total** (e.g. *Share
+  of grid export* = this system's exports ÷ *all power exported by the home*).
 
 See [Power distribution → ratio vs. share](concepts.md#the-four-channels)
 for the full definition.
 
 :::
 
+:::info[Where a device's power goes]
+
+On the grid, PV and battery devices, the distribution sensors describe **where
+that device's output goes** — never what the device itself consumes. They read
+`{Import|Production|Discharge} to {destination}`:
+
+- **home consumption** — your household appliances;
+- **batteries** — battery charging;
+- **system standby** — the idle draw of your energy system's own equipment
+  (e.g. PV inverters at night), *not* appliances on standby;
+- **grid** — export.
+
+So a battery's *Discharge to system standby* is battery power feeding a PV
+inverter's night draw, not the battery's own standby.
+
+:::
+
 Legend for the **Enabled by** column — the option/category (and where relevant
 the device capability) that must be on for the sensor to exist:
 
-- *Distribution (W/ratios/shares)* → the matching **Power sensors** category.
-- *Cost — Standard / Levelized* → the **Cost calculation method**.
-- *Savings — Standard / Levelized* → the **Savings calculation method**.
+- *Power split (W)*, *Power split (%)*, *Share of home totals* → the matching
+  toggle in the **Power** section.
+- *Cost — Standard / Levelized* → the **Cost method**.
+- *Savings — Standard / Levelized* → the **Savings method**.
 - *Financial return — Standard / Levelized* → the **Financial return method**.
-- *Accumulate …* → the matching accumulate toggle.
+- *Total costs / savings / financial return* → the matching **Total …** toggle,
+  for the method(s) selected above it (*levelized* = the Levelized method).
 
 ---
 
 ## Combined (whole home)
 
 These aggregate power and cost **across your whole home** — they sum all your
-devices into a single number per metric.
+devices into a single number per metric. They live on the **Combined**
+device, so the device name already says "combined" and the sensor names don't
+repeat it.
 
 ### Real-time sensors
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Available power | W | Gross power entering the home (grid import + PV production + battery discharge). Diagnostic, **disabled by default**. | *Debug power entities* |
-| Combined self-consumption power | W | Locally produced power (solar + battery discharge) your home is using right now instead of importing. | Distribution (W) |
-| Combined charging power | W | Power currently going into battery charging. | Distribution (W) |
-| Combined standby power | W | Power currently consumed by device standby (e.g. PV at night). | Distribution (W) |
-| Combined export ratio | % | Share of gross power currently exported to the grid. | Distribution ratios |
-| Combined self-consumption ratio | % | Share of gross power currently self-consumed. | Distribution ratios |
-| Combined charging ratio | % | Share of gross power currently going to charging. | Distribution ratios |
-| Combined standby ratio | % | Share of gross power currently lost to standby. | Distribution ratios |
-| Combined price of electricity | EUR/kWh | Current blended price of one kWh across your whole mix (grid + your devices). | Cost — Standard |
-| Combined levelized price of electricity | EUR/kWh | As above, but each device's cost is its levelized lifetime cost. | Cost — Levelized |
-| Combined cost rate | EUR/h | Running cost per hour of your current mix. | Cost — Standard |
-| Combined levelized cost rate | EUR/h | Cost rate computed with levelized device costs. | Cost — Levelized |
-| Combined operating cost rate | EUR/h | Running operating cost per hour of your mix. | Cost — Standard |
-| Combined levelized operating cost rate | EUR/h | Operating cost rate with levelized device costs. | Cost — Levelized |
-| Combined cost savings rate | EUR/h | Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
-| Combined levelized cost savings rate | EUR/h | Cost savings rate computed with levelized device costs. | Savings — Levelized |
-| Combined financial return rate | EUR/h | Total financial benefit per hour — cost savings plus export compensation. | Financial return — Standard |
-| Combined levelized financial return rate | EUR/h | Financial return computed with levelized device costs. | Financial return — Levelized |
+| Available power | W | Gross power entering the home (grid import + PV production + battery discharge). Diagnostic, **disabled by default**. | *Debug sensors* |
+| Home consumption power | W | Everything your home's appliances draw right now — metered consumers plus the unmetered base load — from any source (grid, solar or battery). | Power split (W) |
+| Battery charging power | W | Power currently going into battery charging. | Power split (W) |
+| System standby power | W | Power currently drawn by your energy system's own equipment while idle (e.g. PV inverters at night) — not household appliances on standby. | Power split (W) |
+| Export ratio | % | Share of gross power currently exported to the grid. | Power split (%) |
+| Home consumption ratio | % | Share of gross power currently going to home consumption. | Power split (%) |
+| Battery charging ratio | % | Share of gross power currently going to battery charging. | Power split (%) |
+| System standby ratio | % | Share of gross power currently lost to system standby. | Power split (%) |
+| Price of electricity | EUR/kWh | Current blended price of one kWh across your whole mix (grid + your devices). | Cost — Standard |
+| Levelized price of electricity | EUR/kWh | As above, but each device's cost is its levelized lifetime cost. | Cost — Levelized |
+| Cost rate | EUR/h | What all the power entering your home costs per hour right now (gross power × price of electricity). | Cost — Standard |
+| Levelized cost rate | EUR/h | Cost rate computed with levelized device costs. | Cost — Levelized |
+| Consumption cost rate | EUR/h | The part of the cost rate that goes to **home consumption**. | Cost — Standard |
+| Levelized consumption cost rate | EUR/h | Consumption cost rate computed with levelized device costs. | Cost — Levelized |
+| Charging cost rate | EUR/h | The part of the cost rate that goes into **battery charging**. | Cost — Standard |
+| Levelized charging cost rate | EUR/h | Charging cost rate computed with levelized device costs. | Cost — Levelized |
+| Levelized system standby cost rate | EUR/h | The part of the levelized cost rate lost to **system standby**. | Cost — Levelized |
+| Levelized export cost rate | EUR/h | What producing the **exported** power cost, at levelized device costs. | Cost — Levelized |
+| Device operating cost rate | EUR/h | What running your PV and battery hardware costs per hour — their own draw (charging plus standby). The sum of the per-device *Operating cost rate* sensors. | Cost — Standard |
+| Levelized device operating cost rate | EUR/h | Device operating cost rate computed with levelized device costs. | Cost — Levelized |
+| Cost savings rate | EUR/h | Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
+| Levelized cost savings rate | EUR/h | Cost savings rate computed with levelized device costs. | Savings — Levelized |
+| Financial return rate | EUR/h | Total financial benefit per hour — cost savings plus export compensation. | Financial return — Standard |
+| Levelized financial return rate | EUR/h | Financial return computed with levelized device costs. | Financial return — Levelized |
 
 ### Accumulated totals
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Combined total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Combined total levelized operating cost | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
-| Combined total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
-| Combined total levelized cost savings | EUR | Levelized cost savings totalled across all devices (retro-corrected). | Accumulate levelized savings |
-| Combined total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return |
-| Combined total levelized financial return | EUR | Levelized financial return totalled across all devices (retro-corrected). | Accumulate levelized financial return |
+| Total consumption cost | EUR | Consumption cost rate integrated over time. | Total costs |
+| Total charging cost | EUR | Charging cost rate integrated over time. | Total costs |
+| Total levelized device operating cost | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Total costs (levelized) |
+| Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Total savings |
+| Total levelized cost savings | EUR | Levelized cost savings totalled across all devices (retro-corrected). | Total savings (levelized) |
+| Total financial return | EUR | Financial return rate integrated over time. | Total financial return |
+| Total levelized financial return | EUR | Levelized financial return totalled across all devices (retro-corrected). | Total financial return (levelized) |
 
 :::note[Combined levelized totals are derived, not integrated]
 
@@ -100,24 +129,27 @@ physically happen). See [Grid connection configuration](configuration/grid.md).
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Import power | W | Power currently bought from the grid. | Distribution (W) |
-| Export power | W | Surplus power currently sent back to the grid. | Distribution (W) |
-| Consumption ratio | % | Grid import as a share of total home power flow. | Distribution ratios |
-| Consumption share | % | Share of all grid throughput that is import vs. export. | Distribution shares |
-| Charging ratio | % | Share of grid import currently going to battery charging. Only exists when a battery charges from the grid. | Distribution ratios · charge source |
-| Charging share | % | Grid's share of all battery-charging power in the home. Only exists when a battery charges from the grid. | Distribution shares · charge source |
-| Standby ratio | % | Share of grid import currently going to device standby. | Distribution ratios |
-| Standby share | % | Grid's share of all standby power in the home. | Distribution shares |
+| Import power | W | Power currently bought from the grid. | Power split (W) |
+| Export power | W | Surplus power currently sent back to the grid. | Power split (W) |
+| Import to home consumption | W | Grid import currently going to home consumption. | Power split (W) |
+| Import to home consumption ratio | % | Fraction of **grid import** currently going to home consumption. | Power split (%) |
+| Share of home consumption | % | The grid's share of **all home consumption**. | Share of home totals |
+| Import to batteries | W | Grid import currently going to battery charging. Only exists when a battery charges from the grid. | Power split (W) · charge source |
+| Import to batteries ratio | % | Fraction of grid import currently going to battery charging. Only exists when a battery charges from the grid. | Power split (%) · charge source |
+| Share of battery charging | % | The grid's share of all battery-charging power in the home. Only exists when a battery charges from the grid. | Share of home totals · charge source |
+| Import to system standby | W | Grid import currently feeding system standby (e.g. PV inverters at night). | Power split (W) |
+| Import to system standby ratio | % | Fraction of grid import currently going to system standby. | Power split (%) |
+| Share of system standby | % | The grid's share of all system standby power. | Share of home totals |
 | Import cost rate | EUR/h | Current cost per hour of grid imports (live price × import power). | Cost — Standard |
-| Total import cost | EUR | Import cost integrated over time. | Accumulate costs |
+| Total import cost | EUR | Import cost integrated over time. | Total costs |
 | Export compensation rate | EUR/h | Money earned per hour from exports (export power × compensation rate). | Export compensation rate |
-| Total export compensation | EUR | Export compensation integrated over time. | Accumulated export compensation |
+| Total export compensation | EUR | Export compensation integrated over time. | Total export compensation |
 
 ---
 
 ## PV system
 
-Per PV device. Export sensors require **Exports power to grid** to be on;
+Per PV device. Export sensors require **Feeds into the grid** to be on;
 levelized sensors require lifetime values (an LCOE). See
 [PV system configuration](configuration/pv.md).
 
@@ -125,17 +157,18 @@ levelized sensors require lifetime values (an LCOE). See
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Export power | W | Power from this system currently sent to the grid. | Distribution (W) · exports |
-| Export ratio | % | Fraction of **this system's own production** currently exported to the grid. | Distribution ratios · exports |
-| Export share | % | This system's share of **all power exported by the home**. | Distribution shares · exports |
-| Self-consumption power | W | Power from this system currently consumed in the home. | Distribution (W) |
-| Self-consumption ratio | % | Fraction of **this system's own production** consumed directly in the home. | Distribution ratios |
-| Self-consumption share | % | This system's share of **all self-consumption in the home**. | Distribution shares |
-| Charging ratio | % | Share of this system's production currently going to battery charging. Only exists when a battery charges from this system. | Distribution ratios · charge source |
-| Charging share | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Distribution shares · charge source |
-| Standby ratio | % | Share of this system's production currently going to device standby. | Distribution ratios |
-| Standby share | % | This system's share of all standby power in the home. | Distribution shares |
-| Standby power | W | Watts of this system's output currently feeding another device's standby draw. | Distribution (W) |
+| Production to grid | W | Power from this system currently sent to the grid. | Power split (W) · exports |
+| Production to grid ratio | % | Fraction of **this system's own production** currently exported to the grid. | Power split (%) · exports |
+| Share of grid export | % | This system's share of **all power exported by the home**. | Share of home totals · exports |
+| Production to home consumption | W | Power from this system currently consumed in the home. | Power split (W) |
+| Production to home consumption ratio | % | Fraction of **this system's own production** consumed directly in the home. | Power split (%) |
+| Share of home consumption | % | This system's share of **all home consumption**. | Share of home totals |
+| Production to batteries | W | Power from this system currently going to battery charging. Only exists when a battery charges from this system. | Power split (W) · charge source |
+| Production to batteries ratio | % | Fraction of this system's production currently going to battery charging. Only exists when a battery charges from this system. | Power split (%) · charge source |
+| Share of battery charging | % | This system's share of all battery-charging power in the home. Only exists when a battery charges from this system. | Share of home totals · charge source |
+| Production to system standby | W | Power from this system currently feeding another device's standby draw (system standby). | Power split (W) |
+| Production to system standby ratio | % | Fraction of this system's production currently going to system standby. | Power split (%) |
+| Share of system standby | % | This system's share of all system standby power. | Share of home totals |
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |
@@ -148,13 +181,13 @@ levelized sensors require lifetime values (an LCOE). See
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Total export compensation | EUR | Export compensation integrated over time. | Accumulated export compensation · exports |
-| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Accumulate levelized costs · has lifetime values |
-| Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
-| Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Accumulate levelized savings · has lifetime values |
-| Total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return · exports |
-| Total levelized financial return | EUR | Levelized financial return integrated (retro-corrected). | Accumulate levelized financial return · has lifetime values · exports |
+| Total export compensation | EUR | Export compensation integrated over time. | Total export compensation · exports |
+| Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
+| Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Total costs (levelized) · has lifetime values |
+| Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Total savings |
+| Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Total savings (levelized) · has lifetime values |
+| Total financial return | EUR | Financial return rate integrated over time. | Total financial return · exports |
+| Total levelized financial return | EUR | Levelized financial return integrated (retro-corrected). | Total financial return (levelized) · has lifetime values · exports |
 
 ---
 
@@ -162,10 +195,11 @@ levelized sensors require lifetime values (an LCOE). See
 
 Per battery device. The battery has the **same sensor set as a PV system**
 (above) — including cost savings, financial return, and their levelized variants
-— reading the battery's own values, **plus** dynamic charging-source sensors.
-(Its own *Charging ratio/share* sensors only appear when another battery is
-configured to charge *from* this one — battery-to-battery charging — so in most
-setups they are absent.)
+— reading the battery's own values, with **Discharge** in place of
+**Production** (*Discharge to home consumption*, *Discharge to grid*, …), **plus**
+dynamic charging-source sensors. (Its *Discharge to batteries* sensors only
+appear when another battery is configured to charge *from* this one —
+battery-to-battery charging — so in most setups they are absent.)
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
@@ -184,7 +218,7 @@ Per consumer device. Consumer support is still under development. See
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Consumption share | % | This consumer's share of all self-consumption in the home. | Distribution shares |
+| Consumption share | % | This consumer's share of all self-consumption in the home. | Share of home totals |
 | Power share from &lt;source&gt; (one per source) | % | Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's *Charging share from &lt;source&gt;*. | Power source shares |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
@@ -193,6 +227,6 @@ Per consumer device. Consumer support is still under development. See
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Accumulate levelized costs |
-| Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Accumulate savings |
+| Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
+| Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Total costs (levelized) |
+| Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |

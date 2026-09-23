@@ -9,37 +9,33 @@ Add it with **Add device → Grid connection**.
 
 ## Fields
 
-### Power entity
+### Power sensor
 
-> Sensor that reports this device's power in W, kW or MW.
->
-> **Sign convention:** Grid — positive = import, negative = export. Use **Invert
-> power direction** if your sensor uses the opposite sign.
+> Sensor with the grid power in W, kW or MW. Positive = import, negative =
+> export.
 
 This is the only always-required field. It must report instantaneous power (not
 energy). Power Insight normalises W / kW / MW automatically.
 
-### Invert power direction
+### Invert power sign
 
-> Turn on if your sensor reports power with the opposite sign to the convention
-> described above.
+> Turn on if your sensor uses the opposite sign.
 
 Use this when your meter reports **import as negative** (or export as positive).
 
-### Electricity price entity
+### Electricity price
 
-> Sensor or input number with the current grid import price per kWh, in your Home
-> Assistant currency. **Required when any cost or savings sensors are enabled.**
+> Sensor or number with the current price per kWh you pay for grid power. Required for cost, savings and financial return sensors.
 
 This can be a live/dynamic price sensor (for example from a dynamic-tariff
 integration) or a static `input_number`. Because Power Insight uses the *current*
 value at every calculation, dynamic tariffs are fully supported.
 
-### CO₂ intensity entity
+### Grid CO₂ intensity
 
-> Sensor reporting the current grid CO₂ intensity in g/kWh (for example from the
-> [Electricity Maps](https://www.home-assistant.io/integrations/co2signal/)
-> integration). Required when CO₂ sensors are enabled.
+> Sensor with the grid's current CO₂ intensity in g/kWh (e.g. from
+> [Electricity Maps](https://www.home-assistant.io/integrations/co2signal/)).
+> Optional; reserved for CO₂ sensors.
 
 :::note
 
@@ -55,14 +51,15 @@ grid device owns **both sides of the meter**.
 
 | Sensor | Unit | Enabled by |
 |---|---|---|
-| Import power | W | *Power distribution (W)* |
-| Export power | W | *Power distribution (W)* |
-| Consumption ratio | % | *Power distribution ratios (%)* |
-| Consumption share | % | *Power distribution shares (%)* |
+| Import power | W | *Power split (W)* |
+| Export power | W | *Power split (W)* |
+| Import to home consumption / batteries / system standby | W | *Power split (W)* |
+| Import to home consumption / batteries / system standby ratio | % | *Power split (%)* |
+| Share of home consumption / battery charging / system standby | % | *Share of home totals (%)* |
 | Import cost rate | currency/h | *Cost method = Standard* |
 | Total import cost | currency | *Accumulate costs* |
 | Export compensation rate | currency/h | *Export compensation rate* |
-| Total export compensation | currency | *Accumulated export compensation* |
+| Total export compensation | currency | *Total export compensation* |
 
 See the [Entity reference](../entities.md#grid-connection) for exactly what each
 sensor means, and [Sensors, presets & options](options-and-presets.md) for how to

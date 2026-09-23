@@ -178,6 +178,14 @@ def _levelized_production_required(options: dict) -> bool:
 # HELPERS
 # ============================================================================
 
+# Device-type names for the {adapter_type} placeholder in step titles.
+ADAPTER_TYPE_LABELS = {
+    "grid": "grid connection",
+    "pv_system": "PV system",
+    "battery": "battery",
+    "consumer": "consumer",
+}
+
 SOURCE_MODE_SELECTOR = selector.SelectSelector(
     selector.SelectSelectorConfig(
         options=[
@@ -187,6 +195,7 @@ SOURCE_MODE_SELECTOR = selector.SelectSelector(
             ),
         ],
         mode=selector.SelectSelectorMode.LIST,
+        translation_key="source_mode",
     )
 )
 
@@ -587,6 +596,7 @@ def _preset_selector(include_custom: bool = True) -> selector.SelectSelector:
         selector.SelectSelectorConfig(
             options=options,
             mode=selector.SelectSelectorMode.LIST,
+            translation_key="preset",
         )
     )
 
@@ -698,7 +708,9 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
                 "cost_method", default=defaults.get("cost_method", "none")
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=cost_opts, mode=selector.SelectSelectorMode.LIST
+                    options=cost_opts,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="calculation_method",
                 )
             ),
         }
@@ -721,7 +733,9 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
                 "savings_method", default=defaults.get("savings_method", "none")
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=sav_opts, mode=selector.SelectSelectorMode.LIST
+                    options=sav_opts,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="calculation_method",
                 )
             ),
         }
@@ -746,7 +760,9 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
                 default=defaults.get("financial_return_method", "none"),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=fr_opts, mode=selector.SelectSelectorMode.LIST
+                    options=fr_opts,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="calculation_method",
                 )
             ),
         }
@@ -1819,7 +1835,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "adapter_type": self._adapter_type.replace("_", " ").title(),
+                "adapter_type": ADAPTER_TYPE_LABELS.get(
+                    self._adapter_type, self._adapter_type
+                ),
             },
         )
 
@@ -1940,7 +1958,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             data_schema=schema,
             errors=errors,
             description_placeholders={
-                "adapter_type": self._adapter_type.replace("_", " ").title(),
+                "adapter_type": ADAPTER_TYPE_LABELS.get(
+                    self._adapter_type, self._adapter_type
+                ),
             },
         )
 

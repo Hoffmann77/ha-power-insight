@@ -42,10 +42,9 @@ required once you enable any levelized sensor.
 If you enable an option that a device is missing data for, the options flow tells
 you which devices need attention:
 
-> These devices are missing data required by your selection: … Open each
-> device's **Reconfigure** page to supply the missing values (for example, an
-> electricity price entity for cost sensors, or lifetime production and cost for
-> levelized sensors), then save the options again.
+> These devices are missing values the selected sensors need: … Open
+> **Reconfigure** on each device to add them (e.g. a price sensor for costs,
+> lifetime values for levelized sensors), then save again.
 
 ## Sensor selection
 

@@ -3,7 +3,7 @@
 A consumer represents an electrical load — an appliance, EV charger, heat pump,
 etc. Power Insight tracks how much power it draws and where that power comes from.
 
-Add it with **Add device → Electrical consumer**.
+Add it with **Add device → Consumer**.
 
 :::warning[Under development]
 
@@ -17,18 +17,17 @@ sensors. More consumer sensors are planned.
 
 ### Name
 
-> A unique name for this device, for example "Heat Pump". Used as the device name
-> in Home Assistant.
+> For example "Rooftop" or "Heat pump". Used in the device and sensor names.
 
-### Power entity
+### Power sensor
 
-> Sensor that reports this device's power in W, kW or MW. Positive = power drawn
-> by the consumer.
+> Sensor that reports this device's power in W, kW or MW. Negative = power drawn
+> by the consumer. Most smart plugs report their draw as a positive value — turn
+> on **Invert power sign** for those.
 
-### Invert power direction
+### Invert power sign
 
-> Turn on if your sensor reports power with the opposite sign to the expected
-> convention.
+> Turn on if your sensor uses the opposite sign.
 
 A consumer has no cost, price, or lifetime fields of its own — its cost is
 derived from the mix of sources currently supplying it (grid / solar / battery).
@@ -37,7 +36,7 @@ derived from the mix of sources currently supplying it (grid / solar / battery).
 
 | Sensor | Unit | Enabled by |
 |---|---|---|
-| Power source shares (one per source) | % | *Power source shares (%)* |
+| Power source shares (one per source) | % | *Power sources (%)* |
 | Operating cost rate | currency/h | *Cost method = Standard* |
 | Levelized operating cost rate | currency/h | *Cost method = Levelized* |
 
