@@ -57,13 +57,7 @@ export interface CaseState {
   readings: {[uid: string]: Rat};
   price: Rat;
   /** Every catalogued property, as the engine computed it. */
-  results?: Result[];
-  /**
-   * The same list under its old name. Docs versions cut before the cases
-   * were engine-computed store hand-derived values here; this component is
-   * shared by every version, so it keeps reading them. Use `resultsOf`.
-   */
-  expectations?: Result[];
+  results: Result[];
 }
 
 export interface ReferenceCase {
@@ -72,8 +66,6 @@ export interface ReferenceCase {
   summary: string;
   /** What this case shows about the engine. */
   shows: string[];
-  /** The same list in docs versions cut before it was renamed. */
-  decides?: string[];
   topology: Adapter[];
   states: CaseState[];
 }

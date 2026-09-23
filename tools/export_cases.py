@@ -1,34 +1,23 @@
-"""Publish the reference cases to ``docs/spec/cases/`` for the docs site.
+"""The reference cases as the docs site shows them: ``docs/spec/cases/``.
 
 The cases live in ``tests/engine/reference/`` as fixed homes — a wiring and a
 few snapshots of readings each. :meth:`ReferenceCase.publish` passes every
-snapshot through the engine and records every catalogued property, so what
-appears on a page is exactly what the engine computes at this commit.
-
-This tool is the IO around that. It writes two things into
-``docs/spec/cases/``:
+snapshot through the engine and records every catalogued property. This module
+renders that into:
 
 ``<case-id>.json``
-    One file per case — the wiring, the snapshots, and the engine's results
-    for each of them.
+    One file per case — the wiring, the snapshots, and the engine's results.
 
 ``index.json``
     The ladder, in order.
 
-The output is committed. ``tests/engine/reference/test_corpus.py`` fails when
-it no longer matches the engine, so a change that moves a published number
-carries the new numbers in the same commit — the PR diff shows which moved —
-and a docs version cut from any commit freezes that commit's own results.
-
-Usage::
-
-    uv run --group engine python tools/export_cases.py
-    uv run --group engine python tools/export_cases.py --check   # CI: is it stale?
+It has no command of its own: ``tools/snapshot.py`` writes these together with
+the frozen engine outputs, and ``tests/engine/reference/test_corpus.py`` fails
+when they are stale.
 """
 
 from __future__ import annotations
 
-import argparse
 import json
 import pathlib
 import sys
@@ -61,42 +50,3 @@ def render() -> dict[str, str]:
     files: dict[str, object] = {f"{case['id']}.json": case for case in built}
     files["index.json"] = index_json(built)
     return {name: json.dumps(data, indent=2) + "\n" for name, data in files.items()}
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--check",
-        action="store_true",
-        help="exit non-zero if the published JSON is out of date, writing nothing",
-    )
-    args = parser.parse_args()
-
-    OUT.mkdir(parents=True, exist_ok=True)
-    files = render()
-
-    if args.check:
-        stale = [
-            name
-            for name, content in files.items()
-            if not (OUT / name).exists() or (OUT / name).read_text() != content
-        ]
-        if stale:
-            print(
-                "docs/spec/cases is out of date with the engine:\n"
-                + "".join(f"  {name}\n" for name in sorted(stale))
-                + "Run: uv run --group engine python tools/export_cases.py",
-                file=sys.stderr,
-            )
-            return 1
-        print(f"docs/spec/cases is up to date ({len(files)} files)")
-        return 0
-
-    for name, content in files.items():
-        (OUT / name).write_text(content)
-    print(f"wrote {len(files)} files to {OUT.relative_to(ROOT)}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

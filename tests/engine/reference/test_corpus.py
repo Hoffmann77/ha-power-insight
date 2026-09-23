@@ -54,5 +54,5 @@ def test_published_cases_are_current():
     )
     assert not stale, (
         f"docs/spec/cases is out of date with the engine: {stale}\n"
-        f"Run: uv run --group engine python tools/export_cases.py"
+        f"Run: uv run --group engine python tools/snapshot.py"
     )

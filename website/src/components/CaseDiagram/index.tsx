@@ -8,14 +8,7 @@ import ValueLedger from './ValueLedger';
 import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
 import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
-import {
-  costOf,
-  buildModel,
-  isEngineComputed,
-  resultsOf,
-  roleText,
-  valueOf,
-} from './model';
+import {costOf, buildModel, roleText, valueOf} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
 import type {
   AdapterConfig,
@@ -164,7 +157,7 @@ export default function CaseDiagram({
   );
 
   const byLayer = useMemo(
-    () => (activeState ? groupByLayer(resultsOf(activeState), properties) : null),
+    () => (activeState ? groupByLayer(activeState.results, properties) : null),
     [activeState, properties],
   );
 
@@ -365,11 +358,8 @@ export default function CaseDiagram({
     });
   };
 
-  // Engine-computed snapshots publish every property, so a missing row there is
-  // the engine reporting nothing (an unavailable reading). In docs versions
-  // cut before that, a missing row simply had not been derived yet.
-  const engineComputed = isEngineComputed(activeState);
-  const missingShares = engineComputed ? 'unavailable' : 'not yet derived';
+  // Every property is published; a snapshot with an unavailable reading
+  // publishes its provenance as nothing at all.
   const sharesKnown =
     valueOf(
       model.byProperty,
@@ -521,7 +511,7 @@ export default function CaseDiagram({
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
                     {!sharesKnown && (
-                      <span className={styles.vpending}>{missingShares}</span>
+                      <span className={styles.vpending}>unavailable</span>
                     )}
                   </p>
                   {flowRows(
@@ -536,7 +526,7 @@ export default function CaseDiagram({
                   <p className={styles.ptitle}>
                     Where its output went{' '}
                     {!sharesKnown && (
-                      <span className={styles.vpending}>{missingShares}</span>
+                      <span className={styles.vpending}>unavailable</span>
                     )}
                   </p>
                   {flowRows(
@@ -579,11 +569,8 @@ export default function CaseDiagram({
       />
 
       <p className={styles.certline}>
-        {engineComputed
-          ? 'Every value is what the engine computed for these readings at this version of the docs.'
-          : resultsOf(activeState).length === 1
-            ? '1 value derived by hand for this snapshot'
-            : `${resultsOf(activeState).length} values derived by hand for this snapshot`}
+        Every value is what the engine computed for these readings at this
+        version of the docs.
       </p>
     </div>
   );

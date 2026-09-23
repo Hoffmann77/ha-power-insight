@@ -1,0 +1,88 @@
+name: Update engine snapshots
+
+# Re-freeze everything the repository stores that the engine computes — the
+# frozen engine outputs (tests/engine/frozen/snapshots/) and the reference-case
+# results the docs show (docs/spec/cases/) — and commit them to the branch you
+# run this on.
+#
+# Normally you run this locally, in the same commit as the engine change that
+# moved an output:
+#
+#     uv run --group engine python tools/snapshot.py
+#
+# The engine tests fail if you forget, and list the outputs that moved. This
+# workflow is the button for when you forgot — Actions -> Update engine
+# snapshots -> Run workflow, choosing the branch. Tick *dry run* to see what
+# moved without committing.
+#
+# Deliberately manual: re-freezing is *accepting* that the outputs moved, which
+# is a decision for whoever reviews the change, not something to automate.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only report what moved; commit nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Never let two runs race for the same branch. Not cancel-in-progress: a run
+# that is mid-push should finish rather than leave a half-done commit.
+concurrency:
+  group: update-snapshots-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A real branch checkout rather than a detached head, so the commit
+          # below has somewhere to go.
+          ref: ${{ github.ref_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          python-version-file: pyproject.toml
+
+      - name: Install dependencies
+        run: uv sync --group engine
+
+      - name: Report what moved
+        id: diff
+        run: |
+          set -euo pipefail
+          {
+            echo "### Engine snapshots on \`${{ github.ref_name }}\`"
+            echo
+            if uv run --group engine python tools/snapshot.py --check; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            fi
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Re-freeze, commit and push
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          uv run --group engine python tools/snapshot.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/engine/frozen/snapshots docs/spec/cases
+          git commit -m "Re-freeze engine snapshots"
+          # A plain push, never a force: if the branch moved while this ran,
+          # failing loudly is right — the run is cheap to repeat, and
+          # clobbering somebody's commit is not.
+          git push origin HEAD:"${{ github.ref_name }}"
+
+      - name: Note that nothing was committed
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run == true
+        run: |
+          echo "Dry run: the snapshots are stale, but nothing was committed." \
+            | tee -a "$GITHUB_STEP_SUMMARY"

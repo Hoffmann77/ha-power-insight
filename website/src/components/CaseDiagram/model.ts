@@ -125,28 +125,8 @@ function asNested(v: ValueTree | undefined): {[k: string]: {[k: string]: string}
   return out;
 }
 
-/**
- * A snapshot's published values, whichever docs version it was frozen in.
- *
- * The component is shared by every docs version, so it must render the case
- * data each one froze — `results` today, `expectations` before the cases were
- * computed by the engine.
- */
-export function resultsOf(state: CaseState): Result[] {
-  return state.results ?? state.expectations ?? [];
-}
-
-/**
- * Whether a snapshot's values were computed by the engine (every property
- * present) rather than derived by hand (only some), which decides how the
- * diagram words a missing value.
- */
-export function isEngineComputed(state: CaseState): boolean {
-  return state.results !== undefined;
-}
-
 export function indexResults(state: CaseState): Map<string, Result> {
-  return new Map(resultsOf(state).map((e) => [e.property, e]));
+  return new Map(state.results.map((e) => [e.property, e]));
 }
 
 export function valueOf(

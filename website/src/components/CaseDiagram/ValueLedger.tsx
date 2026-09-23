@@ -130,10 +130,8 @@ export default function ValueLedger({
           />
         ))
       ) : (
-        // Engine-computed snapshots publish every property, so only a docs
-        // version cut from hand-derived values can have an empty layer.
         <div className={styles.vnone}>
-          Nothing in this layer has been derived for this snapshot yet.
+          The engine publishes nothing in this layer for this snapshot.
         </div>
       )}
     </section>

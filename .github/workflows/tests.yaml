@@ -23,6 +23,12 @@ jobs:
       - name: Run engine tests
         run: uv run --group engine pytest tests/engine -q
 
+      # A frozen-snapshot failure is a list of engine outputs this change moved,
+      # not necessarily a bug. Put that list where a reviewer sees it first.
+      - name: Summarise moved engine outputs
+        if: failure()
+        run: uv run --group engine python tools/snapshot.py --check >> "$GITHUB_STEP_SUMMARY" || true
+
   # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.
   integration-tests:
     runs-on: ubuntu-latest

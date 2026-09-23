@@ -108,7 +108,7 @@ root serves. Commit all three.
 The reference cases need no step of their own. Their results under
 `docs/spec/cases/` are the engine's, and CI fails any commit whose engine no
 longer produces them, so cutting from a green commit freezes exactly what this
-release's engine computes. `uv run --group engine python tools/export_cases.py
+release's engine computes. `uv run --group engine python tools/snapshot.py
 --check` confirms it locally.
 
 Old versions stay browsable and are still *rebuilt* on every deploy, because
@@ -125,8 +125,13 @@ passes it in rather than letting the component reach for it.
 
 Break that split and an old version's page will quietly start rendering today's
 numbers, when its whole purpose is to show what the engine did at that version.
-The shared component also has to keep reading every version's data: rename a
-field in the case JSON and the component must accept the old name too.
+
+Older versions are **not** kept compatible with the component. If the case JSON
+format changes, the build shows which old pages broke; remove those pages from
+the old versions (and their sidebar entries) rather than teaching the component
+every past format. That is what happened to 2026.7's hand-derived anchor cases,
+which left a one-paragraph stub at `spec/index` so the navbar link keeps
+working.
 
 :::
 

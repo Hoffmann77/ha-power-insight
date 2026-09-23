@@ -2,7 +2,7 @@
 
 Each module here is one case — a wiring (``@topology``), a few snapshots of
 readings (``@state``), and prose in docstrings. Nothing in them is asserted:
-``tools/export_cases.py`` passes every snapshot through the engine and writes
+``tools/snapshot.py`` passes every snapshot through the engine and writes
 the results, for every catalogued property, to ``docs/spec/cases/*.json`` for
 the documentation site. ``test_corpus.py`` fails whenever that output is out of
 step with the engine, so each commit — and each docs version cut from one —

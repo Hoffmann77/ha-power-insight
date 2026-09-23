@@ -4,7 +4,7 @@ A reference case is a small, fixed home — one wiring and a few snapshots of
 readings — shown on the documentation site with everything the engine
 computes for it. The cases are a **showcase**, not a specification: the
 numbers on a page are whatever the engine produced for those readings at that
-version of the code, recomputed by ``tools/export_cases.py`` and frozen into
+version of the code, recomputed by ``tools/snapshot.py`` and frozen into
 each docs version when it is cut. What the engine *ought* to do is pinned
 elsewhere — each decision by a hand-derived block in ``tests/engine/manual/``,
 every property's formula and the laws they obey in ``tests/engine/automatic/``.
