@@ -989,7 +989,7 @@ class PowerInsight:
         allowed happens to be idle.
 
         Two guarantees hold for every snapshot, and are checked over random
-        topologies by ``tests/engine/test_source_shares_invariants.py``:
+        topologies by ``tests/engine/automatic/test_source_shares_invariants.py``:
 
         * **Sources balance.** The watts attributed to a source across all sinks
           equal its reading. No source is over-drawn and none is left over.

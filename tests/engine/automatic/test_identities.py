@@ -15,7 +15,8 @@ the roots, where no formula exists:
 * ``sink_adapters_source_shares`` — the provenance allocation. Its shape and
   guarantees are pinned over random wirings by
   ``test_source_shares_invariants.py``; which of the valid allocations it
-  picks is a decision, and deciding belongs to the reference cases.
+  picks is a decision, and each decision is pinned by a hand-derived block in
+  ``tests/engine/manual/``.
 
 Everything else is a consequence of provenance plus the model's documented
 conventions (``docs/dev/engine-calculations.md``), and each identity's
@@ -36,11 +37,11 @@ from typing import Any, Callable
 
 import pytest
 
-from tests.engine.random_homes import Home, random_homes
+from tests.engine.automatic.random_homes import Home, random_homes
 from tests.engine.scenario_framework import matches, show
 
 CATALOG = json.loads(
-    (Path(__file__).parents[2] / "docs" / "spec" / "properties.json").read_text()
+    (Path(__file__).parents[3] / "docs" / "spec" / "properties.json").read_text()
 )["properties"]
 
 #: Tolerance for every comparison. Random homes use whole watts and cent

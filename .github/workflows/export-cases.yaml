@@ -1,11 +1,12 @@
 name: Export reference cases
 
-# Re-generate docs/spec/cases/ from the reference-case tests, and commit the
-# result to the branch you run this on.
+# Re-generate docs/spec/cases/ — every reference case's snapshots passed through
+# the engine — and commit the result to the branch you run this on.
 #
-# The source of truth is tests/engine/reference/*.py; the JSON under
-# docs/spec/cases/ is a projection of it that the documentation site imports.
-# Normally you re-export locally after filling in a value:
+# The readings live in tests/engine/reference/*.py; the JSON under
+# docs/spec/cases/ is what the engine computes for them, which the
+# documentation site imports. Normally you re-export locally in the same commit
+# as the engine change that moved a number:
 #
 #     uv run --group engine python tools/export_cases.py
 #
@@ -62,8 +63,7 @@ jobs:
           {
             echo "### Reference cases"
             echo
-            derived=$(python -c "import json;print(json.load(open('docs/spec/cases/coverage.json'))['totals']['derived'])")
-            echo "\`$derived\` derived values published from \`${{ github.ref_name }}\`."
+            echo "Engine results for every reference case on \`${{ github.ref_name }}\`."
             echo
             if git diff --quiet -- docs/spec/cases; then
               echo "changed=false" >> "$GITHUB_OUTPUT"

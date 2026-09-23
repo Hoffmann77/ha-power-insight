@@ -105,6 +105,12 @@ That is the whole ritual. It writes `versioned_docs/version-2026.8/`, a matching
 sidebar, and a new entry in `versions.json`; the newest entry becomes what the
 root serves. Commit all three.
 
+The reference cases need no step of their own. Their results under
+`docs/spec/cases/` are the engine's, and CI fails any commit whose engine no
+longer produces them, so cutting from a green commit freezes exactly what this
+release's engine computes. `uv run --group engine python tools/export_cases.py
+--check` confirms it locally.
+
 Old versions stay browsable and are still *rebuilt* on every deploy, because
 Docusaurus versions source rather than output — so a theme fix reaches every
 version at once.
@@ -118,8 +124,9 @@ that draws it is shared — which is why each page imports its own case data and
 passes it in rather than letting the component reach for it.
 
 Break that split and an old version's page will quietly start rendering today's
-numbers, which for a page whose entire purpose is pinning down specific values
-would be worse than useless.
+numbers, when its whole purpose is to show what the engine did at that version.
+The shared component also has to keep reading every version's data: rename a
+field in the case JSON and the component must accept the old name too.
 
 :::
 

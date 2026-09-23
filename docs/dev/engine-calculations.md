@@ -171,7 +171,7 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Pinned by [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
+Shown in [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 
 :::
 
@@ -192,7 +192,8 @@ the plug was then shown drawing from that third system, with a deficit. Merge
 east and west into one system and it did not happen, because the plug's need
 then lands on that one system as a reserve.
 
-Pinned by [`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx).
+Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`; shown in
+[`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx).
 
 :::
 
@@ -466,12 +467,11 @@ one block per decision, the smallest wiring that tells it apart from its
 alternatives, with values derived by hand from the decision. When a decision is
 added here, its block is added there.
 
-**Approximation policy.** Share and ratio expectations are compared with
-`pytest.approx(..., abs=1e-3)` — they must agree to **three decimal places**
-(0.1 percentage point). That lets an author write a readable rounded literal
-like `0.615` for `8/13`, while still catching any real regression (which shifts
-a share by far more than `1e-3` — the home-load bug above moved a share from
-`0.615` to `0.951`). Values that *are* exact — `0.5`, `2/3`, `0.625`, `0.0`,
-`1.0` — can be written exactly and compared at the default `pytest.approx`
-tolerance (relative `1e-6`). When you want a share pinned tighter than three
-decimals, write it as an exact fraction instead of rounding.
+**Approximation policy.** Write a hand-derived value as an exact fraction
+(`F(8, 13)`, not `0.615`); it is compared at `pytest.approx`'s default relative
+tolerance of `1e-6`, so it pins the engine to the value rather than to a
+rounding of it. Pass `abs_tol` to `expect_attribute` only when a value really
+must be written rounded.
+
+The reference cases in the docs are not tests of this kind: they show what the
+engine computes for fixed readings, and are recomputed whenever it changes.

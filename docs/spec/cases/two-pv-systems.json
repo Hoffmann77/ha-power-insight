@@ -2,7 +2,7 @@
   "id": "two-pv-systems",
   "title": "Two PV systems",
   "summary": "Two equal PV systems, east and west, and a smaller third on the carport. A plug may run on east or west but not on the carport. Everything else is exported, and there is no unmetered base load, so every watt in the house is spoken for.\n\nThe plug needs 400 W from east and west together, but neither system in particular \u2014 either one alone could cover it. That is easy to get wrong: a solver that reasons one source at a time finds nothing it must set aside for the plug on east, nothing on west, and can hand the export watts the plug needed.",
-  "decides": [
+  "shows": [
     "A restriction naming several PV systems is honoured jointly: a load allowed two systems is served from them whenever together they can cover it, even though it needs neither in particular.",
     "A sink spreads its draw over the systems it may use in proportion to what each has left, so two equal systems each carry half of it."
   ],
@@ -70,7 +70,7 @@
         "plug": "-400"
       },
       "price": "3/10",
-      "expectations": [
+      "results": [
         {
           "property": "gross_power",
           "value": "2200"
@@ -120,6 +120,14 @@
               "west": "1/2",
               "carport": "0"
             }
+          }
+        },
+        {
+          "property": "home_base_load_source_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
           }
         },
         {
@@ -215,6 +223,22 @@
           "value": {
             "east": "1/2",
             "west": "1/2",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_charging_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_standby_shares",
+          "value": {
+            "east": "0",
+            "west": "0",
             "carport": "0"
           }
         },

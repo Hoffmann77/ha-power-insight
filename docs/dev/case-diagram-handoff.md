@@ -77,9 +77,10 @@ drawn, and visibly distinguished from real devices.
 ## Data contract
 
 One JSON file per case in `docs/spec/cases/`, plus `index.json` listing them in
-ladder order and `coverage.json` recording how far the derivation programme has
-got. The diagram component needs neither of the latter two — they drive the
-tables on the section index — but `index.json` is the authority on case order.
+ladder order. Every state carries every catalogued property as the engine
+computed it (`results`). Docs versions cut before that carry hand-derived values
+under `expectations` and the case's list under `decides`; the component is
+shared by every version, so it reads both (`resultsOf` in `model.ts`).
 
 Read `group-captivity.json` and `mixed-export-house.json` first — between them
 they exercise every shape. `grid-only.json` is the other end of the range: a
@@ -90,7 +91,7 @@ single adapter, and still a slot for every property.
   "id": "group-captivity",
   "title": "Group captivity",
   "summary": "…prose for the page…",
-  "decides": ["…the modelling choices this case pins…"],
+  "shows": ["…what this case shows about the engine…"],
 
   "topology": [
     { "uid": "grid",  "kind": "grid",    "config": { "has_price_entity": true } },
@@ -105,7 +106,7 @@ single adapter, and still a slot for every property.
       "note": "…one line on what makes this snapshot interesting…",
       "readings": { "grid": "200", "east": "100", "bat_a": "-100" },
       "price": "3/10",
-      "expectations": [
+      "results": [
         { "property": "gross_power", "value": "400" },
         { "property": "combined_grid_export", "value": null }
       ]

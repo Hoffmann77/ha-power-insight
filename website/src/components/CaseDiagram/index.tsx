@@ -8,7 +8,14 @@ import ValueLedger from './ValueLedger';
 import {LAYERS, groupByLayer, layerTitle} from './layers';
 import {DeviceIcon, KIND_LABEL, kindColor} from './icons';
 import {fmtEur, fmtPct, fmtShare, fmtW, humanize, rat} from './rational';
-import {costOf, buildModel, hasValue, roleText} from './model';
+import {
+  costOf,
+  buildModel,
+  isEngineComputed,
+  resultsOf,
+  roleText,
+  valueOf,
+} from './model';
 import type {FlowEdge, FlowModel, FlowNode} from './model';
 import type {
   AdapterConfig,
@@ -157,7 +164,7 @@ export default function CaseDiagram({
   );
 
   const byLayer = useMemo(
-    () => (activeState ? groupByLayer(activeState.expectations, properties) : null),
+    () => (activeState ? groupByLayer(resultsOf(activeState), properties) : null),
     [activeState, properties],
   );
 
@@ -190,13 +197,11 @@ export default function CaseDiagram({
   const selected: FlowNode | null =
     model.nodes.find((n) => n.uid === selectedUid) ?? null;
 
-  const stateDerived = activeState.expectations.length;
-
   /** A stacked supply or demand bar, valued in whatever the layer asks for. */
   const ledgerRow = (title: string, list: FlowNode[]) => {
     // A node with no reading contributes nothing to the bar rather than a
-    // zero-width segment: the home base load has no derived size yet on most
-    // snapshots, and it must not be drawn as though it were measured at zero.
+    // zero-width segment: when the engine publishes no base load (a reading it
+    // needs is unavailable), it must not be drawn as though measured at zero.
     const watts = (n: FlowNode) => (n.reading === null ? 0 : Math.abs(n.reading));
     const totalW = list.reduce((a, n) => a + watts(n), 0);
     if (!totalW) {
@@ -360,12 +365,18 @@ export default function CaseDiagram({
     });
   };
 
-  const sharesDerived = hasValue(
-    model.byProperty,
-    selected?.virtual
-      ? 'home_base_load_source_shares'
-      : 'sink_adapters_source_shares',
-  );
+  // Engine-computed snapshots publish every property, so a missing row there is
+  // the engine reporting nothing (an unavailable reading). In docs versions
+  // cut before that, a missing row simply had not been derived yet.
+  const engineComputed = isEngineComputed(activeState);
+  const missingShares = engineComputed ? 'unavailable' : 'not yet derived';
+  const sharesKnown =
+    valueOf(
+      model.byProperty,
+      selected?.virtual
+        ? 'home_base_load_source_shares'
+        : 'sink_adapters_source_shares',
+    ) != null;
 
   return (
     <div className={styles.root}>
@@ -509,8 +520,8 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its power came from{' '}
-                    {!sharesDerived && (
-                      <span className={styles.vpending}>not yet derived</span>
+                    {!sharesKnown && (
+                      <span className={styles.vpending}>{missingShares}</span>
                     )}
                   </p>
                   {flowRows(
@@ -524,8 +535,8 @@ export default function CaseDiagram({
                 <>
                   <p className={styles.ptitle}>
                     Where its output went{' '}
-                    {!sharesDerived && (
-                      <span className={styles.vpending}>not yet derived</span>
+                    {!sharesKnown && (
+                      <span className={styles.vpending}>{missingShares}</span>
                     )}
                   </p>
                   {flowRows(
@@ -563,14 +574,16 @@ export default function CaseDiagram({
 
       <ValueLedger
         title={`${layer} · ${layerTitle(layer, properties)}`}
-        expectations={byLayer[layer]}
+        results={byLayer[layer]}
         catalog={properties}
       />
 
       <p className={styles.certline}>
-        {stateDerived === 1
-          ? '1 value derived by hand for this snapshot'
-          : `${stateDerived} values derived by hand for this snapshot`}
+        {engineComputed
+          ? 'Every value is what the engine computed for these readings at this version of the docs.'
+          : resultsOf(activeState).length === 1
+            ? '1 value derived by hand for this snapshot'
+            : `${resultsOf(activeState).length} values derived by hand for this snapshot`}
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 ---
 title: Mixed export house
-description: "Every device class at once, with the export permissions deliberately unequal: one battery may feed the grid and the other may not. Nothing here is settled for the first time \u2014 this is the case that checks the rules of the lower rungs still hold when they all apply together."
+description: "Every device class at once, with the export permissions deliberately unequal: one battery may feed the grid and the other may not. Nothing here appears for the first time \u2014 this is the case that shows the rules of the lower rungs still hold when they all apply together."
 ---
 
 import {referenceCase, PROPERTIES} from './cases/all';
@@ -11,10 +11,10 @@ export const CASE = referenceCase('mixed-export-house');
 
 {CASE.summary}
 
-## What this case pins down
+## What this case shows
 
 <ul>
-  {CASE.decides.map((d) => (
+  {CASE.shows.map((d) => (
     <li key={d}>{d}</li>
   ))}
 </ul>
@@ -26,9 +26,10 @@ export const CASE = referenceCase('mixed-export-house');
 Each card above is one snapshot of this wiring. The tabs under them re-label the
 same picture with a different layer of the engine — the readings, where each
 sink's power came from, how the gross power split between channels, and what it
-all cost — and the values derived for that snapshot are listed underneath. Only
-derived values appear, so a short table means the hand-checking has not got far
-here; a snapshot whose provenance is still undecided has no flows to draw.
+all cost — and every value the engine computed for that snapshot is listed
+underneath. They are recomputed from the readings whenever the engine changes,
+and frozen with each docs version, so this page shows what this version of the
+engine does.
 
 {CASE.states.map((s) => (
   <div key={s.id} style={{marginBottom: '1.25rem'}}>
@@ -45,7 +46,7 @@ here; a snapshot whose provenance is still undecided has no flows to draw.
 
 ## Why this case exists
 
-Every device class at once, and nothing settled here for the first time. That
+Every device class at once, and nothing here for the first time. That
 is deliberate: this rung is a net rather than a lesson. Each rule below it was
 pinned in the smallest wiring that could express it, and this case asks whether
 those rules still hold when they all apply to the same snapshot.

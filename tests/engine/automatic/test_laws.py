@@ -28,11 +28,11 @@ from typing import Any, Callable
 
 import pytest
 
-from tests.engine.random_homes import Home, random_homes
+from tests.engine.automatic.random_homes import Home, random_homes
 from tests.engine.scenario_framework import Adapter, matches, show
 
 CATALOG = json.loads(
-    (Path(__file__).parents[2] / "docs" / "spec" / "properties.json").read_text()
+    (Path(__file__).parents[3] / "docs" / "spec" / "properties.json").read_text()
 )["properties"]
 PROPERTIES = list(CATALOG)
 

@@ -8,8 +8,7 @@
         "import_only",
         "grid_idle",
         "grid_unavailable"
-      ],
-      "derived": 78
+      ]
     },
     {
       "id": "pv-self-consumption",
@@ -20,8 +19,7 @@
         "pv_covers_all",
         "pv_standby",
         "pv_unavailable"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "pv-export",
@@ -31,8 +29,7 @@
         "export_surplus",
         "export_all",
         "zero_gross"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "metered-load",
@@ -41,8 +38,7 @@
       "states": [
         "load_and_base",
         "over_metered"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "captive-load",
@@ -51,8 +47,7 @@
       "states": [
         "captive_load",
         "load_exceeds"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "battery-basics",
@@ -62,8 +57,7 @@
         "charging",
         "discharging",
         "idle"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "captive-battery",
@@ -72,8 +66,7 @@
       "states": [
         "captive_depletes_first",
         "source_in_standby"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "group-captivity",
@@ -82,8 +75,7 @@
       "states": [
         "hall_tight_pair",
         "unsatisfiable_overlap"
-      ],
-      "derived": 0
+      ]
     },
     {
       "id": "two-pv-systems",
@@ -91,8 +83,7 @@
       "file": "two-pv-systems.json",
       "states": [
         "every_watt_spoken_for"
-      ],
-      "derived": 53
+      ]
     },
     {
       "id": "mixed-export-house",
@@ -102,8 +93,7 @@
         "export_non_exporting_battery",
         "export_with_standby",
         "discharge_dynamic_prices"
-      ],
-      "derived": 0
+      ]
     }
   ]
 }

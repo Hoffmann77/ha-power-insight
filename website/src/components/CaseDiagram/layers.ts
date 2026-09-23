@@ -6,7 +6,7 @@
  * Short labels are for the tab; the catalog's own wording is the section
  * heading, because that is the vocabulary the rest of the spec uses.
  */
-import type {Expectation, LayerId, PropertyCatalog} from './types';
+import type {Result, LayerId, PropertyCatalog} from './types';
 
 export const LAYERS: {id: LayerId; short: string; fallback: string}[] = [
   {id: '1', short: 'Totals', fallback: 'Readings and totals'},
@@ -29,18 +29,18 @@ export function layerTitle(
 }
 
 /**
- * A state's expectations, bucketed by layer.
+ * A state's results, bucketed by layer.
  *
  * A property the catalog does not document still has to be shown — silently
  * dropping a published value would be the one failure mode this table exists to
  * prevent — so it falls into layer 1 alongside the readings.
  */
 export function groupByLayer(
-  expectations: Expectation[],
+  results: Result[],
   catalog: PropertyCatalog | undefined,
-): {[k in LayerId]: Expectation[]} {
-  const out: {[k in LayerId]: Expectation[]} = {'1': [], '2': [], '3': [], '4': []};
-  for (const e of expectations) {
+): {[k in LayerId]: Result[]} {
+  const out: {[k in LayerId]: Result[]} = {'1': [], '2': [], '3': [], '4': []};
+  for (const e of results) {
     const layer = String(catalog?.properties?.[e.property]?.layer ?? 1) as LayerId;
     (out[layer] ?? out['1']).push(e);
   }
