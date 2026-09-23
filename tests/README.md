@@ -96,9 +96,10 @@ with readings that slightly overdraw, as unsynchronised sensors do).
 ### `manual/` — one hand-derived harness per engine decision
 
 Each module covers one area with one class — `test_power_flow.py`
-(`TestPowerFlow`: where each sink's power comes from), `test_edge_readings.py`
-(`TestEdgeReadings`: missing and degenerate readings) — and each decision is
-one block in it: the smallest `@topology` and `@state` that tell the decision
+(`TestPowerFlow`: where each sink's power comes from), `test_money.py`
+(`TestMoney`: what it costs, saves, and who gets the credit),
+`test_edge_readings.py` (`TestEdgeReadings`: missing and degenerate readings)
+— and each decision is one block in it: the smallest `@topology` and `@state` that tell the decision
 apart from its alternatives, then `@expect_attribute` claims derived **by
 hand** from the decision, never read back from the engine. The `@state`
 docstring names the decision and its note in
@@ -107,7 +108,11 @@ red test here reads as "this decision no longer holds". Any engine property can
 be claimed, catalogued or not (the restriction deficit, say).
 
 **Add a block whenever a decision is made** — together with its note, and with
-the engine fix when the decision was found as a bug. A red block means either
+the engine fix when the decision was found as a bug. `test_decisions.py`
+enforces it: every `Decision:` note in `engine-calculations.md` must end with
+`Pinned by `TestX` in …` (a class that exists here) or `Not pinned in the
+engine tier:` and a reason, and every block's `@state` docstring must open with
+the decision it pins. A red block means either
 the engine or the derivation is wrong; resolving which is a human call. Never
 paste an answer out of a failing test's `actual:` line.
 

@@ -38,6 +38,9 @@ consumer sensor dropping out does **not** invalidate it (consumers are not
 sources). Everything gated on `gross_power` (the share vectors, the source
 provenance) then propagates `None` / `{}` rather than a wrong number.
 
+Pinned by `TestEdgeReadings` in `tests/engine/manual/test_edge_readings.py`
+(an unavailable meter, and a consumer dropping out).
+
 :::
 
 `source_adapters_gross_power_shares` sums to 1. `sink_adapters_gross_power_shares`
@@ -261,6 +264,8 @@ because the four channels are the only cost split that conserves:
 and likewise for the marginal (`coe`) variants. Every watt of gross power
 is bought once and lands in exactly one channel.
 
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+
 :::
 
 :::note[Decision: operating cost has a channel view and a device view]
@@ -296,6 +301,8 @@ accumulated history does not carry over. The integration is still in
 development, so no repair issue is raised for it. CON, STB and EXP are new
 quantities and start from zero.
 
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+
 :::
 
 ### Savings are booked per device, at the moment they are realized
@@ -313,6 +320,8 @@ model cannot do. Booking at charge time is exact per snapshot and correct
 over a full cycle: charge `−(kWh × mix price)`, discharge
 `+(kWh × (grid − LCOS))`, and round-trip losses show up honestly as the
 difference between the two energies.
+
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
 
 :::
 
@@ -339,6 +348,8 @@ the CON channel come to the same number:
 `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
 **Never add the two sides together** — that double counts every saved euro.
 
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+
 :::
 
 ### Corrections apply to prices, not to results
@@ -357,6 +368,8 @@ belongs on the `lcoe` inside the bracket, which is where the engine's
 The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
 factor is not merely misplaced there, it is unrelated.
+
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
 
 :::
 
@@ -377,6 +390,10 @@ Totals accumulated before the breakdown existed restore without one. They
 are carried through unscaled: there is no attribution left to correct them
 by, and inventing one would be worse than leaving them at face value.
 
+Not pinned in the engine tier: the accumulation happens in the sensor layer.
+Covered by `tests/integration/test_correction_flow.py`
+(`test_stored_data_round_trips_the_component_breakdown` and its neighbour).
+
 :::
 
 ### The home base load is a device
@@ -393,6 +410,8 @@ any readable uid (`home`, `base_load`) can collide with a user's slugified
 device name — which is exactly why the solver's internal sentinel is
 `"\x00home"`. Dedicated properties are collision-proof and make the
 duality invariant above explicit rather than hidden in a magic key.
+
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
 
 :::
 
@@ -414,6 +433,8 @@ mix the battery *would* charge on right now even while discharging, and left
 an unrestricted battery undefined entirely. Tracking a true running average
 cost of stored energy is a stateful feature, deliberately deferred; nothing
 in the savings ledger depends on it, because discharge is valued at `LCOS`.
+
+Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
 
 :::
 
@@ -464,6 +485,9 @@ That left the configured value with no consumer at all, so the field is
 gone: asking for a number nothing reads is worse than not asking. Existing
 entries have the stored key dropped by a migration.
 
+Not pinned in the engine tier: there is nothing to pin — the engine has no
+efficiency input.
+
 :::
 
 **Known simplification.** Self-consumption is valued at the import price even in
@@ -482,8 +506,12 @@ rewriting the "expected" answer.
 
 Every decision on this page gets an explicit harness in `tests/engine/manual/`:
 one block per decision, the smallest wiring that tells it apart from its
-alternatives, with values derived by hand from the decision. When a decision is
-added here, its block is added there.
+alternatives, with values derived by hand from the decision. Each note ends
+with where it is pinned — `Pinned by `TestX` in …` — or, after `Not pinned in
+the engine tier:`, why it cannot be and what covers it instead.
+`tests/engine/manual/test_decisions.py` fails when a note has neither, when it
+names a class that does not exist, or when a block does not say which decision
+it pins. So adding a decision here means adding its block there.
 
 **Approximation policy.** Write a hand-derived value as an exact fraction
 (`F(8, 13)`, not `0.615`); it is compared at `pytest.approx`'s default relative

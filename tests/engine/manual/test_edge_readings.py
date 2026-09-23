@@ -118,3 +118,39 @@ class TestEdgeReadings(EngineScenario):
     @expect_attribute("sink_adapters_source_shares")
     def test_export_with_nothing_producing_sink_adapters_source_shares(self):
         return {}
+
+    # ----------------------------------------------------------------------
+    # Decision: a consumer dropping out does not make gross power unknowable.
+
+    @topology
+    def grid_and_a_plug(self):
+        return (Adapter.grid(), Adapter.consumer("plug"))
+
+    @state
+    def plug_unavailable(self):
+        """Decision: gross power is unknowable only when an *inflow* sensor —
+        grid, PV or battery — is unavailable; a consumer dropping out does not
+        invalidate it (engine-calculations.md, "gross power is None if any
+        inflow sensor is unavailable").
+
+        The grid still reads 500 W, so gross power and self-consumption are
+        known. The plug's sensor is gone: it is in no flow group, so it has no
+        row, and its draw is simply part of the 500 W base load.
+        """
+        return State(grid=500, plug=None, price=F(3, 10))
+
+    @expect_attribute("gross_power")
+    def test_plug_unavailable_gross_power(self):
+        return 500
+
+    @expect_attribute("combined_consumption")
+    def test_plug_unavailable_combined_consumption(self):
+        return 500
+
+    @expect_attribute("home_base_load_power")
+    def test_plug_unavailable_home_base_load_power(self):
+        return 500
+
+    @expect_attribute("sink_adapters_source_shares")
+    def test_plug_unavailable_sink_adapters_source_shares(self):
+        return {}
