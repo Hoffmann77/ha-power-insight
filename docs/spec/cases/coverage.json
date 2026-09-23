@@ -8,6 +8,7 @@
     "battery-basics",
     "captive-battery",
     "group-captivity",
+    "split-array",
     "mixed-export-house"
   ],
   "decisions": [
@@ -95,6 +96,15 @@
       "derived": 0
     },
     {
+      "case": "split-array",
+      "case_title": "Split array",
+      "decides": [
+        "A restriction naming several sources is honoured jointly: a sink allowed two strings is served from them whenever together they can cover it, even though it needs neither string in particular.",
+        "Splitting an array into strings splits its rows and nothing else: each string carries half of what the single array would, and every whole-home figure is unchanged."
+      ],
+      "derived": 53
+    },
+    {
       "case": "mixed-export-house",
       "case_title": "Mixed export house",
       "decides": [
@@ -109,81 +119,91 @@
     "gross_power": {
       "title": "Gross power",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_grid_import": {
       "title": "Grid import",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_grid_export": {
       "title": "Grid export",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_production": {
       "title": "PV production",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_charging_power": {
       "title": "Charging power",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_discharging_power": {
       "title": "Discharging power",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_standby_power": {
       "title": "Standby power",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_consumption": {
       "title": "Self-consumption",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "home_base_load_power": {
       "title": "Home base load",
       "layer": 1,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "sink_adapters_source_shares": {
       "title": "Source provenance",
       "layer": 2,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "home_base_load_source_shares": {
@@ -197,102 +217,122 @@
     "gross_power_export_ratio": {
       "title": "Export ratio",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "gross_power_consumption_ratio": {
       "title": "Self-consumption ratio",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "gross_power_charging_ratio": {
       "title": "Charging ratio",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "gross_power_standby_ratio": {
       "title": "Standby ratio",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_consumption_power": {
       "title": "Self-consumed power per source",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_export_power": {
       "title": "Exported power per source",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_export_shares": {
       "title": "Export share per source",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_standby_power": {
       "title": "Standby power per source",
       "layer": 3,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_charging_power": {
       "title": "Charging power per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_consumption_ratios": {
       "title": "Self-consumption ratio per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_export_ratios": {
       "title": "Export ratio per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_charging_ratios": {
       "title": "Charging ratio per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_standby_ratios": {
       "title": "Standby ratio per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_consumption_shares": {
       "title": "Self-consumption share per source",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_charging_shares": {
       "title": "Charging share per source",
@@ -309,224 +349,247 @@
     "sink_adapters_consumption_shares": {
       "title": "Consumption share per sink",
       "layer": 3,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_coe_rate": {
       "title": "Cost of electricity rate",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_lcoe_rate": {
       "title": "Levelized cost of electricity rate",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_saving_rate": {
       "title": "Cost saving rate",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "combined_export_compensation_rate": {
       "title": "Export compensation rate",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_dynamic_coe": {
       "title": "Marginal price per source",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_dynamic_lcoe": {
       "title": "Levelized price per source",
       "layer": 4,
-      "derived": 3,
+      "derived": 4,
       "derived_in": [
-        "grid-only"
+        "grid-only",
+        "split-array"
       ]
     },
     "source_adapters_coe_rate": {
       "title": "Marginal cost rate per source",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_export_compensation_rates": {
       "title": "Export compensation rate per source",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_coo_rates": {
       "title": "Operating cost rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "source_adapters_lcoo_rates": {
       "title": "Levelized operating cost rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "sink_adapters_coo_rates": {
       "title": "Operating cost rate per sink",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "sink_adapters_lcoo_rates": {
       "title": "Levelized operating cost rate per sink",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "sink_adapters_avoided_cost_rates": {
       "title": "Avoided cost rate per sink",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "home_base_load_avoided_cost_rate": {
       "title": "Home base load avoided cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_coe": {
       "title": "Price of electricity",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_lcoe": {
       "title": "Levelized price of electricity",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_consumption_cost_rate": {
       "title": "Consumption cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_levelized_consumption_cost_rate": {
       "title": "Levelized consumption cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_charging_cost_rate": {
       "title": "Charging cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_levelized_export_cost_rate": {
       "title": "Levelized export cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_levelized_standby_cost_rate": {
       "title": "Levelized standby cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_device_operating_cost_rate": {
       "title": "Device operating cost rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "adapters_saving_rates": {
       "title": "Cost saving rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "adapters_levelized_saving_rates": {
       "title": "Levelized cost saving rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "adapters_financial_return_rates": {
       "title": "Financial return rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "adapters_levelized_financial_return_rates": {
       "title": "Levelized financial return rate per device",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     },
     "combined_financial_return_rate": {
       "title": "Financial return rate",
       "layer": 4,
-      "derived": 0,
-      "derived_in": []
+      "derived": 1,
+      "derived_in": [
+        "split-array"
+      ]
     }
   },
   "totals": {
-    "derived": 78,
+    "derived": 131,
     "untouched": [
-      "adapters_financial_return_rates",
-      "adapters_levelized_financial_return_rates",
-      "adapters_levelized_saving_rates",
-      "adapters_saving_rates",
-      "combined_charging_cost_rate",
-      "combined_coe",
-      "combined_consumption_cost_rate",
-      "combined_device_operating_cost_rate",
-      "combined_financial_return_rate",
-      "combined_lcoe",
-      "combined_levelized_consumption_cost_rate",
-      "combined_levelized_export_cost_rate",
-      "combined_levelized_standby_cost_rate",
-      "home_base_load_avoided_cost_rate",
-      "sink_adapters_avoided_cost_rates",
-      "sink_adapters_consumption_shares",
-      "sink_adapters_coo_rates",
-      "sink_adapters_lcoo_rates",
-      "source_adapters_charging_power",
-      "source_adapters_charging_ratios",
       "source_adapters_charging_shares",
-      "source_adapters_coe_rate",
-      "source_adapters_consumption_ratios",
-      "source_adapters_consumption_shares",
-      "source_adapters_coo_rates",
-      "source_adapters_export_compensation_rates",
-      "source_adapters_export_ratios",
-      "source_adapters_lcoo_rates",
-      "source_adapters_standby_ratios",
       "source_adapters_standby_shares"
     ]
   }

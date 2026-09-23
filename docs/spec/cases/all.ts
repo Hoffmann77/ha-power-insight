@@ -4,7 +4,7 @@
  * The order is the corpus's argument, not an accident: each case is the
  * smallest wiring that can express the decision it settles, and every entry
  * adds one device or flips one configuration flag against the entry above it.
- * The last two are specialists — they are allowed to be large because the
+ * The last three are specialists — they are allowed to be large because the
  * decisions they carry cannot be shown in anything smaller.
  *
  * This barrel lives inside `docs/` on purpose: the case data is part of the
@@ -22,6 +22,7 @@ import CAPTIVE_LOAD from './captive-load.json';
 import BATTERY_BASICS from './battery-basics.json';
 import CAPTIVE_BATTERY from './captive-battery.json';
 import GROUP_CAPTIVITY from './group-captivity.json';
+import SPLIT_ARRAY from './split-array.json';
 import MIXED_EXPORT_HOUSE from './mixed-export-house.json';
 import CATALOG from '../properties.json';
 import COVERAGE from './coverage.json';
@@ -41,6 +42,7 @@ export const REFERENCE_CASES = [
   BATTERY_BASICS,
   CAPTIVE_BATTERY,
   GROUP_CAPTIVITY,
+  SPLIT_ARRAY,
   MIXED_EXPORT_HOUSE,
 ] as unknown as ReferenceCase[];
 

@@ -1,0 +1,78 @@
+---
+title: Split array
+description: "One PV array on an inverter with two MPP trackers, registered as two strings, next to a small second array. A plug may only run on the main array — on either of its strings. Everything else is exported, and there is no unmetered base load, so every watt in the house is spoken for."
+---
+
+import {referenceCase, PROPERTIES} from './cases/all';
+
+export const CASE = referenceCase('split-array');
+
+# Split array
+
+{CASE.summary}
+
+## What this case pins down
+
+<ul>
+  {CASE.decides.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+<CaseDiagram case={CASE} properties={PROPERTIES} />
+
+## The snapshots
+
+Each card above is one snapshot of this wiring. The tabs under them re-label the
+same picture with a different layer of the engine — the readings, where each
+sink's power came from, how the gross power split between channels, and what it
+all cost — and the values derived for that snapshot are listed underneath. Only
+derived values appear, so a short table means the hand-checking has not got far
+here; a snapshot whose provenance is still undecided has no flows to draw.
+
+{CASE.states.map((s) => (
+  <div key={s.id} style={{marginBottom: '1.25rem'}}>
+    <p style={{marginBottom: '0.4rem'}}>
+      <code>{s.id}</code> — {s.note}
+    </p>
+    {s.open_question && (
+      <blockquote>
+        <strong>Open question.</strong> {s.open_question}
+      </blockquote>
+    )}
+  </div>
+))}
+
+## Why this case exists
+
+[Group captivity](./group-captivity.mdx) is about a *group of sinks* that
+together need a set of sources. This case is its mirror image: *one sink* that
+needs a group of sources — the two strings of one array — without needing
+either string in particular.
+
+That is exactly what a solver reasoning one source at a time cannot see. Ask
+"what must the plug take from `pv1a`?" and the answer is nothing, because `pv1b`
+could cover it; ask the same of `pv1b` and the answer is again nothing. So
+nothing is set aside for the plug on either string, even though it needs 400 W
+of the pair.
+
+Meanwhile the export *does* have something set aside: `pv2` may feed nothing
+else, so all 200 W of it must go to the export in any valid allocation. The
+engine used to offer the export a share of all three sources, find the offers
+added up to more than its 1800 W, and scale every offer down by the same factor
+— including the 200 W it had to take from `pv2`. It took 180 W, and the 20 W of
+`pv2` it left behind could go nowhere but the plug, which may not use it. The
+plug was shown drawing 20 W from `pv2` and a restriction deficit was reported
+for a configuration that had nothing wrong with it.
+
+Register the same array as one device and none of this happens: the plug then
+needs all 400 W from that one device, which is reserved for it up front. A
+house should not get different numbers for how its inverter is registered.
+
+The fix is that offers are still scaled down together — which keeps each sink's
+split in proportion to what its sources have left — but never below what a
+source *must* carry in every valid allocation.
+
+This needs no base load to go wrong only because with one, the slack hides the
+mistake. In the snapshot above every watt is spoken for, so there is nowhere
+for a misplaced watt to go.

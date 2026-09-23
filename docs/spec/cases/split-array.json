@@ -1,0 +1,390 @@
+{
+  "id": "split-array",
+  "title": "Split array",
+  "summary": "One PV array on an inverter with two MPP trackers, registered as two strings, next to a small second array. A plug may only run on the main array \u2014 on either of its strings. Everything else is exported, and there is no unmetered base load, so every watt in the house is spoken for.\n\nNothing about the house changes if the main array is registered as one device or as two, so nothing the engine publishes about it should either. That is easy to get wrong: the plug needs neither string in particular, so a solver that reasons one source at a time finds nothing it must reserve for the plug on either string, and can hand the export watts the plug needed.",
+  "decides": [
+    "A restriction naming several sources is honoured jointly: a sink allowed two strings is served from them whenever together they can cover it, even though it needs neither string in particular.",
+    "Splitting an array into strings splits its rows and nothing else: each string carries half of what the single array would, and every whole-home figure is unchanged."
+  ],
+  "topology": [
+    {
+      "uid": "grid",
+      "kind": "grid",
+      "config": {
+        "has_price_entity": true
+      }
+    },
+    {
+      "uid": "pv1a",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "pv1b",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "pv2",
+      "kind": "pv",
+      "config": {
+        "lcoe": "1/10",
+        "lco2_intensity": "50",
+        "exports_power": true,
+        "export_compensation": "0",
+        "correction_factor": "1"
+      }
+    },
+    {
+      "uid": "plug",
+      "kind": "consumer",
+      "config": {
+        "power_from_adapters": [
+          "pv1a",
+          "pv1b"
+        ]
+      }
+    }
+  ],
+  "states": [
+    {
+      "id": "every_watt_spoken_for",
+      "note": "The main array makes 2000 W across its two strings and pv2 makes 200 W. The plug draws 400 W and the other 1800 W is exported. pv2 can only go to the export, so the export takes it all, and the strings cover the rest of the export and the whole plug \u2014 exactly.",
+      "readings": {
+        "grid": "-1800",
+        "pv1a": "1000",
+        "pv1b": "1000",
+        "pv2": "200",
+        "plug": "-400"
+      },
+      "price": "3/10",
+      "expectations": [
+        {
+          "property": "gross_power",
+          "value": "2200"
+        },
+        {
+          "property": "combined_grid_import",
+          "value": "0"
+        },
+        {
+          "property": "combined_grid_export",
+          "value": "1800"
+        },
+        {
+          "property": "combined_production",
+          "value": "2200"
+        },
+        {
+          "property": "combined_charging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_discharging_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_standby_power",
+          "value": "0"
+        },
+        {
+          "property": "combined_consumption",
+          "value": "400"
+        },
+        {
+          "property": "home_base_load_power",
+          "value": "0"
+        },
+        {
+          "property": "sink_adapters_source_shares",
+          "value": {
+            "grid": {
+              "pv1a": "4/9",
+              "pv1b": "4/9",
+              "pv2": "1/9"
+            },
+            "plug": {
+              "pv1a": "1/2",
+              "pv1b": "1/2",
+              "pv2": "0"
+            }
+          }
+        },
+        {
+          "property": "gross_power_export_ratio",
+          "value": "9/11"
+        },
+        {
+          "property": "gross_power_consumption_ratio",
+          "value": "2/11"
+        },
+        {
+          "property": "gross_power_charging_ratio",
+          "value": "0"
+        },
+        {
+          "property": "gross_power_standby_ratio",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_consumption_power",
+          "value": {
+            "pv1a": "200",
+            "pv1b": "200",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_power",
+          "value": {
+            "pv1a": "800",
+            "pv1b": "800",
+            "pv2": "200"
+          }
+        },
+        {
+          "property": "source_adapters_export_shares",
+          "value": {
+            "pv1a": "4/9",
+            "pv1b": "4/9",
+            "pv2": "1/9"
+          }
+        },
+        {
+          "property": "source_adapters_standby_power",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_charging_power",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_consumption_ratios",
+          "value": {
+            "pv1a": "1/5",
+            "pv1b": "1/5",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_ratios",
+          "value": {
+            "pv1a": "4/5",
+            "pv1b": "4/5",
+            "pv2": "1"
+          }
+        },
+        {
+          "property": "source_adapters_charging_ratios",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_standby_ratios",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_consumption_shares",
+          "value": {
+            "pv1a": "1/2",
+            "pv1b": "1/2",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_consumption_shares",
+          "value": {
+            "plug": "1"
+          }
+        },
+        {
+          "property": "combined_coe_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_lcoe_rate",
+          "value": "11/50"
+        },
+        {
+          "property": "combined_avoided_cost_rate",
+          "value": "3/25"
+        },
+        {
+          "property": "combined_saving_rate",
+          "value": "3/25"
+        },
+        {
+          "property": "combined_export_compensation_rate",
+          "value": "0"
+        },
+        {
+          "property": "source_adapters_dynamic_coe",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_dynamic_lcoe",
+          "value": {
+            "pv1a": "1/10",
+            "pv1b": "1/10",
+            "pv2": "1/10"
+          }
+        },
+        {
+          "property": "source_adapters_coe_rate",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_export_compensation_rates",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_coo_rates",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "source_adapters_lcoo_rates",
+          "value": {
+            "pv1a": "0",
+            "pv1b": "0",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_coo_rates",
+          "value": {
+            "grid": "0",
+            "plug": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_lcoo_rates",
+          "value": {
+            "grid": "9/50",
+            "plug": "1/25"
+          }
+        },
+        {
+          "property": "sink_adapters_avoided_cost_rates",
+          "value": {
+            "plug": "3/25"
+          }
+        },
+        {
+          "property": "home_base_load_avoided_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_coe",
+          "value": "0"
+        },
+        {
+          "property": "combined_lcoe",
+          "value": "1/10"
+        },
+        {
+          "property": "combined_consumption_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_consumption_cost_rate",
+          "value": "1/25"
+        },
+        {
+          "property": "combined_charging_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_export_cost_rate",
+          "value": "9/50"
+        },
+        {
+          "property": "combined_levelized_standby_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_device_operating_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "adapters_saving_rates",
+          "value": {
+            "pv1a": "3/50",
+            "pv1b": "3/50",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "adapters_levelized_saving_rates",
+          "value": {
+            "pv1a": "1/25",
+            "pv1b": "1/25",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "adapters_financial_return_rates",
+          "value": {
+            "pv1a": "3/50",
+            "pv1b": "3/50",
+            "pv2": "0"
+          }
+        },
+        {
+          "property": "adapters_levelized_financial_return_rates",
+          "value": {
+            "pv1a": "-1/25",
+            "pv1b": "-1/25",
+            "pv2": "-1/50"
+          }
+        },
+        {
+          "property": "combined_financial_return_rate",
+          "value": "3/25"
+        }
+      ]
+    }
+  ]
+}

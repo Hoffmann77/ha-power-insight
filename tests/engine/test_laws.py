@@ -224,13 +224,13 @@ def test_an_idle_device_changes_nothing() -> None:
 @pytest.mark.xfail(
     strict=True,
     reason=(
-        "Open: the allocation is not split-invariant. With a captive sink "
-        "restricted to *several* sources, (1) the engine can report a "
-        "restriction deficit although an allocation honouring every "
-        "restriction exists, and (2) a flexible sink no longer splits in "
-        "proportion to what each source has left. Both only show once one "
-        "source becomes two. Repro: grid=-880, pv0a=pv0b=1075, pv1=250, "
-        "bat0=-1180[pv0a, pv0b, grid], cons0=-340[pv0a, pv0b]."
+        "Open: the allocation is not split-invariant. With a sink restricted "
+        "to *several* sources and an unmetered base load in the house, the "
+        "export no longer splits in proportion to what each source has left "
+        "once one source becomes two. Repro: grid=-1300, pv0a=pv0b=1000, "
+        "pv1=200, plug=-400[pv0a, pv0b] gives the export 0.886 from pv0, not "
+        "1600/1800. (The spurious deficit this law also found is fixed and "
+        "pinned by the split-array reference case.)"
     ),
 )
 def test_splitting_an_array_into_two_strings_changes_nothing_in_total() -> None:

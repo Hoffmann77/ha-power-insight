@@ -175,6 +175,25 @@ Pinned by [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.md
 
 :::
 
+:::note[Decision: what every valid allocation carries is never scaled away]
+
+A sink allowed several sources is offered a share of each, and the offers can
+add up to more than it draws; they are then scaled down together, which keeps
+its split in proportion to what each source has left. But some of an offer may
+be a *reserve* — watts that source must carry to this sink in every valid
+allocation, because no other sink may take them. Scaling stops at the reserve.
+
+Scaling it away strands the difference on a source only this sink could use,
+and some *other* sink then has its restriction relaxed for a configuration
+with nothing wrong in it. The symptom is registration-dependent: a plug allowed
+both strings of one array reported a deficit that disappears when the array is
+registered as one device, because a single device carries the plug's reserve
+up front while two interchangeable strings carry none each.
+
+Pinned by [`split-array / every_watt_spoken_for`](../spec/split-array.mdx).
+
+:::
+
 **Worked example** — grid `+400`, `pv_1 1000`, `pv_2 600` (gross 2000);
 `bat_1` on grid+`pv_1` and `bat_2` on grid+`pv_2` drawing 400 W each; `bat_3`
 and `cons_1` on PV only, 500 W each; home base load 200 W.

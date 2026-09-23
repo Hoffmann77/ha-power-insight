@@ -89,12 +89,12 @@ uv run --group engine pytest tests/engine   # HA harness not required
 ### Coverage the corpus still owes
 
 Concentrating every value in `reference/` means the corpus is now the *only*
-thing asserting one, and eight of its nine cases are still `TODO`. Two gaps are
+thing asserting one, and eight of its ten cases are still mostly `TODO`. Two gaps are
 open until it catches up, both worth closing before a release:
 
 1. **Derivations.** 64 engine properties reach a user's sensor and the catalog
-   now names 50 of them, so every one has a `return TODO` stub waiting in all
-   nine cases — 1266 in total. Until a stub is filled the property has no
+   now names 50 of them, so every one has a `return TODO` stub waiting in every
+   case — 1269 in total. Until a stub is filled the property has no
    assertion anywhere, so the count of skips *is* the size of the gap.
 
    Fourteen sensor-facing properties are deliberately left out of the catalog,
@@ -125,7 +125,7 @@ The scenario files above cover what a value assertion cannot express. The
 **reference corpus** holds every value, and answers the question that matters —
 whether what the engine does is *right*.
 
-It is nine small homes, one module per case. Each is an ordinary scenario class
+It is ten small homes, one module per case. Each is an ordinary scenario class
 whose `@expect` methods claim values somebody worked out **by hand from the
 model**, with the engine's answer not in view:
 

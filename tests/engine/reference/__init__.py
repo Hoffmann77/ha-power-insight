@@ -1,4 +1,4 @@
-"""The reference corpus: nine small homes the engine is specified against.
+"""The reference corpus: ten small homes the engine is specified against.
 
 Each module here is one case — an ordinary scenario class (``@topology`` /
 ``@state`` / source-order binding, exactly like every other engine test) whose
@@ -30,12 +30,13 @@ the rung above it. Two rules keep it finite, and both are load-bearing:
 * A snapshot earns its place only if it moves a published value that no other
   snapshot of its case moves.
 
-The last two cases break the one-device-at-a-time growth on purpose. They are
-specialists: Hall's condition quantifies over *subsets* of sinks and cannot be
-shown with fewer than two sources and two restricted sinks, and the mixed
-export permissions only mean anything with two dischargers that differ. They
-are the only cases allowed to be large, and neither is the first home of any
-decision.
+The last three cases break the one-device-at-a-time growth on purpose. They
+are specialists: Hall's condition quantifies over *subsets* of sinks and cannot
+be shown with fewer than two sources and two restricted sinks; its mirror image
+— one sink allowed a *group* of sources, none of which it needs on its own —
+needs a second restricted sink competing for the group and a source only that
+competitor may use; and the mixed export permissions only mean anything with
+two dischargers that differ. They are the only cases allowed to be large.
 """
 
 from __future__ import annotations
@@ -58,6 +59,7 @@ from tests.engine.reference.test_metered_load import TestMeteredLoad
 from tests.engine.reference.test_mixed_export_house import TestMixedExportHouse
 from tests.engine.reference.test_pv_export import TestPvExport
 from tests.engine.reference.test_pv_self_consumption import TestPvSelfConsumption
+from tests.engine.reference.test_split_array import TestSplitArray
 
 #: Every reference case, in ladder order. The order is the corpus's argument,
 #: not an accident — see the module docstring.
@@ -70,6 +72,7 @@ REFERENCE_CASES: tuple[type[ReferenceCase], ...] = (
     TestBatteryBasics,
     TestCaptiveBattery,
     TestGroupCaptivity,
+    TestSplitArray,
     TestMixedExportHouse,
 )
 

@@ -86,6 +86,15 @@
       "derived": 0
     },
     {
+      "id": "split-array",
+      "title": "Split array",
+      "file": "split-array.json",
+      "states": [
+        "every_watt_spoken_for"
+      ],
+      "derived": 53
+    },
+    {
       "id": "mixed-export-house",
       "title": "Mixed export house",
       "file": "mixed-export-house.json",
