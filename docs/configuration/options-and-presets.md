@@ -12,130 +12,143 @@ historical data is preserved. You can re-enable them at any time.
 
 :::
 
-## Presets
+## Sensor sets
 
-The quickest way to configure sensors is a preset, which applies the same
-selection to all your devices instantly:
+The quickest way to configure sensors is a sensor set, which applies the same
+selection to all your devices at once:
 
-| Preset | What it adds |
+| Sensor set | What it adds |
 |---|---|
-| **Minimal** | Distribution ratios and financial-return sensors only. |
-| **Recommended** | Adds distribution power, source-attribution, and running totals for costs, savings and export compensation. |
-| **Extended** | Also adds real-time cost/savings rate sensors and levelized cost sensors (requires lifetime values per device). |
-| **Custom** | Configure each device type individually on the following pages. |
+| **Minimal** | Power split (%), where each consumer's power comes from, and financial return (with running totals). |
+| **Recommended** | Adds the power split in W, battery charging sources, and running totals for costs, savings and export compensation. |
+| **Extended** | Adds live cost, savings and export compensation rates (per hour) and each device's share of the home totals. |
+| **Custom** | Choose sensors per device type on the following pages. |
 
-Each preset builds on the previous one. **Recommended** is the sweet spot for
-most installations.
+Each set builds on the previous one. **Recommended** suits most homes.
+Levelized sensors in a set only appear for devices that have lifetime values.
 
-## Custom mode: per-scope configuration
+## Custom: one page per device type
 
-Choosing **Custom** walks you through one page per **scope** — a device class the
-selection applies to. Only scopes that apply to you are shown.
+Choosing **Custom** walks you through one page per **scope** — the devices the
+selection applies to. Only scopes you have devices for are shown.
 
 | Scope | Applies to |
 |---|---|
-| **Combined** | Whole-home aggregate sensors (the hub). |
-| **Grid** | Your single grid connection (import + export). |
-| **PV system** | All PV system devices. |
-| **Battery** | All battery devices. |
-| **Consumer** | All consumer devices. |
+| **Combined** | Whole-home sensors, on the *Combined* device. |
+| **Grid** | Your grid connection. |
+| **PV system** | All PV systems. |
+| **Battery** | All batteries. |
+| **Consumer** | All consumers. |
 
-Each page groups its options into friendly **categories**. Which categories a
-scope shows depends on what its sensors support.
+Each page groups its options into sections. Which ones a page shows depends on
+what its sensors support — see [the matrix below](#which-scope-offers-what).
 
-### Power sensors
+### Power
 
-- **Power distribution (W)** — one sensor per power-flow type (self-consumption,
-  import, export, charging, standby, …) in Watts. These are the fundamental
-  building blocks other sensors are derived from.
-- **Power distribution ratios (%)** — each power flow as a share of total home
-  power (e.g. "65 % of my home load comes from solar").
-- **Power distribution shares (%)** — how a device's own throughput splits (e.g.
-  "60 % of my solar output is self-consumed, 40 % exported"). *(grid / PV /
-  battery)*
-- **Charging source shares (%)** — how much of a battery's current charging power
-  comes from each configured source. *(battery only)*
-- **Power source shares (%)** — what fraction of a consumer's power currently
-  comes from each source. *(consumer only)*
+- **Power split (W)** — where the power goes, in Watts. On a device: *Import /
+  Production / Discharge to home consumption*, *to batteries*, *to system
+  standby*, *to grid*. On *Combined*: *Home consumption power*, *Battery
+  charging power*, *System standby power*. The grid also gets *Import power*
+  and *Export power*.
+- **Power split (%)** — the same split as a percentage of the device's own
+  output (or, on *Combined*, of all power entering the home).
+- **Share of home totals (%)** — how much of the home's consumption, battery
+  charging, system standby and export this device supplies. On a consumer:
+  its share of the home's total consumption.
+- **Home base load** — a device for everything your home uses that has no
+  sensor of its own. *(Combined only)*
+- **Charging sources (%)** — how much of a battery's charging comes from each
+  source. *(battery only)*
+- **Power sources (%)** — how much of a consumer's power comes from each
+  source. *(consumer only)*
+
+See [Where a device's power goes](../entities.md) for how to read these names.
 
 ### Export compensation
 
-- **Export compensation rate (per hour)** — a real-time sensor (currency/h)
-  showing how fast you are earning from exported power (current export power × the
-  device's export compensation rate).
-- **Accumulated export compensation** — a running total of all export
-  compensation earned.
+- **Export compensation rate** — what the device currently earns per hour from
+  exports.
+- **Total export compensation** — running total of the export compensation
+  earned.
 
-### Electricity costs
+### Costs
 
-The **Cost calculation method** select controls whether and how cost sensors are
-created:
+The **Cost method** controls whether and how cost sensors are created:
 
 | Method | Meaning |
 |---|---|
-| **None** | No cost sensors created. |
-| **Standard** | Cost using the live grid import price per kWh. Requires a price entity on the grid adapter. |
-| **Levelized** | Cost using each device's lifetime cost per kWh ([LCOE](../concepts.md#lcoe-levelized-cost-of-electricity) / [LCOS](../concepts.md#lcos-levelized-cost-of-storage)). Requires lifetime values per device. |
-| **Both** | Creates a pair of sensors, one per method. |
+| **None** | No cost sensors. |
+| **Standard** | Priced at the live grid price. Needs an electricity price sensor on your grid connection. |
+| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](../concepts.md#lcoe-levelized-cost-of-electricity) / [LCOS](../concepts.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
+| **Both** | One sensor for each method. |
 
-- **Accumulate costs** — adds sensors that sum cost over time (running total,
-  stored in the recorder, survives restarts).
+- **Total costs** — adds running totals that keep counting across restarts.
+
+What "cost" means differs per device: the grid's *Import cost rate*, a PV
+system's or battery's *Operating cost* (its own draw — standby, or charging),
+and a consumer's *Operating cost* (running it, based on where its power comes
+from).
 
 :::info
 
-Grid electricity has no levelized cost — the **Grid** scope only offers the
-**Standard** method.
+Grid power has no levelized cost, so the **Grid** page only offers
+**Standard**.
 
 :::
 
-### Cost savings
+### Savings
 
-Savings measure the money you avoid spending on grid electricity by
-self-consuming your own generation (or discharging your battery) instead of
-importing.
-
-The **Savings calculation method** select works the same way (None / Standard /
-Levelized / Both), and **Accumulate savings** adds running-total sensors. Savings
-is not offered on the grid scope. See
+Savings are the money you did not pay the grid because your own devices
+supplied the power. The **Savings method** works like the cost method, and
+**Total savings** adds running totals. On a consumer, the same money appears as
+its *Avoided cost* — don't add it to the producing devices' savings. See
 [How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
 
-## Which scope offers which categories
+### Financial return
 
-| Category | Combined | Grid | PV | Battery | Consumer |
+Savings plus export compensation (for a battery, minus what charging cost).
+The **Financial return method** works like the cost method, and **Total
+financial return** adds running totals.
+
+## Which scope offers what
+
+| Option | Combined | Grid | PV | Battery | Consumer |
 |---|:---:|:---:|:---:|:---:|:---:|
-| Power distribution (W) | ✅ | ✅ | ✅ | ✅ | — |
-| Power distribution ratios (%) | ✅ | ✅ | ✅ | ✅ | — |
-| Power distribution shares (%) | — | ✅ | ✅ | ✅ | — |
-| Charging source shares (%) | — | — | — | ✅ | — |
-| Power source shares (%) | — | — | — | — | ✅ |
+| Power split (W) | ✅ | ✅ | ✅ | ✅ | — |
+| Power split (%) | ✅ | ✅ | ✅ | ✅ | — |
+| Share of home totals (%) | — | ✅ | ✅ | ✅ | ✅ |
+| Home base load | ✅ | — | — | — | — |
+| Charging sources (%) | — | — | — | ✅ | — |
+| Power sources (%) | — | — | — | — | ✅ |
 | Export compensation rate | — | ✅ | ✅ | ✅ | — |
-| Accumulated export compensation | — | ✅ | ✅ | ✅ | — |
+| Total export compensation | — | ✅ | ✅ | ✅ | — |
 | Cost method — Standard | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Cost method — Levelized | ✅ | — | ✅ | ✅ | ✅ |
-| Accumulate costs | ✅ | ✅ | ✅ | ✅ | — |
-| Savings method — Standard | ✅ | — | ✅ | ✅ | — |
+| Total costs | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Savings method — Standard | ✅ | — | ✅ | ✅ | ✅ |
 | Savings method — Levelized | ✅ | — | ✅ | ✅ | — |
-| Accumulate savings | ✅ | — | ✅ | ✅ | — |
+| Total savings | ✅ | — | ✅ | ✅ | ✅ |
+| Financial return method — Standard | ✅ | — | ✅ | ✅ | — |
+| Financial return method — Levelized | ✅ | — | ✅ | ✅ | — |
+| Total financial return | ✅ | — | ✅ | ✅ | — |
 
 *(Derived from `SCOPE_SUPPORTED_OPTIONS` in the integration; a ✅ means the
-category is offered on that scope.)*
+option is offered on that scope.)*
 
 ## Diagnostics
 
-The Options **init** page also has a global toggle:
+The first Options page also has a global toggle:
 
-- **Enable debug power entities** — exposes the raw internal power values used
-  for calculations as additional sensors. Useful for diagnosing unexpected
-  readings; leave off unless troubleshooting.
+- **Debug sensors** — adds diagnostic sensors with the raw values used in the
+  calculations. Leave off unless troubleshooting.
 
 ## Missing-data guard
 
-If you enable an option that a device doesn't have the data for, the options flow
-stops and tells you which devices need attention:
+If you enable an option that a device doesn't have the data for, the options
+flow stops and tells you which devices need attention:
 
-> These devices are missing data required by your selection: … Open each device's
-> **Reconfigure** page to supply the missing values (for example, an electricity
-> price entity for cost sensors, or lifetime production and cost for levelized
-> sensors), then save the options again.
+> These devices are missing values the selected sensors need: … Open
+> **Reconfigure** on each device to add them (e.g. a price sensor for costs,
+> lifetime values for levelized sensors), then save again.
 
 Fix the devices (see [Configuration](index.md)) and save the options again.
