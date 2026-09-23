@@ -25,14 +25,6 @@ Add it with **Add device → Battery**.
 > Turn on if your sensor reports power with the opposite sign to the expected
 > convention.
 
-### Round-trip efficiency
-
-> Round-trip efficiency in percent — the share of energy stored that you actually
-> get back when discharging (typical values: 85–95 %). Used to correctly
-> attribute charging losses to their source.
-
-Default: `95`.
-
 ### Exports power to grid
 
 > Turn on if this device can feed surplus power back to the grid. Enables
