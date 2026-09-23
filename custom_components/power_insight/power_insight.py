@@ -1900,6 +1900,21 @@ class PowerInsight:
         return self._sink_cost_rates(levelized=True)
 
     @property
+    def sink_adapters_lcoo_rate_components(self) -> dict:
+        """Per-sink operating cost split by which correction factor applies.
+
+        The sink-side counterpart of
+        ``source_adapters_lcoo_rate_components``: a consumer's levelized draw
+        is a blend of the *source* devices' prices, so its accumulated total
+        has to be corrected per supplying device rather than by one factor of
+        its own — a consumer has no lifetime cost to correct by.
+        """
+        if self.gross_power is None:
+            return {}
+
+        return {a.uid: self._sink_cost_components(a.uid) for a in self.sink_adapters}
+
+    @property
     def sink_adapters_avoided_cost_rates(self) -> dict:
         """Avoided-cost rate per consuming sink (EUR/h).
 

@@ -283,19 +283,23 @@
           "costs": {
             "name": "Electricity costs",
             "data": {
-              "cost_method": "Cost calculation method"
+              "cost_method": "Cost calculation method",
+              "accumulate_costs": "Accumulate costs"
             },
             "data_description": {
-              "cost_method": "**None** — no cost sensors for this consumer.\n**Standard** — cost calculated using the live grid price, weighted by the source mix. Requires a price entity on the grid adapter.\n**Levelized** — cost calculated using the levelized cost per kWh of each source in the mix. Requires lifetime values on each generating device.\n**Both** — creates sensors for both methods."
+              "cost_method": "**None** — no cost sensors for this consumer.\n**Standard** — cost calculated using the live grid price, weighted by the source mix. Requires a price entity on the grid adapter.\n**Levelized** — cost calculated using the levelized cost per kWh of each source in the mix. Requires lifetime values on each generating device.\n**Both** — creates sensors for both methods.",
+              "accumulate_costs": "Creates sensors that accumulate what this consumer has cost to run over time. Stored in the recorder and survives restarts."
             }
           },
           "savings": {
             "name": "Cost savings",
             "data": {
-              "savings_method": "Savings calculation method"
+              "savings_method": "Savings calculation method",
+              "accumulate_savings": "Accumulate savings"
             },
             "data_description": {
-              "savings_method": "Savings represent the money this consumer avoided spending on grid electricity, because local generation supplied it instead. It is the same saved money the producing device reports from its own end — the two are two views of one figure, so do not add them together.\n\n**None** — no savings sensors.\n**Standard** — the avoided cost, valued at the live grid price."
+              "savings_method": "Savings represent the money this consumer avoided spending on grid electricity, because local generation supplied it instead. It is the same saved money the producing device reports from its own end — the two are two views of one figure, so do not add them together.\n\n**None** — no savings sensors.\n**Standard** — the avoided cost, valued at the live grid price.",
+              "accumulate_savings": "Creates sensors that accumulate the cost this consumer has avoided over time. Stored in the recorder and survives restarts."
             }
           }
         }

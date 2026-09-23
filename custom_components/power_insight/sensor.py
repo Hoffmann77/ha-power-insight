@@ -868,6 +868,16 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
+        key="standby_power",
+        name="Standby power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.source_adapters_standby_power,
+    ),
+    PowerInsightSensorDescription(
         key="financial_return_rate",
         name="Financial return rate",
         icon="mdi:currency-eur",
@@ -1188,6 +1198,16 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         transform_fn=lambda val: val * 100,
     ),
     PowerInsightSensorDescription(
+        key="standby_power",
+        name="Standby power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.source_adapters_standby_power,
+    ),
+    PowerInsightSensorDescription(
         key="financial_return_rate",
         name="Financial return rate",
         icon="mdi:currency-eur",
@@ -1418,9 +1438,49 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     ),
 )
 
-POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS: tuple[
-    PowerInsightIntegrationSensorDescription, ...
-] = ()
+POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
+    PowerInsightIntegrationSensorDescription(
+        key="total_operating_cost",
+        name="Total operating cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.sink_adapters_coo_rates,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_levelized_operating_cost",
+        name="Total levelized operating cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.sink_adapters_lcoo_rates,
+        # A consumer has no lifetime cost of its own, so the correction is
+        # per *supplying* device: each accumulated component is scaled by the
+        # factor of the source it came from.
+        integration_components_fn=lambda obj: obj.sink_adapters_lcoo_rate_components,
+        apply_correction_factor=True,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_avoided_cost",
+        name="Total avoided cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.sink_adapters_avoided_cost_rates,
+    ),
+)
 
 
 # ---------------------------------------------------------------------------
@@ -1471,6 +1531,8 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
     "consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,           # grid
     "self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,      # pv / storage
+    "charging_power": CONF_ENABLE_DISTRIBUTION_POWER,              # grid / pv / storage
+    "standby_power": CONF_ENABLE_DISTRIBUTION_POWER,               # grid
     "combined_self_consumption_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_charging_power": CONF_ENABLE_DISTRIBUTION_POWER,
     "combined_standby_power": CONF_ENABLE_DISTRIBUTION_POWER,
@@ -1533,6 +1595,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     "combined_total_levelized_device_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---
+    "total_avoided_cost": CONF_ACCUMULATE_COST_SAVING_RATES,        # consumer
     "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "total_levelized_cost_savings": CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,

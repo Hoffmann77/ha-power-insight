@@ -224,6 +224,11 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
         # A consumer has a saving to report now: the sink-side avoided cost,
         # what it did not pay the grid because local generation served it.
         CONF_CALCULATE_COST_SAVING_RATES,
+        # ... and each of those three rates can be accumulated, so a consumer
+        # reports what it has cost and saved over time like any other device.
+        CONF_ACCUMULATE_COST_RATES,
+        CONF_ACCUMULATE_LEVELIZED_COST_RATES,
+        CONF_ACCUMULATE_COST_SAVING_RATES,
         CONF_ENABLE_DISTRIBUTION_SHARES,
         CONF_ENABLE_POWER_SOURCE_SHARES,
     },

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase, expect
+from tests.engine.reference.case import TODO, F, ReferenceCase, expect
 from tests.engine.scenario_framework import Adapter, State, state, topology
 
 
@@ -161,6 +161,42 @@ class TestGridOnly(ReferenceCase):
             "grid": 0,
         }
 
+    @expect("source_adapters_charging_power")
+    def test_import_only_source_adapters_charging_power(self):
+        return TODO
+
+    @expect("source_adapters_consumption_ratios")
+    def test_import_only_source_adapters_consumption_ratios(self):
+        return TODO
+
+    @expect("source_adapters_export_ratios")
+    def test_import_only_source_adapters_export_ratios(self):
+        return TODO
+
+    @expect("source_adapters_charging_ratios")
+    def test_import_only_source_adapters_charging_ratios(self):
+        return TODO
+
+    @expect("source_adapters_standby_ratios")
+    def test_import_only_source_adapters_standby_ratios(self):
+        return TODO
+
+    @expect("source_adapters_consumption_shares")
+    def test_import_only_source_adapters_consumption_shares(self):
+        return TODO
+
+    @expect("source_adapters_charging_shares")
+    def test_import_only_source_adapters_charging_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_shares")
+    def test_import_only_source_adapters_standby_shares(self):
+        return TODO
+
+    @expect("sink_adapters_consumption_shares")
+    def test_import_only_sink_adapters_consumption_shares(self):
+        return TODO
+
     # Layer 4 — money. 1.2 kW at 0.30 EUR/kWh, and marginal equals levelized
     # while the grid is the only source.
 
@@ -205,6 +241,90 @@ class TestGridOnly(ReferenceCase):
         return {
             "grid": F(3, 10),
         }
+
+    @expect("source_adapters_coe_rate")
+    def test_import_only_source_adapters_coe_rate(self):
+        return TODO
+
+    @expect("source_adapters_export_compensation_rates")
+    def test_import_only_source_adapters_export_compensation_rates(self):
+        return TODO
+
+    @expect("source_adapters_coo_rates")
+    def test_import_only_source_adapters_coo_rates(self):
+        return TODO
+
+    @expect("source_adapters_lcoo_rates")
+    def test_import_only_source_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_coo_rates")
+    def test_import_only_sink_adapters_coo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_import_only_sink_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_import_only_sink_adapters_avoided_cost_rates(self):
+        return TODO
+
+    @expect("home_base_load_avoided_cost_rate")
+    def test_import_only_home_base_load_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_coe")
+    def test_import_only_combined_coe(self):
+        return TODO
+
+    @expect("combined_lcoe")
+    def test_import_only_combined_lcoe(self):
+        return TODO
+
+    @expect("combined_consumption_cost_rate")
+    def test_import_only_combined_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_consumption_cost_rate")
+    def test_import_only_combined_levelized_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_charging_cost_rate")
+    def test_import_only_combined_charging_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_export_cost_rate")
+    def test_import_only_combined_levelized_export_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_standby_cost_rate")
+    def test_import_only_combined_levelized_standby_cost_rate(self):
+        return TODO
+
+    @expect("combined_device_operating_cost_rate")
+    def test_import_only_combined_device_operating_cost_rate(self):
+        return TODO
+
+    @expect("adapters_saving_rates")
+    def test_import_only_adapters_saving_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_saving_rates")
+    def test_import_only_adapters_levelized_saving_rates(self):
+        return TODO
+
+    @expect("adapters_financial_return_rates")
+    def test_import_only_adapters_financial_return_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_financial_return_rates")
+    def test_import_only_adapters_levelized_financial_return_rates(self):
+        return TODO
+
+    @expect("combined_financial_return_rate")
+    def test_import_only_combined_financial_return_rate(self):
+        return TODO
 
     # ----------------------------------------------------------------------
 
@@ -332,6 +452,42 @@ class TestGridOnly(ReferenceCase):
         """No source is providing, so the export share map is empty."""
         return {}
 
+    @expect("source_adapters_charging_power")
+    def test_grid_idle_source_adapters_charging_power(self):
+        return TODO
+
+    @expect("source_adapters_consumption_ratios")
+    def test_grid_idle_source_adapters_consumption_ratios(self):
+        return TODO
+
+    @expect("source_adapters_export_ratios")
+    def test_grid_idle_source_adapters_export_ratios(self):
+        return TODO
+
+    @expect("source_adapters_charging_ratios")
+    def test_grid_idle_source_adapters_charging_ratios(self):
+        return TODO
+
+    @expect("source_adapters_standby_ratios")
+    def test_grid_idle_source_adapters_standby_ratios(self):
+        return TODO
+
+    @expect("source_adapters_consumption_shares")
+    def test_grid_idle_source_adapters_consumption_shares(self):
+        return TODO
+
+    @expect("source_adapters_charging_shares")
+    def test_grid_idle_source_adapters_charging_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_shares")
+    def test_grid_idle_source_adapters_standby_shares(self):
+        return TODO
+
+    @expect("sink_adapters_consumption_shares")
+    def test_grid_idle_sink_adapters_consumption_shares(self):
+        return TODO
+
     # Layer 4 — The monetary model. Nothing flows, so every rate is 0.
 
     @expect("combined_coe_rate")
@@ -368,6 +524,90 @@ class TestGridOnly(ReferenceCase):
     def test_grid_idle_source_adapters_dynamic_lcoe(self):
         """The grid is idle, delivering no priced power, so the map is empty."""
         return {}
+
+    @expect("source_adapters_coe_rate")
+    def test_grid_idle_source_adapters_coe_rate(self):
+        return TODO
+
+    @expect("source_adapters_export_compensation_rates")
+    def test_grid_idle_source_adapters_export_compensation_rates(self):
+        return TODO
+
+    @expect("source_adapters_coo_rates")
+    def test_grid_idle_source_adapters_coo_rates(self):
+        return TODO
+
+    @expect("source_adapters_lcoo_rates")
+    def test_grid_idle_source_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_coo_rates")
+    def test_grid_idle_sink_adapters_coo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_grid_idle_sink_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_grid_idle_sink_adapters_avoided_cost_rates(self):
+        return TODO
+
+    @expect("home_base_load_avoided_cost_rate")
+    def test_grid_idle_home_base_load_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_coe")
+    def test_grid_idle_combined_coe(self):
+        return TODO
+
+    @expect("combined_lcoe")
+    def test_grid_idle_combined_lcoe(self):
+        return TODO
+
+    @expect("combined_consumption_cost_rate")
+    def test_grid_idle_combined_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_consumption_cost_rate")
+    def test_grid_idle_combined_levelized_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_charging_cost_rate")
+    def test_grid_idle_combined_charging_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_export_cost_rate")
+    def test_grid_idle_combined_levelized_export_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_standby_cost_rate")
+    def test_grid_idle_combined_levelized_standby_cost_rate(self):
+        return TODO
+
+    @expect("combined_device_operating_cost_rate")
+    def test_grid_idle_combined_device_operating_cost_rate(self):
+        return TODO
+
+    @expect("adapters_saving_rates")
+    def test_grid_idle_adapters_saving_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_saving_rates")
+    def test_grid_idle_adapters_levelized_saving_rates(self):
+        return TODO
+
+    @expect("adapters_financial_return_rates")
+    def test_grid_idle_adapters_financial_return_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_financial_return_rates")
+    def test_grid_idle_adapters_levelized_financial_return_rates(self):
+        return TODO
+
+    @expect("combined_financial_return_rate")
+    def test_grid_idle_combined_financial_return_rate(self):
+        return TODO
 
     # ----------------------------------------------------------------------
 
@@ -495,6 +735,42 @@ class TestGridOnly(ReferenceCase):
         """The per-source split is unknowable with the grid unavailable."""
         return None
 
+    @expect("source_adapters_charging_power")
+    def test_grid_unavailable_source_adapters_charging_power(self):
+        return TODO
+
+    @expect("source_adapters_consumption_ratios")
+    def test_grid_unavailable_source_adapters_consumption_ratios(self):
+        return TODO
+
+    @expect("source_adapters_export_ratios")
+    def test_grid_unavailable_source_adapters_export_ratios(self):
+        return TODO
+
+    @expect("source_adapters_charging_ratios")
+    def test_grid_unavailable_source_adapters_charging_ratios(self):
+        return TODO
+
+    @expect("source_adapters_standby_ratios")
+    def test_grid_unavailable_source_adapters_standby_ratios(self):
+        return TODO
+
+    @expect("source_adapters_consumption_shares")
+    def test_grid_unavailable_source_adapters_consumption_shares(self):
+        return TODO
+
+    @expect("source_adapters_charging_shares")
+    def test_grid_unavailable_source_adapters_charging_shares(self):
+        return TODO
+
+    @expect("source_adapters_standby_shares")
+    def test_grid_unavailable_source_adapters_standby_shares(self):
+        return TODO
+
+    @expect("sink_adapters_consumption_shares")
+    def test_grid_unavailable_sink_adapters_consumption_shares(self):
+        return TODO
+
     # Layer 4 — The monetary model. Every rate is priced off the grid reading,
     # so all of them collapse to nothing.
 
@@ -533,3 +809,87 @@ class TestGridOnly(ReferenceCase):
     def test_grid_unavailable_source_adapters_dynamic_lcoe(self):
         """No source has a knowable delivered price, so the map is unknown."""
         return None
+
+    @expect("source_adapters_coe_rate")
+    def test_grid_unavailable_source_adapters_coe_rate(self):
+        return TODO
+
+    @expect("source_adapters_export_compensation_rates")
+    def test_grid_unavailable_source_adapters_export_compensation_rates(self):
+        return TODO
+
+    @expect("source_adapters_coo_rates")
+    def test_grid_unavailable_source_adapters_coo_rates(self):
+        return TODO
+
+    @expect("source_adapters_lcoo_rates")
+    def test_grid_unavailable_source_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_coo_rates")
+    def test_grid_unavailable_sink_adapters_coo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_grid_unavailable_sink_adapters_lcoo_rates(self):
+        return TODO
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_grid_unavailable_sink_adapters_avoided_cost_rates(self):
+        return TODO
+
+    @expect("home_base_load_avoided_cost_rate")
+    def test_grid_unavailable_home_base_load_avoided_cost_rate(self):
+        return TODO
+
+    @expect("combined_coe")
+    def test_grid_unavailable_combined_coe(self):
+        return TODO
+
+    @expect("combined_lcoe")
+    def test_grid_unavailable_combined_lcoe(self):
+        return TODO
+
+    @expect("combined_consumption_cost_rate")
+    def test_grid_unavailable_combined_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_consumption_cost_rate")
+    def test_grid_unavailable_combined_levelized_consumption_cost_rate(self):
+        return TODO
+
+    @expect("combined_charging_cost_rate")
+    def test_grid_unavailable_combined_charging_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_export_cost_rate")
+    def test_grid_unavailable_combined_levelized_export_cost_rate(self):
+        return TODO
+
+    @expect("combined_levelized_standby_cost_rate")
+    def test_grid_unavailable_combined_levelized_standby_cost_rate(self):
+        return TODO
+
+    @expect("combined_device_operating_cost_rate")
+    def test_grid_unavailable_combined_device_operating_cost_rate(self):
+        return TODO
+
+    @expect("adapters_saving_rates")
+    def test_grid_unavailable_adapters_saving_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_saving_rates")
+    def test_grid_unavailable_adapters_levelized_saving_rates(self):
+        return TODO
+
+    @expect("adapters_financial_return_rates")
+    def test_grid_unavailable_adapters_financial_return_rates(self):
+        return TODO
+
+    @expect("adapters_levelized_financial_return_rates")
+    def test_grid_unavailable_adapters_levelized_financial_return_rates(self):
+        return TODO
+
+    @expect("combined_financial_return_rate")
+    def test_grid_unavailable_combined_financial_return_rate(self):
+        return TODO
