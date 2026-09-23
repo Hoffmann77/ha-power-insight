@@ -346,7 +346,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_cost_rate",
-        name="System standby cost rate",
+        name="Levelized system standby cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -359,7 +359,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_export_cost_rate",
-        name="Export cost rate",
+        name="Levelized export cost rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,

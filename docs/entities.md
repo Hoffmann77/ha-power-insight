@@ -73,7 +73,7 @@ repeat it.
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
 | Available power | W | Gross power entering the home (grid import + PV production + battery discharge). Diagnostic, **disabled by default**. | *Debug power entities* |
-| Home consumption power | W | Locally produced power (solar + battery discharge) your home is using right now instead of importing. | Distribution (W) |
+| Home consumption power | W | Everything your home's appliances draw right now — metered consumers plus the unmetered base load — from any source (grid, solar or battery). | Distribution (W) |
 | Battery charging power | W | Power currently going into battery charging. | Distribution (W) |
 | System standby power | W | Power currently drawn by your energy system's own equipment while idle (e.g. PV inverters at night) — not household appliances on standby. | Distribution (W) |
 | Export ratio | % | Share of gross power currently exported to the grid. | Distribution ratios |
@@ -82,10 +82,16 @@ repeat it.
 | System standby ratio | % | Share of gross power currently lost to system standby. | Distribution ratios |
 | Price of electricity | EUR/kWh | Current blended price of one kWh across your whole mix (grid + your devices). | Cost — Standard |
 | Levelized price of electricity | EUR/kWh | As above, but each device's cost is its levelized lifetime cost. | Cost — Levelized |
-| Cost rate | EUR/h | Running cost per hour of your current mix. | Cost — Standard |
+| Cost rate | EUR/h | What all the power entering your home costs per hour right now (gross power × price of electricity). | Cost — Standard |
 | Levelized cost rate | EUR/h | Cost rate computed with levelized device costs. | Cost — Levelized |
-| Operating cost rate | EUR/h | Running operating cost per hour of your mix. | Cost — Standard |
-| Levelized operating cost rate | EUR/h | Operating cost rate with levelized device costs. | Cost — Levelized |
+| Consumption cost rate | EUR/h | The part of the cost rate that goes to **home consumption**. | Cost — Standard |
+| Levelized consumption cost rate | EUR/h | Consumption cost rate computed with levelized device costs. | Cost — Levelized |
+| Charging cost rate | EUR/h | The part of the cost rate that goes into **battery charging**. | Cost — Standard |
+| Levelized charging cost rate | EUR/h | Charging cost rate computed with levelized device costs. | Cost — Levelized |
+| Levelized system standby cost rate | EUR/h | The part of the levelized cost rate lost to **system standby**. | Cost — Levelized |
+| Levelized export cost rate | EUR/h | What producing the **exported** power cost, at levelized device costs. | Cost — Levelized |
+| Device operating cost rate | EUR/h | What running your PV and battery hardware costs per hour — their own draw (charging plus standby). The sum of the per-device *Operating cost rate* sensors. | Cost — Standard |
+| Levelized device operating cost rate | EUR/h | Device operating cost rate computed with levelized device costs. | Cost — Levelized |
 | Cost savings rate | EUR/h | Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
 | Levelized cost savings rate | EUR/h | Cost savings rate computed with levelized device costs. | Savings — Levelized |
 | Financial return rate | EUR/h | Total financial benefit per hour — cost savings plus export compensation. | Financial return — Standard |
@@ -95,8 +101,9 @@ repeat it.
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Total operating cost | EUR | Operating cost rate integrated over time. | Accumulate costs |
-| Total levelized operating cost | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
+| Total consumption cost | EUR | Consumption cost rate integrated over time. | Accumulate costs |
+| Total charging cost | EUR | Charging cost rate integrated over time. | Accumulate costs |
+| Total levelized device operating cost | EUR | Levelized operating cost totalled across all devices (retro-corrected). | Accumulate levelized costs |
 | Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Accumulate savings |
 | Total levelized cost savings | EUR | Levelized cost savings totalled across all devices (retro-corrected). | Accumulate levelized savings |
 | Total financial return | EUR | Financial return rate integrated over time. | Accumulate financial return |
