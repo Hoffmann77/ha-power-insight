@@ -555,6 +555,33 @@ Covered by `tests/integration/test_correction_flow.py`
 
 :::
 
+:::note[Decision: a removed device's correction is final]
+
+A battery's or consumer's total holds a component for every device that
+supplied it. When one of those devices is removed, its component keeps the
+last correction factor it had, so its share of the history stays as it was
+displayed. That is the same rule as the device's own totals, which are
+frozen, corrected, into the retired ledger: a removed device can never be
+edited again, so its last factor cannot become wrong.
+
+The alternative, falling back to `1.0`, would re-price the removed device's
+share at its original lifetime cost. The battery's total and the combined
+total would drop at the moment of the removal, and the long-term statistics
+would record that as a real change, while the device's own frozen totals
+still carried the correction.
+
+Each accumulating sensor stores the last factor it saw for every component,
+next to the components. It is written when the sensor is removed for the
+reload that follows the device's removal, while the engine still holds the
+device. A retired-ledger entry would not do: one is only written when the
+removed device had an enabled levelized total with a value.
+
+Not pinned in the engine tier: the factors are stored in the sensor layer.
+Covered by `tests/integration/test_correction_flow.py`
+(`test_removing_a_source_keeps_its_share_corrected`).
+
+:::
+
 ### The home base load is a device
 
 Everything consumed without a sensor on it already takes part in the provenance

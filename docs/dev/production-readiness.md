@@ -127,10 +127,21 @@ components times their factors sum to the corrected value, and no uncorrected
 property moves when factors change — so the engine is consistent. Missing is
 the promise and its tests: the `*_corrected` and `*_components` families are
 not catalogued, the harness's `Adapter.battery` ignores `correction_factor`,
-and no manual class pins a battery's factor. Open questions: whether a
-correction reaches the whole history (and replaced hardware is a new device),
-and whether clearing the lifetime fields can silently re-base the correction
-(`config_flow.py`, the `depends_on` branch of the calculated fields).
+and no manual class pins a battery's factor.
+
+Settled: a removed device's share of another device's total keeps its last
+factor instead of falling back to `1.0` (decision "a removed device's
+correction is final"). Clearing the lifetime fields cannot re-base the
+correction today: the reconfigure form seeds them as defaults, so an emptied
+field is refilled, and the selectors reject `0`. The `depends_on` branch of
+`calculate_fields` would still wipe `default_lcoe` if a falsy value ever got
+through, so it wants a guard.
+
+Still open: whether a correction reaches the whole history (and replaced
+hardware is a new device); a total restored without a breakdown is scaled by
+the device's own factor until its first component accumulates, then carried
+unscaled; and editing `lifetime_production` corrects the cost but not the CO₂
+intensity.
 
 ## Home Assistant layer
 

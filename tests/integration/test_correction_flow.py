@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 import copy
+from datetime import timedelta
 
 import pytest
+from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
+import homeassistant.util.dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
     BASE_OPTIONS,
+    BAT_SUB_ID,
     FULL_OPTIONS,
     PV_SUB_ID,
     GRID_SUB_ID,
+    make_battery_subentry_data,
     make_grid_subentry_data,
     make_pv_subentry_data,
     setup_integration,
@@ -259,6 +264,31 @@ def test_stored_data_round_trips_the_component_breakdown() -> None:
     assert sum(restored.component_totals.values()) == restored.native_value
 
 
+def test_stored_data_round_trips_the_last_factors() -> None:
+    """The last factor seen per component survives serialisation.
+
+    It is what a removed device's share of the total is corrected by once the
+    device is no longer there to ask.
+    """
+    from decimal import Decimal
+
+    from custom_components.power_insight.entity import (
+        IntegrationSensorExtraStoredData,
+    )
+
+    stored = IntegrationSensorExtraStoredData(
+        Decimal("1.50"),
+        "EUR",
+        Decimal("1.50"),
+        {"pv": Decimal("1.00"), "grid": Decimal("0.50")},
+        {"pv": 1.5, "grid": 1.0},
+    )
+    restored = IntegrationSensorExtraStoredData.from_dict(stored.as_dict())
+
+    assert restored is not None
+    assert restored.component_factors == {"pv": 1.5, "grid": 1.0}
+
+
 def test_stored_data_without_components_restores_cleanly() -> None:
     """A total written before the breakdown existed still restores.
 
@@ -284,3 +314,84 @@ def test_stored_data_without_components_restores_cleanly() -> None:
     assert restored is not None
     assert restored.native_value == Decimal("2.00")
     assert restored.component_totals is None
+    assert restored.component_factors is None
+
+
+# ---------------------------------------------------------------------------
+# C7 — a removed device's correction is final
+# ---------------------------------------------------------------------------
+
+
+async def test_removing_a_source_keeps_its_share_corrected(
+    hass: HomeAssistant,
+) -> None:
+    """A removed PV's share of the battery's total keeps the PV's last factor.
+
+    The battery charges 1 kW from the PV for one hour. The PV's lcoe is 0.10
+    corrected by 1.5, so the battery's levelized operating cost is 0.10 EUR at
+    base and 0.15 EUR displayed. Removing the PV must not move that history:
+    the PV can never be edited again, so 1.5 is final. Falling back to 1.0
+    would drop the battery's total (and the combined total) to 0.10 EUR — a
+    fall the long-term statistics would record — while the PV's own totals
+    stay frozen, corrected, in the retired ledger.
+    """
+    pv = copy.deepcopy(make_pv_subentry_data())
+    pv["data"]["adapter"]["config"]["correction_factor"] = 1.5
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={
+            "schema": 2,
+            "scopes": {
+                "combined": ["accumulate_levelized_cost_rates"],
+                "pv_system": ["accumulate_levelized_cost_rates"],
+                "battery": ["accumulate_levelized_cost_rates"],
+            },
+        },
+        subentries_data=[
+            make_grid_subentry_data(),
+            pv,
+            make_battery_subentry_data(charge_from_adapters=[PV_SUB_ID]),
+        ],
+    )
+    battery_total = f"{BAT_SUB_ID}_total_levelized_operating_cost"
+    combined_total = "combined_total_levelized_device_operating_cost"
+
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+        hass.states.async_set("sensor.pv_power", "1000", {"unit_of_measurement": "W"})
+        hass.states.async_set(
+            "sensor.battery_power", "-1000", {"unit_of_measurement": "W"}
+        )
+        await setup_integration(hass, entry)
+
+        # Hold the 1 kW charge for one hour, re-reported so the step is exact.
+        frozen.move_to(t0 + timedelta(hours=1))
+        hass.states.async_set(
+            "sensor.battery_power", "-1000", {"unit_of_measurement": "W"}
+        )
+        for _ in range(4):
+            await hass.async_block_till_done()
+
+        before = float(_pv_state(hass, entry, battery_total).state)
+        combined_before = float(_pv_state(hass, entry, combined_total).state)
+        assert before == pytest.approx(0.15, abs=1e-6)
+        assert combined_before == pytest.approx(0.15, abs=1e-6)
+
+        hass.config_entries.async_remove_subentry(entry, PV_SUB_ID)
+        for _ in range(4):
+            await hass.async_block_till_done()
+        # Refresh the derived combined sensor, and prove a second reload (a
+        # restart) keeps the factor too.
+        await hass.config_entries.async_reload(entry.entry_id)
+        hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+        for _ in range(4):
+            await hass.async_block_till_done()
+
+        assert PV_SUB_ID not in entry.runtime_data.power_insight.levelized_correction_factors
+        after = float(_pv_state(hass, entry, battery_total).state)
+        combined_after = float(_pv_state(hass, entry, combined_total).state)
+
+    assert after == pytest.approx(before, abs=1e-6)
+    assert combined_after == pytest.approx(combined_before, abs=1e-6)

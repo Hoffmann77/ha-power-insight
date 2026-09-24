@@ -2409,6 +2409,21 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
         return get_value(self.device_adapter.uid, components_fn(self.power_insight))
 
+    def _component_factors_now(self) -> dict[str, float]:
+        """Return the factor that scales each accumulated component.
+
+        A component's adapter that still exists gives its live factor. One that
+        has been removed can no longer be edited, so the last factor seen for
+        it is final: its share of this total stays as it was displayed when
+        the adapter was removed, just as the adapter's own totals are frozen
+        into the retired ledger. The grid never scales (1.0).
+        """
+        live = self.power_insight.levelized_correction_factors
+        return {
+            uid: live.get(uid, self._component_factors.get(uid, 1.0))
+            for uid in self._component_totals
+        }
+
     @property
     def native_value(self) -> Decimal | None:
         """Return the accumulated base total, corrected for display if requested.
@@ -2426,22 +2441,28 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         if not self._component_totals:
             return base * Decimal(str(self.device_adapter.correction_factor))
 
-        factors = self.power_insight.levelized_correction_factors
+        factors = self._component_factors_now()
         corrected = Decimal(0)
         for uid, total in self._component_totals.items():
-            corrected += total * Decimal(str(factors.get(uid, 1.0)))
+            corrected += total * Decimal(str(factors[uid]))
 
         # Whatever predates the breakdown stays as it was recorded.
         return corrected + (base - sum(self._component_totals.values()))
 
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:
-        """Persist the BASE running total (not the corrected display)."""
+        """Persist the BASE running total (not the corrected display).
+
+        The factors go with it: this is written when the entity is removed
+        for the reload that follows a device's removal, while the engine still
+        holds that device, so its last factor survives into the next setup.
+        """
         return IntegrationSensorExtraStoredData(
             self._state,
             self.native_unit_of_measurement,
             self._last_valid_state,
             dict(self._component_totals) or None,
+            self._component_factors_now() or None,
         )
 
     async def async_will_remove_from_hass(self) -> None:
