@@ -24,15 +24,12 @@ PRICE = F(3, 10)
 
 
 class TestConsumersGetAnAvoidedCost(Home):
-    """Decision: a consumer running on PV is the same saved euro as the PV
-    supplying it — credited to the PV as a saving and to the consumer only as
-    an avoided cost, never both summed (engine-calculations.md, "consumers do
-    not get a saving, they get an avoided cost").
+    """Decision: a consumer gets an avoided cost, not a saving.
 
-    The raw mix is grid 1/4, pv1 3/4 of 800 W. The plug (400 W) and the base
-    load (400 W) each take 300 W of pv1, avoiding 0.3 × 3/10 each. pv1 is
-    credited with all 600 W: 0.6 × 3/10 — the same euro, counted once on each
-    side. The plug has no saving entry at all.
+    The euros pv1 saves by feeding the house are its saving; the plug and the
+    base load see the same euros as avoided cost, and the two are never
+    summed. See "consumers do not get a saving, they get an avoided cost" in
+    engine-calculations.md.
     """
 
     grid = Grid(200, price=PRICE)
@@ -41,11 +38,10 @@ class TestConsumersGetAnAvoidedCost(Home):
 
     @expect("adapters_saving_rates")
     def test_saving(self):
-        """Only pv1 has a saving; the plug has no entry at all.
+        """Only pv1 has a saving; the plug has none.
 
-        pv1 supplies 600 W to the house that would otherwise have come from
-        the grid: 0.6 kW × 3/10 = 9/50 EUR/h. Savings belong to supplying
-        devices, so the plug does not appear.
+        pv1's 600 W replace grid power: 0.6 kW × 3/10 = 9/50 EUR/h. Savings
+        belong to the supplying device.
         """
         return {"pv1": F(9, 50)}
 
@@ -53,17 +49,15 @@ class TestConsumersGetAnAvoidedCost(Home):
     def test_combined_saving(self):
         """The house's total saving is pv1's saving, counted once.
 
-        Adding the plug's avoided cost on top would count the same euros
-        twice, so the total is 9/50 EUR/h.
+        Adding the plug's avoided cost would count the same euros twice.
         """
         return F(9, 50)
 
     @expect("sink_adapters_avoided_cost_rates")
     def test_avoided_cost(self):
-        """The plug avoided the grid price of the pv1 power it used.
+        """The plug avoided the grid price of its pv1 power.
 
-        The plug draws 400 W, three quarters of it (300 W) from pv1, which
-        would have cost 0.3 kW × 3/10 = 9/100 EUR/h from the grid.
+        300 W of its 400 W came from pv1: 0.3 kW × 3/10 = 9/100 EUR/h.
         """
         return {"plug": F(9, 100)}
 
@@ -71,21 +65,18 @@ class TestConsumersGetAnAvoidedCost(Home):
     def test_base_load_avoided_cost(self):
         """The base load avoided the same 9/100 EUR/h as the plug.
 
-        It too draws 400 W, 300 W of it from pv1. Plug and base load
-        together avoid 9/50 EUR/h — exactly pv1's saving, seen from the other
-        side.
+        It also draws 300 W of pv1. Plug and base load together avoid
+        9/50 EUR/h, exactly pv1's saving.
         """
         return F(9, 100)
 
 
 class TestBaseLoadHasItsOwnProperties(Home):
-    """Decision: the home base load is published through its own
-    ``home_base_load_*`` properties and never as a key in the
-    ``sink_adapters_*`` maps (engine-calculations.md, "the home base load gets
-    its own properties, not a uid").
+    """Decision: the base load has its own ``home_base_load_*`` properties.
 
-    No sun: the plug draws 100 W and the other 400 W are the base load, all
-    from the grid. The sink maps name the plug alone.
+    It never appears as a key in the ``sink_adapters_*`` maps, where an
+    invented id could clash with a real device. See "the home base load gets
+    its own properties, not a uid" in engine-calculations.md.
     """
 
     grid = Grid(500, price=PRICE)
@@ -94,49 +85,44 @@ class TestBaseLoadHasItsOwnProperties(Home):
 
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """The provenance map has a row for the plug and nothing else.
+        """The provenance map has a row for the plug only.
 
-        The base load is a sink too, but it has no row here under an
-        invented id — any such id could clash with a real device's name.
+        The base load is a sink too, but it is not listed here.
         """
         return {"plug": {"grid": 1}}
 
     @expect("sink_adapters_avoided_cost_rates")
     def test_avoided_cost(self):
-        """The avoided-cost map also names only the plug.
+        """The avoided-cost map also lists only the plug.
 
-        The plug ran on the grid, so it avoided nothing: 0 EUR/h.
+        The plug ran on the grid, so it avoided nothing.
         """
         return {"plug": 0}
 
     @expect("home_base_load_power")
     def test_base_load_power(self):
-        """The base load's power is published on its own property.
+        """The base load's power is on its own property.
 
-        500 W enter the house and the plug meters 100 W of it; the other
-        400 W are the unmetered base load.
+        500 W enter the house and the plug meters 100 W; the other 400 W are
+        the base load.
         """
         return 400
 
     @expect("home_base_load_source_shares")
     def test_base_load_source_shares(self):
-        """The base load's source mix is published on its own property.
+        """The base load's source mix is on its own property.
 
-        With pv1 idle the grid is the only source, so the base load is all
-        grid.
+        pv1 is idle, so the base load is all grid.
         """
         return {"grid": 1}
 
 
 class TestCorrectionFactorScalesTheLcoe(Home):
-    """Decision: a device's correction factor multiplies its LCOE inside the
-    saving, never the finished saving (engine-calculations.md, "the factor
-    multiplies the lcoe, never the finished number").
+    """Decision: the correction factor scales the LCOE, not the finished saving.
 
-    pv1's lifetime cost was edited so its energy costs twice as much. All
-    600 W of it serve the 800 W base load. Uncorrected, it saves
-    0.6 × (3/10 − 1/10) = 3/25; corrected, 0.6 × (3/10 − 2/10) = 3/50 — less,
-    as dearer energy must. Scaling the result would have said 6/25.
+    pv1's factor of 2 makes its energy twice as expensive, so its saving must
+    go down. See "the factor multiplies the lcoe, never the finished number"
+    in engine-calculations.md.
     """
 
     grid = Grid(200, price=PRICE)
@@ -144,19 +130,17 @@ class TestCorrectionFactorScalesTheLcoe(Home):
 
     @expect("adapters_levelized_saving_rates")
     def test_uncorrected(self):
-        """Before the correction, pv1 saves at its configured LCOE of 1/10.
+        """Uncorrected, pv1 saves at its LCOE of 1/10.
 
-        Its 600 W replace grid power at 3/10 and cost 1/10 to make:
-        0.6 kW × (3/10 − 1/10) = 3/25 EUR/h.
+        Its 600 W replace grid power: 0.6 kW × (3/10 − 1/10) = 3/25 EUR/h.
         """
         return {"pv1": F(3, 25)}
 
     @expect("adapters_levelized_saving_rates_corrected")
     def test_corrected(self):
-        """After doubling its cost, pv1 saves less, not more.
+        """Corrected, pv1 saves less, not more.
 
-        The factor of 2 doubles the LCOE to 2/10 inside the bracket:
-        0.6 × (3/10 − 2/10) = 3/50 EUR/h. Doubling the finished saving
-        instead would have claimed 6/25 — dearer energy saving more.
+        The LCOE doubles to 2/10: 0.6 × (3/10 − 2/10) = 3/50 EUR/h. Doubling
+        the saving instead would have given 6/25.
         """
         return {"pv1": F(3, 50)}

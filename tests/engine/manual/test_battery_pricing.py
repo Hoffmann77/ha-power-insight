@@ -23,14 +23,11 @@ PRICE = F(3, 10)
 
 
 class TestBatteryPaysWhenItCharges(Home):
-    """Decision: a battery's energy cost is booked when it charges, and its
-    discharge is valued at the full tariff it displaces less only its own LCOS
-    (engine-calculations.md, "a battery's energy cost is booked when it
-    charges").
+    """Decision: a battery pays for its energy when it charges.
 
-    The charging half. bat1 takes 400 W of a half-grid, half-pv1 mix: 200 W
-    each. Its saving is minus what that cost: −0.2 × 3/10 at the margin, and
-    −(0.2 × 3/10 + 0.2 × 1/10) levelized.
+    This is the charging half: bat1 takes 400 W, half grid and half pv1, and
+    its saving is minus what that costs. See "a battery's energy cost is
+    booked when it charges" in engine-calculations.md.
     """
 
     grid = Grid(500, price=PRICE)
@@ -39,37 +36,30 @@ class TestBatteryPaysWhenItCharges(Home):
 
     @expect("adapters_saving_rates")
     def test_saving(self):
-        """While charging, bat1's saving is negative: it pays for its grid power.
+        """While charging, bat1's saving is negative.
 
-        Supply is half grid, half pv1, and bat1 takes 400 W of it: 200 W
-        from the grid, which costs 0.2 kW × 3/10 = 3/50 EUR/h now, so its
-        saving is −3/50. pv1 saves 0.3 × 3/10 = 9/100 for the 300 W of base
-        load it serves; the 200 W it puts into the battery earn nothing yet.
+        Its 200 W of grid cost 0.2 kW × 3/10 = 3/50 EUR/h, so it saves −3/50.
+        pv1 saves 0.3 × 3/10 = 9/100 on the 300 W of base load it serves; its
+        power into bat1 earns nothing yet.
         """
         return {"pv1": F(9, 100), "bat1": F(-3, 50)}
 
     @expect("adapters_levelized_saving_rates")
     def test_levelized_saving(self):
-        """Levelized, bat1 also pays for the pv1 half of its charge.
+        """Levelized, bat1 also pays for its pv1 half.
 
-        bat1: −(0.2 × 3/10 + 0.2 × 1/10) = −2/25 EUR/h. pv1 saves on its
-        300 W of base load the tariff less its own LCOE:
-        0.3 × (3/10 − 1/10) = 3/50.
+        bat1: −(0.2 × 3/10 + 0.2 × 1/10) = −2/25 EUR/h. pv1 saves the tariff
+        less its LCOE on 300 W: 0.3 × (3/10 − 1/10) = 3/50.
         """
         return {"pv1": F(3, 50), "bat1": F(-2, 25)}
 
 
 class TestBatteryDischargeSavesTheFullTariff(Home):
-    """Decision: a battery's energy cost is booked when it charges, and its
-    discharge is valued at the full tariff it displaces less only its own LCOS
-    (engine-calculations.md, "a battery's energy cost is booked when it
-    charges").
+    """Decision: a discharging battery saves the full tariff, less only its LCOS.
 
-    The discharging half. pv1 is idle; bat1 discharges 300 W into a 500 W base
-    load beside 200 W of grid, so it serves 300 W. Its energy was paid for
-    when it charged, so at the margin it saves the full tariff: 0.3 × 3/10.
-    Levelized it carries only its LCOS: 0.3 × (3/10 − 3/20). pv1 reads 0, not
-    absent.
+    This is the discharging half: bat1 serves 300 W of the house, and its
+    energy was already paid for when it charged. See "a battery's energy cost
+    is booked when it charges" in engine-calculations.md.
     """
 
     grid = Grid(200, price=PRICE)
@@ -80,16 +70,14 @@ class TestBatteryDischargeSavesTheFullTariff(Home):
     def test_saving(self):
         """While discharging, bat1 saves the full grid tariff.
 
-        It serves 300 W of the house, and what that energy cost was already
-        booked when it charged, so nothing is subtracted now:
-        0.3 kW × 3/10 = 9/100 EUR/h. Idle pv1 is listed at 0 rather than
-        left out, so its sensor stays available.
+        0.3 kW × 3/10 = 9/100 EUR/h. Idle pv1 reads 0 rather than being left
+        out, so its sensor stays available.
         """
         return {"pv1": 0, "bat1": F(9, 100)}
 
     @expect("adapters_levelized_saving_rates")
     def test_levelized_saving(self):
-        """Levelized, bat1's saving is the tariff less its own LCOS.
+        """Levelized, bat1 saves the tariff less its LCOS.
 
         0.3 kW × (3/10 − 3/20) = 9/200 EUR/h. Idle pv1 again reads 0.
         """
@@ -97,13 +85,11 @@ class TestBatteryDischargeSavesTheFullTariff(Home):
 
 
 class TestDischargePriceIsTheFlatLcos(Home):
-    """Decision: a discharging battery's dynamic price is its flat LCOS, and
-    its marginal price is 0 — its energy cost was booked when it charged
-    (engine-calculations.md, "the dynamic price falls back to the flat LCOS on
-    discharge").
+    """Decision: a discharging battery costs 0 at the margin and its LCOS levelized.
 
-    The same home as the discharge above; only the sources appear, so idle
-    pv1 does not.
+    Its energy cost was booked when it charged. Same home as above, but these
+    maps list only supplying devices, so idle pv1 is absent. See "the dynamic
+    price falls back to the flat LCOS on discharge" in engine-calculations.md.
     """
 
     grid = Grid(200, price=PRICE)
@@ -112,20 +98,18 @@ class TestDischargePriceIsTheFlatLcos(Home):
 
     @expect("source_adapters_dynamic_coe")
     def test_dynamic_coe(self):
-        """At the margin, the discharging battery's power costs nothing.
+        """At the margin, bat1's power costs nothing.
 
-        This map prices each supplying device right now. The grid costs its
-        tariff, 3/10 EUR/kWh; bat1 costs 0, because its energy was paid for
-        when it charged. Idle pv1 is not supplying, so it is not listed.
+        The grid costs its tariff, 3/10 EUR/kWh; bat1 costs 0 because it paid
+        when it charged. Idle pv1 is not listed.
         """
         return {"grid": PRICE, "bat1": 0}
 
     @expect("source_adapters_dynamic_lcoe")
     def test_dynamic_lcoe(self):
-        """Levelized, the discharging battery is priced at its flat LCOS.
+        """Levelized, bat1 is priced at its flat LCOS.
 
-        The grid still costs 3/10; bat1 costs its LCOS of 3/20 EUR/kWh,
-        not the price of the mix it once charged on, which a single
-        snapshot cannot know.
+        bat1 costs 3/20 EUR/kWh, not the price of the mix it charged on, which
+        a single snapshot cannot know.
         """
         return {"grid": PRICE, "bat1": F(3, 20)}

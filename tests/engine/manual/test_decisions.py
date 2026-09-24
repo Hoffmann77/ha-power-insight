@@ -81,8 +81,10 @@ HARNESSES = [pytest.param(name, cls, id=name) for name, cls in manual_classes().
 
 
 def test_the_log_has_decisions() -> None:
-    """The log parses into at least one decision note, so the checks below
-    are not passing vacuously over an empty list."""
+    """The decision log contains at least one decision note.
+
+    Otherwise the checks below would pass over an empty list.
+    """
     assert decision_notes(), f"no ':::note[Decision: …]' notes found in {LOG}"
 
 
@@ -91,9 +93,10 @@ def test_the_log_has_decisions() -> None:
     [pytest.param(title, body, id=title) for title, body in decision_notes()],
 )
 def test_every_decision_says_where_it_is_pinned(title: str, body: str) -> None:
-    """A decision note names the harness classes that pin it and the module
-    they are in, and those classes are really there — or it says why the
-    engine tier cannot pin it."""
+    """Every decision note names the classes that pin it, or says why none can.
+
+    The named classes must exist, in the module the note names.
+    """
     pins = [
         (cls, m["path"]) for m in PINNED.finditer(body) for cls in CLASS.findall(m["classes"])
     ]
@@ -121,8 +124,10 @@ def test_every_decision_says_where_it_is_pinned(title: str, body: str) -> None:
 
 @pytest.mark.parametrize("name,cls", HARNESSES)
 def test_every_harness_is_named_in_the_log(name: str, cls: type) -> None:
-    """Each harness class is named in the log, so the decision it pins is
-    written down somewhere a reader can find it."""
+    """Every harness class is named in the decision log.
+
+    That way the decision it pins is written down where a reader can find it.
+    """
     assert f"`{name}`" in LOG.read_text(), (
         f"{name} is not named in {LOG.name}. Say which decision it pins there — "
         f"'Pinned by `{name}` in …' in its note, or beside the rule it pins."
@@ -131,8 +136,10 @@ def test_every_harness_is_named_in_the_log(name: str, cls: type) -> None:
 
 @pytest.mark.parametrize("name,cls", HARNESSES)
 def test_every_harness_names_its_decision(name: str, cls: type) -> None:
-    """Each harness class docstring opens with ``Decision:``, so a failing
-    test points straight at the decision that no longer holds."""
+    """Every harness class docstring starts with ``Decision:``.
+
+    That way a failing test points straight at the decision that broke.
+    """
     assert inspect.cleandoc(cls.__doc__ or "").startswith("Decision:"), (
         f"{name}: the class docstring does not start with 'Decision: …' — say "
         f"which decision it pins, so a failure names it"
@@ -141,8 +148,11 @@ def test_every_harness_names_its_decision(name: str, cls: type) -> None:
 
 @pytest.mark.parametrize("name,cls", HARNESSES)
 def test_every_harness_test_explains_itself(name: str, cls: type) -> None:
-    """Each test method in a harness has a docstring, so a first-time reader
-    learns what it checks and why without reverse-engineering the numbers."""
+    """Every test method in a harness has a docstring.
+
+    A first-time reader learns what it checks and why without
+    reverse-engineering the numbers.
+    """
     bare = [
         attr
         for attr, obj in vars(cls).items()
@@ -152,9 +162,11 @@ def test_every_harness_test_explains_itself(name: str, cls: type) -> None:
 
 
 def test_class_names_are_unique_across_the_engine_tier() -> None:
-    """No two test classes in tests/engine share a name. The log names a
-    harness by its class name alone, and a duplicate would also make two
-    unrelated failures read alike."""
+    """No two test classes in tests/engine share a name.
+
+    The log names a harness by its class name alone, and duplicates would make
+    two unrelated failures read alike.
+    """
     names = [cls.__name__ for cls in collected_classes(ENGINE, "tests.engine")]
     duplicates = sorted({n for n in names if names.count(n) > 1})
     assert not duplicates, f"test classes defined more than once: {duplicates}"

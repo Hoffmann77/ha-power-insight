@@ -22,15 +22,11 @@ PRICE = F(3, 10)
 
 
 class TestChannelCostsAreTheLedger(Home):
-    """Decision: the four channel cost buckets are the cost ledger — they add
-    up to the cost of gross power, at marginal and at levelized prices
-    (engine-calculations.md, "the channel cost buckets are the cost ledger").
+    """Decision: the four channel costs add up to the cost of all gross power.
 
-    Nothing is restricted, so every sink takes the raw mix: grid 1/4, pv1 3/4
-    of 1200 W. Consumption (the 900 W base load) gets 225 W grid and 675 W
-    pv1; charging (bat1's 250 W) 62.5 and 187.5; standby (pv2's 50 W) 12.5 and
-    37.5. At the margin only grid watts cost anything: 0.225, 0.0625 and
-    0.0125 kW × 3/10. Levelized, pv1 adds 1/10 per kWh.
+    This holds at marginal and at levelized prices. Nothing is restricted, so
+    every sink gets the raw mix, 1/4 grid and 3/4 pv1. See "the channel cost
+    buckets are the cost ledger" in engine-calculations.md.
     """
 
     grid = Grid(300, price=PRICE)
@@ -40,69 +36,67 @@ class TestChannelCostsAreTheLedger(Home):
 
     @expect("combined_consumption_cost_rate")
     def test_consumption_cost(self):
-        """The consumption channel pays for its 225 W of grid power.
+        """Consumption pays for its 225 W of grid power.
 
-        The 900 W base load takes the raw mix, a quarter of it from the grid:
-        0.225 kW × 3/10 EUR/kWh = 27/400 EUR/h. Its 675 W of pv1 cost nothing
-        at the margin.
+        The 900 W base load is 1/4 grid: 0.225 kW × 3/10 = 27/400 EUR/h. Its
+        pv1 power is free at the margin.
         """
         return F(27, 400)
 
     @expect("combined_charging_cost_rate")
     def test_charging_cost(self):
-        """The charging channel pays for bat1's 62.5 W of grid power.
+        """Charging pays for bat1's 62.5 W of grid power.
 
-        bat1 charges at 250 W, a quarter of it from the grid:
-        0.0625 kW × 3/10 = 3/160 EUR/h.
+        bat1 charges at 250 W, 1/4 of it grid: 0.0625 kW × 3/10 = 3/160 EUR/h.
         """
         return F(3, 160)
 
     @expect("combined_standby_cost_rate")
     def test_standby_cost(self):
-        """The standby channel pays for pv2's 12.5 W of grid power.
+        """Standby pays for pv2's 12.5 W of grid power.
 
-        pv2 draws 50 W of standby, a quarter of it from the grid:
-        0.0125 kW × 3/10 = 3/800 EUR/h.
+        pv2 draws 50 W, 1/4 of it grid: 0.0125 kW × 3/10 = 3/800 EUR/h.
         """
         return F(3, 800)
 
     @expect("combined_export_cost_rate")
     def test_export_cost(self):
-        """Nothing is exported, so the export channel costs nothing."""
+        """Export costs nothing.
+
+        The grid is importing, so nothing is exported.
+        """
         return 0
 
     @expect("combined_coe_rate")
     def test_coe_rate(self):
-        """The four marginal channel costs add up to the cost of the import.
+        """The marginal channel costs add up to the cost of the import.
 
-        27/400 + 3/160 + 3/800 + 0 = 9/100 EUR/h, which is exactly the
-        300 W import at 3/10 EUR/kWh: every watt bought lands in one channel,
-        none twice and none missing.
+        27/400 + 3/160 + 3/800 + 0 = 9/100 EUR/h, exactly 300 W at
+        3/10 EUR/kWh: every watt bought is counted once.
         """
         return F(9, 100)
 
     @expect("combined_levelized_consumption_cost_rate")
     def test_levelized_consumption_cost(self):
-        """Levelized, the consumption channel also pays for its pv1 power.
+        """Levelized, consumption also pays for its pv1 power.
 
-        225 W of grid at 3/10 plus 675 W of pv1 at its LCOE of 1/10:
-        0.225 × 3/10 + 0.675 × 1/10 = 27/200 EUR/h.
+        225 W of grid at 3/10 plus 675 W of pv1 at 1/10: 27/200 EUR/h.
         """
         return F(27, 200)
 
     @expect("combined_levelized_charging_cost_rate")
     def test_levelized_charging_cost(self):
-        """Levelized, charging pays for 62.5 W of grid and 187.5 W of pv1.
+        """Levelized, charging pays for its grid and pv1 power.
 
-        0.0625 × 3/10 + 0.1875 × 1/10 = 3/80 EUR/h.
+        62.5 W of grid at 3/10 plus 187.5 W of pv1 at 1/10: 3/80 EUR/h.
         """
         return F(3, 80)
 
     @expect("combined_levelized_standby_cost_rate")
     def test_levelized_standby_cost(self):
-        """Levelized, standby pays for 12.5 W of grid and 37.5 W of pv1.
+        """Levelized, standby pays for its grid and pv1 power.
 
-        0.0125 × 3/10 + 0.0375 × 1/10 = 3/400 EUR/h.
+        12.5 W of grid at 3/10 plus 37.5 W of pv1 at 1/10: 3/400 EUR/h.
         """
         return F(3, 400)
 
@@ -110,21 +104,19 @@ class TestChannelCostsAreTheLedger(Home):
     def test_lcoe_rate(self):
         """The levelized channel costs add up to the cost of all gross power.
 
-        27/200 + 3/80 + 3/400 = 9/50 EUR/h, which is the 300 W import at
-        3/10 plus pv1's 900 W at 1/10: 0.09 + 0.09.
+        27/200 + 3/80 + 3/400 = 9/50 EUR/h: the import (0.09) plus pv1's
+        900 W at 1/10 (0.09).
         """
         return F(9, 50)
 
 
 class TestOperatingCostHasTwoViews(Home):
-    """Decision: operating cost has a channel view (charging alone) and a
-    device view (every PV system's and battery's own draw); overnight they
-    disagree (engine-calculations.md, "operating cost has a channel view and a
-    device view").
+    """Decision: operating cost has a channel view and a device view.
 
-    Nothing charges, so the charging channel costs nothing. pv1 draws 20 W of
-    standby, all of it from the grid: 0.02 kW × 3/10 = 3/500 EUR/h, which the
-    device view counts and the channel view does not.
+    The channel view counts only battery charging; the device view counts
+    what every PV system and battery itself draws, so pv1's standby shows up
+    only there. See "operating cost has a channel view and a device view" in
+    engine-calculations.md.
     """
 
     grid = Grid(300, price=PRICE)
@@ -134,8 +126,7 @@ class TestOperatingCostHasTwoViews(Home):
     def test_charging_cost(self):
         """The channel view reads 0: no battery is charging.
 
-        The charging channel counts only power going into batteries, and
-        there is none here, so pv1's standby draw does not show up in it.
+        pv1's standby draw is not charging, so it does not count here.
         """
         return 0
 
@@ -143,8 +134,7 @@ class TestOperatingCostHasTwoViews(Home):
     def test_device_operating_cost(self):
         """The device view counts pv1's standby draw.
 
-        It adds up what every PV system and battery itself draws. pv1's 20 W
-        of standby come from the grid: 0.02 kW × 3/10 = 3/500 EUR/h.
+        pv1's 20 W come from the grid: 0.02 kW × 3/10 = 3/500 EUR/h.
         """
         return F(3, 500)
 
@@ -152,7 +142,7 @@ class TestOperatingCostHasTwoViews(Home):
     def test_per_device_operating_cost(self):
         """pv1's own operating cost is the whole 3/500 EUR/h.
 
-        The per-device operating costs are what the device view is the sum
-        of; with one PV system, all of it is pv1's.
+        The device view is the sum of these per-device costs, and pv1 is the
+        only PV system or battery.
         """
         return {"pv1": F(3, 500)}
