@@ -307,14 +307,17 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
 def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
     """A grid, PV or battery sensor drops out: gross power is unknowable, so
     every property built on it publishes nothing at all — never a zero, never an
-    empty map. The raw totals that do not read the missing sensor are unmoved.
-
+    empty map. The raw totals that do not read the missing sensor are unmoved,
+    and a channel total over devices the house does not have stays a confident
+    zero: the missing meter says nothing about a device that is not there.
     """
     reads = {
         "combined_grid_import": "grid", "combined_grid_export": "grid",
-        "combined_production": "pv", "combined_standby_power": "pv",
-        "combined_charging_power": "battery", "combined_discharging_power": "battery",
+        "combined_production": "pv", "combined_discharging_power": "battery",
     }
+    # Channel totals are balanced across every meter, so they follow gross
+    # power — unless there is nothing to sum at all.
+    sums_over = {"combined_charging_power": "battery", "combined_standby_power": "pv"}
 
     def compare(home: Home) -> list[str]:
         before = results(home)
@@ -322,7 +325,10 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
         for dropped in [a for a in home.adapters if a.kind != "consumer"]:
             after = results(home.with_readings(**{dropped.uid: None}))
             for name, value in after.items():
-                if reads.get(name, dropped.kind) == dropped.kind:
+                if name in sums_over and not home.uids(sums_over[name]):
+                    if value != 0:
+                        problems.append(f"{name} over no devices = {show(value)}")
+                elif reads.get(name, dropped.kind) == dropped.kind:
                     if value is not None:
                         problems.append(
                             f"{dropped.uid} unavailable, {name} = {show(value)}"
@@ -411,19 +417,16 @@ def test_the_books_balance() -> None:
       channel carries exactly what its meters say: the export channel the grid
       export, the charging channel what the batteries drew, the standby channel
       what the PV systems drew.
+    * All of that in every home, those whose readings overdraw the sources
+      included — once the readings are balanced by meeting in the middle:
+      sources up by ``1 + λ``, sinks down by ``1 − λ``, with
+      ``λ = (drawn − supplied) / (drawn + supplied)`` when the sinks read more,
+      and 0 otherwise. The gap is published as ``metering_imbalance``.
     * Every euro of gross cost lands in exactly one channel's cost bucket, at
       marginal and at levelized prices alike.
     * The avoided cost measured at the sources equals the avoided cost
       measured at the loads, base load included.
-    * Self-consumption and the base load are never negative — this one in
-      every home, including those whose readings overdraw the sources.
-
-    Open question: when the readings overdraw (the metered sinks draw more
-    than the sources provide, as unsynchronised sensors do), the engine
-    attributes a source more watts than it read, so the first two do not hold
-    there. The engine docs promise source balance "in every snapshot"; either
-    that promise or the overdraw handling has to give, so for now the balance
-    is only checked where the readings balance.
+    * Self-consumption and the base load are never negative.
     """
     channels = ("consumption", "export", "charging", "standby")
 
@@ -432,27 +435,40 @@ def test_the_books_balance() -> None:
         problems = []
         if e.combined_consumption < 0 or e.home_base_load_power < 0:
             problems.append("negative self-consumption or base load")
-        if not home.balanced:
-            return problems
+        kind = {a.uid: a.kind for a in home.adapters}
+        supplied = sum(
+            w for u, w in home.readings.items() if w and w > 0 and kind[u] != "consumer"
+        )
+        drawn = sum(-w for w in home.readings.values() if w and w < 0)
+        shift = (drawn - supplied) / (drawn + supplied) if drawn > supplied else 0.0
+        if not matches(max(0.0, drawn - supplied), e.metering_imbalance, abs_tol=ABS_TOL):
+            problems.append(f"imbalance {show(e.metering_imbalance)} W, readings say "
+                            f"{show(drawn - supplied)} W")
         for source, reading in home.readings.items():
-            if reading is None or reading <= 0 or source.startswith("cons"):
+            if reading is None or reading <= 0 or kind[source] == "consumer":
                 continue
             routed = sum(
                 getattr(e, f"source_adapters_{c}_power")[source] for c in channels
             )
-            if not matches(reading, routed, abs_tol=ABS_TOL):
+            if not matches(reading * (1 + shift), routed, abs_tol=ABS_TOL):
                 problems.append(f"{source} read {reading} W but {show(routed)} W was routed")
-        for channel, metered in (
-            ("export", e.combined_grid_export),
-            ("charging", e.combined_charging_power),
-            ("standby", e.combined_standby_power),
+
+        def metered(kinds: set[str]) -> float:
+            return sum(-w for u, w in home.readings.items() if w < 0 and kind[u] in kinds)
+
+        for channel, meters, total in (
+            ("export", {"grid"}, None),
+            ("charging", {"battery"}, e.combined_charging_power),
+            ("standby", {"pv"}, e.combined_standby_power),
         ):
+            expected = metered(meters) * (1 - shift)
             carried = sum(getattr(e, f"source_adapters_{channel}_power").values())
-            if not matches(metered, carried, abs_tol=ABS_TOL):
-                problems.append(
-                    f"the {channel} channel carried {show(carried)} W, "
-                    f"its meters read {show(metered)} W"
-                )
+            for value in (carried, total):
+                if value is not None and not matches(expected, value, abs_tol=ABS_TOL):
+                    problems.append(
+                        f"the {channel} channel carried {show(value)} W, "
+                        f"its meters read {show(expected)} W once balanced"
+                    )
         for levelized, total in ((False, e.combined_coe_rate), (True, e.combined_lcoe_rate)):
             prefix = "combined_levelized_" if levelized else "combined_"
             buckets = sum(getattr(e, f"{prefix}{c}_cost_rate") for c in channels)

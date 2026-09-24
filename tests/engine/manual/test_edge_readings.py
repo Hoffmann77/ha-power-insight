@@ -324,3 +324,58 @@ class TestAMissingPriceBlanksOnlyWhatNeedsIt(Home):
         the tariff, so it cost 0.
         """
         return {"pv1": None, "bat1": 0}
+
+
+class TestOverdrawMeetsInTheMiddle(Home):
+    """Decision: readings that overdraw are balanced by meeting in the middle.
+
+    pv1 reads 1000 W, but the export (200 W), bat1 (500 W) and the plug
+    (600 W) read 1300 W — meters sampled at different moments. No meter is
+    trusted over another: sources move up by 1 + λ and sinks down by 1 − λ,
+    λ = (1300 − 1000) / (1300 + 1000) = 3/23. See "readings that overdraw
+    meet in the middle" in engine-calculations.md.
+    """
+
+    grid = Grid(-200, price=F(3, 10))
+    pv1 = Pv(1000, exports=True)
+    bat1 = Battery(-500)
+    plug = Consumer(-600)
+
+    @expect("metering_imbalance")
+    def test_metering_imbalance(self):
+        """The sinks read 300 W more than the sources supplied."""
+        return 300
+
+    @expect("gross_power")
+    def test_gross_power(self):
+        """pv1 moves up by 26/23: 1000 × 26/23 = 26000/23 W (≈ 1130 W)."""
+        return F(26000, 23)
+
+    @expect("source_adapters_export_power")
+    def test_export_power(self):
+        """The export moves down by 20/23: 200 × 20/23 = 4000/23 W (≈ 174 W)."""
+        return {"pv1": F(4000, 23)}
+
+    @expect("combined_charging_power")
+    def test_charging_power(self):
+        """bat1's 500 W move down the same way: 10000/23 W (≈ 435 W)."""
+        return F(10000, 23)
+
+    @expect("source_adapters_consumption_power")
+    def test_consumption_power(self):
+        """The plug's 600 W become 12000/23 W (≈ 522 W).
+
+        With the base load at exactly 0, that is the whole consumption channel,
+        and pv1's three channels add up to its balanced 26000/23 W.
+        """
+        return {"pv1": F(12000, 23)}
+
+    @expect("home_base_load_power")
+    def test_home_base_load_power(self):
+        """Balancing leaves nothing unmetered: 0 W, never negative."""
+        return 0
+
+    @expect("combined_grid_export")
+    def test_raw_export(self):
+        """The raw grid total keeps what the meter read: 200 W."""
+        return 200

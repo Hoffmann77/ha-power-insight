@@ -46,16 +46,6 @@ class Home:
     def engine(self):
         return Cell(self.topology, self.state).build_engine()
 
-    @property
-    def balanced(self) -> bool:
-        """Whether the metered sinks draw no more than the sources provide."""
-        powers = [
-            (a.kind, self.readings[a.uid]) for a in self.adapters
-        ]
-        gross = sum(w for kind, w in powers if w and w > 0 and kind != "consumer")
-        drawn = sum(-w for _, w in powers if w and w < 0)
-        return drawn <= gross
-
     def adapter(self, uid: str) -> Adapter:
         return next(a for a in self.adapters if a.uid == uid)
 

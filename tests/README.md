@@ -242,8 +242,6 @@ anything else) if your PR needs green checks to merge.
   only one manual class sets a factor other than 1.0; the integration tier
   covers them in `test_correction_flow.py`. Parked — see
   [`docs/dev/production-readiness.md`](../docs/dev/production-readiness.md).
-- **Overdraw.** Readings that overdraw break source balance, so the
-  conservation law only checks balanced homes.
 
 ## Integration tier (`integration/`)
 

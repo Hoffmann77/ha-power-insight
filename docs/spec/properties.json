@@ -106,6 +106,21 @@
       "derivation_steps": ["Subtract export, charging and standby from gross power."]
     },
 
+    "metering_imbalance": {
+      "title": "Metering imbalance",
+      "unit": "W",
+      "layer": 1,
+      "definition": "How much more the metered sinks drew than the sources supplied — which cannot physically happen, and does when meters are sampled at different moments or are individually inaccurate. Every reading is balanced by meeting in the middle: sources move up and sinks down, each in proportion to its size, by the least that closes this gap. Zero whenever the readings balance.",
+      "formula": "metering_imbalance = max(Σ |reading(k)| over sinks − Σ reading(s) over sources, 0)",
+      "depends_on": [],
+      "answer_shape": "scalar",
+      "derivation_steps": [
+        "Add up every source's reading, and every sink's draw.",
+        "If the sinks draw more, the difference is the imbalance; otherwise it is 0."
+      ],
+      "note": "The raw totals (grid import and export, production, discharging) keep what the meters read; gross power, the channels and everything built on them use the balanced readings. A persistent imbalance points at a configuration error: an inverted sign, or a meter nested inside another metered circuit."
+    },
+
     "home_base_load_power": {
       "title": "Home base load",
       "unit": "W",

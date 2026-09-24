@@ -24,9 +24,9 @@ docstring says which convention it encodes. Write an identity from the model,
 never from the engine's code: one read off the implementation only proves the
 code equals itself.
 
-Identities cover *available, balanced* snapshots. What happens when a sensor
-drops out, or when the readings overdraw the sources (unsynchronised sensors),
-is a law (``test_laws.py``), not a formula.
+Identities cover *available* snapshots — those whose readings overdraw the
+sources included, stated over the balanced readings (``Snap``). What happens
+when a sensor drops out is a law (``test_laws.py``), not a formula.
 """
 
 from __future__ import annotations
@@ -71,12 +71,20 @@ class Snap:
         self.reading = home.readings
         self.kind = {a.uid: a.kind for a in home.adapters}
         # A consumer can only draw: a positive consumer reading is idle.
-        self.sources = {
+        self.raw_sources = {
             uid: w
             for uid, w in self.reading.items()
             if w > 0 and self.kind[uid] != "consumer"
         }
-        self.sinks = {uid: -w for uid, w in self.reading.items() if w < 0}
+        self.raw_sinks = {uid: -w for uid, w in self.reading.items() if w < 0}
+        # Meet in the middle: when the sinks read more than the sources, every
+        # reading moves in proportion to its size by the least that balances.
+        supplied, drawn = sum(self.raw_sources.values()), sum(self.raw_sinks.values())
+        self.shift = (drawn - supplied) / (drawn + supplied) if drawn > supplied else 0.0
+        self.imbalance = max(0.0, drawn - supplied)
+        #: The balanced readings every derived result is built on.
+        self.sources = {u: w * (1 + self.shift) for u, w in self.raw_sources.items()}
+        self.sinks = {u: w * (1 - self.shift) for u, w in self.raw_sinks.items()}
 
     def of(self, kind: str) -> list[str]:
         return self.home.uids(kind)
@@ -207,7 +215,8 @@ def _(s):
 
 @identity("combined_charging_power")
 def _(s):
-    return sum(max(-s.reading[u], 0) for u in s.of("battery"))
+    """The CHG channel: what the batteries drew, balanced."""
+    return sum(s.sinks.get(u, 0.0) for u in s.of("battery"))
 
 
 @identity("combined_discharging_power")
@@ -217,20 +226,30 @@ def _(s):
 
 @identity("combined_standby_power")
 def _(s):
-    return sum(max(-s.reading[u], 0) for u in s.of("pv"))
+    """The STB channel: what the PV systems drew, balanced."""
+    return sum(s.sinks.get(u, 0.0) for u in s.of("pv"))
+
+
+@identity("metering_imbalance")
+def _(s):
+    """What the metered sinks read beyond the sources, from the raw readings."""
+    return s.imbalance
 
 
 @identity("combined_consumption")
 def _(s):
-    """CON is the residual: gross − export − charging − standby, floored at 0."""
+    """CON is the residual: gross − export − charging − standby, floored at 0.
+
+    The export is the balanced one, like every channel.
+    """
     e = s.e
-    return max(
-        0.0,
+    rest = (
         e.gross_power
-        - e.combined_grid_export
+        - s.sinks.get("grid", 0.0)
         - e.combined_charging_power
-        - e.combined_standby_power,
+        - e.combined_standby_power
     )
+    return rest if rest > 1e-9 * max(1.0, e.gross_power) else 0.0
 
 
 @identity("home_base_load_power")
@@ -240,7 +259,8 @@ def _(s):
     Every metered draw is attributed somewhere — a sink whose allowed sources
     are all idle is relaxed onto what did supply — so none of it is base load.
     """
-    return max(0.0, s.e.gross_power - sum(s.sinks.values()))
+    rest = s.e.gross_power - sum(s.sinks.values())
+    return rest if rest > 1e-9 * max(1.0, s.e.gross_power) else 0.0
 
 
 # Layer 2 — provenance. The metered rows are the root; the base load's row is
@@ -263,7 +283,7 @@ def _(s):
 
 @identity("gross_power_export_ratio")
 def _(s):
-    return ratio(s.e.combined_grid_export, s.e.gross_power)
+    return ratio(s.sinks.get("grid", 0.0), s.e.gross_power)
 
 
 @identity("gross_power_consumption_ratio")
@@ -328,7 +348,7 @@ def _shares(channel: str) -> Callable[[Snap], dict]:
 @identity("source_adapters_export_shares")
 def _(s):
     watts = s.e.source_adapters_export_power
-    return {src: ratio(w, s.e.combined_grid_export) for src, w in watts.items()}
+    return {src: ratio(w, s.sinks.get("grid", 0.0)) for src, w in watts.items()}
 
 
 for _channel in (CON, EXP, CHG, STB):
@@ -353,7 +373,7 @@ def _(s):
 @identity("combined_coe_rate")
 def _(s):
     """Only imported watts have a marginal price."""
-    return kw(s.e.combined_grid_import) * s.price
+    return kw(s.sources.get("grid", 0.0)) * s.price
 
 
 @identity("combined_lcoe_rate")
@@ -574,7 +594,7 @@ _SNAPS: list[Snap] | None = None
 def _snaps() -> list[Snap]:
     global _SNAPS
     if _SNAPS is None:
-        _SNAPS = [Snap(home) for home in random_homes() if home.balanced]
+        _SNAPS = [Snap(home) for home in random_homes()]
     return _SNAPS
 
 

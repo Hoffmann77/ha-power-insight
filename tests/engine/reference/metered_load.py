@@ -15,8 +15,9 @@ class MeteredLoad(ReferenceCase):
 
     * A metered consumer gets its own provenance row; the remainder is the home
       base load.
-    * A metered draw larger than gross power clamps the base load to zero
-      rather than going negative.
+    * A metered draw larger than what the sources supply is balanced by
+      meeting in the middle: the sources move up, the load moves down, and
+      the base load is exactly zero.
     * A zeroed base load still publishes a share row, of zeros.
     """
 
@@ -38,8 +39,10 @@ class MeteredLoad(ReferenceCase):
         price = F(3, 10)
 
     class OverMetered(Snapshot):
-        """cons1 reads more than the sources supply — the meters disagree, and the
-        base load has nowhere to go but zero.
+        """cons1 reads 400 W while the sources supply 300 W — the meters were
+        sampled at different moments. No meter is trusted over another: the
+        grid and pv1 move up by 8/7 and cons1 down by 6/7, to about 343 W on
+        both sides, and the 100 W gap is the metering imbalance.
         """
 
         grid = 100

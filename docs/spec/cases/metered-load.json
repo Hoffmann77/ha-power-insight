@@ -4,7 +4,7 @@
   "summary": "A consumer with a meter on it, next to the unmetered remainder. The base load stops being the whole house and becomes what is left after the metered draw \u2014 including when the meters disagree and there is nothing left.",
   "shows": [
     "A metered consumer gets its own provenance row; the remainder is the home base load.",
-    "A metered draw larger than gross power clamps the base load to zero rather than going negative.",
+    "A metered draw larger than what the sources supply is balanced by meeting in the middle: the sources move up, the load moves down, and the base load is exactly zero.",
     "A zeroed base load still publishes a share row, of zeros."
   ],
   "topology": [
@@ -76,6 +76,10 @@
         {
           "property": "combined_consumption",
           "value": "1400"
+        },
+        {
+          "property": "metering_imbalance",
+          "value": "0"
         },
         {
           "property": "home_base_load_power",
@@ -361,7 +365,7 @@
     },
     {
       "id": "over_metered",
-      "note": "cons1 reads more than the sources supply \u2014 the meters disagree, and the base load has nowhere to go but zero.",
+      "note": "cons1 reads 400 W while the sources supply 300 W \u2014 the meters were sampled at different moments. No meter is trusted over another: the grid and pv1 move up by 8/7 and cons1 down by 6/7, to about 343 W on both sides, and the 100 W gap is the metering imbalance.",
       "readings": {
         "grid": "100",
         "pv1": "200",
@@ -371,7 +375,7 @@
       "results": [
         {
           "property": "gross_power",
-          "value": "300"
+          "value": "2400/7"
         },
         {
           "property": "combined_grid_import",
@@ -399,7 +403,11 @@
         },
         {
           "property": "combined_consumption",
-          "value": "300"
+          "value": "2400/7"
+        },
+        {
+          "property": "metering_imbalance",
+          "value": "100"
         },
         {
           "property": "home_base_load_power",
@@ -448,8 +456,8 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
-            "grid": "400/3",
-            "pv1": "800/3"
+            "grid": "800/7",
+            "pv1": "1600/7"
           }
         },
         {
@@ -483,8 +491,8 @@
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
-            "grid": "4/3",
-            "pv1": "4/3"
+            "grid": "1",
+            "pv1": "1"
           }
         },
         {
@@ -532,24 +540,24 @@
         {
           "property": "sink_adapters_consumption_shares",
           "value": {
-            "cons1": "4/3"
+            "cons1": "1"
           }
         },
         {
           "property": "combined_coe_rate",
-          "value": "3/100"
+          "value": "6/175"
         },
         {
           "property": "combined_lcoe_rate",
-          "value": "1/20"
+          "value": "2/35"
         },
         {
           "property": "combined_avoided_cost_rate",
-          "value": "2/25"
+          "value": "12/175"
         },
         {
           "property": "combined_saving_rate",
-          "value": "2/25"
+          "value": "12/175"
         },
         {
           "property": "combined_export_compensation_rate",
@@ -572,7 +580,7 @@
         {
           "property": "source_adapters_coe_rate",
           "value": {
-            "grid": "3/100",
+            "grid": "6/175",
             "pv1": "0"
           }
         },
@@ -600,7 +608,7 @@
           "value": {
             "grid": "0",
             "pv1": "0",
-            "cons1": "1/25"
+            "cons1": "6/175"
           }
         },
         {
@@ -608,13 +616,13 @@
           "value": {
             "grid": "0",
             "pv1": "0",
-            "cons1": "1/15"
+            "cons1": "2/35"
           }
         },
         {
           "property": "sink_adapters_avoided_cost_rates",
           "value": {
-            "cons1": "2/25"
+            "cons1": "12/175"
           }
         },
         {
@@ -631,11 +639,11 @@
         },
         {
           "property": "combined_consumption_cost_rate",
-          "value": "1/25"
+          "value": "6/175"
         },
         {
           "property": "combined_levelized_consumption_cost_rate",
-          "value": "1/15"
+          "value": "2/35"
         },
         {
           "property": "combined_charging_cost_rate",
@@ -656,30 +664,30 @@
         {
           "property": "adapters_saving_rates",
           "value": {
-            "pv1": "2/25"
+            "pv1": "12/175"
           }
         },
         {
           "property": "adapters_levelized_saving_rates",
           "value": {
-            "pv1": "4/75"
+            "pv1": "8/175"
           }
         },
         {
           "property": "adapters_financial_return_rates",
           "value": {
-            "pv1": "2/25"
+            "pv1": "12/175"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates",
           "value": {
-            "pv1": "4/75"
+            "pv1": "8/175"
           }
         },
         {
           "property": "combined_financial_return_rate",
-          "value": "2/25"
+          "value": "12/175"
         }
       ]
     }

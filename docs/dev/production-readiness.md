@@ -57,7 +57,7 @@ issue. The balance law gains channel-total checks (the charging channel equals
 what the batteries drew, the export channel equals the grid export), which is
 what would have caught this.
 
-### 2. Readings that overdraw — settled
+### 2. Readings that overdraw — done in the engine (sensor and repair issue: Home Assistant layer)
 
 Meters are sampled at different times (a grid meter every 60 s, smart plugs
 every 30 s) and are individually inaccurate, so the metered sinks sometimes

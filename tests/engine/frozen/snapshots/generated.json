@@ -73,6 +73,7 @@
     "combined_discharging_power": 1100.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 680.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 350.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -368,6 +369,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 1400.0,
     "combined_consumption": 2720.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1290.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -750,6 +752,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 440.0,
     "combined_consumption": 2310.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1230.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -1097,6 +1100,7 @@
     "combined_discharging_power": 1800.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3700.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 750.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -1414,6 +1418,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3500.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 210.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -1619,6 +1624,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 5450.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 3550.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -1882,6 +1888,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 2360.0,
     "combined_consumption": 3140.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1650.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -2240,6 +2247,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 2300.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 980.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -2479,6 +2487,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 710.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 710.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -2718,6 +2727,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 9090.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 6910.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -3104,6 +3114,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 1020.0,
     "combined_consumption": 1110.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -3464,6 +3475,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 540.0,
     "combined_consumption": 1960.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1960.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -3777,6 +3789,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 100.0,
     "combined_consumption": 350.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -3976,6 +3989,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 100.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 70.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -4213,6 +4227,7 @@
     "combined_discharging_power": 550.0,
     "combined_standby_power": 110.0,
     "combined_consumption": 2930.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 890.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -4587,6 +4602,7 @@
     "combined_discharging_power": 100.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 90.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 60.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -4886,6 +4902,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3020.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1030.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -5211,14 +5228,15 @@
    },
    "price": 0.18,
    "outputs": {
-    "gross_power": 900.0,
+    "gross_power": 909.89010989,
     "combined_grid_import": 650.0,
     "combined_grid_export": 0.0,
     "combined_production": 0.0,
     "combined_charging_power": 0.0,
     "combined_discharging_power": 250.0,
     "combined_standby_power": 0.0,
-    "combined_consumption": 900.0,
+    "combined_consumption": 909.89010989,
+    "metering_imbalance": 20.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -5234,8 +5252,8 @@
       "grid": 1.0
      },
      "cons2": {
-      "bat0": 0.423728813559,
-      "grid": 0.576271186441
+      "bat0": 0.433145009416,
+      "grid": 0.566854990584
      },
      "grid": {
       "bat0": 0.0,
@@ -5251,8 +5269,8 @@
     "gross_power_charging_ratio": 0.0,
     "gross_power_standby_ratio": 0.0,
     "source_adapters_consumption_power": {
-     "bat0": 250.0,
-     "grid": 670.0
+     "bat0": 252.747252747,
+     "grid": 657.142857143
     },
     "source_adapters_export_power": {
      "bat0": 0.0,
@@ -5272,7 +5290,7 @@
     },
     "source_adapters_consumption_ratios": {
      "bat0": 1.0,
-     "grid": 1.03076923077
+     "grid": 1.0
     },
     "source_adapters_export_ratios": {
      "bat0": 0.0,
@@ -5287,8 +5305,8 @@
      "grid": 0.0
     },
     "source_adapters_consumption_shares": {
-     "bat0": 0.271739130435,
-     "grid": 0.728260869565
+     "bat0": 0.277777777778,
+     "grid": 0.722222222222
     },
     "source_adapters_charging_shares": {
      "bat0": 0.0,
@@ -5299,14 +5317,14 @@
      "grid": 0.0
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 0.177777777778,
-     "cons1": 0.188888888889,
-     "cons2": 0.655555555556
+     "cons0": 0.173913043478,
+     "cons1": 0.184782608696,
+     "cons2": 0.641304347826
     },
-    "combined_coe_rate": 0.117,
-    "combined_lcoe_rate": 0.1545,
-    "combined_avoided_cost_rate": 0.045,
-    "combined_saving_rate": 0.045,
+    "combined_coe_rate": 0.118285714286,
+    "combined_lcoe_rate": 0.156197802198,
+    "combined_avoided_cost_rate": 0.0454945054945,
+    "combined_saving_rate": 0.0454945054945,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "bat0": 0.0,
@@ -5318,7 +5336,7 @@
     },
     "source_adapters_coe_rate": {
      "bat0": 0.0,
-     "grid": 0.117
+     "grid": 0.118285714286
     },
     "source_adapters_export_compensation_rates": {
      "bat0": 0.0,
@@ -5332,50 +5350,50 @@
     },
     "sink_adapters_coo_rates": {
      "bat0": 0.0,
-     "cons0": 0.0288,
-     "cons1": 0.0306,
-     "cons2": 0.0612,
+     "cons0": 0.0284835164835,
+     "cons1": 0.0302637362637,
+     "cons2": 0.0595384615385,
      "grid": 0.0
     },
     "sink_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "cons0": 0.0288,
-     "cons1": 0.0306,
-     "cons2": 0.0987,
+     "cons0": 0.0284835164835,
+     "cons1": 0.0302637362637,
+     "cons2": 0.0974505494505,
      "grid": 0.0
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0,
      "cons1": 0.0,
-     "cons2": 0.045
+     "cons2": 0.0454945054945
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.13,
     "combined_lcoe": 0.171666666667,
-    "combined_consumption_cost_rate": 0.1206,
-    "combined_levelized_consumption_cost_rate": 0.1581,
+    "combined_consumption_cost_rate": 0.118285714286,
+    "combined_levelized_consumption_cost_rate": 0.156197802198,
     "combined_charging_cost_rate": 0.0,
     "combined_levelized_export_cost_rate": 0.0,
     "combined_levelized_standby_cost_rate": 0.0,
     "combined_device_operating_cost_rate": 0.0,
     "adapters_saving_rates": {
-     "bat0": 0.045
+     "bat0": 0.0454945054945
     },
     "adapters_levelized_saving_rates": {
-     "bat0": 0.0075
+     "bat0": 0.00758241758242
     },
     "adapters_financial_return_rates": {
-     "bat0": 0.045
+     "bat0": 0.0454945054945
     },
     "adapters_levelized_financial_return_rates": {
-     "bat0": 0.0075
+     "bat0": 0.00758241758242
     },
-    "combined_financial_return_rate": 0.045,
+    "combined_financial_return_rate": 0.0454945054945,
     "sink_adapters_restriction_deficit": {
      "bat0": 0.0,
      "cons0": 0.0,
      "cons1": 0.0,
-     "cons2": 340.0,
+     "cons2": 330.769230769,
      "grid": 0.0
     }
    }
@@ -5493,6 +5511,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 7400.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1290.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -5844,14 +5863,15 @@
    },
    "price": 0.25,
    "outputs": {
-    "gross_power": 3550.0,
+    "gross_power": 3712.2311828,
     "combined_grid_import": 2550.0,
     "combined_grid_export": 0.0,
     "combined_production": 1000.0,
-    "combined_charging_power": 860.0,
+    "combined_charging_power": 820.698924731,
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
-    "combined_consumption": 2690.0,
+    "combined_consumption": 2891.53225806,
+    "metering_imbalance": 340.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -5869,14 +5889,14 @@
      "cons0": {
       "bat0": 0.0,
       "bat1": 0.0,
-      "grid": 0.947955390335,
-      "pv0": 0.0520446096654
+      "grid": 0.922186584856,
+      "pv0": 0.0778134151443
      },
      "cons1": {
       "bat0": 0.0,
       "bat1": 0.0,
-      "grid": 0.947955390335,
-      "pv0": 0.0520446096654
+      "grid": 0.922186584856,
+      "pv0": 0.0778134151443
      },
      "grid": {
       "bat0": 0.0,
@@ -5898,14 +5918,14 @@
      "pv0": 0.0
     },
     "gross_power_export_ratio": 0.0,
-    "gross_power_consumption_ratio": 0.757746478873,
-    "gross_power_charging_ratio": 0.242253521127,
+    "gross_power_consumption_ratio": 0.778920308483,
+    "gross_power_charging_ratio": 0.221079691517,
     "gross_power_standby_ratio": 0.0,
     "source_adapters_consumption_power": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "grid": 2872.30483271,
-     "pv0": 157.695167286
+     "grid": 2666.53225806,
+     "pv0": 225.0
     },
     "source_adapters_export_power": {
      "bat0": 0.0,
@@ -5929,13 +5949,13 @@
      "bat0": 0.0,
      "bat1": 0.0,
      "grid": 0.0,
-     "pv0": 860.0
+     "pv0": 820.698924731
     },
     "source_adapters_consumption_ratios": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "grid": 1.12639405204,
-     "pv0": 0.157695167286
+     "grid": 1.0,
+     "pv0": 0.215167095116
     },
     "source_adapters_export_ratios": {
      "bat0": 0.0,
@@ -5947,7 +5967,7 @@
      "bat0": 0.0,
      "bat1": 0.0,
      "grid": 0.0,
-     "pv0": 0.86
+     "pv0": 0.784832904884
     },
     "source_adapters_standby_ratios": {
      "bat0": 0.0,
@@ -5958,8 +5978,8 @@
     "source_adapters_consumption_shares": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "grid": 0.947955390335,
-     "pv0": 0.0520446096654
+     "grid": 0.922186584856,
+     "pv0": 0.0778134151443
     },
     "source_adapters_charging_shares": {
      "bat0": 0.0,
@@ -5974,13 +5994,13 @@
      "pv0": 0.0
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 0.739776951673,
-     "cons1": 0.386617100372
+     "cons0": 0.656765676568,
+     "cons1": 0.343234323432
     },
-    "combined_coe_rate": 0.6375,
-    "combined_lcoe_rate": 0.8375,
-    "combined_avoided_cost_rate": 0.0394237918216,
-    "combined_saving_rate": 0.0394237918216,
+    "combined_coe_rate": 0.666633064516,
+    "combined_lcoe_rate": 0.875772849462,
+    "combined_avoided_cost_rate": 0.05625,
+    "combined_saving_rate": 0.05625,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "bat0": null,
@@ -5997,7 +6017,7 @@
     "source_adapters_coe_rate": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "grid": 0.6375,
+     "grid": 0.666633064516,
      "pv0": 0.0
     },
     "source_adapters_export_compensation_rates": {
@@ -6013,34 +6033,34 @@
     },
     "source_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "bat1": 0.172,
+     "bat1": 0.164139784946,
      "pv0": 0.0
     },
     "sink_adapters_coo_rates": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "cons0": 0.471607806691,
-     "cons1": 0.246468401487,
+     "cons0": 0.437821715639,
+     "cons1": 0.228811348877,
      "grid": 0.0,
      "pv0": 0.0
     },
     "sink_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "bat1": 0.172,
-     "cons0": 0.492321561338,
-     "cons1": 0.257293680297,
+     "bat1": 0.164139784946,
+     "cons0": 0.467376171085,
+     "cons1": 0.244256893431,
      "grid": 0.0,
      "pv0": 0.0
     },
     "sink_adapters_avoided_cost_rates": {
-     "cons0": 0.0258921933086,
-     "cons1": 0.013531598513
+     "cons0": 0.0369430693069,
+     "cons1": 0.0193069306931
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.179577464789,
     "combined_lcoe": 0.235915492958,
-    "combined_consumption_cost_rate": 0.718076208178,
-    "combined_levelized_consumption_cost_rate": 0.749615241636,
+    "combined_consumption_cost_rate": 0.666633064516,
+    "combined_levelized_consumption_cost_rate": 0.711633064516,
     "combined_charging_cost_rate": 0.0,
     "combined_levelized_export_cost_rate": 0.0,
     "combined_levelized_standby_cost_rate": 0.0,
@@ -6048,24 +6068,24 @@
     "adapters_saving_rates": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "pv0": 0.0394237918216
+     "pv0": 0.05625
     },
     "adapters_levelized_saving_rates": {
      "bat0": 0.0,
-     "bat1": -0.172,
-     "pv0": 0.00788475836431
+     "bat1": -0.164139784946,
+     "pv0": 0.01125
     },
     "adapters_financial_return_rates": {
      "bat0": 0.0,
      "bat1": 0.0,
-     "pv0": 0.0394237918216
+     "pv0": 0.05625
     },
     "adapters_levelized_financial_return_rates": {
      "bat0": 0.0,
-     "bat1": -0.172,
-     "pv0": 0.00788475836431
+     "bat1": -0.164139784946,
+     "pv0": 0.01125
     },
-    "combined_financial_return_rate": 0.0394237918216,
+    "combined_financial_return_rate": 0.05625,
     "sink_adapters_restriction_deficit": {
      "bat0": 0.0,
      "bat1": 0.0,
@@ -6116,6 +6136,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 1460.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1460.0,
     "sink_adapters_source_shares": {
      "grid": {
@@ -6353,6 +6374,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 1740.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1740.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -6708,6 +6730,7 @@
     "combined_discharging_power": 150.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 4150.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -7034,6 +7057,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 310.0,
     "combined_consumption": 2320.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 340.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -7421,6 +7445,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 20.0,
     "combined_consumption": 630.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 630.0,
     "sink_adapters_source_shares": {
      "grid": {
@@ -7708,6 +7733,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 100.0,
     "combined_consumption": 4690.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 3590.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -8018,6 +8044,7 @@
     "combined_discharging_power": 1650.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3350.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2400.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -8312,6 +8339,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 0.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "grid": {
@@ -8594,6 +8622,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 4700.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 3240.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -8875,6 +8904,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 180.0,
     "combined_consumption": 690.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 440.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -9167,6 +9197,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3430.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 650.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -9438,6 +9469,7 @@
     "combined_discharging_power": 1500.0,
     "combined_standby_power": 10.0,
     "combined_consumption": 3740.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 350.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -9745,6 +9777,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 6100.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1720.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -10044,6 +10077,7 @@
     "combined_discharging_power": 850.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 1100.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 790.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -10299,6 +10333,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 5950.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2750.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -10579,14 +10614,15 @@
    },
    "price": 0.42,
    "outputs": {
-    "gross_power": 5800.0,
+    "gross_power": 5946.21848739,
     "combined_grid_import": 850.0,
     "combined_grid_export": 0.0,
     "combined_production": 3050.0,
     "combined_charging_power": 0.0,
     "combined_discharging_power": 1900.0,
-    "combined_standby_power": 1450.0,
-    "combined_consumption": 4350.0,
+    "combined_standby_power": 1413.44537815,
+    "combined_consumption": 4532.77310924,
+    "metering_imbalance": 300.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -10647,15 +10683,15 @@
      "pv2": 0.0
     },
     "gross_power_export_ratio": 0.0,
-    "gross_power_consumption_ratio": 0.75,
+    "gross_power_consumption_ratio": 0.762295081967,
     "gross_power_charging_ratio": 0.0,
-    "gross_power_standby_ratio": 0.25,
+    "gross_power_standby_ratio": 0.237704918033,
     "source_adapters_consumption_power": {
-     "bat0": 1523.27586207,
-     "grid": 681.465517241,
+     "bat0": 1484.87394958,
+     "grid": 664.285714286,
      "pv0": 0.0,
-     "pv1": 2405.17241379,
-     "pv2": 40.0862068966
+     "pv1": 2344.53781513,
+     "pv2": 39.0756302521
     },
     "source_adapters_export_power": {
      "bat0": 0.0,
@@ -10672,11 +10708,11 @@
      "pv2": 0.0
     },
     "source_adapters_standby_power": {
-     "bat0": 475.0,
-     "grid": 212.5,
+     "bat0": 463.025210084,
+     "grid": 207.142857143,
      "pv0": 0.0,
-     "pv1": 750.0,
-     "pv2": 12.5
+     "pv1": 731.092436975,
+     "pv2": 12.1848739496
     },
     "source_adapters_charging_power": {
      "bat0": 0.0,
@@ -10686,11 +10722,11 @@
      "pv2": 0.0
     },
     "source_adapters_consumption_ratios": {
-     "bat0": 0.801724137931,
-     "grid": 0.801724137931,
+     "bat0": 0.762295081967,
+     "grid": 0.762295081967,
      "pv0": 0.0,
-     "pv1": 0.801724137931,
-     "pv2": 0.801724137931
+     "pv1": 0.762295081967,
+     "pv2": 0.762295081967
     },
     "source_adapters_export_ratios": {
      "bat0": 0.0,
@@ -10707,11 +10743,11 @@
      "pv2": 0.0
     },
     "source_adapters_standby_ratios": {
-     "bat0": 0.25,
-     "grid": 0.25,
+     "bat0": 0.237704918033,
+     "grid": 0.237704918033,
      "pv0": 0.0,
-     "pv1": 0.25,
-     "pv2": 0.25
+     "pv1": 0.237704918033,
+     "pv2": 0.237704918033
     },
     "source_adapters_consumption_shares": {
      "bat0": 0.327586206897,
@@ -10735,13 +10771,13 @@
      "pv2": 0.00862068965517
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 0.372413793103,
-     "cons1": 0.696551724138
+     "cons0": 0.348387096774,
+     "cons1": 0.651612903226
     },
-    "combined_coe_rate": 0.357,
-    "combined_lcoe_rate": 1.442,
-    "combined_avoided_cost_rate": 1.66678448276,
-    "combined_saving_rate": 1.57753448276,
+    "combined_coe_rate": 0.366,
+    "combined_lcoe_rate": 1.47835294118,
+    "combined_avoided_cost_rate": 1.62476470588,
+    "combined_saving_rate": 1.53776470588,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "bat0": 0.0,
@@ -10759,7 +10795,7 @@
     },
     "source_adapters_coe_rate": {
      "bat0": 0.0,
-     "grid": 0.357,
+     "grid": 0.366,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
@@ -10773,75 +10809,75 @@
     },
     "source_adapters_coo_rates": {
      "bat0": 0.0,
-     "pv0": 0.08925,
+     "pv0": 0.087,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "source_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "pv0": 0.3605,
+     "pv0": 0.351411764706,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_coo_rates": {
      "bat0": 0.0,
-     "cons0": 0.0997137931034,
-     "cons1": 0.186501724138,
+     "cons0": 0.0972,
+     "cons1": 0.1818,
      "grid": 0.0,
-     "pv0": 0.08925,
+     "pv0": 0.087,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "cons0": 0.402765517241,
-     "cons1": 0.753320689655,
+     "cons0": 0.392611764706,
+     "cons1": 0.734329411765,
      "grid": 0.0,
-     "pv0": 0.3605,
+     "pv0": 0.351411764706,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {
-     "cons0": 0.580686206897,
-     "cons1": 1.08609827586
+     "cons0": 0.566047058824,
+     "cons1": 1.05871764706
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0615517241379,
     "combined_lcoe": 0.248620689655,
-    "combined_consumption_cost_rate": 0.286215517241,
-    "combined_levelized_consumption_cost_rate": 1.1560862069,
+    "combined_consumption_cost_rate": 0.279,
+    "combined_levelized_consumption_cost_rate": 1.12694117647,
     "combined_charging_cost_rate": 0.0,
     "combined_levelized_export_cost_rate": 0.0,
-    "combined_levelized_standby_cost_rate": 0.3605,
-    "combined_device_operating_cost_rate": 0.08925,
+    "combined_levelized_standby_cost_rate": 0.351411764706,
+    "combined_device_operating_cost_rate": 0.087,
     "adapters_saving_rates": {
-     "bat0": 0.639775862069,
-     "pv0": -0.08925,
-     "pv1": 1.01017241379,
-     "pv2": 0.0168362068966
+     "bat0": 0.623647058824,
+     "pv0": -0.087,
+     "pv1": 0.984705882353,
+     "pv2": 0.0164117647059
     },
     "adapters_levelized_saving_rates": {
-     "bat0": 0.258956896552,
-     "pv0": -0.3605,
-     "pv1": 0.529137931034,
-     "pv2": 0.00881896551724
+     "bat0": 0.252428571429,
+     "pv0": -0.351411764706,
+     "pv1": 0.515798319328,
+     "pv2": 0.00859663865546
     },
     "adapters_financial_return_rates": {
-     "bat0": 0.639775862069,
-     "pv0": -0.08925,
-     "pv1": 1.01017241379,
-     "pv2": 0.0168362068966
+     "bat0": 0.623647058824,
+     "pv0": -0.087,
+     "pv1": 0.984705882353,
+     "pv2": 0.0164117647059
     },
     "adapters_levelized_financial_return_rates": {
-     "bat0": 0.258956896552,
-     "pv0": -0.3605,
-     "pv1": 0.529137931034,
-     "pv2": 0.00881896551724
+     "bat0": 0.252428571429,
+     "pv0": -0.351411764706,
+     "pv1": 0.515798319328,
+     "pv2": 0.00859663865546
     },
-    "combined_financial_return_rate": 1.57753448276,
+    "combined_financial_return_rate": 1.53776470588,
     "sink_adapters_restriction_deficit": {
      "bat0": 0.0,
-     "cons0": 1620.0,
+     "cons0": 1579.15966387,
      "cons1": 0.0,
      "grid": 0.0,
      "pv0": 0.0,
@@ -10908,14 +10944,15 @@
    },
    "price": 0.42,
    "outputs": {
-    "gross_power": 2050.0,
+    "gross_power": 2074.69879518,
     "combined_grid_import": 0.0,
     "combined_grid_export": 160.0,
     "combined_production": 2050.0,
     "combined_charging_power": 0.0,
     "combined_discharging_power": 0.0,
-    "combined_standby_power": 1190.0,
-    "combined_consumption": 700.0,
+    "combined_standby_power": 1175.6626506,
+    "combined_consumption": 740.963855422,
+    "metering_imbalance": 50.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -10944,18 +10981,18 @@
      "pv0": 0.0,
      "pv1": 0.0
     },
-    "gross_power_export_ratio": 0.0780487804878,
-    "gross_power_consumption_ratio": 0.341463414634,
+    "gross_power_export_ratio": 0.0761904761905,
+    "gross_power_consumption_ratio": 0.357142857143,
     "gross_power_charging_ratio": 0.0,
-    "gross_power_standby_ratio": 0.580487804878,
+    "gross_power_standby_ratio": 0.566666666667,
     "source_adapters_consumption_power": {
      "grid": 0.0,
-     "pv0": 750.0,
+     "pv0": 740.963855422,
      "pv1": 0.0
     },
     "source_adapters_export_power": {
      "grid": 0.0,
-     "pv0": 160.0,
+     "pv0": 158.072289157,
      "pv1": 0.0
     },
     "source_adapters_export_shares": {
@@ -10965,7 +11002,7 @@
     },
     "source_adapters_standby_power": {
      "grid": 0.0,
-     "pv0": 1190.0,
+     "pv0": 1175.6626506,
      "pv1": 0.0
     },
     "source_adapters_charging_power": {
@@ -10975,12 +11012,12 @@
     },
     "source_adapters_consumption_ratios": {
      "grid": 0.0,
-     "pv0": 0.365853658537,
+     "pv0": 0.357142857143,
      "pv1": 0.0
     },
     "source_adapters_export_ratios": {
      "grid": 0.0,
-     "pv0": 0.0780487804878,
+     "pv0": 0.0761904761905,
      "pv1": 0.0
     },
     "source_adapters_charging_ratios": {
@@ -10990,7 +11027,7 @@
     },
     "source_adapters_standby_ratios": {
      "grid": 0.0,
-     "pv0": 0.580487804878,
+     "pv0": 0.566666666667,
      "pv1": 0.0
     },
     "source_adapters_consumption_shares": {
@@ -11009,12 +11046,12 @@
      "pv1": 0.0
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 1.07142857143
+     "cons0": 1.0
     },
     "combined_coe_rate": 0.0,
-    "combined_lcoe_rate": 0.164,
-    "combined_avoided_cost_rate": 0.315,
-    "combined_saving_rate": 0.315,
+    "combined_lcoe_rate": 0.165975903614,
+    "combined_avoided_cost_rate": 0.311204819277,
+    "combined_saving_rate": 0.311204819277,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "grid": null,
@@ -11042,7 +11079,7 @@
     },
     "source_adapters_lcoo_rates": {
      "pv0": 0.0,
-     "pv1": 0.0952
+     "pv1": 0.0940530120482
     },
     "sink_adapters_coo_rates": {
      "cons0": 0.0,
@@ -11051,40 +11088,40 @@
      "pv1": 0.0
     },
     "sink_adapters_lcoo_rates": {
-     "cons0": 0.06,
-     "grid": 0.0128,
+     "cons0": 0.0592771084337,
+     "grid": 0.0126457831325,
      "pv0": 0.0,
-     "pv1": 0.0952
+     "pv1": 0.0940530120482
     },
     "sink_adapters_avoided_cost_rates": {
-     "cons0": 0.315
+     "cons0": 0.311204819277
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
     "combined_lcoe": 0.08,
     "combined_consumption_cost_rate": 0.0,
-    "combined_levelized_consumption_cost_rate": 0.06,
+    "combined_levelized_consumption_cost_rate": 0.0592771084337,
     "combined_charging_cost_rate": 0.0,
-    "combined_levelized_export_cost_rate": 0.0128,
-    "combined_levelized_standby_cost_rate": 0.0952,
+    "combined_levelized_export_cost_rate": 0.0126457831325,
+    "combined_levelized_standby_cost_rate": 0.0940530120482,
     "combined_device_operating_cost_rate": 0.0,
     "adapters_saving_rates": {
-     "pv0": 0.315,
+     "pv0": 0.311204819277,
      "pv1": 0.0
     },
     "adapters_levelized_saving_rates": {
-     "pv0": 0.255,
-     "pv1": -0.0952
+     "pv0": 0.251927710843,
+     "pv1": -0.0940530120482
     },
     "adapters_financial_return_rates": {
-     "pv0": 0.315,
+     "pv0": 0.311204819277,
      "pv1": 0.0
     },
     "adapters_levelized_financial_return_rates": {
-     "pv0": 0.2422,
-     "pv1": -0.0952
+     "pv0": 0.239281927711,
+     "pv1": -0.0940530120482
     },
-    "combined_financial_return_rate": 0.315,
+    "combined_financial_return_rate": 0.311204819277,
     "sink_adapters_restriction_deficit": {
      "cons0": 0.0,
      "grid": 0.0,
@@ -11135,6 +11172,7 @@
     "combined_discharging_power": 600.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 0.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -11381,6 +11419,7 @@
     "combined_discharging_power": 1100.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 12910.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 5220.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -11729,6 +11768,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 1000.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1000.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -11954,6 +11994,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 250.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 90.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -12180,6 +12221,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 430.0,
     "combined_consumption": 360.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -12525,6 +12567,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 40.0,
     "combined_consumption": 1300.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 920.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -12841,6 +12884,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 710.0,
     "combined_consumption": 1340.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -13155,6 +13199,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 180.0,
     "combined_consumption": 1210.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1200.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -13512,6 +13557,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 1650.0,
     "combined_consumption": 4220.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2160.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -13817,6 +13863,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 9300.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 9300.0,
     "sink_adapters_source_shares": {
      "grid": {
@@ -14079,6 +14126,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 1880.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1510.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -14278,14 +14326,15 @@
    },
    "price": 0.3,
    "outputs": {
-    "gross_power": 3500.0,
+    "gross_power": 3620.68965517,
     "combined_grid_import": 0.0,
     "combined_grid_export": 2720.0,
     "combined_production": 3500.0,
-    "combined_charging_power": 1030.0,
+    "combined_charging_power": 994.482758621,
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 0.0,
+    "metering_imbalance": 250.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -14309,9 +14358,9 @@
      "grid": 0.0,
      "pv0": 0.0
     },
-    "gross_power_export_ratio": 0.777142857143,
+    "gross_power_export_ratio": 0.725333333333,
     "gross_power_consumption_ratio": 0.0,
-    "gross_power_charging_ratio": 0.294285714286,
+    "gross_power_charging_ratio": 0.274666666667,
     "gross_power_standby_ratio": 0.0,
     "source_adapters_consumption_power": {
      "bat0": 0.0,
@@ -14321,7 +14370,7 @@
     "source_adapters_export_power": {
      "bat0": 0.0,
      "grid": 0.0,
-     "pv0": 2720.0
+     "pv0": 2626.20689655
     },
     "source_adapters_export_shares": {
      "bat0": 0.0,
@@ -14336,7 +14385,7 @@
     "source_adapters_charging_power": {
      "bat0": 0.0,
      "grid": 0.0,
-     "pv0": 1030.0
+     "pv0": 994.482758621
     },
     "source_adapters_consumption_ratios": {
      "bat0": 0.0,
@@ -14346,12 +14395,12 @@
     "source_adapters_export_ratios": {
      "bat0": 0.0,
      "grid": 0.0,
-     "pv0": 0.777142857143
+     "pv0": 0.725333333333
     },
     "source_adapters_charging_ratios": {
      "bat0": 0.0,
      "grid": 0.0,
-     "pv0": 0.294285714286
+     "pv0": 0.274666666667
     },
     "source_adapters_standby_ratios": {
      "bat0": 0.0,
@@ -14375,10 +14424,10 @@
     },
     "sink_adapters_consumption_shares": {},
     "combined_coe_rate": 0.0,
-    "combined_lcoe_rate": 0.7,
+    "combined_lcoe_rate": 0.724137931034,
     "combined_avoided_cost_rate": 0.0,
     "combined_saving_rate": 0.0,
-    "combined_export_compensation_rate": 0.1632,
+    "combined_export_compensation_rate": 0.157572413793,
     "source_adapters_dynamic_coe": {
      "bat0": null,
      "grid": null,
@@ -14397,14 +14446,14 @@
     "source_adapters_export_compensation_rates": {
      "bat0": 0.0,
      "grid": 0.0,
-     "pv0": 0.1632
+     "pv0": 0.157572413793
     },
     "source_adapters_coo_rates": {
      "bat0": 0.0,
      "pv0": 0.0
     },
     "source_adapters_lcoo_rates": {
-     "bat0": 0.206,
+     "bat0": 0.198896551724,
      "pv0": 0.0
     },
     "sink_adapters_coo_rates": {
@@ -14413,8 +14462,8 @@
      "pv0": 0.0
     },
     "sink_adapters_lcoo_rates": {
-     "bat0": 0.206,
-     "grid": 0.544,
+     "bat0": 0.198896551724,
+     "grid": 0.52524137931,
      "pv0": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
@@ -14424,7 +14473,7 @@
     "combined_consumption_cost_rate": 0.0,
     "combined_levelized_consumption_cost_rate": 0.0,
     "combined_charging_cost_rate": 0.0,
-    "combined_levelized_export_cost_rate": 0.544,
+    "combined_levelized_export_cost_rate": 0.52524137931,
     "combined_levelized_standby_cost_rate": 0.0,
     "combined_device_operating_cost_rate": 0.0,
     "adapters_saving_rates": {
@@ -14432,18 +14481,18 @@
      "pv0": 0.0
     },
     "adapters_levelized_saving_rates": {
-     "bat0": -0.206,
+     "bat0": -0.198896551724,
      "pv0": 0.0
     },
     "adapters_financial_return_rates": {
      "bat0": 0.0,
-     "pv0": 0.1632
+     "pv0": 0.157572413793
     },
     "adapters_levelized_financial_return_rates": {
-     "bat0": -0.206,
-     "pv0": -0.3808
+     "bat0": -0.198896551724,
+     "pv0": -0.367668965517
     },
-    "combined_financial_return_rate": 0.1632,
+    "combined_financial_return_rate": 0.157572413793,
     "sink_adapters_restriction_deficit": {
      "bat0": 0.0,
      "grid": 0.0,
@@ -14519,6 +14568,7 @@
     "combined_discharging_power": 250.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 120.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 40.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -14796,6 +14846,7 @@
     "combined_discharging_power": 200.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 4050.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 4050.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -15149,6 +15200,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 6150.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2500.0,
     "sink_adapters_source_shares": {
      "cons0": {
@@ -15422,6 +15474,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 90.0,
     "combined_consumption": 2150.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1270.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -15721,21 +15774,22 @@
    },
    "price": 0.3,
    "outputs": {
-    "gross_power": 4200.0,
+    "gross_power": 4321.38728324,
     "combined_grid_import": 1700.0,
     "combined_grid_export": 0.0,
     "combined_production": 2500.0,
     "combined_charging_power": 0.0,
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
-    "combined_consumption": 4200.0,
+    "combined_consumption": 4321.38728324,
+    "metering_imbalance": 250.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "cons0": {
-      "grid": 0.393594443373,
-      "pv0": 0.0694578429481,
-      "pv1": 0.358865521899,
-      "pv2": 0.178082191781
+      "grid": 0.388518324559,
+      "pv0": 0.0685620572752,
+      "pv1": 0.354237295922,
+      "pv2": 0.188682322244
      },
      "cons1": {
       "grid": 0.478873239437,
@@ -15779,10 +15833,10 @@
     "gross_power_charging_ratio": 0.0,
     "gross_power_standby_ratio": 0.0,
     "source_adapters_consumption_power": {
-     "grid": 1819.71830986,
-     "pv0": 321.126760563,
-     "pv1": 1659.15492958,
-     "pv2": 650.0
+     "grid": 1749.13294798,
+     "pv0": 308.670520231,
+     "pv1": 1594.79768786,
+     "pv2": 668.786127168
     },
     "source_adapters_export_power": {
      "grid": 0.0,
@@ -15809,9 +15863,9 @@
      "pv2": 0.0
     },
     "source_adapters_consumption_ratios": {
-     "grid": 1.07042253521,
-     "pv0": 1.07042253521,
-     "pv1": 1.07042253521,
+     "grid": 1.0,
+     "pv0": 1.0,
+     "pv1": 1.0,
      "pv2": 1.0
     },
     "source_adapters_export_ratios": {
@@ -15833,10 +15887,10 @@
      "pv2": 0.0
     },
     "source_adapters_consumption_shares": {
-     "grid": 0.40892546289,
-     "pv0": 0.0721633169805,
-     "pv1": 0.372843804399,
-     "pv2": 0.14606741573
+     "grid": 0.404761904762,
+     "pv0": 0.0714285714286,
+     "pv1": 0.369047619048,
+     "pv2": 0.154761904762
     },
     "source_adapters_charging_shares": {
      "grid": 0.0,
@@ -15851,13 +15905,13 @@
      "pv2": 0.0
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 0.869047619048,
-     "cons1": 0.190476190476
+     "cons0": 0.820224719101,
+     "cons1": 0.179775280899
     },
-    "combined_coe_rate": 0.51,
-    "combined_lcoe_rate": 0.81,
-    "combined_avoided_cost_rate": 0.789084507042,
-    "combined_saving_rate": 0.789084507042,
+    "combined_coe_rate": 0.524739884393,
+    "combined_lcoe_rate": 0.833410404624,
+    "combined_avoided_cost_rate": 0.771676300578,
+    "combined_saving_rate": 0.771676300578,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "grid": 0.3,
@@ -15872,7 +15926,7 @@
      "pv2": 0.12
     },
     "source_adapters_coe_rate": {
-     "grid": 0.51,
+     "grid": 0.524739884393,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
@@ -15894,57 +15948,57 @@
      "pv2": 0.0
     },
     "sink_adapters_coo_rates": {
-     "cons0": 0.430985915493,
-     "cons1": 0.114929577465,
+     "cons0": 0.413131971017,
+     "cons1": 0.111607913376,
      "grid": 0.0,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_lcoo_rates": {
-     "cons0": 0.696591549296,
-     "cons1": 0.164957746479,
+     "cons0": 0.673220223073,
+     "cons1": 0.160190181552,
      "grid": 0.0,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {
-     "cons0": 0.664014084507,
-     "cons1": 0.125070422535
+     "cons0": 0.650220630139,
+     "cons1": 0.121455670439
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.121428571429,
     "combined_lcoe": 0.192857142857,
-    "combined_consumption_cost_rate": 0.545915492958,
-    "combined_levelized_consumption_cost_rate": 0.861549295775,
+    "combined_consumption_cost_rate": 0.524739884393,
+    "combined_levelized_consumption_cost_rate": 0.833410404624,
     "combined_charging_cost_rate": 0.0,
     "combined_levelized_export_cost_rate": 0.0,
     "combined_levelized_standby_cost_rate": 0.0,
     "combined_device_operating_cost_rate": 0.0,
     "adapters_saving_rates": {
-     "pv0": 0.096338028169,
-     "pv1": 0.497746478873,
-     "pv2": 0.195
+     "pv0": 0.0926011560694,
+     "pv1": 0.478439306358,
+     "pv2": 0.20063583815
     },
     "adapters_levelized_saving_rates": {
-     "pv0": 0.0578028169014,
-     "pv1": 0.298647887324,
-     "pv2": 0.117
+     "pv0": 0.0555606936416,
+     "pv1": 0.287063583815,
+     "pv2": 0.12038150289
     },
     "adapters_financial_return_rates": {
-     "pv0": 0.096338028169,
-     "pv1": 0.497746478873,
-     "pv2": 0.195
+     "pv0": 0.0926011560694,
+     "pv1": 0.478439306358,
+     "pv2": 0.20063583815
     },
     "adapters_levelized_financial_return_rates": {
-     "pv0": 0.0578028169014,
-     "pv1": 0.298647887324,
-     "pv2": 0.117
+     "pv0": 0.0555606936416,
+     "pv1": 0.287063583815,
+     "pv2": 0.12038150289
     },
-    "combined_financial_return_rate": 0.789084507042,
+    "combined_financial_return_rate": 0.771676300578,
     "sink_adapters_restriction_deficit": {
-     "cons0": 3000.0,
+     "cons0": 2875.72254335,
      "cons1": 0.0,
      "grid": 0.0,
      "pv0": 0.0,
@@ -16043,14 +16097,15 @@
    },
    "price": 0.3,
    "outputs": {
-    "gross_power": 5150.0,
+    "gross_power": 5379.3135436,
     "combined_grid_import": 2500.0,
     "combined_grid_export": 0.0,
     "combined_production": 2650.0,
     "combined_charging_power": 0.0,
     "combined_discharging_power": 0.0,
     "combined_standby_power": 0.0,
-    "combined_consumption": 5150.0,
+    "combined_consumption": 5379.3135436,
+    "metering_imbalance": 480.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -16062,10 +16117,10 @@
      },
      "cons0": {
       "bat0": 0.0,
-      "grid": 0.496677850141,
-      "pv0": 0.195381882771,
-      "pv1": 0.13906979804,
-      "pv2": 0.168870469048
+      "grid": 0.485436893204,
+      "pv0": 0.21359223301,
+      "pv1": 0.135922330097,
+      "pv2": 0.165048543689
      },
      "grid": {
       "bat0": 0.0,
@@ -16109,10 +16164,10 @@
     "gross_power_standby_ratio": 0.0,
     "source_adapters_consumption_power": {
      "bat0": 0.0,
-     "grid": 2796.2962963,
-     "pv0": 1100.0,
-     "pv1": 782.962962963,
-     "pv2": 950.740740741
+     "grid": 2611.31725417,
+     "pv0": 1148.97959184,
+     "pv1": 731.168831169,
+     "pv2": 887.847866419
     },
     "source_adapters_export_power": {
      "bat0": 0.0,
@@ -16144,10 +16199,10 @@
     },
     "source_adapters_consumption_ratios": {
      "bat0": 0.0,
-     "grid": 1.11851851852,
+     "grid": 1.0,
      "pv0": 1.0,
-     "pv1": 1.11851851852,
-     "pv2": 1.11851851852
+     "pv1": 1.0,
+     "pv2": 1.0
     },
     "source_adapters_export_ratios": {
      "bat0": 0.0,
@@ -16172,10 +16227,10 @@
     },
     "source_adapters_consumption_shares": {
      "bat0": 0.0,
-     "grid": 0.496677850141,
-     "pv0": 0.195381882771,
-     "pv1": 0.13906979804,
-     "pv2": 0.168870469048
+     "grid": 0.485436893204,
+     "pv0": 0.21359223301,
+     "pv1": 0.135922330097,
+     "pv2": 0.165048543689
     },
     "source_adapters_charging_shares": {
      "bat0": 0.0,
@@ -16192,12 +16247,12 @@
      "pv2": 0.0
     },
     "sink_adapters_consumption_shares": {
-     "cons0": 1.0932038835
+     "cons0": 1.0
     },
-    "combined_coe_rate": 0.75,
-    "combined_lcoe_rate": 1.01,
-    "combined_avoided_cost_rate": 0.850111111111,
-    "combined_saving_rate": 0.850111111111,
+    "combined_coe_rate": 0.783395176252,
+    "combined_lcoe_rate": 1.05497217069,
+    "combined_avoided_cost_rate": 0.830398886827,
+    "combined_saving_rate": 0.830398886827,
     "combined_export_compensation_rate": 0.0,
     "source_adapters_dynamic_coe": {
      "bat0": null,
@@ -16215,7 +16270,7 @@
     },
     "source_adapters_coe_rate": {
      "bat0": 0.0,
-     "grid": 0.75,
+     "grid": 0.783395176252,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
@@ -16241,7 +16296,7 @@
     },
     "sink_adapters_coo_rates": {
      "bat0": 0.0,
-     "cons0": 0.838888888889,
+     "cons0": 0.783395176252,
      "grid": 0.0,
      "pv0": 0.0,
      "pv1": 0.0,
@@ -16249,52 +16304,52 @@
     },
     "sink_adapters_lcoo_rates": {
      "bat0": 0.0,
-     "cons0": 1.12318518519,
+     "cons0": 1.05497217069,
      "grid": 0.0,
      "pv0": 0.0,
      "pv1": 0.0,
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {
-     "cons0": 0.850111111111
+     "cons0": 0.830398886827
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.145631067961,
     "combined_lcoe": 0.196116504854,
-    "combined_consumption_cost_rate": 0.838888888889,
-    "combined_levelized_consumption_cost_rate": 1.12318518519,
+    "combined_consumption_cost_rate": 0.783395176252,
+    "combined_levelized_consumption_cost_rate": 1.05497217069,
     "combined_charging_cost_rate": 0.0,
     "combined_levelized_export_cost_rate": 0.0,
     "combined_levelized_standby_cost_rate": 0.0,
     "combined_device_operating_cost_rate": 0.0,
     "adapters_saving_rates": {
      "bat0": 0.0,
-     "pv0": 0.33,
-     "pv1": 0.234888888889,
-     "pv2": 0.285222222222
+     "pv0": 0.344693877551,
+     "pv1": 0.219350649351,
+     "pv2": 0.266354359926
     },
     "adapters_levelized_saving_rates": {
      "bat0": 0.0,
-     "pv0": 0.275,
-     "pv1": 0.195740740741,
-     "pv2": 0.0950740740741
+     "pv0": 0.287244897959,
+     "pv1": 0.182792207792,
+     "pv2": 0.0887847866419
     },
     "adapters_financial_return_rates": {
      "bat0": 0.0,
-     "pv0": 0.33,
-     "pv1": 0.234888888889,
-     "pv2": 0.285222222222
+     "pv0": 0.344693877551,
+     "pv1": 0.219350649351,
+     "pv2": 0.266354359926
     },
     "adapters_levelized_financial_return_rates": {
      "bat0": 0.0,
-     "pv0": 0.275,
-     "pv1": 0.195740740741,
-     "pv2": 0.0950740740741
+     "pv0": 0.287244897959,
+     "pv1": 0.182792207792,
+     "pv2": 0.0887847866419
     },
-    "combined_financial_return_rate": 0.850111111111,
+    "combined_financial_return_rate": 0.830398886827,
     "sink_adapters_restriction_deficit": {
      "bat0": 0.0,
-     "cons0": 4530.0,
+     "cons0": 4230.33395176,
      "grid": 0.0,
      "pv0": 0.0,
      "pv1": 0.0,
@@ -16374,6 +16429,7 @@
     "combined_discharging_power": 0.0,
     "combined_standby_power": 500.0,
     "combined_consumption": 1450.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 1430.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -16664,6 +16720,7 @@
     "combined_discharging_power": 2650.0,
     "combined_standby_power": 2670.0,
     "combined_consumption": 2080.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2080.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -17047,6 +17104,7 @@
     "combined_discharging_power": 1250.0,
     "combined_standby_power": 0.0,
     "combined_consumption": 3800.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 2360.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -17369,6 +17427,7 @@
     "combined_discharging_power": 400.0,
     "combined_standby_power": 560.0,
     "combined_consumption": 990.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 690.0,
     "sink_adapters_source_shares": {
      "bat0": {
@@ -17733,6 +17792,7 @@
     "combined_discharging_power": 100.0,
     "combined_standby_power": 220.0,
     "combined_consumption": 4490.0,
+    "metering_imbalance": 0.0,
     "home_base_load_power": 820.0,
     "sink_adapters_source_shares": {
      "bat0": {

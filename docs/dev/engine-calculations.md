@@ -31,7 +31,7 @@ worked example where the arithmetic is not obvious.
 ## Gross power and its shares
 
 `gross_power = grid_import + PV_production + battery_discharge` — the sum of the
-source-adapter readings.
+source-adapter readings, balanced (below).
 
 :::note[Decision: gross power is `None` if any inflow sensor is unavailable]
 
@@ -39,11 +39,55 @@ source-adapter readings.
 unavailable, because the total would otherwise silently under-count. A
 consumer sensor dropping out does **not** invalidate it (consumers are not
 sources). Everything gated on `gross_power` (the share vectors, the source
-provenance) then propagates `None` / `{}` rather than a wrong number.
+provenance) then propagates `None` rather than a wrong number.
 
 Pinned by `TestUnavailableMeterPublishesNothing` and
 `TestUnavailableConsumerKeepsGrossPower` in
 `tests/engine/manual/test_edge_readings.py`.
+
+:::
+
+:::note[Decision: readings that overdraw meet in the middle]
+
+Meters are sampled at different moments — a grid meter every 60 s, smart
+plugs every 30 s — and each is individually inaccurate, so the metered sinks
+sometimes read more than the sources supply. That cannot physically happen,
+and the engine used to route more watts out of a source than it read.
+
+No meter is trusted over another. Every reading moves in proportion to its
+size, by the least that balances the books: sources up by `1 + λ`, sinks
+down by `1 − λ`, with `λ = (drawn − supplied) / (drawn + supplied)`, which
+leaves the base load at exactly 0. With PV reading 1000 W against an export
+of 200 W, a battery charging 500 W and a plug drawing 600 W, `λ = 3/23`: PV
+becomes 1130 W and the sinks 174 + 435 + 522 W.
+
+Holding the sources — or the grid — fixed looks tempting, since they are the
+meters money depends on. But when a heat pump switches on, the plug reports
+it within 30 s while the grid meter still shows the old import; holding the
+grid fixed then shrinks a load that really ran. Holding it fixed is exactly
+right when the grid is fresh and fully wrong when it is stale, and with
+these intervals it is often stale. Meeting in the middle is never fully
+wrong. It is also the only weighting that keeps the PV-splitting law (equal
+adjustments per meter would not), it is continuous (`λ = 0` at balance), it
+only ever makes restrictions easier to honour, and because it is unbiased
+the timing errors average out in the running totals.
+
+The raw-reading totals — `combined_grid_import` / `_export`,
+`combined_production`, `combined_discharging_power`, and each device's own
+power — keep what the meters say. `gross_power`, the four channels, the
+ratios and every cost and avoided cost use the balanced readings, so every
+ledger balances in every snapshot. The gap is published as
+`metering_imbalance`. Only overdraw is corrected: an underdraw cannot be told
+apart from real unmetered consumption, so it stays in the base load.
+
+A possible later refinement is to weight each reading by its age
+(`last_reported`), which would put most of the correction on the stale
+meter. It is deferred: it makes the engine depend on timestamps, and sensors
+that only report on change look stale while being accurate.
+
+Pinned by `TestOverdrawMeetsInTheMiddle` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the balance
+law in `tests/engine/automatic/test_laws.py`, which now runs on every home.
 
 :::
 

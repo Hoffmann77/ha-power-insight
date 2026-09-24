@@ -92,6 +92,10 @@
           "value": "500"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "300"
         },
@@ -448,6 +452,10 @@
         {
           "property": "combined_consumption",
           "value": "580"
+        },
+        {
+          "property": "metering_imbalance",
+          "value": "0"
         },
         {
           "property": "home_base_load_power",
