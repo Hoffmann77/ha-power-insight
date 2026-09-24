@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
 from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.exceptions import ConfigEntryError
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
@@ -139,6 +140,14 @@ async def async_migrate_entry(
     hass: HomeAssistant, entry: MyConfigEntry,
 ) -> bool:
     """Migrate the config entry to a newer version."""
+    if entry.version > 1:
+        # Written by a newer release (the integration was downgraded). Its
+        # layout is unknown here, so refuse rather than load it as v1.
+        raise ConfigEntryError(
+            translation_domain=DOMAIN,
+            translation_key="migration_downgrade",
+            translation_placeholders={"version": str(entry.version)},
+        )
     if entry.version == 1 and entry.minor_version < 2:
         _migrate_options_to_scopes(hass, entry)
     if entry.version == 1 and entry.minor_version < 3:
