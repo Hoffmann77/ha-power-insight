@@ -84,6 +84,14 @@
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
             "cons1": {
               "grid": "4/7",
               "pv1": "3/7"
@@ -266,12 +274,16 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "3/35"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "3/28"
           }
         },
@@ -396,6 +408,14 @@
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
             "cons1": {
               "grid": "1/3",
               "pv1": "2/3"
@@ -578,12 +598,16 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "1/25"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "1/15"
           }
         },

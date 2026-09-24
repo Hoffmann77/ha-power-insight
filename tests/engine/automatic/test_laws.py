@@ -187,7 +187,8 @@ def test_names_and_registration_order_do_not_matter() -> None:
 
 def test_an_idle_device_changes_nothing() -> None:
     """A PV system, a battery and a plug all reading 0 W join the home. Every
-    result is as before; the only new entries are theirs, and read 0."""
+    result is as before; the only new entries are theirs, and read their idle
+    value — 0 for an amount, share or ratio, nothing at all for a price."""
     idle = {"idle_pv": Adapter.pv("idle_pv"), "idle_bat": Adapter.battery("idle_bat"),
             "idle_plug": Adapter.consumer("idle_plug")}
 
@@ -202,6 +203,13 @@ def test_an_idle_device_changes_nothing() -> None:
             return kept
         return value
 
+    def is_idle(name: str, value: Any) -> bool:
+        if isinstance(value, dict):
+            return all(is_idle(name, v) for v in value.values())
+        if CATALOG[name]["unit"] == "EUR/kWh":
+            return value is None
+        return value == 0
+
     def compare(home: Home) -> list[str]:
         before = results(home)
         after = results(
@@ -211,11 +219,13 @@ def test_an_idle_device_changes_nothing() -> None:
                 home.price,
             )
         )
-        found: list[Any] = []
-        stripped = {name: strip(value, found) for name, value in after.items()}
-        problems = differences(before, stripped)
-        if any(v != 0 for v in found):
-            problems.append(f"an idle device read non-zero: {found}")
+        problems = []
+        for name, value in after.items():
+            found: list[Any] = []
+            stripped = strip(value, found)
+            problems += differences({name: before[name]}, {name: stripped})
+            if not all(is_idle(name, v) for v in found):
+                problems.append(f"an idle device read non-idle in {name}: {found}")
         return problems
 
     check("Adding idle devices must change nothing.", HOMES, compare)
@@ -237,6 +247,14 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
         "source_adapters_dynamic_coe", "source_adapters_dynamic_lcoe",
     }
 
+    def combine(x: Any, y: Any) -> Any:
+        """The two halves' values added up, map by map."""
+        if isinstance(x, dict) and isinstance(y, dict) and x.keys() == y.keys():
+            return {k: combine(x[k], y[k]) for k in x}
+        if x is None or y is None or isinstance(x, dict) or isinstance(y, dict):
+            return {"halves do not add": (x, y)}
+        return x + y
+
     def merge(value: Any, a: str, b: str, into: str, *, add: bool) -> Any:
         if not isinstance(value, dict):
             return value
@@ -244,7 +262,7 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
                if k not in (a, b)}
         if a in value:
             if add:
-                out[into] = value[a] + value[b]
+                out[into] = merge(combine(value[a], value[b]), a, b, into, add=add)
             else:
                 if not matches(value[a], value[b], abs_tol=ABS_TOL):
                     return {"halves disagree": (value[a], value[b])}
@@ -291,17 +309,12 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
     every property built on it publishes nothing at all — never a zero, never an
     empty map. The raw totals that do not read the missing sensor are unmoved.
 
-    ``PUBLISH_WHILE_UNAVAILABLE`` lists the properties that do not yet obey.
-    They are held to it strictly the other way: once one starts obeying, this
-    test fails until it is taken off the list.
     """
     reads = {
         "combined_grid_import": "grid", "combined_grid_export": "grid",
         "combined_production": "pv", "combined_standby_power": "pv",
         "combined_charging_power": "battery", "combined_discharging_power": "battery",
     }
-
-    still_publishing: set[str] = set()
 
     def compare(home: Home) -> list[str]:
         before = results(home)
@@ -310,11 +323,7 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
             after = results(home.with_readings(**{dropped.uid: None}))
             for name, value in after.items():
                 if reads.get(name, dropped.kind) == dropped.kind:
-                    if value is None:
-                        continue
-                    if name in PUBLISH_WHILE_UNAVAILABLE:
-                        still_publishing.add(name)
-                    else:
+                    if value is not None:
                         problems.append(
                             f"{dropped.uid} unavailable, {name} = {show(value)}"
                         )
@@ -324,21 +333,75 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
 
     check("An unavailable meter must collapse everything downstream to nothing.",
           HOMES, compare)
-    fixed = set(PUBLISH_WHILE_UNAVAILABLE) - still_publishing
-    assert not fixed, f"now publish nothing — take them off the list: {sorted(fixed)}"
 
 
-#: Properties that still publish a value while gross power is unknowable.
-#: Five return an empty map, which a sensor reads the same as "no such device";
-#: ``source_adapters_coe_rate`` returns a zero for every local source.
-PUBLISH_WHILE_UNAVAILABLE = {
-    "sink_adapters_consumption_shares",
-    "sink_adapters_coo_rates",
-    "sink_adapters_lcoo_rates",
-    "sink_adapters_avoided_cost_rates",
-    "source_adapters_export_compensation_rates",
-    "source_adapters_coe_rate",
-}
+def test_a_missing_price_moves_no_watt_and_invents_no_number() -> None:
+    """The grid tariff drops out. Routing never depends on prices, so no watt,
+    share or ratio moves; every monetary value is either exactly what it was
+    — it never needed the tariff — or nothing at all, and never a different
+    number. What cannot be known without the tariff (the cost of an import)
+    is blank."""
+    money = {"EUR/h", "EUR/kWh"}
+
+    def leaves(before: Any, after: Any, name: str) -> list[str]:
+        if isinstance(before, dict) and isinstance(after, dict):
+            if set(before) != set(after):
+                return [f"{name} changed its keys"]
+            return [p for k in before for p in leaves(before[k], after[k], f"{name}.{k}")]
+        if after is None or matches(before, after, abs_tol=ABS_TOL):
+            return []
+        return [f"{name}: {show(before)} became {show(after)}"]
+
+    def compare(home: Home) -> list[str]:
+        before = results(home)
+        after = results(replace(home, price=None))
+        problems = []
+        for name in PROPERTIES:
+            if CATALOG[name]["unit"] in money:
+                problems += leaves(before[name], after[name], name)
+            else:
+                problems += differences({name: before[name]}, {name: after[name]})
+        if home.readings["grid"] > 0 and after["combined_coe_rate"] is not None:
+            problems.append("an import was costed without a tariff")
+        return problems
+
+    check("A missing price must blank only what needs it.",
+          [h for h in HOMES if h.price is not None], compare)
+
+
+def test_every_map_is_keyed_by_its_whole_family() -> None:
+    """Every per-device map carries a key for every device of its family —
+    idle, drawing or supplying — at every level, so a device never drops out
+    of a map because it went quiet. The catalog's ``keys`` names the family."""
+    kinds = {
+        "sources": {"grid", "pv", "battery"},
+        "sinks": {"grid", "pv", "battery", "consumer"},
+        "consumers": {"consumer"},
+        "devices": {"pv", "battery"},
+    }
+    maps = {name: doc["keys"] for name, doc in CATALOG.items() if "keys" in doc}
+
+    def compare(home: Home) -> list[str]:
+        engine = home.engine()
+        problems = []
+        for name, keys in maps.items():
+            levels = [keys] if isinstance(keys, str) else list(keys)
+            value = getattr(engine, name)
+            if value is None:
+                continue  # unknowable as a whole: the unavailability law's business
+            stack = [(value, levels)]
+            while stack:
+                mapping, (level, *rest) = stack.pop()
+                want = {a.uid for a in home.adapters if a.kind in kinds[level]}
+                if set(mapping) != want:
+                    problems.append(
+                        f"{name} keyed by {sorted(mapping)}, not the {level} {sorted(want)}"
+                    )
+                    break
+                stack += [(v, rest) for v in mapping.values() if rest and v is not None]
+        return problems
+
+    check("Every map must be keyed by its whole family.", HOMES, compare)
 
 
 def test_the_books_balance() -> None:

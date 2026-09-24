@@ -2207,8 +2207,11 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
             return None
 
         values = attributes_fn(self.power_insight) or {}
+        deficit = values.get(self.device_adapter.uid)
 
-        return {"restriction_deficit": round(values.get(self.device_adapter.uid, 0.0), 1)}
+        return {
+            "restriction_deficit": None if deficit is None else round(deficit, 1)
+        }
 
 
 class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):

@@ -86,6 +86,16 @@ class Snap:
         """Every PV system and battery — the devices with a P&L."""
         return self.of("pv") + self.of("battery")
 
+    @property
+    def source_family(self) -> list[str]:
+        """Every adapter that can supply power — the keys of a per-source map."""
+        return ["grid", *self.devices]
+
+    @property
+    def sink_family(self) -> list[str]:
+        """Every adapter that can draw power — the keys of a per-sink map."""
+        return list(self.kind)
+
     def channel(self, sink: str) -> str:
         """The channel a drawing adapter's watts land in."""
         return {"grid": EXP, "battery": CHG, "pv": STB}.get(self.kind[sink], CON)
@@ -138,7 +148,7 @@ def priced(watts: dict[str, float], price: Callable[[str], float]) -> float:
 
 def channel_watts(s: Snap, channel: str) -> dict[str, float]:
     """``{source: watts}`` routed into ``channel`` by the provenance rows."""
-    out = dict.fromkeys(s.sources, 0.0)
+    out = dict.fromkeys(s.source_family, 0.0)
     rows = [s.draw_watts(k) for k in s.sinks if s.channel(k) == channel]
     if channel == CON:
         rows.append(s.home_watts())
@@ -247,7 +257,7 @@ def _(s):
 def _(s):
     """Each source's reading, less what the metered rows took, over the base load."""
     load = s.e.home_base_load_power
-    left = dict(s.sources)
+    left = {src: s.sources.get(src, 0.0) for src in s.source_family}
     for k in s.sinks:
         for src, w in s.draw_watts(k).items():
             left[src] -= w
@@ -307,7 +317,7 @@ def _(s):
 def _ratios(channel: str) -> Callable[[Snap], dict]:
     def fn(s):
         watts = published_channel(s, channel)
-        return {src: ratio(w, s.sources[src]) for src, w in watts.items()}
+        return {src: ratio(w, s.sources.get(src, 0.0)) for src, w in watts.items()}
 
     return fn
 
@@ -335,11 +345,10 @@ for _channel in (CON, CHG, STB):
 
 @identity("sink_adapters_consumption_shares")
 def _(s):
-    """Each metered load's draw over CON; the rest of CON is the base load."""
+    """Each consumer's draw over CON; the rest of CON is the base load."""
     return {
-        k: ratio(draw, s.e.combined_consumption)
-        for k, draw in s.sinks.items()
-        if s.channel(k) == CON
+        k: ratio(s.sinks.get(k, 0.0), s.e.combined_consumption)
+        for k in s.of("consumer")
     }
 
 
@@ -383,26 +392,38 @@ def _(s):
 
 @identity("source_adapters_dynamic_coe")
 def _(s):
-    """A discharging battery's marginal price is 0: it was booked at charge time."""
-    return {src: s.marginal(src) for src in s.sources}
+    """A discharging battery's marginal price is 0: it was booked at charge time.
+
+    A source delivering nothing has no price: nothing was bought.
+    """
+    return {
+        src: s.marginal(src) if src in s.sources else None
+        for src in s.source_family
+    }
 
 
 @identity("source_adapters_dynamic_lcoe")
 def _(s):
     """A discharging battery falls back to its flat LCOS."""
-    return {src: s.levelized(src) for src in s.sources}
+    return {
+        src: s.levelized(src) if src in s.sources else None
+        for src in s.source_family
+    }
 
 
 @identity("source_adapters_coe_rate")
 def _(s):
     dynamic = s.e.source_adapters_dynamic_coe
-    return {src: kw(w) * dynamic[src] for src, w in s.sources.items()}
+    return {
+        src: kw(s.sources[src]) * dynamic[src] if src in s.sources else 0.0
+        for src in s.source_family
+    }
 
 
 @identity("source_adapters_export_compensation_rates")
 def _(s):
     exported = s.e.source_adapters_export_power
-    return {src: kw(exported[src]) * s.compensation(src) for src in s.sources}
+    return {src: kw(exported[src]) * s.compensation(src) for src in s.source_family}
 
 
 def _own_draw(price: Callable[[Snap], Callable[[str], float]]) -> Callable:
@@ -418,10 +439,13 @@ def _own_draw(price: Callable[[Snap], Callable[[str], float]]) -> Callable:
 
 
 def _sink_cost(price: Callable[[Snap], Callable[[str], float]]) -> Callable:
-    """Every drawing adapter's row at its sources' prices."""
+    """Every drawing adapter's row at its sources' prices; 0 when not drawing."""
 
     def fn(s):
-        return {k: priced(s.draw_watts(k), price(s)) for k in s.sinks}
+        return {
+            k: priced(s.draw_watts(k), price(s)) if k in s.sinks else 0.0
+            for k in s.sink_family
+        }
 
     return fn
 
@@ -438,11 +462,10 @@ def _local(watts: dict[str, float]) -> float:
 
 @identity("sink_adapters_avoided_cost_rates")
 def _(s):
-    """A metered load's locally supplied watts at the tariff. CON sinks only."""
+    """A consumer's locally supplied watts at the tariff; 0 when not drawing."""
     return {
-        k: kw(_local(s.draw_watts(k))) * s.price
-        for k in s.sinks
-        if s.channel(k) == CON
+        k: kw(_local(s.draw_watts(k))) * s.price if k in s.sinks else 0.0
+        for k in s.of("consumer")
     }
 
 
@@ -451,14 +474,19 @@ def _(s):
     return kw(_local(s.home_watts())) * s.price
 
 
+def price_per_kwh(rate: float, gross: float) -> float | None:
+    """A rate over gross power; no price at all when nothing was delivered."""
+    return rate / kw(gross) if gross else None
+
+
 @identity("combined_coe")
 def _(s):
-    return ratio(s.e.combined_coe_rate, kw(s.e.gross_power))
+    return price_per_kwh(s.e.combined_coe_rate, s.e.gross_power)
 
 
 @identity("combined_lcoe")
 def _(s):
-    return ratio(s.e.combined_lcoe_rate, kw(s.e.gross_power))
+    return price_per_kwh(s.e.combined_lcoe_rate, s.e.gross_power)
 
 
 def _channel_cost(channel: str, price: Callable[[Snap], Callable]) -> Callable:

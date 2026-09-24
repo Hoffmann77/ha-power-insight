@@ -53,9 +53,11 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import json
 import os
 from dataclasses import dataclass
 from fractions import Fraction
+from pathlib import Path
 from typing import Any, Callable, ClassVar, Iterable
 
 import pytest
@@ -591,6 +593,61 @@ class Home:
 # ---------------------------------------------------------------------------
 
 
+#: Every per-device map is keyed by a whole family of adapters (the catalog's
+#: ``keys``); these are the maps outside the catalog.
+_UNCATALOGUED_KEYS = {"sink_adapters_restriction_deficit": "sinks"}
+
+_CATALOG = json.loads(
+    (Path(__file__).parents[2] / "docs" / "spec" / "properties.json").read_text()
+)["properties"]
+
+#: Which device kinds make up each family a map can be keyed by.
+FAMILIES = {
+    "sources": (Grid, Pv, Battery),
+    "sinks": (Grid, Pv, Battery, Consumer),
+    "consumers": (Consumer,),
+    "devices": (Pv, Battery),
+}
+
+
+def map_keys(attribute: str) -> tuple[str, ...]:
+    """The families a property's map is keyed by, outermost first; ``()`` if none."""
+    keys = _CATALOG.get(attribute, {}).get("keys") or _UNCATALOGUED_KEYS.get(attribute)
+    if keys is None:
+        return ()
+    return (keys,) if isinstance(keys, str) else tuple(keys)
+
+
+def family(devices: Iterable[Device], name: str) -> list[str]:
+    """The uids of ``devices`` that belong to family ``name``."""
+    return [d.uid for d in devices if isinstance(d, FAMILIES[name])]
+
+
+def complete(attribute: str, expected: Any, devices: Iterable[Device]) -> Any:
+    """``expected`` with every device it leaves out given its idle value.
+
+    A hand-written map need only list the devices it is about. Every other
+    device of the map's family is claimed to be uninvolved: an amount, share or
+    ratio reads 0, a price reads nothing at all, and a provenance row reads all
+    zeros. Keys the expectation does write are left exactly as written, so an
+    unavailable device's ``None`` is still stated by hand.
+    """
+    devices = tuple(devices)
+    idle = None if _CATALOG.get(attribute, {}).get("unit") == "EUR/kWh" else 0
+
+    def fill(value: Any, levels: tuple[str, ...]) -> Any:
+        if not levels or not isinstance(value, dict):
+            return value
+        rest = levels[1:]
+        blank = fill({}, rest) if rest else idle
+        return {
+            uid: fill(value[uid], rest) if uid in value else blank
+            for uid in family(devices, levels[0])
+        } | {k: v for k, v in value.items() if k not in family(devices, levels[0])}
+
+    return fill(expected, map_keys(attribute))
+
+
 def expect(
     attribute: str, *, abs_tol: float | None = None
 ) -> Callable[[Callable[[Any], Any]], Callable[[Any, Any], None]]:
@@ -604,6 +661,9 @@ def expect(
         def test_base_load(self):
             return {"grid": F(8, 9), "pv1": F(1, 9)}
 
+    A map need only list the devices it is about: every other device of its
+    family is claimed to read its idle value (see :func:`complete`).
+
     ``abs_tol`` sets a per-value absolute tolerance, for expectations that
     really must be written rounded; the default keeps ``pytest.approx``'s
     relative tolerance, which is what an exact fraction wants.
@@ -611,7 +671,7 @@ def expect(
 
     def decorator(fn: Callable[[Any], Any]) -> Callable[[Any, Any], None]:
         def wrapper(self: Any, power_insight: Any) -> None:
-            expected = fn(self)
+            expected = complete(attribute, fn(self), self.devices)
             actual = getattr(power_insight, attribute)
             state = self.cell().state
             readings = ", ".join(f"{k}={show(v)}" for k, v in state.readings.items())

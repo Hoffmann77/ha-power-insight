@@ -12,7 +12,7 @@ Status per decision: **settled** (decided, not yet implemented), **done**
 
 ## Engine
 
-### 1. What a published map contains — settled
+### 1. What a published map contains — done
 
 Six properties used to publish a value while a meter was unavailable, and the
 per-device maps dropped a device whenever it went idle. The contract:
@@ -33,7 +33,7 @@ Rejected: blanking fractions while idle (sensors would read *unknown* every
 night), and reporting an idle device's own configured price (it describes a
 kWh that was not delivered).
 
-### B. A missing grid price — settled
+### B. A missing grid price — done
 
 A missing *meter* blanks the whole map. A missing *price* blanks only the
 values that need it, per key: a battery charging from PV alone still has a

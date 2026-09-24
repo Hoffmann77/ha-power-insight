@@ -47,6 +47,59 @@ Pinned by `TestUnavailableMeterPublishesNothing` and
 
 :::
 
+:::note[Decision: a map keys every device of its family, and says what an idle one reads]
+
+Every per-device map is keyed by a whole *family* of adapters — every
+adapter that can supply power (grid, PV, batteries), every adapter that can
+draw it (all of them), every consumer, or every PV system and battery — not
+by the ones active this snapshot. The catalog's `keys` names the family. A
+device never drops out of a map because it went quiet, so a sensor reading
+it never mistakes "idle" for "gone", and a running total never stops.
+
+What a device reads when it is not involved depends on what is measured:
+
+| Situation | Published |
+| --- | --- |
+| A meter is unavailable (gross power unknowable) | the whole map is `None`, never `{}` |
+| The device's own meter is unavailable | its entry is `None` |
+| An amount (W, EUR/h), device not involved | `0.0` — the true value |
+| A fraction (share, ratio) over nothing | `0.0` — by convention: a share of nothing is nothing |
+| A price (EUR/kWh), nothing delivered | `None` — a price with no energy behind it is unknown, not free |
+
+The fraction convention is deliberate: the alternative, `None`, would blank
+every PV ratio sensor every night. The price rule is the opposite on
+purpose: 0 EUR/kWh claims the energy was free. It covers the blended
+`combined_coe` / `combined_lcoe` too, which have no price when gross power
+is 0.
+
+Pinned by `TestAnIdleDeviceKeepsItsKeys` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the
+key-family and unavailability laws in `tests/engine/automatic/test_laws.py`.
+
+:::
+
+:::note[Decision: a missing price blanks only what needs it]
+
+A missing *meter* makes gross power unknowable, so everything built on it is
+`None` as a whole. A missing grid *tariff* is narrower: routing never depends
+on a price, so every watt, share and ratio stands, and a monetary value is
+blank only if it actually needs the tariff. A battery charging from PV alone
+still has a known levelized cost; the load drawing grid power next to it does
+not. Blanking every money value instead would throw away numbers that are
+still right.
+
+Watts a source did not deliver cost nothing at any price, so a zero never
+needs one: an exporting grid does not blank a cost because the tariff is
+unknown, and a device that served nothing saved nothing. Holding the last
+known tariff through a short dropout is a question for the sensor layer; the
+engine prices only what it is given.
+
+Pinned by `TestAMissingPriceBlanksOnlyWhatNeedsIt` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the
+missing-price law in `tests/engine/automatic/test_laws.py`.
+
+:::
+
 `source_adapters_gross_power_shares` sums to 1. `sink_adapters_gross_power_shares`
 need **not** sum to 1 — the remainder up to 1 is the **unmetered home base
 load** (everything the metered sinks don't account for). Both guard the

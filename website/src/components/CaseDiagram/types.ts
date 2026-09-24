@@ -84,6 +84,8 @@ export interface PropertyDoc {
   formula?: string;
   depends_on?: string[];
   answer_shape?: string;
+  /** The device family a map is keyed by (outermost first for a nested map). */
+  keys?: string | string[];
   derivation_steps?: string[];
   note?: string;
 }
