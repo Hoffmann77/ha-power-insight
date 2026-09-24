@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Battery, Consumer, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class CaptiveBattery(ReferenceCase):
@@ -24,26 +24,21 @@ class CaptiveBattery(ReferenceCase):
     case_id = "captive-battery"
     title = "Captive battery"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", lcoe=0.10, exports=True),
-            Adapter.battery("bat1", lcos=0.15, charge_from=("pv1",)),
-            Adapter.consumer("cons1"),
-        )
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10, exports=True)
+    bat1 = Battery(lcos=0.15, charge_from=(pv1,))
+    cons1 = Consumer()
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def captive_depletes_first(self):
+    class CaptiveDepletesFirst(Snapshot):
         """pv1 produces exactly what bat1 draws, so bat1 takes all of it."""
-        return State(grid=500, pv1=400, bat1=-400, cons1=-200, price=F(3, 10))
 
-    # ----------------------------------------------------------------------
+        grid = 500
+        pv1 = 400
+        bat1 = -400
+        cons1 = -200
+        price = F(3, 10)
 
-    @state
-    def source_in_standby(self):
+    class SourceInStandby(Snapshot):
         """pv1 is drawing standby, so it is a sink; bat1's only allowed source
         does not exist.
 
@@ -52,4 +47,9 @@ class CaptiveBattery(ReferenceCase):
         device that has a meter on it. Its docstring says gross minus metered
         draw, which would be 580 W rather than 980 W.
         """
-        return State(grid=1000, pv1=-20, bat1=-400, cons1=-100, price=F(3, 10))
+
+        grid = 1000
+        pv1 = -20
+        bat1 = -400
+        cons1 = -100
+        price = F(3, 10)

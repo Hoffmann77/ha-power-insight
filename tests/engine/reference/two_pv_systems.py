@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Consumer, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class TwoPvSystems(ReferenceCase):
@@ -30,30 +30,22 @@ class TwoPvSystems(ReferenceCase):
     case_id = "two-pv-systems"
     title = "Two PV systems"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("east", lcoe=0.10, exports=True),
-            Adapter.pv("west", lcoe=0.10, exports=True),
-            Adapter.pv("carport", lcoe=0.10, exports=True),
-            Adapter.consumer("plug", power_from=("east", "west")),
-        )
+    grid = Grid()
+    east = Pv(lcoe=0.10, exports=True)
+    west = Pv(lcoe=0.10, exports=True)
+    carport = Pv(lcoe=0.10, exports=True)
+    plug = Consumer(power_from=(east, west))
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def every_watt_spoken_for(self):
+    class EveryWattSpokenFor(Snapshot):
         """East and west make 1000 W each and the carport 200 W. The plug draws
         400 W and the other 1800 W is exported. The carport's power can only go
         to the export, so the export takes all of it, and east and west cover
         the rest of the export and the whole plug — exactly.
         """
-        return State(
-            grid=-1800,
-            east=1000,
-            west=1000,
-            carport=200,
-            plug=-400,
-            price=F(3, 10),
-        )
+
+        grid = -1800
+        east = 1000
+        west = 1000
+        carport = 200
+        plug = -400
+        price = F(3, 10)

@@ -127,18 +127,17 @@ class GridOnly(ReferenceCase):
     case_id = "grid-only"
     title = "Grid only"
 
-    @topology
-    def wiring(self):
-        return (Adapter.grid(),)
+    grid = Grid()
 
-    @state
-    def import_only(self):
+    class ImportOnly(Snapshot):
         """The house runs on the grid alone; every watt is base load."""
-        return State(grid=1200, price=F(3, 10))
+
+        grid = 1200
+        price = F(3, 10)
 ```
 
 The summary at the top of a case page is the class docstring, the caption under
-each snapshot card is its `@state` docstring, and every value in the tables is
+each snapshot card is its `Snapshot` docstring, and every value in the tables is
 what the engine returns for those readings. A tool passes each snapshot through
 the engine and writes the results next to these pages; CI fails any change to
 the engine that moves a published number without re-publishing it, so the

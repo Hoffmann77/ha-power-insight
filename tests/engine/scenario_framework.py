@@ -46,8 +46,9 @@ separator between blocks. Reusing a topology across two reading sets is just two
 Each test receives a freshly built engine through the ``power_insight`` fixture
 (and can also take ``state`` / ``topology`` for the raw block objects).
 
-The hand-derived decision harnesses in ``tests/engine/manual/`` do not use the
-source-order binding: each is one declarative home, see ``tests/engine/home.py``.
+The hand-derived decision harnesses in ``tests/engine/manual/`` and the
+reference cases do not use the source-order binding: they are declarative
+homes, see ``tests/engine/home.py``.
 
 Authoring surface
 -----------------
@@ -64,11 +65,6 @@ Authoring surface
 * :func:`matches` — the one comparator the whole tier comes down to. Maps
   compare key set first at every level; ``None`` matches only ``None``, never a
   zero.
-* :func:`scenario_blocks` — reads a scenario class back out as its
-  ``(topology, state)`` blocks, using the same source-order rules
-  the tests bind by, without running pytest or building an engine. This is how
-  the reference cases in ``tests/engine/reference/`` read their wiring and
-  snapshots out for the documentation site.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -84,7 +80,6 @@ Wiring: ``tests/engine/conftest.py`` calls :func:`generate_scenario_tests` from
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Callable
 
 from tests.engine.home import (  # noqa: F401 - re-exported for the scenarios
@@ -186,54 +181,6 @@ class EngineScenario:
     to the block above it and receives a freshly built engine via the
     ``power_insight`` fixture.
     """
-
-
-# ---------------------------------------------------------------------------
-# Reading a scenario back out — the same binding, without running pytest.
-# ---------------------------------------------------------------------------
-#
-# A scenario class already says everything about a snapshot: the wiring and
-# the readings. ``scenario_blocks`` walks that structure with the *same*
-# source-order rules the tests bind by, so anything generated from a scenario
-# (the published reference cases, say) reads the snapshots exactly as the
-# tests bind them. Nothing here builds or touches an engine.
-
-
-@dataclass(frozen=True)
-class Block:
-    """One ``@topology`` + ``@state`` pair."""
-
-    topology: Topology
-    state: State
-
-    @property
-    def cell(self) -> Cell:
-        return Cell(self.topology, self.state)
-
-
-def scenario_blocks(cls: type) -> list[Block]:
-    """Every ``(topology, state)`` block of a scenario class.
-
-    One block per ``@state``, in source order, each carrying the ``@topology``
-    above it — by exactly the rule :func:`bind_cell` uses, so a block here is
-    the same snapshot the corresponding tests run against.
-    """
-    inst = cls()
-    topo_methods = _role_methods(cls, "topology")
-    blocks = []
-    for lineno, state_name, state_fn in _role_methods(cls, "state"):
-        where = f"{cls.__name__}.{state_name}"
-        topo_name, topo_fn = _nearest_above(
-            topo_methods, lineno, role="topology", where=where
-        )
-        result = topo_fn(inst)
-        topo = result if isinstance(result, Topology) else Topology(*result)
-        topo.name = topo_name
-        st = state_fn(inst)
-        object.__setattr__(st, "name", state_name)
-        check_compatible(topo, st)
-        blocks.append(Block(topo, st))
-    return blocks
 
 
 # ---------------------------------------------------------------------------

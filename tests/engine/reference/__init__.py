@@ -1,7 +1,7 @@
 """The reference cases: ten fixed homes shown with everything the engine computes.
 
-Each module here is one case — a wiring (``@topology``), a few snapshots of
-readings (``@state``), and prose in docstrings. Nothing in them is asserted:
+Each module here is one case — a wiring (its devices, declared bare), a few
+snapshots of readings (one ``Snapshot`` class each), and prose in docstrings. Nothing in them is asserted:
 ``tools/snapshot.py`` passes every snapshot through the engine and writes
 the results, for every catalogued property, to ``docs/spec/cases/*.json`` for
 the documentation site. ``test_corpus.py`` fails whenever that output is out of
@@ -9,7 +9,7 @@ step with the engine, so each commit — and each docs version cut from one —
 carries exactly the numbers its own engine produces.
 
 Whether those numbers are *right* is asked elsewhere: each engine decision by a
-hand-derived block in ``tests/engine/manual/``, every property's formula and
+hand-derived class in ``tests/engine/manual/``, every property's formula and
 the laws they obey in ``tests/engine/automatic/``.
 
 The cases form a **ladder**, and ``REFERENCE_CASES`` is in ladder order. Each

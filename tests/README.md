@@ -19,17 +19,19 @@ Pure-Python tests for the `PowerInsight` calculation engine. They import
 `custom_components/power_insight/power_insight.py` directly via `importlib`,
 so they need **no Home Assistant** and run in a few seconds.
 
-The hand-derived harnesses in `manual/` are **declarative homes**
-(`home.py`): one class per home, its devices declared as class attributes
-with their readings — `grid = Grid(500)`, `bat1 = Battery(-400,
-charge_from=(grid, pv1))` — and its tests as plain methods, most of them a
-one-line `@expect("<property>")` claim. The reference cases and
-`test_flow_view.py` use the **source-order scenario framework**
-(`scenario_framework.py`, wired in `conftest.py`), where a class's methods come
-in repeating blocks of `@topology` → `@state` → `test_` methods and each test
-binds to the block declared above it. `home.py` also holds the plain data
-every engine test is built from — `Adapter`, `Topology`, `State`, `Cell`.
-See each module's docstring for the authoring surface.
+The hand-derived harnesses in `manual/` and the reference cases are
+**declarative homes** (`home.py`): a class whose devices are class attributes,
+declared with their readings — `grid = Grid(500)`, `bat1 = Battery(-400,
+charge_from=(grid, pv1))` — and whose tests are plain methods, most of them a
+one-line `@expect("<property>")` claim. A reference case declares the same
+devices without readings and gives each snapshot its own inner `Snapshot`
+class (see `reference/` below). `test_flow_view.py` still uses the
+**source-order scenario framework** (`scenario_framework.py`, wired in
+`conftest.py`), where a class's methods come in repeating blocks of
+`@topology` → `@state` → `test_` methods and each test binds to the block
+declared above it. The generated homes and the frozen snapshots use the plain
+data beneath — `Adapter`, `Topology`, `State`, `Cell` — directly. See each
+module's docstring for the authoring surface.
 
 The strategy is to **assume the engine is right** rather than try to derive
 every output by hand, and to layer three kinds of check on top of that
@@ -184,9 +186,36 @@ snapshot through the engine and writes every catalogued property to
 and `reference/test_corpus.py` fails when it no longer matches the engine, so a
 docs version cut from any commit freezes that commit's own results.
 
-The prose lives in docstrings: a case class's is the page summary (everything
-above its `Shows:` list), and a `@state`'s is the caption under its snapshot
-card, where a paragraph opening `Open question:` becomes a callout.
+A case declares its devices bare and one `Snapshot` per set of readings:
+
+```python
+class PvExport(ReferenceCase):
+    """The same two devices, with the PV system now permitted to export. ...
+
+    Shows:
+
+    * An exporting grid is a sink, not a source with a negative reading.
+    """
+
+    case_id = "pv-export"
+    title = "PV export"
+
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10, exports=True, export_comp=0.08)
+
+    class ExportSurplus(Snapshot):
+        """The PV system outruns the house; the surplus leaves through the grid."""
+
+        grid = -400
+        pv1 = 900
+        price = F(1, 4)
+```
+
+A snapshot must read exactly the case's devices, and publishes under its class
+name in snake_case (`export_surplus`). The prose lives in docstrings: a case
+class's is the page summary (everything above its `Shows:` list), and a
+snapshot's is the caption under its card, where a paragraph opening `Open
+question:` becomes a callout.
 
 If you cannot run the command locally, **Actions → Update engine snapshots →
 Run workflow** does it on the branch you pick and commits the result (tick *dry
@@ -207,8 +236,9 @@ anything else) if your PR needs green checks to merge.
   snapshot can ask.
 - `test_scenario_framework.py` — self-tests for the framework's validation and
   source-order binding.
-- `test_home.py` — self-tests for the declarative homes: the checks at class
-  creation, and that `@expect` really fails on a wrong value.
+- `test_home.py` — self-tests for the declarative homes and reference cases:
+  the checks at class creation, and that `@expect` really fails on a wrong
+  value.
 
 ### Known gaps
 

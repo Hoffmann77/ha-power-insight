@@ -123,13 +123,13 @@ def reference_homes() -> list[FrozenHome]:
     """Every snapshot of every reference case, in ladder order."""
     homes = []
     for case in REFERENCE_CASES:
-        for block in case.blocks():
+        for cell in case.cells():
             homes.append(
                 FrozenHome(
-                    f"{case.case_id}/{block.state.name}",
-                    block.topology.adapters,
-                    dict(block.state.readings),
-                    block.state.price,
+                    f"{case.case_id}/{cell.state.name}",
+                    cell.topology.adapters,
+                    dict(cell.state.readings),
+                    cell.state.price,
                 )
             )
     return homes

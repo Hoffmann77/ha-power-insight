@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Grid
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class GridOnly(ReferenceCase):
@@ -25,24 +25,15 @@ class GridOnly(ReferenceCase):
     case_id = "grid-only"
     title = "Grid only"
 
-    @topology
-    def wiring(self):
-        return (Adapter.grid(),)
+    grid = Grid()
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def import_only(self):
+    class ImportOnly(Snapshot):
         """The house runs on the grid alone; every watt is unmetered base load."""
-        return State(
-            grid=1200,
-            price=F(3, 10),
-        )
 
-    # ----------------------------------------------------------------------
+        grid = 1200
+        price = F(3, 10)
 
-    @state
-    def grid_idle(self):
+    class GridIdle(Snapshot):
         """The meter reads exactly 0 W: gross power is zero and every ratio has to
         survive it.
 
@@ -52,15 +43,11 @@ class GridOnly(ReferenceCase):
         absent one; whether these per-source sensors should show 0 (grid present,
         delivering nothing) rather than go blank is unsettled.
         """
-        return State(
-            grid=0,
-            price=F(3, 10),
-        )
 
-    # ----------------------------------------------------------------------
+        grid = 0
+        price = F(3, 10)
 
-    @state
-    def grid_unavailable(self):
+    class GridUnavailable(Snapshot):
         """The grid sensor has dropped out. Everything derived from the meter
         collapses to nothing, while a total over an empty device set — no PV,
         no battery — is still a confident zero.
@@ -72,7 +59,6 @@ class GridOnly(ReferenceCase):
         discharging, standby) it stays 0: the missing meter says nothing about
         PV that is not installed.
         """
-        return State(
-            grid=None,
-            price=F(3, 10),
-        )
+
+        grid = None
+        price = F(3, 10)

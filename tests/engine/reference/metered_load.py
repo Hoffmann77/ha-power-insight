@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Consumer, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class MeteredLoad(ReferenceCase):
@@ -23,28 +23,26 @@ class MeteredLoad(ReferenceCase):
     case_id = "metered-load"
     title = "Metered load"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", lcoe=0.10),
-            Adapter.consumer("cons1"),
-        )
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10)
+    cons1 = Consumer()
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def load_and_base(self):
+    class LoadAndBase(Snapshot):
         """cons1 draws 500 W of the 1400 W entering the house; the other 900 W is
         unmetered.
         """
-        return State(grid=800, pv1=600, cons1=-500, price=F(3, 10))
 
-    # ----------------------------------------------------------------------
+        grid = 800
+        pv1 = 600
+        cons1 = -500
+        price = F(3, 10)
 
-    @state
-    def over_metered(self):
+    class OverMetered(Snapshot):
         """cons1 reads more than the sources supply — the meters disagree, and the
         base load has nowhere to go but zero.
         """
-        return State(grid=100, pv1=200, cons1=-400, price=F(3, 10))
+
+        grid = 100
+        pv1 = 200
+        cons1 = -400
+        price = F(3, 10)

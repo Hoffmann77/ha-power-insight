@@ -6,13 +6,15 @@ computes for it. The cases are a **showcase**, not a specification: the
 numbers on a page are whatever the engine produced for those readings at that
 version of the code, recomputed by ``tools/snapshot.py`` and frozen into
 each docs version when it is cut. What the engine *ought* to do is pinned
-elsewhere — each decision by a hand-derived block in ``tests/engine/manual/``,
+elsewhere — each decision by a hand-derived class in ``tests/engine/manual/``,
 every property's formula and the laws they obey in ``tests/engine/automatic/``.
 
 Writing a case
 --------------
 
-::
+A case declares its devices like any home (``tests/engine/home.py``), but
+without readings — those differ from snapshot to snapshot, so each
+:class:`Snapshot` inside the case supplies them::
 
     class GridOnly(ReferenceCase):
         \"\"\"One meter and nothing else. ...
@@ -25,20 +27,20 @@ Writing a case
         case_id = "grid-only"
         title = "Grid only"
 
-        @topology
-        def wiring(self):
-            return (Adapter.grid(),)
+        grid = Grid()
 
-        @state
-        def import_only(self):
+        class ImportOnly(Snapshot):
             \"\"\"The house runs on the grid alone; every watt is base load.\"\"\"
-            return State(grid=1200, price=F(3, 10))
 
-That is the whole source. The prose lives in docstrings — the class's is the
-page summary (everything above its ``Shows:`` list), a ``@state``'s is the
-caption under its snapshot card, and a paragraph opening ``Open question:``
-becomes a callout — and :meth:`ReferenceCase.publish` reads the structure back
-out with the same source-order binding the engine tests bind by.
+            grid = 1200
+            price = F(3, 10)
+
+That is the whole source. A snapshot names a reading for exactly the case's
+devices (``None`` for an unavailable sensor) plus the grid ``price``, and its
+published id is its class name in snake_case (``import_only``). The prose lives
+in docstrings — the case's is the page summary (everything above its
+``Shows:`` list), a snapshot's is the caption under its card, and a paragraph
+opening ``Open question:`` becomes a callout.
 """
 
 from __future__ import annotations
@@ -46,10 +48,20 @@ from __future__ import annotations
 import inspect
 import json
 import pathlib
+import re
 from fractions import Fraction
-from typing import Any
+from typing import Any, ClassVar
 
-from tests.engine.scenario_framework import Block, scenario_blocks
+from tests.engine.home import (
+    NO_READING,
+    Cell,
+    Device,
+    Grid,
+    State,
+    check_compatible,
+    declared_devices,
+    wiring,
+)
 
 #: Alias for writing exact rationals inline: ``F(8, 15)``, ``F(3, 10)``.
 F = Fraction
@@ -66,17 +78,81 @@ CATALOG: dict[str, Any] = json.loads(CATALOG_PATH.read_text())
 PROPERTIES: tuple[str, ...] = tuple(CATALOG["properties"])
 
 
+class Snapshot:
+    """One set of readings for a reference case: ``uid = watts`` attributes
+    plus the grid ``price``. Its docstring is the caption under its card."""
+
+    price: ClassVar[float | None] = None
+
+    @classmethod
+    def id(cls) -> str:
+        """The published id: the class name in snake_case."""
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", cls.__name__).lower()
+
+    @classmethod
+    def state(cls) -> State:
+        readings = {
+            name: value
+            for name, value in vars(cls).items()
+            if not name.startswith("_") and name != "price"
+        }
+        return State(price=cls.price, name=cls.id(), **readings)
+
+
 class ReferenceCase:
     """One rung of the ladder: a wiring, what it shows, and its snapshots.
 
-    Subclasses set :attr:`case_id` and :attr:`title`, then declare one
-    ``@topology`` and one or more ``@state`` methods. See the module docstring.
+    Subclasses set :attr:`case_id` and :attr:`title`, declare their devices
+    without readings, then one :class:`Snapshot` per set of readings. See the
+    module docstring. A case is checked when its class is created: its wiring
+    like any home's, and every snapshot against it.
     """
 
     #: The published id — the docs page slug.
-    case_id: str = ""
+    case_id: ClassVar[str] = ""
     #: Human-readable name, shown as the page title.
-    title: str = ""
+    title: ClassVar[str] = ""
+    #: The case's devices and snapshots, in declaration order.
+    devices: ClassVar[tuple[Device, ...]] = ()
+    snapshots: ClassVar[tuple[type[Snapshot], ...]] = ()
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.devices = declared_devices(cls)
+        cls.snapshots = tuple(
+            obj
+            for obj in vars(cls).values()
+            if isinstance(obj, type) and issubclass(obj, Snapshot)
+        )
+        topology = wiring(cls, cls.devices, base=ReferenceCase)
+        clash = [d.uid for d in cls.devices if d.uid in dir(Snapshot)]
+        if clash:
+            raise TypeError(
+                f"{cls.__name__}: a device may not be called {clash}, which a "
+                f"Snapshot already uses"
+            )
+        read = [d.uid for d in cls.devices if d.power is not NO_READING]
+        if read:
+            raise TypeError(
+                f"{cls.__name__}: {read} carry a reading — a case's readings "
+                f"belong in its snapshots, so declare the devices bare"
+            )
+        if any(isinstance(d, Grid) and d.price is not None for d in cls.devices):
+            raise TypeError(
+                f"{cls.__name__}: the grid price is a reading — set it on each "
+                f"snapshot as 'price = ...'"
+            )
+        for snapshot in cls.snapshots:
+            try:
+                check_compatible(topology, snapshot.state())
+            except ValueError as exc:
+                raise TypeError(f"{cls.__name__}.{snapshot.__name__}: {exc}") from None
+
+    @classmethod
+    def cells(cls) -> list[Cell]:
+        """Every snapshot as a (topology, state) pair, in source order."""
+        topology = wiring(cls, cls.devices, base=ReferenceCase)
+        return [Cell(topology, snapshot.state()) for snapshot in cls.snapshots]
 
     @classmethod
     def summary(cls) -> str:
@@ -89,11 +165,6 @@ class ReferenceCase:
         return _prose(cls.__doc__)[1]
 
     @classmethod
-    def blocks(cls) -> list[Block]:
-        """Every ``(topology, state)`` block, in source order."""
-        return scenario_blocks(cls)
-
-    @classmethod
     def publish(cls) -> dict:
         """This case as the documentation site consumes it.
 
@@ -102,32 +173,35 @@ class ReferenceCase:
         """
         if not cls.case_id or not cls.title:
             raise ValueError(f"{cls.__name__} must set both case_id and title")
-        blocks = cls.blocks()
-        if not blocks:
-            raise ValueError(f"{cls.__name__} declares no @state to publish")
+        if not cls.snapshots:
+            raise ValueError(f"{cls.__name__} declares no Snapshot to publish")
+        cells = cls.cells()
         return {
             "id": cls.case_id,
             "title": cls.title,
             "summary": cls.summary(),
             "shows": list(cls.shows()),
-            "topology": [_adapter(a) for a in blocks[0].topology.adapters],
-            "states": [_snapshot(cls, block) for block in blocks],
+            "topology": [_adapter(a) for a in cells[0].topology.adapters],
+            "states": [
+                _snapshot(snapshot, cell)
+                for snapshot, cell in zip(cls.snapshots, cells)
+            ],
         }
 
 
 # ---------------------------------------------------------------------------
-# Turning a block into published JSON.
+# Turning a snapshot into published JSON.
 # ---------------------------------------------------------------------------
 
 
-def _snapshot(cls: type, block: Block) -> dict:
-    note, open_question = _state_prose(cls, block.state.name)
-    engine = block.cell.build_engine()
+def _snapshot(snapshot: type[Snapshot], cell: Cell) -> dict:
+    note, open_question = _state_prose(snapshot)
+    engine = cell.build_engine()
     entry = {
-        "id": block.state.name,
+        "id": cell.state.name,
         "note": note,
-        "readings": {uid: _rat(v) for uid, v in block.state.readings.items()},
-        "price": _rat(block.state.price),
+        "readings": {uid: _rat(v) for uid, v in cell.state.readings.items()},
+        "price": _rat(cell.state.price),
         "results": [
             {"property": prop, "value": _encode(getattr(engine, prop))}
             for prop in PROPERTIES
@@ -177,7 +251,7 @@ def _encode(value: Any) -> Any:
 # ---------------------------------------------------------------------------
 #
 # The page text lives where the thing it describes lives: a case's summary in
-# its class docstring, a snapshot's caption in its ``@state`` method's. There
+# its class docstring, a snapshot's caption in its :class:`Snapshot`'s. There
 # is no second place to keep them in step with.
 
 
@@ -205,14 +279,14 @@ def _prose(doc: str | None) -> tuple[str, tuple[str, ...]]:
     return _join(summary), tuple(shows)
 
 
-def _state_prose(cls: type, state_name: str) -> tuple[str, str | None]:
-    """A ``@state`` docstring split into ``(note, open_question)``.
+def _state_prose(snapshot: type[Snapshot]) -> tuple[str, str | None]:
+    """A snapshot's docstring split into ``(note, open_question)``.
 
     The note is the caption under the snapshot card. A paragraph opening
     ``Open question:`` marks a snapshot where which answer is *right* has not
     been settled — rendered as a callout, and collected onto the section index.
     """
-    doc = inspect.cleandoc(getattr(cls, state_name).__doc__ or "")
+    doc = inspect.cleandoc(snapshot.__doc__ or "")
     note: list[str] = []
     question: list[str] = []
     target = note

@@ -1,8 +1,8 @@
-"""Self-tests for the declarative homes engine-tier tests are written in.
+"""Self-tests for the declarative homes every engine-tier test is written in.
 
-These guard the machinery the harnesses rely on: devices take their uid from
-the attribute they are assigned to, a miswired home fails when its class is
-created, and ``@expect`` really compares — a
+These guard the machinery the harnesses and reference cases rely on: devices
+take their uid from the attribute they are assigned to, a miswired home or
+case fails when its class is created, and ``@expect`` really compares — a
 wrong expectation must fail, or every harness passes vacuously.
 """
 
@@ -20,6 +20,7 @@ from tests.engine.home import (
     Topology,
     expect,
 )
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class _Wired(Home):
@@ -111,6 +112,76 @@ def test_reserved_names_cannot_be_devices():
         class _Clash(Home):
             grid = Grid(100)
             price = Consumer(-50)
+
+
+# ---------------------------------------------------------------------------
+# Reference cases: bare devices, readings in snapshots.
+# ---------------------------------------------------------------------------
+
+
+class _Case(ReferenceCase):
+    """A case. Shows: nothing."""
+
+    case_id = "case"
+    title = "Case"
+
+    grid = Grid()
+    pv1 = Pv(exports=True)
+
+    class SunnyAfternoon(Snapshot):
+        """Exporting."""
+
+        grid = -300
+        pv1 = 500
+        price = F(1, 4)
+
+    class PvUnavailable(Snapshot):
+        """pv1 has dropped out."""
+
+        grid = 200
+        pv1 = None
+
+
+def test_a_case_publishes_its_snapshots_in_order_under_snake_case_ids():
+    cells = _Case.cells()
+    assert [c.state.name for c in cells] == ["sunny_afternoon", "pv_unavailable"]
+    assert cells[0].state.readings == {"grid": -300, "pv1": 500}
+    assert cells[0].state.price == F(1, 4)
+    assert cells[1].state.readings == {"grid": 200, "pv1": None}
+    assert cells[1].state.price is None
+
+
+def test_a_snapshot_reads_exactly_the_case_devices():
+    with pytest.raises(TypeError, match=r"Missing: .*missing readings \['pv1'\]"):
+
+        class _Short(ReferenceCase):
+            grid = Grid()
+            pv1 = Pv()
+
+            class Missing(Snapshot):
+                grid = 100
+
+
+def test_a_case_declares_its_devices_bare():
+    with pytest.raises(TypeError, match="belong in its snapshots"):
+
+        class _Read(ReferenceCase):
+            grid = Grid(100)
+
+
+def test_a_case_sets_the_price_per_snapshot():
+    with pytest.raises(TypeError, match="price is a reading"):
+
+        class _Priced(ReferenceCase):
+            grid = Grid(price=0.3)
+
+
+def test_a_case_device_cannot_shadow_the_snapshot_api():
+    with pytest.raises(TypeError, match="Snapshot already uses"):
+
+        class _Shadow(ReferenceCase):
+            grid = Grid()
+            state = Consumer()
 
 
 class TestTheFixtureBuildsTheHome(Home):

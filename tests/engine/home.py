@@ -40,8 +40,10 @@ freshly built engine holding the home's readings, or use :func:`expect`,
 whose method takes only ``self`` and *returns* the value an engine property
 should have; :func:`matches` is the comparison, the one the whole tier uses.
 
-Beneath the homes sit the plain data the generated homes and the frozen
-snapshots are built from directly:
+The same devices, declared *without* readings, are the wiring of a reference
+case, whose snapshots then supply the readings — see
+``tests/engine/reference/case.py``. Beneath both sit the plain data the
+generated homes and the frozen snapshots are built from directly:
 :class:`Adapter` (one adapter's kind and config), :class:`Topology` (a set of
 adapters), :class:`State` (``uid -> watts`` plus the grid price) and
 :class:`Cell` (the two together, ready to build an engine).
@@ -431,8 +433,8 @@ def show(value: Any) -> str:
 # Devices — one per class attribute.
 # ---------------------------------------------------------------------------
 
-#: A device declared without a reading. A home rejects it, saying what to write
-#: instead, rather than failing on a missing positional argument.
+#: A device declared without a reading: the wiring of a reference case, whose
+#: snapshots supply the readings.
 NO_READING: Any = type("NoReading", (), {"__repr__": lambda self: "NO_READING"})()
 
 
