@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, reopened, synchronize]
+  # Re-run at the start of each month so the draft gets the new month's
+  # version even if nothing is merged.
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,6 +20,31 @@ jobs:
       contents: write
       pull-requests: read
     steps:
+      # CalVer YEAR.MONTH.PATCH. The first release in a month is .0. Each later
+      # release in the same month increments PATCH.
+      - name: Compute CalVer version
+        id: calver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          prefix="$(date -u +%Y.%-m)"
+          last_patch="$(
+            gh release list --repo "$REPO" --exclude-drafts --limit 100 \
+              --json tagName --jq '.[].tagName' \
+            | sed -n "s/^${prefix//./\\.}\.\([0-9][0-9]*\)$/\1/p" \
+            | sort -n | tail -n 1
+          )"
+          if [ -z "$last_patch" ]; then
+            version="${prefix}.0"
+          else
+            version="${prefix}.$((last_patch + 1))"
+          fi
+          echo "Next version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - uses: release-drafter/release-drafter@v7
+        with:
+          version: ${{ steps.calver.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

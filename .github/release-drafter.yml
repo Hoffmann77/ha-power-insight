@@ -1,50 +1,62 @@
+# The version is CalVer (YEAR.MONTH.PATCH) and is computed by the workflow
+# (.github/workflows/release-drafter.yml), which passes it in as the `version`
+# input. So no category here sets `semver-increment`.
 name-template: '$RESOLVED_VERSION'
 tag-template: '$RESOLVED_VERSION'
 
+# Each PR goes into the first section whose label it carries (`exclusive`).
+# PRs with none of these labels land in "To sort". Move them into a section
+# before you publish.
 categories:
-  - title: '💥 Breaking Changes'
-    labels:
-      - 'breaking'
+  - type: 'pre-exclude'
+    when:
+      label: 'skip-changelog'
+  - title: '⚠️ Breaking Changes'
+    exclusive: true
+    when:
+      label: 'breaking'
   - title: '🚀 New Features'
-    labels:
-      - 'feature'
-      - 'enhancement'
-  - title: '🐛 Bug Fixes'
-    labels:
-      - 'bugfix'
-  - title: '🧰 Maintenance'
-    labels:
-      - 'chore'
-      - 'docs'
-      - 'dependencies'
-      - 'maintenance'
-      - 'refactor'
+    exclusive: true
+    when:
+      labels:
+        - 'feature'
+        - 'enhancement'
+  - title: '🛠️ Improvements & fixes'
+    exclusive: true
+    when:
+      labels:
+        - 'improvement'
+        - 'bugfix'
+        - 'bug'
+        - 'fix'
+  - title: '🏠 Behind the scenes'
+    exclusive: true
+    collapse-after: 10
+    when:
+      labels:
+        - 'chore'
+        - 'ci'
+        - 'dependencies'
+        - 'docs'
+        - 'documentation'
+        - 'maintenance'
+        - 'refactor'
+        - 'tests'
+  - title: '🗂️ To sort'
 
-change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
+category-template: '## $TITLE'
+change-template: '- $TITLE (#$NUMBER)'
 change-title-escapes: '\<*_&'
-
-version-resolver:
-  major:
-    labels:
-      - 'major'
-      - 'breaking'
-  minor:
-    labels:
-      - 'minor'
-      - 'enhancement'
-      - 'feature'
-  patch:
-    labels:
-      - 'bugfix'
-      - 'chore'
-      - 'docs'
-      - 'dependencies'
-      - 'documentation'
-      - 'refactor'
-  default: patch
-
+no-changes-template: '- No changes'
 
 template: |
   ## What's Changed
+  <!--
+    Before you publish, write a short summary for users: what this release adds,
+    what it fixes, and whether they need to do anything. Rewrite the PR titles
+    below so users can follow them, and add a `> [!NOTE]` block under
+    Breaking Changes if anything changes for existing installations.
+  -->
+  Release $RESOLVED_VERSION …
 
   $CHANGES
