@@ -1,8 +1,14 @@
 name: Tests
 
+# Pull requests are tested through `pull_request`; testing their pushes too would
+# run every job twice. `main` is tested after each merge, and any other branch
+# can be tested from Actions -> Tests -> Run workflow.
 on:
   push:
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
 
 jobs:
   # Engine tier: pure-Python calculation engine, no Home Assistant harness.
