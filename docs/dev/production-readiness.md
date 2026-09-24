@@ -91,7 +91,7 @@ the engine depend on timestamps, and sensors that only report on change look
 stale while being accurate. Revisit once `metering_imbalance` shows how large
 real imbalances are.
 
-### C. Savings are measured against a home without the device — settled
+### C. Savings are measured against a home without the device — done
 
 Self-consumption is valued at the import price even while the house exports.
 That is not a simplification: a saving answers "what would this have cost in a

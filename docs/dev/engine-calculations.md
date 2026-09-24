@@ -653,11 +653,23 @@ efficiency input.
 
 :::
 
-**Known simplification.** Self-consumption is valued at the import price even in
-a snapshot where the house is exporting, where the true marginal alternative is
-the feed-in tariff. This is the conventional treatment and matches how the docs
-describe self-consumption, but it slightly overstates savings during an export
-surplus.
+:::note[Decision: a saving is measured against a home without the device]
+
+Self-consumption is valued at the import price even in a snapshot where the
+house is exporting. That can look like it overstates the saving — the watts
+could have been exported instead, for the feed-in rate — but it answers the
+question a saving asks: what would this have cost in a home without this
+device? Without the PV system, the watts the house consumed would have been
+imported, at the tariff. The feed-in rate answers a different question
+("should I use it now or export it?"), and the watts that were exported are
+already credited separately, through the export compensation, in the
+financial return. Valuing self-consumption at the feed-in rate would count
+the export decision twice.
+
+Pinned by `TestSavingsAreMeasuredWithoutTheDevice` in
+`tests/engine/manual/test_savings.py`.
+
+:::
 
 ## How the tests pin this down
 
