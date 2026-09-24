@@ -16,6 +16,8 @@ every restriction was honoured.
 
 from __future__ import annotations
 
+from fractions import Fraction as F
+
 from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 from tests.engine.manual.provenance import rows
 
@@ -93,6 +95,55 @@ class TestFeasibilityOutranksTheRules(Home):
 
         Following the proportional rule would have forced a restriction to
         break; the allocation above honours them all.
+        """
+        return {}
+
+
+class TestACaptiveSinkTakesTheWholeImport(Home):
+    """Decision: a sink allowed only the grid takes the whole import.
+
+    bat1, bat2 and bat3 may all use the grid, but bat3 may use nothing else,
+    so the rules give way and bat1 and bat2 get no grid at all. See
+    "feasibility outranks all three" in engine-calculations.md.
+    """
+
+    grid = Grid(600)
+    pv1 = Pv(1000)
+    pv2 = Pv(600)
+    bat1 = Battery(-400, charge_from=(grid, pv1))
+    bat2 = Battery(-400, charge_from=(grid, pv2))
+    bat3 = Battery(-600, charge_from=(grid,))
+    cons1 = Consumer(-500, power_from=(pv1, pv2))
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """bat3 takes all 600 W of grid; bat1 and bat2 run on their own PV.
+
+        bat1 then takes 400 W of pv1 and bat2 400 W of pv2. cons1 splits over
+        what is left, pv1 600 W and pv2 200 W, 3 : 1: 375 W and 125 W.
+        """
+        return rows({
+            "bat1": {"grid": 0, "pv1": 400, "pv2": 0},
+            "bat2": {"grid": 0, "pv1": 0, "pv2": 400},
+            "bat3": {"grid": 600, "pv1": 0, "pv2": 0},
+            "cons1": {"grid": 0, "pv1": 375, "pv2": 125},
+        })
+
+    @expect("home_base_load_source_shares")
+    def test_base_load_source_shares(self):
+        """The base load gets the last 225 W of pv1 and 75 W of pv2.
+
+        It is unrestricted, so it is served last: the 300 W base load reads
+        3/4 pv1, 1/4 pv2, and no grid.
+        """
+        return {"grid": 0, "pv1": F(3, 4), "pv2": F(1, 4)}
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_restriction_deficit(self):
+        """No restriction is broken, so the deficit map is empty.
+
+        The allocation above honours every restriction, including bat3's
+        grid-only one.
         """
         return {}
 

@@ -147,9 +147,12 @@ Pinned by `TestASinkSplitsOverWhatIsLeft` in
 They genuinely conflict. In one snapshot the only valid allocation required
 a battery to take *more* grid than the proportional split would have given
 it. When that happens the rules give way — they only ever choose among
-allocations that already work.
+allocations that already work. Taken to the extreme, a sink allowed only
+the grid takes the whole import, and the other sinks allowed the grid get
+none of it.
 
-Pinned by `TestFeasibilityOutranksTheRules` in
+Pinned by `TestFeasibilityOutranksTheRules` and
+`TestACaptiveSinkTakesTheWholeImport` in
 `tests/engine/manual/test_feasibility.py`.
 
 :::
