@@ -125,7 +125,7 @@
       "title": "Source provenance",
       "unit": "share",
       "layer": 2,
-      "definition": "For every adapter, the fraction of its draw supplied by each source. A drawing adapter's row sums to 1, or to 0 when every source that sink is allowed happens to be idle; an adapter that is not drawing reads a row of zeros.",
+      "definition": "For every adapter, the fraction of its draw supplied by each source. A drawing adapter's row sums to 1 — a sink whose allowed sources are all idle is relaxed onto what did supply, and its whole draw is its restriction deficit; an adapter that is not drawing reads a row of zeros.",
       "formula": null,
       "depends_on": ["gross_power", "home_base_load_power"],
       "answer_shape": "nested_map_fixed_keys",

@@ -485,10 +485,21 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
             for uid, row in allocation.items()
         }, deficit
 
-    restricted = {uid: d for uid, d in demand.items() if allowed[uid]}
+    # A restricted sink none of whose allowed sources is supplying cannot be
+    # served within its restriction at all. It is not part of the feasibility
+    # question — leaving it in would make every block it sits in infeasible
+    # and cost the other sinks their exact reserves — so its whole draw goes
+    # straight to the last-resort relaxation below, as a deficit.
+    stranded = {
+        uid: d for uid, d in demand.items()
+        if allowed[uid] and not any(_permits(allowed[uid], s) for s in supply)
+    }
+    restricted = {
+        uid: d for uid, d in demand.items() if allowed[uid] and uid not in stranded
+    }
     flexible = {uid: d for uid, d in demand.items() if not allowed[uid]}
     allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
-    deficit: dict[str, float] = {}
+    deficit: dict[str, float] = {uid: d for uid, d in stranded.items() if d > _EPS}
     unused = []
 
     blocks = [(dict(supply), restricted)]
@@ -539,7 +550,7 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
     # source's total to the group is unchanged and every member is allowed the
     # same sources, so the plan stays valid and still carries every reserve.
     groups: dict[frozenset, list[str]] = {}
-    for uid in restricted:
+    for uid in (*restricted, *stranded):
         groups.setdefault(frozenset(allowed[uid]), []).append(uid)
     for members in groups.values():
         total = sum(demand[u] for u in members)
@@ -1025,35 +1036,13 @@ class PowerInsight:
             demand[adapter.uid] = abs(float(adapter.power))
             allowed[adapter.uid] = self._allowed_source_uids(adapter)
 
-        # A sink restricted to sources that are all idle has nothing to be
-        # attributed to. It collapses to an all-zeros row rather than being
-        # forced onto sources the user excluded — but its draw still came from
-        # somewhere, so it stays in the home remainder below.
-        demand_by_uid = dict(demand)
-        stranded = [
-            uid for uid, sources in allowed.items()
-            if sources and not any(_permits(sources, s) for s in supply)
-        ]
-        for uid in stranded:
-            del demand[uid]
-            del allowed[uid]
-
         demand[_HOME] = max(0.0, gross - sum(demand.values()))
         allowed[_HOME] = ()
 
-        allocation, deficit = _allocate(
-            supply, demand, allowed, self.grid_adapter.uid
-        )
         # ``_HOME`` deliberately stays in the allocation: the monetary layer
         # needs the home base load's own mix, and ``sink_adapters_source_shares``
-        # filters it back out so the public row set is adapters only.
-        for uid in stranded:
-            allocation[uid] = {source_uid: 0.0 for source_uid in supply}
-            # Not one watt of it could come from a configured source, so the
-            # whole draw is a deficit even though the row says nothing.
-            deficit[uid] = demand_by_uid[uid]
-
-        return allocation, deficit
+        # leaves it out so the public row set is adapters only.
+        return _allocate(supply, demand, allowed, self.grid_adapter.uid)
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:

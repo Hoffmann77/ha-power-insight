@@ -8,8 +8,8 @@ invariant across all of them.
 
 Four invariants, in increasing strength:
 
-1. **Rows are normalised.** Every sink's row sums to 1, or to 0 when none of its
-   allowed sources is providing this snapshot (the idle collapse).
+1. **Rows are normalised.** Every drawing sink's row sums to 1; an adapter that
+   is not drawing this snapshot reads a row of zeros.
 2. **No source is over-drawn.** The metered sinks together cannot be attributed
    more of a source than that source actually produced. They may be attributed
    *less* — the difference is the unmetered home base load, whose row the engine
@@ -272,16 +272,17 @@ def _is_feasible(case: Case) -> bool:
     unmetered home load as an unrestricted sink, so it is a genuine independent
     check rather than a re-run of the engine's own reasoning.
     """
-    # A sink carrying a restriction whose every target is idle is stranded: the
-    # engine drops it from the solve and the home remainder absorbs its draw.
-    # Feasibility is therefore a question about the sinks that remain — keeping
-    # a stranded sink in would declare the whole case infeasible and silently
-    # cost invariant 4 its most interesting topologies.
+    # A sink carrying a restriction whose every target is idle is stranded: no
+    # allocation can honour it, so the engine relaxes it as a last resort,
+    # after every other sink is served. Feasibility is therefore a question
+    # about the sinks that remain — keeping a stranded sink in would declare
+    # the whole case infeasible and silently cost invariant 4 its most
+    # interesting topologies.
     stranded = {
         uid for uid in case.sinks if uid in case.restricted and not case.allowed[uid]
     }
     demand = {uid: d for uid, d in case.sinks.items() if uid not in stranded}
-    home = case.home + sum(case.sinks[uid] for uid in stranded)
+    home = case.home
     if home > 0:
         demand["__home__"] = home
     capacity: dict[str, dict[str, int]] = {"__src__": {}, "__dst__": {}}
@@ -314,7 +315,7 @@ def _report(failures: list[str], checked: int, invariant: str) -> None:
 
 
 def test_rows_are_normalised() -> None:
-    """Every sink's row sums to 1, or to 0 when all its allowed sources are idle."""
+    """Every drawing sink's row sums to 1; an adapter not drawing reads zeros."""
     failures = []
     cases = _cases()
     for case in cases:
@@ -324,7 +325,7 @@ def test_rows_are_normalised() -> None:
             if abs(total - 1.0) > 1e-9 and abs(total) > 1e-9:
                 failures.append(f"{uid} row sums to {total:.6f}; {case.describe()}")
     _report(
-        failures, len(cases), "Every provenance row must sum to 1 (or 0 when idle)."
+        failures, len(cases), "Every provenance row must sum to 1 (or 0 when not drawing)."
     )
 
 
@@ -354,14 +355,13 @@ def test_no_source_is_overdrawn() -> None:
 
 
 def test_unattributed_power_is_exactly_the_unreportable_draw() -> None:
-    """Whatever the metered rows leave over must be power with nowhere to go.
+    """Whatever the metered rows leave over must be the unmetered base load.
 
-    Two draws are deliberately absent from the result: the unmetered home base
-    load, which has no adapter, and any sink restricted to sources that are all
-    idle, which collapses to an all-zeros row rather than being forced onto
-    sources the user excluded. Everything else must be accounted for exactly, so
-    the shortfall across all sources equals precisely those two together. This
-    is the strict form of "no source is over-drawn" — it pins the slack instead
+    Every metered draw is attributed somewhere — a sink restricted to sources
+    that are all idle included, which is relaxed as a last resort — so the
+    only draw absent from the rows is the home base load, which has no
+    adapter. The shortfall across all sources equals precisely that. This is
+    the strict form of "no source is over-drawn" — it pins the slack instead
     of only bounding it.
     """
     failures = []
@@ -377,21 +377,16 @@ def test_unattributed_power_is_exactly_the_unreportable_draw() -> None:
                 if uid in case.sinks
             )
             unattributed += power - drawn
-        stranded = sum(
-            draw
-            for uid, draw in case.sinks.items()
-            if uid in case.restricted and not case.allowed[uid]
-        )
-        expected = case.home + stranded
+        expected = case.home
         if abs(unattributed - expected) > 1e-6 * max(1.0, expected):
             failures.append(
-                f"{unattributed:.1f} W unattributed, expected {expected:.1f} W "
-                f"(home {case.home} + stranded {stranded:.0f}); {case.describe()}"
+                f"{unattributed:.1f} W unattributed, expected the home load "
+                f"{expected:.1f} W; {case.describe()}"
             )
     _report(
         failures,
         len(cases),
-        "Unattributed power must be exactly the home load plus any stranded draw.",
+        "Unattributed power must be exactly the home load.",
     )
 
 

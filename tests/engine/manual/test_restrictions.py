@@ -59,29 +59,31 @@ class TestBrokenRestrictionIsReported(Home):
         return {"grid": 1, "pv1": 0}
 
 
-class TestSinkWithOnlyIdleSourcesGetsZeros(Home):
-    """Decision: a sink none of whose allowed sources supply gets a row of zeros.
+class TestASinkWithOnlyIdleSourcesIsRelaxed(Home):
+    """Decision: a sink none of whose allowed sources supply is relaxed like
+    any other broken restriction.
 
-    bat1 may only use pv1, which is drawing standby, so nothing is attributed
-    to bat1 and its whole draw is the deficit. See "a broken restriction is
-    reported, not hidden" in engine-calculations.md.
+    bat1 may only use pv1, which is drawing standby rather than producing — a
+    "PV only" battery topping up from the grid overnight. Its 400 W still came
+    from somewhere: the grid. See "a broken restriction is reported, not
+    hidden" in engine-calculations.md.
     """
 
-    grid = Grid(1000)
+    grid = Grid(1000, price=F(3, 10))
     pv1 = Pv(-20)
     bat1 = Battery(-400, charge_from=(pv1,))
     cons1 = Consumer(-100)
 
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """bat1's row is all zeros; the other sinks run on the grid.
+        """Every sink, bat1 included, runs on the grid.
 
-        The engine does not invent a grid supply for bat1. pv1's 20 W standby
-        and cons1's 100 W are unrestricted and all grid.
+        The grid is the only source, so bat1's 400 W, pv1's 20 W standby and
+        cons1's 100 W are all grid.
         """
         return rows({
             "pv1": {"grid": 20},
-            "bat1": {"grid": 0},
+            "bat1": {"grid": 400},
             "cons1": {"grid": 100},
         })
 
@@ -92,6 +94,33 @@ class TestSinkWithOnlyIdleSourcesGetsZeros(Home):
         None of it could come from a source bat1 is allowed to use.
         """
         return {"bat1": 400}
+
+    @expect("source_adapters_charging_power")
+    def test_charging_power(self):
+        """The charging channel carries all 400 W bat1 drew.
+
+        It is charging, however the configuration says it should be powered,
+        so it is not counted as household consumption.
+        """
+        return {"grid": 400}
+
+    @expect("home_base_load_power")
+    def test_home_base_load_power(self):
+        """The base load is only what no meter measured.
+
+        1000 W imported, less 20 + 400 + 100 W metered: 480 W. bat1's draw has
+        a meter on it, so it is not part of the unmetered load.
+        """
+        return 480
+
+    @expect("source_adapters_coo_rates")
+    def test_operating_cost(self):
+        """bat1 pays for what it charged.
+
+        0.4 kW of grid at 3/10 EUR/kWh: 3/25 EUR/h. pv1's standby costs 0.02 kW
+        at the same tariff: 3/500 EUR/h.
+        """
+        return {"pv1": F(3, 500), "bat1": F(3, 25)}
 
 
 class TestTheSinkWithSomewhereElseToGoYields(Home):
@@ -193,3 +222,55 @@ class TestExportIsRestrictedToExporters(Home):
             "grid": {"pv1": 300, "bat1": 0},
             "cons1": {"pv1": 200, "bat1": 200},
         })
+
+
+
+class TestAnExportNoDeviceMayFeedIsRelaxed(Home):
+    """Decision: an export that no running device may feed is relaxed like any
+    other broken restriction.
+
+    bat1 may not export, yet the grid reads a 300 W export while bat1 is the
+    only source. The 300 W still left the house, and bat1 is the only thing
+    that can have supplied them. See "exports_power=False is a hard routing
+    restriction" in engine-calculations.md.
+    """
+
+    grid = Grid(-300, price=F(3, 10))
+    bat1 = Battery(500, exports=False, lcos=F(3, 20))
+    plug = Consumer(-100)
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """The export and the plug both run on bat1, the only source."""
+        return rows({"grid": {"bat1": 300}, "plug": {"bat1": 100}})
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_restriction_deficit(self):
+        """The whole 300 W export is the deficit.
+
+        None of it could come from a device allowed to export.
+        """
+        return {"grid": 300}
+
+    @expect("source_adapters_export_power")
+    def test_export_power(self):
+        """The export channel carries the 300 W the meter saw leave."""
+        return {"bat1": 300}
+
+    @expect("home_base_load_power")
+    def test_home_base_load_power(self):
+        """The base load is what no meter measured: 500 − 300 − 100 = 100 W.
+
+        The exported watts are not household consumption.
+        """
+        return 100
+
+    @expect("adapters_saving_rates")
+    def test_saving_rates(self):
+        """bat1 saves the tariff only on what the house consumed.
+
+        The plug's 100 W and the 100 W base load displaced imports: 0.2 kW at
+        3/10 EUR/kWh is 3/50 EUR/h. The exported 300 W earn no saving, and no
+        compensation either — bat1 may not export.
+        """
+        return {"bat1": F(3, 50)}

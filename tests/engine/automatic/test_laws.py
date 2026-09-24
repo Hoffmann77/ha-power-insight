@@ -407,7 +407,10 @@ def test_every_map_is_keyed_by_its_whole_family() -> None:
 def test_the_books_balance() -> None:
     """The model's conservation laws.
 
-    * Every source's watts land in exactly one of the four channels.
+    * Every source's watts land in exactly one of the four channels, and each
+      channel carries exactly what its meters say: the export channel the grid
+      export, the charging channel what the batteries drew, the standby channel
+      what the PV systems drew.
     * Every euro of gross cost lands in exactly one channel's cost bucket, at
       marginal and at levelized prices alike.
     * The avoided cost measured at the sources equals the avoided cost
@@ -439,6 +442,17 @@ def test_the_books_balance() -> None:
             )
             if not matches(reading, routed, abs_tol=ABS_TOL):
                 problems.append(f"{source} read {reading} W but {show(routed)} W was routed")
+        for channel, metered in (
+            ("export", e.combined_grid_export),
+            ("charging", e.combined_charging_power),
+            ("standby", e.combined_standby_power),
+        ):
+            carried = sum(getattr(e, f"source_adapters_{channel}_power").values())
+            if not matches(metered, carried, abs_tol=ABS_TOL):
+                problems.append(
+                    f"the {channel} channel carried {show(carried)} W, "
+                    f"its meters read {show(metered)} W"
+                )
         for levelized, total in ((False, e.combined_coe_rate), (True, e.combined_lcoe_rate)):
             prefix = "combined_levelized_" if levelized else "combined_"
             buckets = sum(getattr(e, f"{prefix}{c}_cost_rate") for c in channels)

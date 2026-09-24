@@ -220,14 +220,26 @@ leaving them unattributed would break the source totals.
 How much that was is published as `sink_adapters_restriction_deficit`, and
 surfaced as a `restriction_deficit` attribute on the device's operating-cost
 sensors. It is the most useful thing an attributional engine can say: *your
-energy manager is not doing what you configured*. A sink whose allowed
-sources are **all idle** is the one exception — it collapses to an all-zeros
-row rather than being forced onto sources the user excluded, and its whole
-draw is reported as the deficit.
+energy manager is not doing what you configured*.
+
+A sink whose allowed sources are **all idle** is no exception: it is relaxed
+the same way, and its whole draw is the deficit. It used to collapse to an
+all-zeros row instead, which moved its draw into the home base load — a
+"PV only" battery topping up from the grid overnight was booked as household
+consumption at no operating cost, and the charging channel no longer matched
+the battery meter. Relaxing it is also continuous: as the allowed source
+fades to 0 W the deficit grows smoothly to the whole draw, with no jump.
+
+A deficit is not always a misconfiguration. A battery that prefers PV but
+tops up from the grid at low charge is best configured "PV only" — "PV and
+grid" would book it grid first whenever the house imports — and then shows a
+deficit in normal operation. So it stays an attribute, not a warning.
 
 Pinned by `TestBrokenRestrictionIsReported` and
-`TestSinkWithOnlyIdleSourcesGetsZeros` in
-`tests/engine/manual/test_restrictions.py`.
+`TestASinkWithOnlyIdleSourcesIsRelaxed` in
+`tests/engine/manual/test_restrictions.py`; the balance law in
+`tests/engine/automatic/test_laws.py` checks that every channel carries what
+its meters read.
 
 :::
 
@@ -557,9 +569,8 @@ The exporting grid is therefore a *restricted sink*: its allowed sources
 are exactly the sources with `exports_power=True`. This reuses the existing
 restriction machinery rather than adding a parallel one, with one
 implementation caveat — an empty allowed set normally means "unrestricted",
-but for the export sink it means "nothing may export". That case has to
-collapse to a stranded, all-zeros row (whole draw reported as a deficit),
-not silently reopen the whole mix.
+but for the export sink it means "nothing may export", and must not
+silently reopen the whole mix.
 
 Like every restriction, it gives way if no allocation can honour it: a
 house exporting while only non-exporting sources are running relaxes the
@@ -567,9 +578,11 @@ restriction and reports the amount through
 `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
 charging off the grid does.
 
-Pinned by `TestExportIsRestrictedToExporters` in
+Pinned by `TestExportIsRestrictedToExporters` and
+`TestAnExportNoDeviceMayFeedIsRelaxed` in
 `tests/engine/manual/test_restrictions.py` (an export that exporters can cover
-takes only exporters).
+takes only exporters; one they cannot is relaxed, and its watts stay export,
+not household consumption).
 
 :::
 

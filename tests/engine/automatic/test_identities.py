@@ -235,18 +235,12 @@ def _(s):
 
 @identity("home_base_load_power")
 def _(s):
-    """Gross minus every metered draw that was attributed to a source.
+    """Gross minus every metered draw, floored at 0.
 
-    A sink whose allowed sources are all idle is attributed nothing — its row
-    is all zeros — so its draw stays in the base load. (The catalog's open
-    question on captive-battery / source_in_standby.)
+    Every metered draw is attributed somewhere — a sink whose allowed sources
+    are all idle is relaxed onto what did supply — so none of it is base load.
     """
-    attributed = sum(
-        draw
-        for k, draw in s.sinks.items()
-        if sum(s.e.sink_adapters_source_shares[k].values()) > 0
-    )
-    return max(0.0, s.e.gross_power - attributed)
+    return max(0.0, s.e.gross_power - sum(s.sinks.values()))
 
 
 # Layer 2 — provenance. The metered rows are the root; the base load's row is

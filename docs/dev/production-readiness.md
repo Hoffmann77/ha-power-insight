@@ -41,7 +41,7 @@ known levelized cost. Watts, shares and ratios never move. Holding the last
 known price through a short dropout is a sensor-layer question, not the
 engine's.
 
-### A. A sink whose allowed sources are all idle — settled
+### A. A sink whose allowed sources are all idle — done
 
 It used to collapse to an all-zeros row, which moved its draw into the home
 base load (a "PV only" battery topping up from the grid overnight was booked as
