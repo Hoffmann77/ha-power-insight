@@ -478,5 +478,231 @@
     "set_value_not_total": {
       "message": "{entity_id} is not a total sensor. Set value only works on sensors that add up over time."
     }
+  },
+  "entity": {
+    "sensor": {
+      "available_power": {
+        "name": "Available power"
+      },
+      "avoided_cost_rate": {
+        "name": "Avoided cost rate"
+      },
+      "battery_charging_power": {
+        "name": "Battery charging power"
+      },
+      "battery_charging_ratio": {
+        "name": "Battery charging ratio"
+      },
+      "charging_cost_rate": {
+        "name": "Charging cost rate"
+      },
+      "charging_share_from": {
+        "name": "Charging share from {source}"
+      },
+      "consumption_cost_rate": {
+        "name": "Consumption cost rate"
+      },
+      "consumption_share": {
+        "name": "Consumption share"
+      },
+      "cost_rate": {
+        "name": "Cost rate"
+      },
+      "cost_savings_rate": {
+        "name": "Cost savings rate"
+      },
+      "device_operating_cost_rate": {
+        "name": "Device operating cost rate"
+      },
+      "discharge_to_batteries": {
+        "name": "Discharge to batteries"
+      },
+      "discharge_to_batteries_ratio": {
+        "name": "Discharge to batteries ratio"
+      },
+      "discharge_to_grid": {
+        "name": "Discharge to grid"
+      },
+      "discharge_to_grid_ratio": {
+        "name": "Discharge to grid ratio"
+      },
+      "discharge_to_home_consumption": {
+        "name": "Discharge to home consumption"
+      },
+      "discharge_to_home_consumption_ratio": {
+        "name": "Discharge to home consumption ratio"
+      },
+      "discharge_to_system_standby": {
+        "name": "Discharge to system standby"
+      },
+      "discharge_to_system_standby_ratio": {
+        "name": "Discharge to system standby ratio"
+      },
+      "export_compensation_rate": {
+        "name": "Export compensation rate"
+      },
+      "export_power": {
+        "name": "Export power"
+      },
+      "export_ratio": {
+        "name": "Export ratio"
+      },
+      "financial_return_rate": {
+        "name": "Financial return rate"
+      },
+      "home_consumption_power": {
+        "name": "Home consumption power"
+      },
+      "home_consumption_ratio": {
+        "name": "Home consumption ratio"
+      },
+      "import_cost_rate": {
+        "name": "Import cost rate"
+      },
+      "import_power": {
+        "name": "Import power"
+      },
+      "import_to_batteries": {
+        "name": "Import to batteries"
+      },
+      "import_to_batteries_ratio": {
+        "name": "Import to batteries ratio"
+      },
+      "import_to_home_consumption": {
+        "name": "Import to home consumption"
+      },
+      "import_to_home_consumption_ratio": {
+        "name": "Import to home consumption ratio"
+      },
+      "import_to_system_standby": {
+        "name": "Import to system standby"
+      },
+      "import_to_system_standby_ratio": {
+        "name": "Import to system standby ratio"
+      },
+      "levelized_charging_cost_rate": {
+        "name": "Levelized charging cost rate"
+      },
+      "levelized_consumption_cost_rate": {
+        "name": "Levelized consumption cost rate"
+      },
+      "levelized_cost_rate": {
+        "name": "Levelized cost rate"
+      },
+      "levelized_cost_savings_rate": {
+        "name": "Levelized cost savings rate"
+      },
+      "levelized_device_operating_cost_rate": {
+        "name": "Levelized device operating cost rate"
+      },
+      "levelized_export_cost_rate": {
+        "name": "Levelized export cost rate"
+      },
+      "levelized_financial_return_rate": {
+        "name": "Levelized financial return rate"
+      },
+      "levelized_operating_cost_rate": {
+        "name": "Levelized operating cost rate"
+      },
+      "levelized_price_of_electricity": {
+        "name": "Levelized price of electricity"
+      },
+      "levelized_system_standby_cost_rate": {
+        "name": "Levelized system standby cost rate"
+      },
+      "metering_imbalance": {
+        "name": "Metering imbalance"
+      },
+      "operating_cost_rate": {
+        "name": "Operating cost rate"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "power_share_from": {
+        "name": "Power share from {source}"
+      },
+      "price_of_electricity": {
+        "name": "Price of electricity"
+      },
+      "production_to_batteries": {
+        "name": "Production to batteries"
+      },
+      "production_to_batteries_ratio": {
+        "name": "Production to batteries ratio"
+      },
+      "production_to_grid": {
+        "name": "Production to grid"
+      },
+      "production_to_grid_ratio": {
+        "name": "Production to grid ratio"
+      },
+      "production_to_home_consumption": {
+        "name": "Production to home consumption"
+      },
+      "production_to_home_consumption_ratio": {
+        "name": "Production to home consumption ratio"
+      },
+      "production_to_system_standby": {
+        "name": "Production to system standby"
+      },
+      "production_to_system_standby_ratio": {
+        "name": "Production to system standby ratio"
+      },
+      "share_of_battery_charging": {
+        "name": "Share of battery charging"
+      },
+      "share_of_grid_export": {
+        "name": "Share of grid export"
+      },
+      "share_of_home_consumption": {
+        "name": "Share of home consumption"
+      },
+      "share_of_system_standby": {
+        "name": "Share of system standby"
+      },
+      "system_standby_power": {
+        "name": "System standby power"
+      },
+      "system_standby_ratio": {
+        "name": "System standby ratio"
+      },
+      "total_avoided_cost": {
+        "name": "Total avoided cost"
+      },
+      "total_charging_cost": {
+        "name": "Total charging cost"
+      },
+      "total_consumption_cost": {
+        "name": "Total consumption cost"
+      },
+      "total_cost_savings": {
+        "name": "Total cost savings"
+      },
+      "total_export_compensation": {
+        "name": "Total export compensation"
+      },
+      "total_financial_return": {
+        "name": "Total financial return"
+      },
+      "total_import_cost": {
+        "name": "Total import cost"
+      },
+      "total_levelized_cost_savings": {
+        "name": "Total levelized cost savings"
+      },
+      "total_levelized_device_operating_cost": {
+        "name": "Total levelized device operating cost"
+      },
+      "total_levelized_financial_return": {
+        "name": "Total levelized financial return"
+      },
+      "total_levelized_operating_cost": {
+        "name": "Total levelized operating cost"
+      },
+      "total_operating_cost": {
+        "name": "Total operating cost"
+      }
+    }
   }
 }

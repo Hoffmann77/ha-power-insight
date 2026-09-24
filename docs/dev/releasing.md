@@ -78,6 +78,14 @@ link that silently rots undermines the point.
 Only pages that actually embed a component — the reference-case pages, and the
 landing page — need to be `.mdx`. Prefer `.md` for everything else.
 
+## Version numbers
+
+Power Insight is versioned by the month it is released in:
+`YEAR.MONTH.PATCH`, so the first release of September 2026 is `2026.9.0` and a
+fix to it `2026.9.1`. The number lives in two places that must agree —
+`custom_components/power_insight/manifest.json` and `pyproject.toml` — and
+`uv lock` then updates the lock file. The docs are cut by `YEAR.MONTH` (below).
+
 ## Versioning
 
 The site publishes **the released docs at the root** and the in-development docs

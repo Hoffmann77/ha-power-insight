@@ -15,7 +15,15 @@ friendly name as **`{device} {entity name}`**:
 | Whole home | `{title} Combined` | `Cost rate` | *Home Combined Cost rate* |
 | Per adapter | `{title} {device}` | `Import power` | *Home Grid Import power* |
 
-Consequences for the `name=` string on a `PowerInsightSensorDescription`:
+An entity's name is not written on its `PowerInsightSensorDescription`: the
+description sets a `translation_key`, and the name lives in `strings.json`
+(and `translations/en.json`, a copy of it) under `entity.sensor.<key>.name`.
+The translation key is the name in snake case (`Production to grid` →
+`production_to_grid`), because one description `key` can carry different
+names on different devices. A name that mentions another device takes it as a
+placeholder: `Charging share from {source}`.
+
+Consequences for the name:
 
 - **Never repeat the device or adapter** in the entity name — it is already the
   prefix (write `Production to grid`, not `PV production to grid`).
@@ -26,15 +34,16 @@ Consequences for the `name=` string on a `PowerInsightSensorDescription`:
 
 ## `key` vs. `name`
 
-- **`name`** is the display string (above). Changing it is cosmetic.
+- **The name** is the display string (above), in `strings.json`. Changing it
+  is cosmetic.
 - **`key`** feeds the `unique_id` (`{entry}_{key}` for the hub,
   `{entry}_{uid}_{key}` per adapter). Changing a `key` orphans the registry
   entry and **breaks history** for existing installs, so keys stay stable even
-  when the `name` changes — they need not echo it. A key that names another
+  when the name changes — they need not echo it. A key that names another
   device uses that device's subentry id, never its title
   (`charging_share_from_{uid}`), so renaming the device cannot change it.
 - The **`entity_id`** is generated from the full name once, when the entity is
-  first registered, and is then kept by the entity registry. Renaming `name`
+  first registered, and is then kept by the entity registry. Renaming the name
   therefore leaves existing installs' entity ids alone and only changes the
   slug new installs get.
 
