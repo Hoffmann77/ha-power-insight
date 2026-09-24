@@ -294,6 +294,10 @@
           "value": "11/50"
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": "11/50"
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": "3/25"
         },
@@ -351,6 +355,14 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": {
+            "east": "0",
+            "west": "0",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": {
             "east": "0",
             "west": "0",
@@ -416,7 +428,15 @@
           "value": "0"
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "combined_device_operating_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
           "value": "0"
         },
         {
@@ -436,6 +456,18 @@
           }
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": {
+            "east": "1/25",
+            "west": "1/25",
+            "carport": "0"
+          }
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": "2/25"
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": {
             "east": "3/50",
@@ -452,8 +484,20 @@
           }
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": {
+            "east": "-1/25",
+            "west": "-1/25",
+            "carport": "-1/50"
+          }
+        },
+        {
           "property": "combined_financial_return_rate",
           "value": "3/25"
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
+          "value": "-1/10"
         }
       ]
     }

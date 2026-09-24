@@ -36,7 +36,8 @@
         "export_compensation": "0",
         "charge_from_adapters": [
           "pv1"
-        ]
+        ],
+        "correction_factor": "1"
       }
     },
     {
@@ -259,6 +260,10 @@
           "value": "19/100"
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": "19/100"
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": "0"
         },
@@ -311,6 +316,13 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": {
+            "pv1": "0",
+            "bat1": "1/25"
+          }
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": {
             "pv1": "0",
             "bat1": "1/25"
@@ -373,8 +385,16 @@
           "value": "0"
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": "1/25"
+        },
+        {
           "property": "combined_device_operating_cost_rate",
           "value": "0"
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
+          "value": "1/25"
         },
         {
           "property": "adapters_saving_rates",
@@ -391,6 +411,17 @@
           }
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": {
+            "pv1": "0",
+            "bat1": "-1/25"
+          }
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": "-1/25"
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": {
             "pv1": "0",
@@ -405,8 +436,19 @@
           }
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": {
+            "pv1": "0",
+            "bat1": "-1/25"
+          }
+        },
+        {
           "property": "combined_financial_return_rate",
           "value": "0"
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
+          "value": "-1/25"
         }
       ]
     },
@@ -621,6 +663,10 @@
           "value": "3/10"
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": "3/10"
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": "0"
         },
@@ -673,6 +719,13 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": {
+            "pv1": "3/500",
+            "bat1": "3/25"
+          }
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": {
             "pv1": "3/500",
             "bat1": "3/25"
@@ -735,7 +788,15 @@
           "value": "3/500"
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": "3/25"
+        },
+        {
           "property": "combined_device_operating_cost_rate",
+          "value": "63/500"
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
           "value": "63/500"
         },
         {
@@ -753,6 +814,17 @@
           }
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": {
+            "pv1": "-3/500",
+            "bat1": "-3/25"
+          }
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": "-63/500"
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": {
             "pv1": "-3/500",
@@ -767,7 +839,18 @@
           }
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": {
+            "pv1": "-3/500",
+            "bat1": "-3/25"
+          }
+        },
+        {
           "property": "combined_financial_return_rate",
+          "value": "-63/500"
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
           "value": "-63/500"
         }
       ]

@@ -129,6 +129,9 @@ def _make_home(rng: random.Random) -> Home | None:
     lcoe = (0.05, 0.08, 0.12, 0.20)
     lcos = (0.10, 0.15, 0.25)
     comp = (0.0, 0.06, 0.08)
+    # Most devices keep their lifetime cost as entered; the rest have had it
+    # edited, up or down, so every corrected result has something to correct.
+    factor = (1.0, 1.0, 0.8, 1.25, 1.5, 2.0)
     adapters = [Adapter.grid()]
     adapters += [
         Adapter.pv(
@@ -136,6 +139,7 @@ def _make_home(rng: random.Random) -> Home | None:
             lcoe=rng.choice(lcoe),
             exports=rng.random() < 0.8,
             export_comp=rng.choice(comp),
+            correction_factor=rng.choice(factor),
         )
         for uid in pv
     ]
@@ -146,6 +150,7 @@ def _make_home(rng: random.Random) -> Home | None:
             exports=rng.random() < 0.3,
             export_comp=rng.choice(comp),
             charge_from=restrictions.get(uid, ()),
+            correction_factor=rng.choice(factor),
         )
         for uid in bat
     ]

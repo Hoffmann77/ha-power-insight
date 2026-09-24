@@ -362,7 +362,7 @@
         },
         "reconfigure": {
           "title": "Reconfigure {adapter_type}",
-          "description": "Changing the lifetime values rescales this device's recorded levelized values so they stay consistent.",
+          "description": "Changing the lifetime values rescales this device's recorded levelized values so they stay consistent. Replaced the hardware itself? Add it as a new device and remove this one instead.",
           "data": {
             "power_entity": "Power sensor",
             "power_entity_inverted": "Invert power sign",

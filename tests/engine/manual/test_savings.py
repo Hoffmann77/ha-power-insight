@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from fractions import Fraction as F
 
-from tests.engine.home import Consumer, Grid, Home, Pv, expect
+from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 
 PRICE = F(3, 10)
 
@@ -144,6 +144,56 @@ class TestCorrectionFactorScalesTheLcoe(Home):
         the saving instead would have given 6/25.
         """
         return {"pv1": F(3, 50)}
+
+
+class TestBatteryFactorScalesItsOwnLcosOnly(Home):
+    """Decision: a battery's factor scales its LCOS; its charging follows its sources.
+
+    bat1 discharges at an LCOS of 1/10 corrected by 2. bat2 charges from pv1,
+    whose LCOE of 1/10 is corrected by 3/2, and carries a factor of 3 of its
+    own that must play no part: what bat2 pays to charge is pv1's energy, so
+    pv1's factor prices it. Two batteries, because one cannot charge and
+    discharge at once. See "the factor multiplies the lcoe, never the finished
+    number" in engine-calculations.md.
+    """
+
+    grid = Grid(200, price=PRICE)
+    pv1 = Pv(500, correction_factor=1.5)
+    bat1 = Battery(400, lcos=F(1, 10), correction_factor=2.0)
+    bat2 = Battery(-500, charge_from=(pv1,), correction_factor=3.0)
+
+    @expect("adapters_levelized_saving_rates")
+    def test_uncorrected(self):
+        """Uncorrected, each battery is priced at its lifetime cost as entered.
+
+        bat2 may only charge from pv1 and needs all of its 500 W, so the
+        base load's 600 W come from the grid and bat1. bat1's 400 W displace
+        grid power: 0.4 kW × (3/10 − 1/10) = 2/25 EUR/h. bat2 books its
+        charging now: −0.5 kW × 1/10 = −1/20 EUR/h. pv1 only feeds the
+        battery, and energy put into storage saves nothing until it comes
+        out, so pv1 reads 0.
+        """
+        return {"bat1": F(2, 25), "bat2": F(-1, 20)}
+
+    @expect("adapters_levelized_saving_rates_corrected")
+    def test_corrected(self):
+        """Corrected, bat1 saves less and bat2 pays pv1's corrected price.
+
+        bat1's LCOS doubles to 1/5: 0.4 × (3/10 − 1/5) = 1/25 EUR/h, not the
+        4/25 that doubling its saving would give. bat2 pays pv1's corrected
+        LCOE of 3/20: −0.5 × 3/20 = −3/40 EUR/h. Applying bat2's own factor
+        of 3 instead would have given −3/20.
+        """
+        return {"bat1": F(1, 25), "bat2": F(-3, 40)}
+
+    @expect("source_adapters_lcoo_rates_corrected")
+    def test_charging_cost(self):
+        """bat2's operating cost is its charging, at pv1's corrected price.
+
+        0.5 kW × 3/20 EUR/kWh = 3/40 EUR/h. The devices that only supply
+        energy draw nothing and cost nothing to run.
+        """
+        return {"bat2": F(3, 40)}
 
 
 class TestSavingsAreMeasuredWithoutTheDevice(Home):

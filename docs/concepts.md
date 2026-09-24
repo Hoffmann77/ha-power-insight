@@ -139,10 +139,27 @@ Power Insight solves this with a **correction factor**:
 correction_factor = current_lcoe / default_lcoe
 ```
 
-Because the factor is constant, multiplying a device's recorded base total by it
-**retroactively and exactly rescales** all its displayed levelized values to the
-new cost basis. When a device is removed, its final corrected contribution is
-frozen into a ledger so the combined totals never drop.
+Because the factor is constant, multiplying the recorded base totals by it
+**retroactively and exactly rescales** all the displayed levelized values to the
+new cost basis. A total that mixes energy from several devices — a battery
+charged from two PV systems, say — keeps a share per device, so each share is
+rescaled by its own device's factor.
+
+The correction reaches the device's **whole history** on purpose. LCOE and
+LCOS are lifetime averages, so a revised lifetime cost or production is the
+right price for energy already recorded too — whether the first estimate was
+off, a repair added to the cost, or the device produces less than expected.
+Two things follow:
+
+- **The long-term statistics show the correction as one step** in the hour you
+  made the edit; earlier statistics are not rewritten.
+- **Replaced hardware is a new device.** New panels or a new battery have a
+  lifetime of their own: add them as a new device and remove the old one
+  rather than editing its lifetime values.
+
+When a device is removed, its final corrected contribution is frozen into a
+ledger so the combined totals never drop, and its share in other devices'
+totals keeps its last factor.
 
 This is why the reconfigure page warns:
 

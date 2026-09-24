@@ -525,10 +525,42 @@ belongs on the `lcoe` inside the bracket, which is where the engine's
 
 The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
-factor is not merely misplaced there, it is unrelated.
+factor is not merely misplaced there, it is unrelated. A battery's factor
+scales its own `LCOS`, which prices its discharge; what it pays to charge is
+priced by the factors of the devices it charged from.
 
-Pinned by `TestCorrectionFactorScalesTheLcoe` in
+Pinned by `TestCorrectionFactorScalesTheLcoe` and
+`TestBatteryFactorScalesItsOwnLcosOnly` in
 `tests/engine/manual/test_savings.py`.
+
+:::
+
+:::note[Decision: a correction restates the device's whole history]
+
+Editing a device's lifetime cost or production re-prices every kWh it has
+ever recorded, not only the energy from the edit onward. An LCOE / LCOS is a
+lifetime average: whether the first estimate was wrong, a repair or a new
+inverter added to the lifetime cost, or degradation lowered the expected
+production, the revised figure is the right price for past energy too.
+Applying it only from now on would leave a mix of two averages, neither of
+which is the device's cost.
+
+Two consequences are accepted. The restatement reaches the long-term
+statistics as one step in the hour of the edit, because past statistics are
+not rewritten. And replaced hardware is not an edit: new panels or a new
+battery are a new asset with a lifetime of their own, so they are added as a
+new device and the old one removed, which freezes its totals into the
+retired ledger. There is no "replace hardware" action.
+
+The base the factor is measured against is set once and never re-based: a
+reconfigure that arrives without lifetime values keeps the stored base,
+current price and factor.
+
+Not pinned in the engine tier: the engine only ever sees the factor; its
+reach over history is in the sensor layer and the config flow. Covered by
+`tests/integration/test_correction_flow.py`
+(`test_an_edit_restates_the_whole_history` and
+`test_reconfigure_without_lifetime_values_keeps_the_base`).
 
 :::
 
@@ -547,11 +579,65 @@ every component keyed by a real adapter instead of needing a sentinel.
 
 Totals accumulated before the breakdown existed restore without one. They
 are carried through unscaled: there is no attribution left to correct them
-by, and inventing one would be worse than leaving them at face value.
+by, and inventing one would be worse than leaving them at face value. That
+includes scaling them by the device's own factor, which would move a saving
+the wrong way and would jump back the moment the first component
+accumulated. A total seeded with `set_value` is the same: the seed replaces
+the history and its breakdown, and reads exactly what was set.
 
 Not pinned in the engine tier: the accumulation happens in the sensor layer.
 Covered by `tests/integration/test_correction_flow.py`
-(`test_stored_data_round_trips_the_component_breakdown` and its neighbour).
+(`test_stored_data_round_trips_the_component_breakdown` and its neighbour,
+`test_a_total_restored_without_a_breakdown_stays_at_face_value` and
+`test_a_seeded_total_reads_exactly_what_was_set`).
+
+:::
+
+:::note[Decision: a removed device's correction is final]
+
+A battery's or consumer's total holds a component for every device that
+supplied it. When one of those devices is removed, its component keeps the
+last correction factor it had, so its share of the history stays as it was
+displayed. That is the same rule as the device's own totals, which are
+frozen, corrected, into the retired ledger: a removed device can never be
+edited again, so its last factor cannot become wrong.
+
+The alternative, falling back to `1.0`, would re-price the removed device's
+share at its original lifetime cost. The battery's total and the combined
+total would drop at the moment of the removal, and the long-term statistics
+would record that as a real change, while the device's own frozen totals
+still carried the correction.
+
+Each accumulating sensor stores the last factor it saw for every component,
+next to the components. It is written when the sensor is removed for the
+reload that follows the device's removal, while the engine still holds the
+device. A retired-ledger entry would not do: one is only written when the
+removed device had an enabled levelized total with a value.
+
+Not pinned in the engine tier: the factors are stored in the sensor layer.
+Covered by `tests/integration/test_correction_flow.py`
+(`test_removing_a_source_keeps_its_share_corrected`).
+
+:::
+
+:::note[Decision: CO₂ is not corrected until something publishes it]
+
+Editing a device's lifetime production restates its LCOE / LCOS through the
+correction factor, but not its CO₂ intensity: that stays at the value
+computed from the footprint and production entered at setup, and the
+footprint cannot be edited afterwards. Nothing depends on it yet — no sensor
+publishes a CO₂ figure, so there is no number a user could see go stale.
+
+Building a CO₂ correction now would mean a second factor, a second set of
+components in every accumulating sensor and a reconfigurable footprint, all
+for values nobody reads. It is deferred to the CO₂ sensors themselves, which
+must then follow the same rules as cost: a lifetime edit restates the
+intensity by its own factor (current over the one set up with), the factor
+multiplies the intensity and never a finished number, accumulated totals
+keep a per-device breakdown, and a removed device's factor is final.
+
+Not pinned in the engine tier: no CO₂ property is catalogued, because none
+is published.
 
 :::
 

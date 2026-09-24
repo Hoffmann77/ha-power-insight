@@ -489,3 +489,126 @@ def test_the_books_balance() -> None:
         return problems
 
     check("The books must balance.", HOMES, compare)
+
+
+# ---------------------------------------------------------------------------
+# Corrections: a factor is a restated lifetime cost.
+# ---------------------------------------------------------------------------
+
+#: Every corrected property, and the property it restates. The combined
+#: twins are not catalogued themselves — no sensor shows them uncorrected.
+CORRECTED = {
+    name: name.removesuffix("_corrected")
+    for name in PROPERTIES
+    if name.endswith("_corrected")
+}
+
+#: Each ``*_components`` family, and the uncorrected property it splits.
+COMPONENTS = {
+    "source_adapters_lcoo_rate_components": "source_adapters_lcoo_rates",
+    "sink_adapters_lcoo_rate_components": "sink_adapters_lcoo_rates",
+    "adapters_levelized_saving_rate_components": "adapters_levelized_saving_rates",
+    "adapters_levelized_financial_return_rate_components":
+        "adapters_levelized_financial_return_rates",
+}
+
+
+def factors(home: Home) -> dict[str, float]:
+    """Each PV system's and battery's correction factor; the grid's is 1."""
+    return {
+        a.uid: a.config["correction_factor"]
+        for a in home.adapters
+        if a.kind in ("pv", "battery")
+    }
+
+
+def restated(home: Home) -> Home:
+    """``home`` with every factor folded into the lifetime cost it corrects."""
+    adapters = []
+    for a in home.adapters:
+        if a.kind in ("pv", "battery"):
+            price = "lcoe" if a.kind == "pv" else "lcos"
+            a = with_config(
+                a,
+                **{price: a.config[price] * a.config["correction_factor"]},
+                correction_factor=1.0,
+            )
+        adapters.append(a)
+    return replace(home, adapters=tuple(adapters))
+
+
+def uncorrected(home: Home) -> Home:
+    """``home`` with every lifetime cost as it was entered."""
+    return replace(home, adapters=tuple(
+        with_config(a, correction_factor=1.0) if a.kind in ("pv", "battery") else a
+        for a in home.adapters
+    ))
+
+
+def test_a_correction_is_a_restated_lifetime_cost() -> None:
+    """A device corrected by ``k`` is the same device with its LCOE / LCOS
+    times ``k``: every corrected result equals the uncorrected one of that
+    restated home. And the factor reaches nothing else — every other result is
+    what the home reads with no corrections at all."""
+    assert any(any(k != 1.0 for k in factors(h).values()) for h in HOMES), (
+        "no random home has a correction factor to check"
+    )
+
+    def compare(home: Home) -> list[str]:
+        engine, restated_engine = home.engine(), restated(home).engine()
+        expected = {
+            name: getattr(restated_engine, twin) for name, twin in CORRECTED.items()
+        }
+        actual = {name: getattr(engine, name) for name in CORRECTED}
+        plain = {name: v for name, v in results(uncorrected(home)).items()
+                 if name not in CORRECTED}
+        return differences(expected, actual) + differences(
+            plain, {name: getattr(engine, name) for name in plain}
+        )
+
+    check("A correction must restate the lifetime cost, and nothing else.",
+          HOMES, compare)
+
+
+def test_the_components_add_up_to_the_total_before_and_after_correction() -> None:
+    """Every ``*_components`` row splits a device's rate by whose factor scales
+    each part: the parts add up to the uncorrected rate, and each part times
+    its own device's factor (the grid's is 1) adds up to the rate the restated
+    home reads. That is what lets an accumulated total be corrected long after
+    the fact."""
+
+    def compare(home: Home) -> list[str]:
+        engine, restated_engine = home.engine(), restated(home).engine()
+        k = factors(home)
+        problems = []
+        for family, base in COMPONENTS.items():
+            rows = getattr(engine, family)
+            plain, corrected = getattr(engine, base), getattr(restated_engine, base)
+            if rows is None:
+                if plain is not None:
+                    problems.append(f"{family} is None but {base} is {show(plain)}")
+                continue
+            for uid, parts in rows.items():
+                if parts is None:
+                    if plain.get(uid) is not None:
+                        problems.append(f"{family}[{uid}] is None, {base} is not")
+                    continue
+                unknown = set(parts) - {"grid", *k}
+                if unknown:
+                    problems.append(f"{family}[{uid}] names no device: {sorted(unknown)}")
+                    continue
+                summed = sum(parts.values())
+                weighted = sum(v * k.get(key, 1.0) for key, v in parts.items())
+                if not matches(plain.get(uid, 0.0), summed, abs_tol=ABS_TOL):
+                    problems.append(
+                        f"{family}[{uid}] sums to {show(summed)}, "
+                        f"{base} is {show(plain.get(uid))}"
+                    )
+                if not matches(corrected.get(uid, 0.0), weighted, abs_tol=ABS_TOL):
+                    problems.append(
+                        f"{family}[{uid}] × factors is {show(weighted)}, "
+                        f"corrected {base} is {show(corrected.get(uid))}"
+                    )
+        return problems
+
+    check("The components must add up, before and after correction.", HOMES, compare)

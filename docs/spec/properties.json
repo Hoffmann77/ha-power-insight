@@ -423,6 +423,16 @@
         "Sum them."
       ]
     },
+    "combined_lcoe_rate_corrected": {
+      "title": "Levelized cost of electricity rate, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "As the levelized cost of electricity rate, with every local source at its corrected LCOE / LCOS. Corrected: each device's lifetime cost as last edited. A device's correction factor is its current levelized cost over the one it was set up with, and it multiplies that device's LCOE / LCOS; the grid tariff never scales.",
+      "formula": "combined_lcoe_rate_corrected = Σ (output(source) / 1000) × price(source) × factor(source), where the grid's factor is 1",
+      "depends_on": ["gross_power", "combined_lcoe_rate"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Repeat the levelized cost derivation with each local source's LCOE / LCOS multiplied by its correction factor."]
+    },
 
     "combined_avoided_cost_rate": {
       "title": "Avoided cost rate",
@@ -560,6 +570,17 @@
         "Repeat the operating-cost derivation, substituting each source's levelized price.",
         "The grid keeps its tariff; a PV system costs its LCOE and a discharging battery its LCOS."
       ]
+    },
+    "source_adapters_lcoo_rates_corrected": {
+      "title": "Levelized operating cost rate per device, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "As the levelized operating cost rate per device, with every supplying source at its corrected levelized price. A charging battery is priced by the factors of the devices it charges from, never by its own. Corrected: each device's lifetime cost as last edited. A device's correction factor is its current levelized cost over the one it was set up with, and it multiplies that device's LCOE / LCOS; the grid tariff never scales.",
+      "formula": null,
+      "depends_on": ["source_adapters_lcoo_rates"],
+      "answer_shape": "map_fixed_keys",
+      "keys": "devices",
+      "derivation_steps": ["Repeat the levelized operating-cost derivation, multiplying each supplying source's levelized price by that source's correction factor."]
     },
 
     "sink_adapters_coo_rates": {
@@ -712,6 +733,16 @@
         "Price each part at that source's levelized price and add them up."
       ]
     },
+    "combined_lcoo_rate_corrected": {
+      "title": "Levelized charging cost rate, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What the watts charged into storage cost per hour, priced at each supplying source's corrected levelized price. Corrected: each device's lifetime cost as last edited. A device's correction factor is its current levelized cost over the one it was set up with, and it multiplies that device's LCOE / LCOS; the grid tariff never scales.",
+      "formula": null,
+      "depends_on": ["sink_adapters_source_shares", "source_adapters_dynamic_lcoe"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Take the watts in the charging channel, split by the source that supplied each one.", "Price each part at that source's levelized price times its correction factor and add them up."]
+    },
 
     "combined_device_operating_cost_rate": {
       "title": "Device operating cost rate",
@@ -723,6 +754,16 @@
       "answer_shape": "scalar",
       "derivation_steps": ["Add up the per-device operating cost rates."],
       "note": "This is the *device* view. The channel view is the charging cost rate, which counts charging alone; the two agree whenever nothing is in standby."
+    },
+    "combined_levelized_device_operating_cost_rate_corrected": {
+      "title": "Levelized device operating cost rate, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What running the PV and battery hardware itself costs per hour at corrected levelized prices: every device's own draw — charging plus PV standby — summed.",
+      "formula": "combined_levelized_device_operating_cost_rate_corrected = Σ source_adapters_lcoo_rates_corrected",
+      "depends_on": ["source_adapters_lcoo_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized operating cost rates."]
     },
 
     "adapters_saving_rates": {
@@ -753,6 +794,27 @@
       "keys": "devices",
       "derivation_steps": ["Repeat the saving derivation with levelized prices in place of marginal ones."]
     },
+    "adapters_levelized_saving_rates_corrected": {
+      "title": "Levelized cost saving rate per device, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "As the levelized cost saving rate per device, with every levelized price corrected. The factor raises the price inside the saving, so a dearer lifetime cost saves less — it never scales the finished saving. Corrected: each device's lifetime cost as last edited. A device's correction factor is its current levelized cost over the one it was set up with, and it multiplies that device's LCOE / LCOS; the grid tariff never scales.",
+      "formula": null,
+      "depends_on": ["adapters_levelized_saving_rates", "source_adapters_lcoo_rates_corrected"],
+      "answer_shape": "map_fixed_keys",
+      "keys": "devices",
+      "derivation_steps": ["Repeat the levelized saving derivation with each device's LCOE / LCOS multiplied by its correction factor.", "A drawing device's saving is minus its corrected operating cost."]
+    },
+    "combined_levelized_saving_rate_corrected": {
+      "title": "Levelized cost saving rate, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What the whole installation saves per hour at corrected levelized prices: every device's corrected levelized saving, summed.",
+      "formula": "combined_levelized_saving_rate_corrected = Σ adapters_levelized_saving_rates_corrected",
+      "depends_on": ["adapters_levelized_saving_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized saving rates."]
+    },
 
     "adapters_financial_return_rates": {
       "title": "Financial return rate per device",
@@ -780,6 +842,17 @@
         "Subtract its exported kW times its own levelized price."
       ]
     },
+    "adapters_levelized_financial_return_rates_corrected": {
+      "title": "Levelized financial return rate per device, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "As the levelized financial return rate per device, with every levelized price corrected. Corrected: each device's lifetime cost as last edited. A device's correction factor is its current levelized cost over the one it was set up with, and it multiplies that device's LCOE / LCOS; the grid tariff never scales.",
+      "formula": null,
+      "depends_on": ["adapters_levelized_saving_rates_corrected", "source_adapters_export_compensation_rates"],
+      "answer_shape": "map_fixed_keys",
+      "keys": "devices",
+      "derivation_steps": ["Start from the device's corrected levelized saving rate and add its export compensation.", "Subtract its exported kW times its own levelized price times its correction factor."]
+    },
 
     "combined_financial_return_rate": {
       "title": "Financial return rate",
@@ -790,6 +863,16 @@
       "depends_on": ["adapters_financial_return_rates"],
       "answer_shape": "scalar",
       "derivation_steps": ["Add up the per-device financial return rates."]
+    },
+    "combined_levelized_financial_return_rate_corrected": {
+      "title": "Levelized financial return rate, corrected",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What the whole installation is worth per hour at corrected levelized prices: every device's corrected levelized financial return, summed.",
+      "formula": "combined_levelized_financial_return_rate_corrected = Σ adapters_levelized_financial_return_rates_corrected",
+      "depends_on": ["adapters_levelized_financial_return_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized financial return rates."]
     }
   }
 }

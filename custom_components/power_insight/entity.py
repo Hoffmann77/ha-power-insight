@@ -257,6 +257,9 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
     #: ``None`` for a total accumulated before the split existed, which can
     #: therefore no longer be corrected — see the class docstring.
     component_totals: dict[str, Decimal] | None = None
+    #: The last correction factor seen for each component's adapter, so a part
+    #: whose adapter has since been removed keeps the factor it had then.
+    component_factors: dict[str, float] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """Serialise to a JSON-compatible dict."""
@@ -267,6 +270,10 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
         data["component_totals"] = (
             {key: str(value) for key, value in self.component_totals.items()}
             if self.component_totals is not None else None
+        )
+        data["component_factors"] = (
+            dict(self.component_factors)
+            if self.component_factors is not None else None
         )
         return data
 
@@ -301,11 +308,23 @@ class IntegrationSensorExtraStoredData(SensorExtraStoredData):
                 _LOGGER.error("Could not restore component_totals — value corrupted")
                 component_totals = None
 
+        component_factors: dict[str, float] | None = None
+        raw_factors = restored.get("component_factors")
+        if isinstance(raw_factors, dict):
+            try:
+                component_factors = {
+                    key: float(value) for key, value in raw_factors.items()
+                }
+            except (TypeError, ValueError):
+                _LOGGER.error("Could not restore component_factors — value corrupted")
+                component_factors = None
+
         return cls(
             extra.native_value,
             extra.native_unit_of_measurement,
             last_valid_state,
             component_totals,
+            component_factors,
         )
 
 
@@ -395,6 +414,9 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         # The running total split by correction target; parallel to _state and
         # summing to it. Empty until the first step with a breakdown available.
         self._component_totals: dict[str, Decimal] = {}
+        # The last correction factor seen per component key, as restored; a
+        # subclass that corrects its display keeps it current.
+        self._component_factors: dict[str, float] = {}
 
         # Left-endpoint anchor: the integration_value at the end of the
         # previous interval.  None until the first event is received.
@@ -570,6 +592,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             self._attr_native_value = last_sensor_data.native_value
             self._last_valid_state = last_sensor_data.last_valid_state
             self._component_totals = dict(last_sensor_data.component_totals or {})
+            self._component_factors = dict(last_sensor_data.component_factors or {})
             _LOGGER.debug(
                 "Restored state=%s last_valid_state=%s",
                 self._state, self._last_valid_state,
@@ -672,9 +695,15 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         Lets the user set an accumulated sensor to a known starting figure —
         e.g. to carry over historical totals when adopting the integration.
         The new total persists across restarts via the existing restore path.
+
+        The seeded figure replaces the history, so its breakdown goes too: the
+        total then reads exactly *value*, which a later correction leaves at
+        face value, like any total with no attribution to correct it by.
         """
         self._state = Decimal(str(value))
         self._last_valid_state = self._state
+        self._component_totals = {}
+        self._component_factors = {}
         self.async_write_ha_state()
 
     @property
@@ -685,6 +714,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             self.native_unit_of_measurement,
             self._last_valid_state,
             dict(self._component_totals) or None,
+            dict(self._component_factors) or None,
         )
 
     async def async_get_last_sensor_data(
