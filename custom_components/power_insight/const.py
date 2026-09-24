@@ -75,6 +75,12 @@ SOURCE_MODE_DEVICE_FIELD = {
     "battery": CONF_CHARGE_FROM_ADAPTERS,
     "consumer": CONF_POWER_FROM_ADAPTERS,
 }
+#: adapter_type -> the device kinds its source restriction may name. A battery
+#: never charges from a battery; a consumer may run on battery discharge.
+SOURCE_ADAPTER_TYPES = {
+    "battery": ("grid", "pv_system"),
+    "consumer": ("grid", "pv_system", "battery"),
+}
 
 
 

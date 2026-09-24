@@ -46,6 +46,7 @@ from .const import (
     CONF_SOURCE_MODE,
     SOURCE_MODE_MIX,
     SOURCE_MODE_DEVICES,
+    SOURCE_ADAPTER_TYPES,
     SOURCE_MODE_DEVICE_FIELD,
     CONF_ENABLE_DEBUG_ENTITIES,
     CONF_ENABLE_DISTRIBUTION_POWER,
@@ -232,17 +233,18 @@ def apply_source_mode(
 def _build_power_source_selector(
     entry: ConfigEntry,
     exclude_subentry_id: str | None = None,
+    source_types: tuple[str, ...] = SOURCE_ADAPTER_TYPES["battery"],
 ) -> selector.SelectSelector:
     """Build the dynamic multi-select selector for a power-source restriction.
 
-    Shared by ``build_schema`` when resolving ``AdapterField.selector_fn`` for
-    both the battery ``CONF_CHARGE_FROM_ADAPTERS`` and the consumer
-    ``CONF_POWER_FROM_ADAPTERS`` fields — the selectable sources are identical:
-    the grid adapter (if configured) followed by all PV-system adapters.
+    Shared by the battery ``CONF_CHARGE_FROM_ADAPTERS`` and the consumer
+    ``CONF_POWER_FROM_ADAPTERS`` fields: the grid adapter (if configured),
+    then the PV-system adapters, then — where *source_types* allows it — the
+    batteries.
     """
     options: list[selector.SelectOptionDict] = []
 
-    # Include the grid adapter as a selectable charge source.
+    # Include the grid adapter as a selectable source.
     for subentry in entry.subentries.values():
         if exclude_subentry_id and subentry.subentry_id == exclude_subentry_id:
             continue
@@ -260,12 +262,35 @@ def _build_power_source_selector(
         _get_pv_adapter_options(entry, exclude_subentry_id=exclude_subentry_id)
     )
 
+    # Include batteries (discharge) where the restriction may name them.
+    if "battery" in source_types:
+        for subentry in entry.subentries.values():
+            if exclude_subentry_id and subentry.subentry_id == exclude_subentry_id:
+                continue
+            if subentry.data.get("adapter", {}).get("adapter_type") == "battery":
+                options.append(
+                    selector.SelectOptionDict(
+                        value=subentry.subentry_id,
+                        label=subentry.title,
+                    )
+                )
+
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=options,
             multiple=True,
             mode=selector.SelectSelectorMode.LIST,
         )
+    )
+
+
+def _build_consumer_source_selector(
+    entry: ConfigEntry,
+    exclude_subentry_id: str | None = None,
+) -> selector.SelectSelector:
+    """Power-source selector for a consumer: grid, PV systems and batteries."""
+    return _build_power_source_selector(
+        entry, exclude_subentry_id, SOURCE_ADAPTER_TYPES["consumer"]
     )
 
 
@@ -1295,7 +1320,7 @@ CONSUMER_FIELDS: dict[str, AdapterField] = {
     # smart plug set to run only on excess solar). Mirrors the battery's
     # charge_from field; empty (the "whole mix" mode) draws from the general mix.
     CONF_POWER_FROM_ADAPTERS: AdapterField(
-        selector_fn=_build_power_source_selector,
+        selector_fn=_build_consumer_source_selector,
         required=False,
         default=[],
         in_config_flow=True,
@@ -1991,12 +2016,12 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
         # For the power-source restriction fields (battery charge_from,
         # consumer power_from), strip stale subentry IDs before seeding so the
-        # selector is pre-populated with only currently valid selections. Valid
-        # sources are grid and pv_system adapters.
+        # selector is pre-populated with only currently valid selections.
+        valid_types = SOURCE_ADAPTER_TYPES.get(self._adapter_type, ())
         valid_source_ids = {
             sub.subentry_id
             for sub in parent_entry.subentries.values()
-            if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
+            if sub.data.get("adapter", {}).get("adapter_type") in valid_types
         }
         for source_field in (CONF_CHARGE_FROM_ADAPTERS, CONF_POWER_FROM_ADAPTERS):
             if source_field in seed:

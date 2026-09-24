@@ -521,6 +521,41 @@ async def test_subentry_consumer_form_offers_source_mode(
     assert _schema_field(result, "source_mode").default() == "mix"
 
 
+async def test_subentry_consumer_can_be_powered_from_a_battery(
+    hass: HomeAssistant,
+) -> None:
+    """A consumer may name a battery as its source; a battery may not.
+
+    A discharging battery is a source like any other, so a consumer's
+    'Powered by' list offers it next to the grid and the PV systems. A
+    battery's 'Charges from' list stays grid and PV only.
+    """
+    entry = _consumer_source_entry(hass, make_battery_subentry_data())
+
+    result = await _start_consumer_flow(hass, entry)
+    field = _schema_field(result, "power_from_adapters")
+    offered = [o["value"] for o in result["data_schema"].schema[field].config["options"]]
+    assert offered == [GRID_SUB_ID, PV_SUB_ID, BAT_SUB_ID]
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_consumer_config_input(
+            source_mode="devices", power_from_adapters=[BAT_SUB_ID]
+        ),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["config"]["power_from_adapters"] == [BAT_SUB_ID]
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": BAT_SUB_ID},
+    )
+    field = _schema_field(result, "charge_from_adapters")
+    offered = [o["value"] for o in result["data_schema"].schema[field].config["options"]]
+    assert BAT_SUB_ID not in offered
+
+
 async def test_subentry_consumer_specific_mode_requires_a_source(
     hass: HomeAssistant,
 ) -> None:
