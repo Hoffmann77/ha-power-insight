@@ -35,7 +35,7 @@ Tests are split into two tiers by dependency group: `tests/engine/` (pure Python
 
 ```
 HA state_changed/state_reported event
-  → EventHandler._update_on_state_change()
+  → EventHandler._update()
       → PowerInsight.set_value(entity_id, value)   # stores raw W value
       → async_dispatcher_send(source_signal(entry_id, entity_id), timestamp)
           → BaseEventSensorEntity.async_write_ha_state()
