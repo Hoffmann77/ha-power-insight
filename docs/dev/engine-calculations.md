@@ -18,7 +18,10 @@ worked example where the arithmetic is not obvious.
   power into a `FlowRole` (`SOURCE`, `SINK`, `IDLE`, `UNKNOWN`). A battery is a
   source while discharging and a sink while charging; PV is a source while
   producing and a sink while drawing standby; a consumer is always a sink (a
-  positive reading is reported `IDLE`, never `SOURCE`).
+  positive reading is reported `IDLE`, never `SOURCE`). A reading of exactly
+  0 W is `IDLE`, in neither group. Pinned by
+  `TestIdleAdapterIsInNoFlowGroup` and `TestPvStandbyIsAnUnrestrictedSink` in
+  `tests/engine/manual/test_flow_roles.py`.
 - **Grid as the balancing node.** The grid keeps its own group (`grid_adapters`)
   and is folded into `source_adapters` / `sink_adapters` direction-aware — it
   joins the sources only while importing and the sinks only while exporting — so
@@ -38,8 +41,9 @@ consumer sensor dropping out does **not** invalidate it (consumers are not
 sources). Everything gated on `gross_power` (the share vectors, the source
 provenance) then propagates `None` / `{}` rather than a wrong number.
 
-Pinned by `TestEdgeReadings` in `tests/engine/manual/test_edge_readings.py`
-(an unavailable meter, and a consumer dropping out).
+Pinned by `TestUnavailableMeterPublishesNothing` and
+`TestUnavailableConsumerKeepsGrossPower` in
+`tests/engine/manual/test_edge_readings.py`.
 
 :::
 
@@ -47,7 +51,9 @@ Pinned by `TestEdgeReadings` in `tests/engine/manual/test_edge_readings.py`
 need **not** sum to 1 — the remainder up to 1 is the **unmetered home base
 load** (everything the metered sinks don't account for). Both guard the
 zero-gross case (a pure-export snapshot where `gross_power == 0`) by returning
-zeros instead of dividing by zero.
+zeros instead of dividing by zero. Pinned by
+`TestZeroGrossPowerGuardsEveryRatio` in
+`tests/engine/manual/test_edge_readings.py`.
 
 ## Source provenance: `sink_adapters_source_shares`
 
@@ -89,7 +95,8 @@ so it is split off and solved on its own before anything flexible can take
 supply it needed. `_exact_reserves` asks the group question per pairing, by
 deleting one pairing and re-running the flow.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+Pinned by `TestFeasibilityIsDecidedForGroups` in
+`tests/engine/manual/test_feasibility.py`.
 
 :::
 
@@ -107,10 +114,13 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
-All three are pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`
-— rule 2's "same row" guarantee as a strict expected failure: when the draws
-exactly exhaust the sources, the engine hands a large sink its reserve first
-and the rows diverge (a 100 W and a 300 W load on the same two PV systems read
+All three are pinned in `tests/engine/manual/test_allocation_rules.py`:
+rules 1 and 2 by `TestTheGridGoesFirst`, rule 3 by
+`TestRestrictedSinksAreServedFirst` (and, in `test_flow_roles.py`, by
+`TestPvStandbyIsAnUnrestrictedSink`), and rule 2's "same row" guarantee by
+`TestSameRestrictionGetsTheSameRow`, as a strict expected failure: when the
+draws exactly exhaust the sources, the engine hands a large sink its reserve
+first and the rows diverge (a 100 W and a 300 W load on the same two PV systems read
 9/13 and 10/13 on pv1 instead of 3/4 each).
 
 :::note[Decision: a sink splits over what is *left*, not over total output]
@@ -127,7 +137,8 @@ output would give. Weighting by total output would let a flexible sink
 take supply a captive one still needed, which is the same starvation
 `_tight_set` exists to prevent.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+Pinned by `TestASinkSplitsOverWhatIsLeft` in
+`tests/engine/manual/test_allocation_rules.py`.
 
 :::
 
@@ -138,7 +149,8 @@ a battery to take *more* grid than the proportional split would have given
 it. When that happens the rules give way — they only ever choose among
 allocations that already work.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+Pinned by `TestFeasibilityOutranksTheRules` in
+`tests/engine/manual/test_feasibility.py`.
 
 :::
 
@@ -158,7 +170,9 @@ sources are **all idle** is the one exception — it collapses to an all-zeros
 row rather than being forced onto sources the user excluded, and its whole
 draw is reported as the deficit.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`.
+Pinned by `TestBrokenRestrictionIsReported` and
+`TestSinkWithOnlyIdleSourcesGetsZeros` in
+`tests/engine/manual/test_restrictions.py`.
 
 :::
 
@@ -188,7 +202,8 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`. Shown in
+Pinned by `TestTheSinkWithSomewhereElseToGoYields` in
+`tests/engine/manual/test_restrictions.py`. Shown in
 [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 
 :::
@@ -210,7 +225,8 @@ the plug was then shown drawing from that third system, with a deficit. Merge
 east and west into one system and it did not happen, because the plug's need
 then lands on that one system as a reserve.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py`; shown in
+Pinned by `TestReservesAreNeverScaledAway` in
+`tests/engine/manual/test_feasibility.py`; shown in
 [`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx).
 
 :::
@@ -264,7 +280,7 @@ because the four channels are the only cost split that conserves:
 and likewise for the marginal (`coe`) variants. Every watt of gross power
 is bought once and lands in exactly one channel.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestChannelCostsAreTheLedger` in `tests/engine/manual/test_costs.py`.
 
 :::
 
@@ -301,7 +317,7 @@ accumulated history does not carry over. The integration is still in
 development, so no repair issue is raised for it. CON, STB and EXP are new
 quantities and start from zero.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestOperatingCostHasTwoViews` in `tests/engine/manual/test_costs.py`.
 
 :::
 
@@ -321,7 +337,9 @@ over a full cycle: charge `−(kWh × mix price)`, discharge
 `+(kWh × (grid − LCOS))`, and round-trip losses show up honestly as the
 difference between the two energies.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestBatteryPaysWhenItCharges` and
+`TestBatteryDischargeSavesTheFullTariff` in
+`tests/engine/manual/test_battery_pricing.py`.
 
 :::
 
@@ -348,7 +366,8 @@ the CON channel come to the same number:
 `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
 **Never add the two sides together** — that double counts every saved euro.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestConsumersGetAnAvoidedCost` in
+`tests/engine/manual/test_savings.py`.
 
 :::
 
@@ -369,7 +388,8 @@ The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
 factor is not merely misplaced there, it is unrelated.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestCorrectionFactorScalesTheLcoe` in
+`tests/engine/manual/test_savings.py`.
 
 :::
 
@@ -411,7 +431,8 @@ device name — which is exactly why the solver's internal sentinel is
 `"\x00home"`. Dedicated properties are collision-proof and make the
 duality invariant above explicit rather than hidden in a magic key.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestBaseLoadHasItsOwnProperties` in
+`tests/engine/manual/test_savings.py`.
 
 :::
 
@@ -434,7 +455,8 @@ an unrestricted battery undefined entirely. Tracking a true running average
 cost of stored energy is a stateful feature, deliberately deferred; nothing
 in the savings ledger depends on it, because discharge is valued at `LCOS`.
 
-Pinned by `TestMoney` in `tests/engine/manual/test_money.py`.
+Pinned by `TestDischargePriceIsTheFlatLcos` in
+`tests/engine/manual/test_battery_pricing.py`.
 
 :::
 
@@ -462,8 +484,9 @@ restriction and reports the amount through
 `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
 charging off the grid does.
 
-Pinned by `TestPowerFlow` in `tests/engine/manual/test_power_flow.py` (an
-export that exporters can cover takes only exporters).
+Pinned by `TestExportIsRestrictedToExporters` in
+`tests/engine/manual/test_restrictions.py` (an export that exporters can cover
+takes only exporters).
 
 :::
 
@@ -498,26 +521,27 @@ surplus.
 
 ## How the tests pin this down
 
-The engine tests use the source-order scenario framework (see
+The decisions are pinned by hand-written harnesses (see
 [the tests README](https://github.com/Hoffmann77/ha-power-insight/blob/main/tests/README.md)).
 Expected values are **hand-derived from first principles**, not read back from
 the engine, so a regression in the model flips a test red rather than silently
 rewriting the "expected" answer.
 
 Every decision on this page gets an explicit harness in `tests/engine/manual/`:
-one block per decision, the smallest wiring that tells it apart from its
-alternatives, with values derived by hand from the decision. Each note ends
-with where it is pinned — `Pinned by `TestX` in …` — or, after `Not pinned in
-the engine tier:`, why it cannot be and what covers it instead.
+one class per decision, declaring the smallest home that tells it apart from
+its alternatives, with values derived by hand from the decision. Each note
+ends with where it is pinned — `Pinned by `TestX` in …` — or, after `Not
+pinned in the engine tier:`, why it cannot be and what covers it instead.
 `tests/engine/manual/test_decisions.py` fails when a note has neither, when it
-names a class that does not exist, or when a block does not say which decision
-it pins. So adding a decision here means adding its block there.
+names a class that does not exist, when a class is named nowhere on this page,
+or when a class's docstring does not open with the decision it pins. So adding
+a decision here means adding its class there.
 
 **Approximation policy.** Write a hand-derived value as an exact fraction
 (`F(8, 13)`, not `0.615`); it is compared at `pytest.approx`'s default relative
 tolerance of `1e-6`, so it pins the engine to the value rather than to a
-rounding of it. Pass `abs_tol` to `expect_attribute` only when a value really
-must be written rounded.
+rounding of it. Pass `abs_tol` to `@expect` only when a value really must be
+written rounded.
 
 The reference cases in the docs are not tests of this kind: they show what the
 engine computes for fixed readings, and are recomputed whenever it changes.

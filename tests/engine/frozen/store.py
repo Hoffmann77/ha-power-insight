@@ -6,7 +6,7 @@ A commit that moves any of those outputs fails ``test_frozen.py`` with a list
 of exactly which outputs moved in which home. If the change is intended, the
 contributor re-freezes (``uv run --group engine python tools/snapshot.py``) and
 the PR diff shows the moved outputs for review. If the change reveals a
-modelling decision, that decision gets a hand-derived block in
+modelling decision, that decision gets a hand-derived class in
 ``tests/engine/manual/``.
 
 Two corpora are frozen, one file each under ``snapshots/``:
