@@ -1,7 +1,11 @@
 name: Validate with HACS
 
+# Pushes only on main: pull requests are validated through `pull_request`, and
+# validating their pushes too would run the check twice.
 on:
-  push: 
+  push:
+    branches:
+      - main
   pull_request:
   schedule:
     - cron: "0 0 * * *"
