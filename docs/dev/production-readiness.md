@@ -109,7 +109,9 @@ Booking at charge time already makes savings exact over a full cycle; only a
 ### E. CO₂ — kept as is
 
 The config flow keeps collecting the CO₂ entities and footprints; the engine
-still computes no CO₂ result.
+still computes no CO₂ result. When CO₂ sensors are built, they follow the
+correction rules for cost (decision "CO₂ is not corrected until something
+publishes it").
 
 ### Already settled elsewhere
 
@@ -118,30 +120,35 @@ The open questions in
 1–5 were answered by the max-flow solver, 6 (hard restrictions) and 7 (grid
 first) are decisions in the log.
 
-### 3. Correction factors — parked
+### 3. Correction factors — done, one question open
 
-For a separate session. Findings so far: over the random homes with factors on
-both PV systems and batteries, every `*_corrected` property equals the same
-snapshot recomputed with each device's LCOE / LCOS times its factor, the
-components times their factors sum to the corrected value, and no uncorrected
-property moves when factors change — so the engine is consistent. Missing is
-the promise and its tests: the `*_corrected` and `*_components` families are
-not catalogued, the harness's `Adapter.battery` ignores `correction_factor`,
-and no manual class pins a battery's factor.
+The engine was already consistent; what was missing was the promise and its
+tests. Now:
 
-Settled: a removed device's share of another device's total keeps its last
-factor instead of falling back to `1.0` (decision "a removed device's
-correction is final"). Clearing the lifetime fields cannot re-base the
-correction today: the reconfigure form seeds them as defaults, so an emptied
-field is refilled, and the selectors reject `0`. The `depends_on` branch of
-`calculate_fields` would still wipe `default_lcoe` if a falsy value ever got
-through, so it wants a guard.
+- The harness's battery takes a `correction_factor`, and
+  `TestBatteryFactorScalesItsOwnLcosOnly` pins that a battery's factor prices
+  its discharge while its charging follows its sources' factors.
+- The eight `*_corrected` properties are catalogued, each with an identity,
+  and so frozen. Two laws hold over the random homes, which now carry
+  factors: a correction is a restated lifetime cost and moves nothing else,
+  and every `*_components` row adds up before and after correction.
+- The sensor layer: a removed device's share of another device's total keeps
+  its last factor ("a removed device's correction is final"); a total with no
+  breakdown, restored or seeded with `set_value`, reads at face value.
+- CO₂ is deliberately uncorrected until something publishes it ("CO₂ is not
+  corrected until something publishes it").
+- Clearing the lifetime fields cannot re-base the correction: the reconfigure
+  form seeds them as defaults, so an emptied field is refilled, and the
+  selectors reject `0`.
 
-Still open: whether a correction reaches the whole history (and replaced
-hardware is a new device); a total restored without a breakdown is scaled by
-the device's own factor until its first component accumulates, then carried
-unscaled; and editing `lifetime_production` corrects the cost but not the CO₂
-intensity.
+Still open:
+
+- **How far back a correction reaches.** Today an edit restates the device's
+  whole history, and the field's help text says so. Whether that is the
+  promise — and so whether replaced hardware must be added as a new device
+  rather than edited in place — is still to be discussed.
+- The `depends_on` branch of `calculate_fields` would wipe `default_lcoe` if
+  a falsy lifetime value ever got past the form; it wants a guard.
 
 ## Home Assistant layer
 
@@ -170,5 +177,6 @@ intensity.
    after a release), then H1/H2, H3, H4, H5, H9, H10, H11, H12, and the
    `metering_imbalance` sensor and repair issue.
 
-Parked for later sessions: item 3 (correction factors), H6 (dispatcher
-signal), decision D, and the age-weighted refinement of item 2.
+Parked for later sessions: the open question in item 3 (how far back a
+correction reaches), H6 (dispatcher signal), decision D, and the age-weighted
+refinement of item 2.

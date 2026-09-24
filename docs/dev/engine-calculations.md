@@ -591,6 +591,27 @@ Covered by `tests/integration/test_correction_flow.py`
 
 :::
 
+:::note[Decision: CO₂ is not corrected until something publishes it]
+
+Editing a device's lifetime production restates its LCOE / LCOS through the
+correction factor, but not its CO₂ intensity: that stays at the value
+computed from the footprint and production entered at setup, and the
+footprint cannot be edited afterwards. Nothing depends on it yet — no sensor
+publishes a CO₂ figure, so there is no number a user could see go stale.
+
+Building a CO₂ correction now would mean a second factor, a second set of
+components in every accumulating sensor and a reconfigurable footprint, all
+for values nobody reads. It is deferred to the CO₂ sensors themselves, which
+must then follow the same rules as cost: a lifetime edit restates the
+intensity by its own factor (current over the one set up with), the factor
+multiplies the intensity and never a finished number, accumulated totals
+keep a per-device breakdown, and a removed device's factor is final.
+
+Not pinned in the engine tier: no CO₂ property is catalogued, because none
+is published.
+
+:::
+
 ### The home base load is a device
 
 Everything consumed without a sensor on it already takes part in the provenance
