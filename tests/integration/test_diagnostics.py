@@ -65,7 +65,8 @@ async def full_entry(hass: HomeAssistant) -> MockConfigEntry:
 
 
 def _device(hass: HomeAssistant, entry: MockConfigEntry, identifier: str):
-    return dr.async_get(hass).async_get_device(identifiers={(DOMAIN, identifier)})
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    return next((d for d in devices if (DOMAIN, identifier) in d.identifiers), None)
 
 
 async def test_entry_diagnostics_dumps_every_adapter(
