@@ -66,8 +66,8 @@ def _set(hass: HomeAssistant, entity_id: str, value, unit: str | None = "W") -> 
 async def _settle(hass: HomeAssistant) -> None:
     """Flush the coalesced (call_soon) sensor state writes a few times.
 
-    Post-setup state events propagate engine -> custom event -> sensor write
-    over a couple of event-loop iterations, and the derived combined sensor
+    Post-setup state events propagate engine -> dispatcher signal -> sensor
+    write over a couple of event-loop iterations, and the derived combined sensor
     reads its siblings' already-written states, so several flushes are needed.
     """
     for _ in range(4):
