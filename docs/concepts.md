@@ -206,7 +206,7 @@ Insight traces that mix in real time to:
 - power the **charging source share** sensors ("70 % solar, 30 % grid").
 
 The same tracing decides where a smart-plug **consumer** restricted to specific
-sources (its **Powers from** list) draws its power, and how the power you export
+sources (its **Powered by** list) draws its power, and how the power you export
 is sourced.
 
 ### How the mix is decided
@@ -249,6 +249,31 @@ devices drawing power at the same instant can show different source mixes:
 Energy lost in a charge/discharge cycle needs no correction here: the battery's
 charging and discharging are both metered at its AC port, so the losses are
 already the difference between the two.
+
+### When a device draws from outside its sources
+
+The sources you pick under **Specific devices** describe what you *expect* your
+energy manager to do. They are not a hard limit: Power Insight counts every watt
+your meters report, even when it can't have come from the sources you picked.
+
+So when a device draws more than its allowed sources supply at that moment, the
+extra is counted as coming from your other sources. The typical case is a
+battery set to charge from solar only that tops up from the grid at night: with
+no solar to draw on, its whole charge is counted — and priced — as grid power.
+
+The watts drawn from outside the selection are shown in the
+`restriction_deficit` attribute of the device's *Operating cost rate* and
+*Levelized operating cost rate* sensors. It reads `0` while the device sticks to
+its sources, and exists only on devices set to **Specific devices**.
+
+A deficit is not necessarily a mistake. A battery that prefers solar but tops up
+from the grid when its charge runs low is still best set to solar only: with the
+grid in its list, Power Insight would count its charging as grid power first
+whenever your home imports. Set to solar only, its charging counts as solar
+whenever there is solar, and the deficit shows just the grid top-ups — which is
+what really happened.
+A deficit that never goes away, on the other hand, usually means the selection
+no longer matches what your energy manager does; **Reconfigure** the device.
 
 :::info[The exact rules]
 

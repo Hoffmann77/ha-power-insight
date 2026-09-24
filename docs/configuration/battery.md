@@ -46,6 +46,13 @@ paid for it. Both this and *Feeds into the grid* can be changed later under
 This drives the battery's blended charging cost and its **charging-source-share**
 sensors. Batteries are never selectable as a charge source for another battery.
 
+The selection describes what you expect your energy manager to do, not a hard
+limit. If the battery charges from elsewhere — say it is set to solar only but
+tops up from the grid at night — that power is still counted, as coming from
+your other sources, and the watts show up in the `restriction_deficit`
+attribute of its operating-cost sensors. See
+[When a device draws from outside its sources](../concepts.md#when-a-device-draws-from-outside-its-sources).
+
 :::note[Reconfigure prompt]
 
 When you add or remove a grid or PV device, Power Insight raises a repair
