@@ -133,7 +133,7 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
     """A constant rate held across an hour integrates into the total sensor.
 
     A constant rate (1 kW import * 0.30 = 0.30 EUR/h) is held and re-reported an
-    hour later, so the trapezoidal step is exact regardless of propagation lag.
+    hour later, so the step is exact regardless of propagation lag.
     """
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -240,3 +240,53 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
         hass, entry, "combined_total_levelized_device_operating_cost"
     )
     assert combined_reloaded == pytest.approx(per_adapter, abs=1e-6)
+
+
+async def test_e2e_combined_total_is_unavailable_while_a_part_is_missing(
+    hass: HomeAssistant,
+) -> None:
+    """A combined levelized total never publishes a partial sum.
+
+    While an enabled per-device total has no value the combined total is
+    unavailable — a partial sum would record a false drop and rise in the
+    long-term statistics. A disabled per-device total is skipped instead: it is
+    not accumulating, so that device is not part of the combined total.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={
+            "schema": 2,
+            "scopes": {
+                "combined": ["accumulate_levelized_cost_rates"],
+                "pv_system": ["accumulate_levelized_cost_rates"],
+            },
+        },
+        subentries_data=[_grid_with_price(), make_pv_subentry_data()],
+    )
+    _set(hass, "sensor.grid_power", 1000)
+    _set(hass, "sensor.grid_price", 0.30, unit="EUR/kWh")
+    _set(hass, "sensor.pv_power", -100)
+    await setup_integration(hass, entry)
+    await _settle(hass)
+
+    combined = "combined_total_levelized_device_operating_cost"
+    part = _state_obj(hass, entry, f"{PV_SUB_ID}_total_levelized_operating_cost")
+    assert _state_obj(hass, entry, combined).state not in ("unknown", "unavailable")
+
+    combined_id = _state_obj(hass, entry, combined).entity_id
+    combined_entity = hass.data["sensor"].get_entity(combined_id)
+
+    # The per-device total loses its value: the combined total goes unavailable.
+    hass.states.async_set(part.entity_id, "unavailable")
+    combined_entity.async_write_ha_state()
+    await hass.async_block_till_done()
+    assert hass.states.get(combined_id).state == "unavailable"
+
+    # Disabled, the per-device total is skipped rather than blocking the sum.
+    er.async_get(hass).async_update_entity(
+        part.entity_id, disabled_by=er.RegistryEntryDisabler.USER
+    )
+    combined_entity.async_write_ha_state()
+    await hass.async_block_till_done()
+    assert float(hass.states.get(combined_id).state) == pytest.approx(0.0)

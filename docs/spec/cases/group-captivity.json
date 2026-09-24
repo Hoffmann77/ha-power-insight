@@ -126,21 +126,63 @@
           "value": "200"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "200"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
+            "east": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
+            "west": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
             "bat_a": {
               "grid": "0",
               "east": "1/2",
-              "west": "1/2"
+              "west": "1/2",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
             },
             "bat_b": {
               "grid": "0",
               "east": "1/2",
-              "west": "1/2"
+              "west": "1/2",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
+            "bat_c": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
             }
           }
         },
@@ -149,7 +191,10 @@
           "value": {
             "grid": "1",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -173,7 +218,10 @@
           "value": {
             "grid": "200",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -181,7 +229,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -189,7 +240,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -197,7 +251,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -205,7 +262,10 @@
           "value": {
             "grid": "0",
             "east": "100",
-            "west": "100"
+            "west": "100",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -213,7 +273,10 @@
           "value": {
             "grid": "1",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -221,7 +284,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -229,7 +295,10 @@
           "value": {
             "grid": "0",
             "east": "1",
-            "west": "1"
+            "west": "1",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -237,7 +306,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -245,7 +317,10 @@
           "value": {
             "grid": "1",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -253,7 +328,10 @@
           "value": {
             "grid": "0",
             "east": "1/2",
-            "west": "1/2"
+            "west": "1/2",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -261,7 +339,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -293,7 +374,10 @@
           "value": {
             "grid": "3/10",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": null,
+            "bat_b": null,
+            "bat_c": null
           }
         },
         {
@@ -301,7 +385,10 @@
           "value": {
             "grid": "3/10",
             "east": "1/10",
-            "west": "1/10"
+            "west": "1/10",
+            "bat_a": null,
+            "bat_b": null,
+            "bat_c": null
           }
         },
         {
@@ -309,7 +396,10 @@
           "value": {
             "grid": "3/50",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -317,7 +407,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -343,15 +436,23 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "east": "0",
+            "west": "0",
             "bat_a": "0",
-            "bat_b": "0"
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "east": "0",
+            "west": "0",
             "bat_a": "1/100",
-            "bat_b": "1/100"
+            "bat_b": "1/100",
+            "bat_c": "0"
           }
         },
         {
@@ -486,26 +587,63 @@
           "value": "100"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "100"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
+            "east": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
+            "west": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
+            },
             "bat_a": {
               "grid": "1/2",
               "east": "0",
-              "west": "1/2"
+              "west": "1/2",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
             },
             "bat_b": {
               "grid": "1/2",
               "east": "0",
-              "west": "1/2"
+              "west": "1/2",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
             },
             "bat_c": {
               "grid": "0",
               "east": "1",
-              "west": "0"
+              "west": "0",
+              "bat_a": "0",
+              "bat_b": "0",
+              "bat_c": "0"
             }
           }
         },
@@ -514,7 +652,10 @@
           "value": {
             "grid": "1",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -538,7 +679,10 @@
           "value": {
             "grid": "100",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -546,7 +690,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -554,7 +701,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -562,7 +712,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -570,7 +723,10 @@
           "value": {
             "grid": "100",
             "east": "100",
-            "west": "100"
+            "west": "100",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -578,7 +734,10 @@
           "value": {
             "grid": "1/2",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -586,7 +745,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -594,7 +756,10 @@
           "value": {
             "grid": "1/2",
             "east": "1",
-            "west": "1"
+            "west": "1",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -602,7 +767,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -610,7 +778,10 @@
           "value": {
             "grid": "1",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -618,7 +789,10 @@
           "value": {
             "grid": "1/3",
             "east": "1/3",
-            "west": "1/3"
+            "west": "1/3",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -626,7 +800,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -658,7 +835,10 @@
           "value": {
             "grid": "3/10",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": null,
+            "bat_b": null,
+            "bat_c": null
           }
         },
         {
@@ -666,7 +846,10 @@
           "value": {
             "grid": "3/10",
             "east": "1/10",
-            "west": "1/10"
+            "west": "1/10",
+            "bat_a": null,
+            "bat_b": null,
+            "bat_c": null
           }
         },
         {
@@ -674,7 +857,10 @@
           "value": {
             "grid": "3/50",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -682,7 +868,10 @@
           "value": {
             "grid": "0",
             "east": "0",
-            "west": "0"
+            "west": "0",
+            "bat_a": "0",
+            "bat_b": "0",
+            "bat_c": "0"
           }
         },
         {
@@ -708,6 +897,9 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "east": "0",
+            "west": "0",
             "bat_a": "3/200",
             "bat_b": "3/200",
             "bat_c": "0"
@@ -716,6 +908,9 @@
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "east": "0",
+            "west": "0",
             "bat_a": "1/50",
             "bat_b": "1/50",
             "bat_c": "1/100"

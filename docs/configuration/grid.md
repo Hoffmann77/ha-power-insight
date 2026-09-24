@@ -31,6 +31,16 @@ This can be a live/dynamic price sensor (for example from a dynamic-tariff
 integration) or a static `input_number`. Because Power Insight uses the *current*
 value at every calculation, dynamic tariffs are fully supported.
 
+The sensor must report a **price per unit of energy** as its unit of
+measurement. `EUR/kWh`, `€/kWh`, `ct/kWh`, `EUR/MWh` and `EUR/Wh` (or the same
+in any other currency) are all converted to a price per kWh; a sensor in any
+other unit — or with no unit at all — is refused, because taken at face value
+a `ct/kWh` tariff would make every cost a hundred times too large. An
+`input_number` needs its unit of measurement set accordingly.
+
+Power Insight does not convert currencies. If the price names a currency other
+than the one Home Assistant is set to, a repair issue says so.
+
 ### Grid CO₂ intensity
 
 > Sensor with the grid's current CO₂ intensity in g/kWh (e.g. from

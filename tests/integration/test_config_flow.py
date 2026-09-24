@@ -553,3 +553,129 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "grid"
     assert result["errors"]["base"] == "reconfigure_adapters_first"
+
+
+# ---------------------------------------------------------------------------
+# Subentry flow — sensors that cannot be used as they are
+# ---------------------------------------------------------------------------
+
+
+async def test_subentry_rejects_a_power_sensor_another_device_uses(
+    hass: HomeAssistant,
+) -> None:
+    """A power sensor measures one device; sharing it would count it twice."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "consumer"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Heat pump",
+            "power_entity": "sensor.grid_power",
+            "power_entity_inverted": False,
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"].get("power_entity") == "power_entity_in_use"
+
+
+@pytest.mark.parametrize(("unit", "accepted"), [("ct/kWh", True), ("EUR", False)])
+async def test_subentry_grid_checks_the_price_unit(
+    hass: HomeAssistant, unit: str, accepted: bool
+) -> None:
+    """A price per unit of energy is accepted (and converted); anything else is not."""
+    entry = MockConfigEntry(domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS)
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": unit})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "grid"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.grid_power",
+            "power_entity_inverted": False,
+            "grid_electricity_price_entity": "sensor.grid_price",
+        },
+    )
+    if accepted:
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+    else:
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"].get("grid_electricity_price_entity") == (
+            "invalid_price_entity"
+        )
+
+
+async def test_subentry_pv_that_exports_needs_a_feed_in_rate(hass: HomeAssistant) -> None:
+    """There is no default rate: one that fits one currency is wrong in the next."""
+    entry = MockConfigEntry(domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS)
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.pv_power", "100", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "pv_system"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Roof",
+            "power_entity": "sensor.pv_power",
+            "power_entity_inverted": False,
+            "exports_power": True,
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"].get("export_compensation") == "required"
+
+
+async def test_reconfigure_changes_the_feed_in_rate(hass: HomeAssistant) -> None:
+    """The export settings are editable after setup."""
+    from .conftest import PV_SUB_ID, make_pv_subentry_data
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), make_pv_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    for name in ("grid_power", "pv_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+
+    result = await entry.start_subentry_reconfigure_flow(hass, PV_SUB_ID)
+    assert result["type"] == FlowResultType.FORM
+    schema_keys = {str(key) for key in result["data_schema"].schema}
+    assert {"exports_power", "export_compensation"} <= schema_keys
+
+    config = entry.subentries[PV_SUB_ID].data["adapter"]["config"]
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": config["power_entity"],
+            "power_entity_inverted": False,
+            "exports_power": True,
+            "export_compensation": 0.12,
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+    new = entry.subentries[PV_SUB_ID].data["adapter"]["config"]
+    assert new["export_compensation"] == 0.12

@@ -31,7 +31,7 @@ worked example where the arithmetic is not obvious.
 ## Gross power and its shares
 
 `gross_power = grid_import + PV_production + battery_discharge` — the sum of the
-source-adapter readings.
+source-adapter readings, balanced (below).
 
 :::note[Decision: gross power is `None` if any inflow sensor is unavailable]
 
@@ -39,11 +39,108 @@ source-adapter readings.
 unavailable, because the total would otherwise silently under-count. A
 consumer sensor dropping out does **not** invalidate it (consumers are not
 sources). Everything gated on `gross_power` (the share vectors, the source
-provenance) then propagates `None` / `{}` rather than a wrong number.
+provenance) then propagates `None` rather than a wrong number.
 
 Pinned by `TestUnavailableMeterPublishesNothing` and
 `TestUnavailableConsumerKeepsGrossPower` in
 `tests/engine/manual/test_edge_readings.py`.
+
+:::
+
+:::note[Decision: readings that overdraw meet in the middle]
+
+Meters are sampled at different moments — a grid meter every 60 s, smart
+plugs every 30 s — and each is individually inaccurate, so the metered sinks
+sometimes read more than the sources supply. That cannot physically happen,
+and the engine used to route more watts out of a source than it read.
+
+No meter is trusted over another. Every reading moves in proportion to its
+size, by the least that balances the books: sources up by `1 + λ`, sinks
+down by `1 − λ`, with `λ = (drawn − supplied) / (drawn + supplied)`, which
+leaves the base load at exactly 0. With PV reading 1000 W against an export
+of 200 W, a battery charging 500 W and a plug drawing 600 W, `λ = 3/23`: PV
+becomes 1130 W and the sinks 174 + 435 + 522 W.
+
+Holding the sources — or the grid — fixed looks tempting, since they are the
+meters money depends on. But when a heat pump switches on, the plug reports
+it within 30 s while the grid meter still shows the old import; holding the
+grid fixed then shrinks a load that really ran. Holding it fixed is exactly
+right when the grid is fresh and fully wrong when it is stale, and with
+these intervals it is often stale. Meeting in the middle is never fully
+wrong. It is also the only weighting that keeps the PV-splitting law (equal
+adjustments per meter would not), it is continuous (`λ = 0` at balance), it
+only ever makes restrictions easier to honour, and because it is unbiased
+the timing errors average out in the running totals.
+
+The raw-reading totals — `combined_grid_import` / `_export`,
+`combined_production`, `combined_discharging_power`, and each device's own
+power — keep what the meters say. `gross_power`, the four channels, the
+ratios and every cost and avoided cost use the balanced readings, so every
+ledger balances in every snapshot. The gap is published as
+`metering_imbalance`. Only overdraw is corrected: an underdraw cannot be told
+apart from real unmetered consumption, so it stays in the base load.
+
+A possible later refinement is to weight each reading by its age
+(`last_reported`), which would put most of the correction on the stale
+meter. It is deferred: it makes the engine depend on timestamps, and sensors
+that only report on change look stale while being accurate.
+
+Pinned by `TestOverdrawMeetsInTheMiddle` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the balance
+law in `tests/engine/automatic/test_laws.py`, which now runs on every home.
+
+:::
+
+:::note[Decision: a map keys every device of its family, and says what an idle one reads]
+
+Every per-device map is keyed by a whole *family* of adapters — every
+adapter that can supply power (grid, PV, batteries), every adapter that can
+draw it (all of them), every consumer, or every PV system and battery — not
+by the ones active this snapshot. The catalog's `keys` names the family. A
+device never drops out of a map because it went quiet, so a sensor reading
+it never mistakes "idle" for "gone", and a running total never stops.
+
+What a device reads when it is not involved depends on what is measured:
+
+| Situation | Published |
+| --- | --- |
+| A meter is unavailable (gross power unknowable) | the whole map is `None`, never `{}` |
+| The device's own meter is unavailable | its entry is `None` |
+| An amount (W, EUR/h), device not involved | `0.0` — the true value |
+| A fraction (share, ratio) over nothing | `0.0` — by convention: a share of nothing is nothing |
+| A price (EUR/kWh), nothing delivered | `None` — a price with no energy behind it is unknown, not free |
+
+The fraction convention is deliberate: the alternative, `None`, would blank
+every PV ratio sensor every night. The price rule is the opposite on
+purpose: 0 EUR/kWh claims the energy was free. It covers the blended
+`combined_coe` / `combined_lcoe` too, which have no price when gross power
+is 0.
+
+Pinned by `TestAnIdleDeviceKeepsItsKeys` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the
+key-family and unavailability laws in `tests/engine/automatic/test_laws.py`.
+
+:::
+
+:::note[Decision: a missing price blanks only what needs it]
+
+A missing *meter* makes gross power unknowable, so everything built on it is
+`None` as a whole. A missing grid *tariff* is narrower: routing never depends
+on a price, so every watt, share and ratio stands, and a monetary value is
+blank only if it actually needs the tariff. A battery charging from PV alone
+still has a known levelized cost; the load drawing grid power next to it does
+not. Blanking every money value instead would throw away numbers that are
+still right.
+
+Watts a source did not deliver cost nothing at any price, so a zero never
+needs one: an exporting grid does not blank a cost because the tariff is
+unknown, and a device that served nothing saved nothing. Holding the last
+known tariff through a short dropout is a question for the sensor layer; the
+engine prices only what it is given.
+
+Pinned by `TestAMissingPriceBlanksOnlyWhatNeedsIt` in
+`tests/engine/manual/test_edge_readings.py`; held in general by the
+missing-price law in `tests/engine/automatic/test_laws.py`.
 
 :::
 
@@ -167,14 +264,26 @@ leaving them unattributed would break the source totals.
 How much that was is published as `sink_adapters_restriction_deficit`, and
 surfaced as a `restriction_deficit` attribute on the device's operating-cost
 sensors. It is the most useful thing an attributional engine can say: *your
-energy manager is not doing what you configured*. A sink whose allowed
-sources are **all idle** is the one exception — it collapses to an all-zeros
-row rather than being forced onto sources the user excluded, and its whole
-draw is reported as the deficit.
+energy manager is not doing what you configured*.
+
+A sink whose allowed sources are **all idle** is no exception: it is relaxed
+the same way, and its whole draw is the deficit. It used to collapse to an
+all-zeros row instead, which moved its draw into the home base load — a
+"PV only" battery topping up from the grid overnight was booked as household
+consumption at no operating cost, and the charging channel no longer matched
+the battery meter. Relaxing it is also continuous: as the allowed source
+fades to 0 W the deficit grows smoothly to the whole draw, with no jump.
+
+A deficit is not always a misconfiguration. A battery that prefers PV but
+tops up from the grid at low charge is best configured "PV only" — "PV and
+grid" would book it grid first whenever the house imports — and then shows a
+deficit in normal operation. So it stays an attribute, not a warning.
 
 Pinned by `TestBrokenRestrictionIsReported` and
-`TestSinkWithOnlyIdleSourcesGetsZeros` in
-`tests/engine/manual/test_restrictions.py`.
+`TestASinkWithOnlyIdleSourcesIsRelaxed` in
+`tests/engine/manual/test_restrictions.py`; the balance law in
+`tests/engine/automatic/test_laws.py` checks that every channel carries what
+its meters read.
 
 :::
 
@@ -504,9 +613,8 @@ The exporting grid is therefore a *restricted sink*: its allowed sources
 are exactly the sources with `exports_power=True`. This reuses the existing
 restriction machinery rather than adding a parallel one, with one
 implementation caveat — an empty allowed set normally means "unrestricted",
-but for the export sink it means "nothing may export". That case has to
-collapse to a stranded, all-zeros row (whole draw reported as a deficit),
-not silently reopen the whole mix.
+but for the export sink it means "nothing may export", and must not
+silently reopen the whole mix.
 
 Like every restriction, it gives way if no allocation can honour it: a
 house exporting while only non-exporting sources are running relaxes the
@@ -514,9 +622,11 @@ restriction and reports the amount through
 `sink_adapters_restriction_deficit`, exactly as a "PV only" battery caught
 charging off the grid does.
 
-Pinned by `TestExportIsRestrictedToExporters` in
+Pinned by `TestExportIsRestrictedToExporters` and
+`TestAnExportNoDeviceMayFeedIsRelaxed` in
 `tests/engine/manual/test_restrictions.py` (an export that exporters can cover
-takes only exporters).
+takes only exporters; one they cannot is relaxed, and its watts stay export,
+not household consumption).
 
 :::
 
@@ -543,11 +653,23 @@ efficiency input.
 
 :::
 
-**Known simplification.** Self-consumption is valued at the import price even in
-a snapshot where the house is exporting, where the true marginal alternative is
-the feed-in tariff. This is the conventional treatment and matches how the docs
-describe self-consumption, but it slightly overstates savings during an export
-surplus.
+:::note[Decision: a saving is measured against a home without the device]
+
+Self-consumption is valued at the import price even in a snapshot where the
+house is exporting. That can look like it overstates the saving — the watts
+could have been exported instead, for the feed-in rate — but it answers the
+question a saving asks: what would this have cost in a home without this
+device? Without the PV system, the watts the house consumed would have been
+imported, at the tariff. The feed-in rate answers a different question
+("should I use it now or export it?"), and the watts that were exported are
+already credited separately, through the export compensation, in the
+financial return. Valuing self-consumption at the feed-in rate would count
+the export decision twice.
+
+Pinned by `TestSavingsAreMeasuredWithoutTheDevice` in
+`tests/engine/manual/test_savings.py`.
+
+:::
 
 ## How the tests pin this down
 

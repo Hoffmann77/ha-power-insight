@@ -47,6 +47,7 @@ const sidebars: SidebarsConfig = {
       label: 'Development',
       items: [
         'dev/engine-calculations',
+        'dev/production-readiness',
         'dev/source-share-allocation-problem',
         'dev/entity-naming',
         'dev/releasing',

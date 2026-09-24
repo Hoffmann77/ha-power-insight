@@ -7,8 +7,10 @@ entry is its *row*; a row sums to 1, or is all zeros when nothing it may use
 is supplying.
 
 By hand those answers are worked out in watts, not fractions, so the
-harnesses write them that way and let :func:`rows` do the division. A row
-lists every source supplying in the snapshot, zeros included.
+harnesses write them that way and let :func:`rows` do the division. The map
+is keyed by every adapter and every row by every source, but a table need
+only list the sinks and sources it is about: ``@expect`` gives every other
+one its idle value, a row or a share of zero.
 """
 
 from __future__ import annotations

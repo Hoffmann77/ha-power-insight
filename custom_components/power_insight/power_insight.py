@@ -485,10 +485,21 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
             for uid, row in allocation.items()
         }, deficit
 
-    restricted = {uid: d for uid, d in demand.items() if allowed[uid]}
+    # A restricted sink none of whose allowed sources is supplying cannot be
+    # served within its restriction at all. It is not part of the feasibility
+    # question — leaving it in would make every block it sits in infeasible
+    # and cost the other sinks their exact reserves — so its whole draw goes
+    # straight to the last-resort relaxation below, as a deficit.
+    stranded = {
+        uid: d for uid, d in demand.items()
+        if allowed[uid] and not any(_permits(allowed[uid], s) for s in supply)
+    }
+    restricted = {
+        uid: d for uid, d in demand.items() if allowed[uid] and uid not in stranded
+    }
     flexible = {uid: d for uid, d in demand.items() if not allowed[uid]}
     allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
-    deficit: dict[str, float] = {}
+    deficit: dict[str, float] = {uid: d for uid, d in stranded.items() if d > _EPS}
     unused = []
 
     blocks = [(dict(supply), restricted)]
@@ -539,7 +550,7 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
     # source's total to the group is unchanged and every member is allowed the
     # same sources, so the plan stays valid and still carries every reserve.
     groups: dict[frozenset, list[str]] = {}
-    for uid in restricted:
+    for uid in (*restricted, *stranded):
         groups.setdefault(frozenset(allowed[uid]), []).append(uid)
     for members in groups.values():
         total = sum(demand[u] for u in members)
@@ -666,6 +677,22 @@ class PowerInsight:
     # the existing prod_adapters_* / storage_adapters_* / cons_adapters_*
     # families remain the source of truth for all other current results.
     # ------------------------------------------------------------------>
+
+    # Every per-device map is keyed by a whole *family* of adapters, not by the
+    # ones that happen to be active this snapshot, so a device never drops out
+    # of a map because it went idle — see "what a published map contains" in
+    # docs/dev/engine-calculations.md. The source family is every adapter that
+    # can supply power, the sink family every adapter that can draw it.
+
+    @property
+    def _source_family(self) -> list[BasePowerAdapter]:
+        """Return every adapter that can supply power: grid, PV, batteries."""
+        return self.gross_power_adapters
+
+    @property
+    def _sink_family(self) -> list[BasePowerAdapter]:
+        """Return every adapter that can draw power: all of them."""
+        return self._all_adapters
 
     @property
     def _non_grid_adapters(self) -> list[BasePowerAdapter]:
@@ -820,10 +847,12 @@ class PowerInsight:
     def combined_charging_power(self) -> float | None:
         """Total power charged by the battery adapters (W).
 
-        The batteries' sink-side draw: each battery's ``consumption`` (its
-        unsigned charging power), summed. This is the CHG channel total.
+        The batteries' sink-side draw, summed: the CHG channel total. Like
+        every channel it is the *balanced* figure — see ``metering_imbalance``
+        — so it can sit slightly below the batteries' own readings while the
+        meters overdraw. ``None`` whenever gross power is unavailable.
         """
-        return self._sum_or_none(a.consumption for a in self.storage_adapters)
+        return self._balanced_draw(self.storage_adapters.adapters)
 
     @property
     def combined_discharging_power(self) -> float | None:
@@ -838,10 +867,81 @@ class PowerInsight:
     def combined_standby_power(self) -> float | None:
         """Total standby power drawn by the PV adapters (W).
 
-        The PV systems' sink-side draw: each PV's ``consumption`` (its night /
-        standby draw), summed. This is the STB channel total.
+        The PV systems' sink-side draw, summed: the STB channel total, balanced
+        like ``combined_charging_power``.
         """
-        return self._sum_or_none(a.consumption for a in self.pv_system_adapters)
+        return self._balanced_draw(self.pv_system_adapters.adapters)
+
+    @property
+    def metering_imbalance(self) -> float | None:
+        """Watts the metered sinks drew beyond what the sources supplied (W).
+
+        Meters are sampled at different moments and are individually
+        inaccurate, so the sinks sometimes read more than the sources supply —
+        which cannot physically happen. No meter is trusted over another: every
+        reading moves in proportion to its size, by the least that balances
+        the books (see ``_balance``), and this is the gap that closed. Zero
+        whenever the readings balance; ``None`` when gross power is unknowable.
+        A persistent imbalance means a configuration error — an inverted sign,
+        or a meter nested inside another metered circuit.
+        """
+        balance = self._balance
+        if balance is None:
+            return None
+
+        supplied, drawn, _ = balance
+
+        return max(0.0, drawn - supplied)
+
+    @property
+    def _balance(self) -> tuple[float, float, float] | None:
+        """Return the snapshot's balance (cached); see ``_compute_balance``."""
+        return self._snapshot_cached("balance", self._compute_balance)
+
+    def _compute_balance(self) -> tuple[float, float, float] | None:
+        """Return ``(Σ source readings, Σ sink readings, λ)`` for this snapshot.
+
+        Meet in the middle: when the sinks read more than the sources, every
+        source is scaled by ``1 + λ`` and every sink by ``1 − λ``, with
+        ``λ = (drawn − supplied) / (drawn + supplied)``, the least proportional
+        move that leaves no base load negative. ``λ`` is 0 whenever the readings
+        balance, and it does not depend on scale, names or idle devices. The
+        raw readings themselves are never changed. ``None`` when an inflow meter
+        is unavailable.
+        """
+        for adapter in self.gross_power_adapters:
+            if adapter.power is None:
+                return None
+
+        supplied = sum(a.power for a in self._all_adapters if a.flow_role is FlowRole.SOURCE)
+        drawn = sum(-a.power for a in self._all_adapters if a.flow_role is FlowRole.SINK)
+        if drawn <= supplied:
+            return supplied, drawn, 0.0
+
+        return supplied, drawn, (drawn - supplied) / (drawn + supplied)
+
+    def _balanced_power(self, adapter) -> float:
+        """Return an available adapter's reading, balanced (see ``_balance``)."""
+        _, _, shift = self._balance
+        power = adapter.power
+
+        return power * (1.0 + shift) if power > 0 else power * (1.0 - shift)
+
+    def _balanced_draw(self, adapters) -> float | None:
+        """Return the balanced, unsigned draw of ``adapters`` summed (W).
+
+        A sum over no adapters at all is a confident 0 even when the snapshot
+        is unknowable: a missing meter says nothing about a device the house
+        does not have.
+        """
+        if not adapters:
+            return 0.0
+        if self._balance is None:
+            return None
+
+        return sum(
+            -self._balanced_power(a) for a in adapters if a.flow_role is FlowRole.SINK
+        )
 
     @property
     def combined_consumption(self) -> float | None:
@@ -855,13 +955,29 @@ class PowerInsight:
         ``None`` whenever gross power is unavailable.
         """
         gross = self.gross_power
-        export = self.combined_grid_export
+        export = self._balanced_export
         charging = self.combined_charging_power
         standby = self.combined_standby_power
         if None in (gross, export, charging, standby):
             return None
 
-        return max(0.0, gross - export - charging - standby)
+        return self._residual(gross, export + charging + standby)
+
+    @staticmethod
+    def _residual(total: float, taken: float) -> float:
+        """Return ``total − taken``, floored at 0 and cleared of float noise.
+
+        Balanced readings leave a residual of exactly 0 in exact arithmetic,
+        but floats can leave a trace of 1e-12 W — and a share of a trace is
+        a real-looking number. Anything below a relative noise floor is 0.
+        """
+        rest = total - taken
+        return rest if rest > _EPS * max(1.0, abs(total)) else 0.0
+
+    @property
+    def _balanced_export(self) -> float | None:
+        """Return the export channel total: the grid export, balanced (W)."""
+        return self._balanced_draw([self.grid_adapter])
 
     @property
     def source_adapters_power(self) -> tuple[list[float], list[str]]:
@@ -877,7 +993,7 @@ class PowerInsight:
 
         for adapter in self.source_adapters:
             index.append(adapter.uid)
-            arr.append(adapter.power)
+            arr.append(self._balanced_power(adapter))
 
         return arr, index
 
@@ -893,7 +1009,7 @@ class PowerInsight:
 
         for adapter in self.sink_adapters:
             index.append(adapter.uid)
-            arr.append(adapter.power)
+            arr.append(self._balanced_power(adapter))
 
         return arr, index
 
@@ -901,14 +1017,14 @@ class PowerInsight:
     def gross_power(self) -> float | None:
         """Total power entering the system (W): grid import + PV + discharge.
 
-        Equal to the sum of the source-adapter readings. Returns ``None`` when
-        any inflow-capable adapter (grid / PV / battery) has an unavailable
-        power sensor, since the total would then be unreliable — a consumer
-        sensor dropping out does not affect it.
+        Equal to the sum of the source-adapter readings, balanced — see
+        ``metering_imbalance``. Returns ``None`` when any inflow-capable
+        adapter (grid / PV / battery) has an unavailable power sensor, since
+        the total would then be unreliable — a consumer sensor dropping out
+        does not affect it.
         """
-        for adapter in self.gross_power_adapters:
-            if adapter.power is None:
-                return None
+        if self._balance is None:
+            return None
 
         power_arr, _ = self.source_adapters_power
         return float(sum(power_arr))
@@ -1006,38 +1122,16 @@ class PowerInsight:
         demand: dict[str, float] = {}
         allowed: dict[str, tuple[str, ...]] = {}
         for adapter in self.sink_adapters:
-            demand[adapter.uid] = abs(float(adapter.power))
+            demand[adapter.uid] = -self._balanced_power(adapter)
             allowed[adapter.uid] = self._allowed_source_uids(adapter)
 
-        # A sink restricted to sources that are all idle has nothing to be
-        # attributed to. It collapses to an all-zeros row rather than being
-        # forced onto sources the user excluded — but its draw still came from
-        # somewhere, so it stays in the home remainder below.
-        demand_by_uid = dict(demand)
-        stranded = [
-            uid for uid, sources in allowed.items()
-            if sources and not any(_permits(sources, s) for s in supply)
-        ]
-        for uid in stranded:
-            del demand[uid]
-            del allowed[uid]
-
-        demand[_HOME] = max(0.0, gross - sum(demand.values()))
+        demand[_HOME] = self._residual(gross, sum(demand.values()))
         allowed[_HOME] = ()
 
-        allocation, deficit = _allocate(
-            supply, demand, allowed, self.grid_adapter.uid
-        )
         # ``_HOME`` deliberately stays in the allocation: the monetary layer
         # needs the home base load's own mix, and ``sink_adapters_source_shares``
-        # filters it back out so the public row set is adapters only.
-        for uid in stranded:
-            allocation[uid] = {source_uid: 0.0 for source_uid in supply}
-            # Not one watt of it could come from a configured source, so the
-            # whole draw is a deficit even though the row says nothing.
-            deficit[uid] = demand_by_uid[uid]
-
-        return allocation, deficit
+        # leaves it out so the public row set is adapters only.
+        return _allocate(supply, demand, allowed, self.grid_adapter.uid)
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:
@@ -1065,26 +1159,36 @@ class PowerInsight:
         proportion to their draw — which means two sinks with the same
         restriction always get the same row, whatever their draws.
 
-        ``None`` when gross power is unavailable — the provenance is unknowable,
-        not empty; ``{}`` only when the grid is present but nothing is providing.
-        See ``docs/dev/engine-calculations.md`` for the model.
+        Keyed by every adapter, each row by every adapter that can supply
+        power: a device that is not drawing reads a row of zeros (a share of
+        nothing is nothing), and a device whose own meter is unavailable reads
+        ``None``. ``None`` as a whole when gross power is unavailable — the
+        provenance is unknowable, not empty. See
+        ``docs/dev/engine-calculations.md`` for the model.
         """
         if self.gross_power is None:
             return None
 
         allocation, _ = self._source_allocation
 
-        shares = {}
-        for uid, row in allocation.items():
-            if uid == _HOME:
-                continue  # published as home_base_load_source_shares instead
-            total = sum(row.values())
-            shares[uid] = {
-                source_uid: (watts / total if total > _EPS else 0.0)
-                for source_uid, watts in row.items()
-            }
+        return {
+            adapter.uid: (
+                None if adapter.flow_role is FlowRole.UNKNOWN
+                else self._share_row(allocation.get(adapter.uid, {}))
+            )
+            for adapter in self._sink_family
+        }
 
-        return shares
+    def _share_row(self, row: dict[str, float]) -> dict[str, float]:
+        """Return a ``{source_uid: watts}`` row as shares over the source family."""
+        total = sum(row.values())
+
+        return {
+            source.uid: (
+                row.get(source.uid, 0.0) / total if total > _EPS else 0.0
+            )
+            for source in self._source_family
+        }
 
     @property
     def sink_adapters_restriction_deficit(self) -> dict[str, float]:
@@ -1097,11 +1201,22 @@ class PowerInsight:
         battery topping up off the grid under cloud), or the configuration is
         stale. Reported per sink so the mix it explains sits next to it.
 
-        Only restricted sinks appear; an unrestricted sink cannot have one.
+        Keyed by every adapter; an unrestricted or non-drawing one reads zero,
+        and one whose own meter is unavailable reads ``None``. ``None`` as a
+        whole when gross power is unavailable.
         """
+        if self.gross_power is None:
+            return None
+
         _, deficit = self._source_allocation
 
-        return deficit
+        return {
+            adapter.uid: (
+                None if adapter.flow_role is FlowRole.UNKNOWN
+                else deficit.get(adapter.uid, 0.0)
+            )
+            for adapter in self._sink_family
+        }
 
 
     # -------------------------------------------------------------->
@@ -1115,7 +1230,7 @@ class PowerInsight:
     @property
     def gross_power_export_ratio(self) -> float | None:
         """Fraction of gross power returned to the grid."""
-        return self._gross_ratio(self.combined_grid_export)
+        return self._gross_ratio(self._balanced_export)
 
     @property
     def gross_power_consumption_ratio(self) -> float | None:
@@ -1165,7 +1280,7 @@ class PowerInsight:
         """
         def compute() -> dict[str, dict[str, float]]:
             allocation, _ = self._source_allocation
-            source_uids = [adapter.uid for adapter in self.source_adapters]
+            source_uids = [adapter.uid for adapter in self._source_family]
             channels = {
                 channel: dict.fromkeys(source_uids, 0.0)
                 for channel in _CHANNELS
@@ -1199,9 +1314,16 @@ class PowerInsight:
     def _priced(
         self, watts: dict[str, float], *, levelized: bool, corrected: bool = False,
     ) -> float | None:
-        """Price a ``{source_uid: watts}`` mapping at its sources' prices."""
+        """Price a ``{source_uid: watts}`` mapping at its sources' prices.
+
+        A source that delivered nothing costs nothing whatever its price, so a
+        zero entry never needs one — an exporting grid does not blank a cost
+        just because the tariff is unknown.
+        """
         total = 0.0
         for source_uid, value in watts.items():
+            if value == 0.0:
+                continue
             adapter = self.get_adapter_by_uid(source_uid)
             if adapter is None:
                 return None
@@ -1248,10 +1370,11 @@ class PowerInsight:
     def _per_kwh(self, rate: float | None) -> float | None:
         """Convert an EUR/h rate into an EUR/kWh price over gross power."""
         gross = self.gross_power
-        if rate is None or gross is None:
+        if rate is None or gross is None or gross == 0.0:
+            # A price with no energy behind it is unknown, not free.
             return None
 
-        return self._divide(rate, self._to_kilo(gross))
+        return rate / self._to_kilo(gross)
 
     def _sink_cost_rate(
         self, uid: str, *, levelized: bool, corrected: bool = False,
@@ -1277,7 +1400,11 @@ class PowerInsight:
         """Return what a sink did not pay the grid for its draw (EUR/h)."""
         grid_price = self.grid_adapter.coe
         local = self._local_watts(uid)
-        if grid_price is None or local is None:
+        if local is None:
+            return None
+        if local == 0.0:
+            return 0.0  # nothing avoided, whatever the tariff
+        if grid_price is None:
             return None
 
         return self._to_kilo(local) * grid_price
@@ -1291,17 +1418,17 @@ class PowerInsight:
         export compensation, and charging is a cost booked against the battery.
         The grid earns nothing — it *is* the alternative being priced against.
         """
-        grid_price = self.grid_adapter.coe
-        if grid_price is None:
-            return None
         if adapter is self.grid_adapter:
             return 0.0
 
-        own = self._source_price(adapter, levelized=levelized, corrected=corrected)
-        if own is None:
-            return None
-
         watts = self._channel_source_power[_CHANNEL_CONSUMPTION].get(adapter.uid, 0.0)
+        if watts == 0.0:
+            return 0.0  # served nothing, so saved nothing, whatever the prices
+
+        grid_price = self.grid_adapter.coe
+        own = self._source_price(adapter, levelized=levelized, corrected=corrected)
+        if grid_price is None or own is None:
+            return None
 
         return self._to_kilo(watts) * (grid_price - own)
 
@@ -1340,7 +1467,7 @@ class PowerInsight:
                 cost = self._sink_cost_rate(
                     adapter.uid, levelized=levelized, corrected=corrected,
                 )
-                rates[adapter.uid] = None if cost is None else -cost
+                rates[adapter.uid] = None if cost is None else -cost or 0.0
             else:
                 rates[adapter.uid] = 0.0
 
@@ -1401,16 +1528,16 @@ class PowerInsight:
         if watts is None:
             return None
         total = sum(watts.values())
+        if total <= _EPS:
+            return dict.fromkeys(watts, 0.0)
 
-        return {uid: self._divide(value, total) for uid, value in watts.items()}
+        return {uid: value / total for uid, value in watts.items()}
 
     def _channel_ratios(self, channel: str) -> dict | None:
         """Return the fraction of each source's own output going to ``channel``."""
         watts = self._channel_power(channel)
         if watts is None:
             return None
-        if not watts:
-            return {}
 
         power_arr, index = self.source_adapters_power
         readings = dict(zip(index, power_arr))
@@ -1421,14 +1548,28 @@ class PowerInsight:
         }
 
     def _sink_cost_rates(self, *, levelized: bool) -> dict:
-        """Return ``{sink_uid: EUR/h}`` for every currently drawing adapter."""
+        """Return ``{uid: EUR/h}`` for every adapter's own draw, 0.0 if none."""
         if self.gross_power is None:
-            return {}
+            return None
 
         return {
-            a.uid: self._sink_cost_rate(a.uid, levelized=levelized)
-            for a in self.sink_adapters
+            a.uid: self._draw_value(
+                a, lambda: self._sink_cost_rate(a.uid, levelized=levelized),
+            )
+            for a in self._sink_family
         }
+
+    def _draw_value(self, adapter, compute: Callable[[], Any]) -> Any:
+        """Return ``compute()`` for a drawing adapter, else its idle value.
+
+        The per-device amount of a device that is not drawing is a true zero;
+        one whose own meter is unavailable is unknown.
+        """
+        if adapter.flow_role is FlowRole.SINK:
+            return compute()
+        if adapter.flow_role is FlowRole.UNKNOWN:
+            return None
+        return 0.0
 
     def _own_draw_cost_rates(
         self, *, levelized: bool, corrected: bool = False,
@@ -1484,9 +1625,10 @@ class PowerInsight:
         levelized cost (which does). A drawing device's is the negated blend of
         whatever supplied it. Each component sums back to the base rate, and
         multiplying each by its own key's factor gives the corrected one.
+        ``None`` when gross power is unavailable.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
         grid_uid = self.grid_adapter.uid
         grid_price = self.grid_adapter.coe
@@ -1854,14 +1996,41 @@ class PowerInsight:
         return self._channel_ratios(_CHANNEL_STANDBY)
 
     @property
-    def source_adapters_coe_rate(self) -> dict:
-        """Cost-of-electricity rate per source (EUR/h)."""
-        return {a.uid: a.coe_rate for a in self.source_adapters}
+    def source_adapters_coe_rate(self) -> dict | None:
+        """Cost-of-electricity rate per source (EUR/h); zero while not delivering."""
+        return self._delivery_values(
+            lambda a: self._delivery_rate(a, levelized=False), idle=0.0,
+        )
 
     @property
-    def source_adapters_lcoe_rate(self) -> dict:
+    def source_adapters_lcoe_rate(self) -> dict | None:
         """Levelized cost-of-electricity rate per source (EUR/h)."""
-        return {a.uid: a.lcoe_rate for a in self.source_adapters}
+        return self._delivery_values(
+            lambda a: self._delivery_rate(a, levelized=True), idle=0.0,
+        )
+
+    def _delivery_rate(self, adapter, *, levelized: bool) -> float | None:
+        """Return what one delivering source's balanced output costs (EUR/h)."""
+        price = self._source_price(adapter, levelized=levelized)
+        if price is None:
+            return None
+
+        return self._to_kilo(self._balanced_power(adapter)) * price
+
+    def _delivery_values(self, value_fn: Callable[[Any], Any], *, idle: Any) -> dict | None:
+        """Return ``{uid: value_fn(a)}`` over the source family.
+
+        A source that is delivering gets ``value_fn``; one that is not reads
+        ``idle`` — ``0.0`` for an amount, ``None`` for a price, which has no
+        energy behind it. ``None`` as a whole when gross power is unavailable.
+        """
+        if self.gross_power is None:
+            return None
+
+        return {
+            a.uid: value_fn(a) if a.flow_role is FlowRole.SOURCE else idle
+            for a in self._source_family
+        }
 
     @property
     def source_adapters_coo_rates(self) -> dict:
@@ -1889,7 +2058,7 @@ class PowerInsight:
     def source_adapters_lcoo_rate_components(self) -> dict:
         """Per-device operating cost split by which correction factor applies."""
         if self.gross_power is None:
-            return {}
+            return None
 
         return {
             a.uid: (
@@ -1906,12 +2075,7 @@ class PowerInsight:
         Zero for a device that may not export — it is never attributed exported
         watts in the first place, so there is nothing to be paid for.
         """
-        if self.gross_power is None:
-            return {}
-
-        return {
-            a.uid: self._export_compensation_rate(a) for a in self.source_adapters
-        }
+        return self._delivery_values(self._export_compensation_rate, idle=0.0)
 
     @property
     def source_adapters_avoided_cost_rates(self) -> dict:
@@ -1920,19 +2084,21 @@ class PowerInsight:
         What each source's contribution to the consumption channel saved
         against importing it. The grid reads zero: it is the alternative.
         """
-        grid_price = self.grid_adapter.coe
-        if self.gross_power is None or grid_price is None:
-            return {}
+        if self.gross_power is None:
+            return None
 
+        grid_price = self.grid_adapter.coe
         watts = self._channel_source_power[_CHANNEL_CONSUMPTION]
 
-        return {
-            a.uid: (
-                0.0 if a is self.grid_adapter
-                else self._to_kilo(watts.get(a.uid, 0.0)) * grid_price
-            )
-            for a in self.source_adapters
-        }
+        def avoided(a) -> float | None:
+            served = watts.get(a.uid, 0.0)
+            if a is self.grid_adapter or served == 0.0:
+                return 0.0
+            if grid_price is None:
+                return None
+            return self._to_kilo(served) * grid_price
+
+        return self._delivery_values(avoided, idle=0.0)
 
     @property
     def source_adapters_dynamic_coe(self) -> dict[str, float | None]:
@@ -1945,25 +2111,19 @@ class PowerInsight:
         blended mix a battery is charging on right now is on the sink side, as
         ``sink_adapters_coo_rates``.
 
-        ``None`` when gross power is unavailable — no source is delivering a
-        knowable price then.
+        A source that is not delivering reads ``None``: a price with no energy
+        behind it is unknown, not free. ``None`` as a whole when gross power is
+        unavailable.
         """
-        if self.gross_power is None:
-            return None
-
-        return {a.uid: a.coe for a in self.source_adapters}
+        return self._delivery_values(lambda a: a.coe, idle=None)
 
     @property
     def source_adapters_dynamic_lcoe(self) -> dict[str, float | None]:
         """Blended levelized cost of electricity per source (EUR/kWh).
 
-        ``None`` when gross power is unavailable, mirroring
-        ``source_adapters_dynamic_coe``.
+        Keyed and blanked like ``source_adapters_dynamic_coe``.
         """
-        if self.gross_power is None:
-            return None
-
-        return {a.uid: a.lcoe for a in self.source_adapters}
+        return self._delivery_values(lambda a: a.lcoe, idle=None)
 
     # -------------------------------------------------------------->
     # SINK ADAPTERS
@@ -1978,16 +2138,18 @@ class PowerInsight:
         """Each consuming sink's share of total self-consumption.
 
         These need not sum to 1: the rest of the channel is the unmetered home
-        base load, which has no adapter (see ``home_base_load_power``).
+        base load, which has no adapter (see ``home_base_load_power``). Keyed
+        by every consumer; one that is not drawing reads zero.
         """
         consumption = self.combined_consumption
         if consumption is None:
-            return {}
+            return None
 
         return {
-            a.uid: self._divide(abs(a.power), consumption)
-            for a in self.sink_adapters
-            if self._sink_channel(a.uid) == _CHANNEL_CONSUMPTION
+            a.uid: self._draw_value(
+                a, lambda: self._divide(-self._balanced_power(a), consumption),
+            )
+            for a in self.consumer_adapters.adapters
         }
 
     @property
@@ -2011,9 +2173,17 @@ class PowerInsight:
         its own — a consumer has no lifetime cost to correct by.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
-        return {a.uid: self._sink_cost_components(a.uid) for a in self.sink_adapters}
+        return {
+            a.uid: (
+                self._sink_cost_components(a.uid)
+                if a.flow_role is FlowRole.SINK
+                else None if a.flow_role is FlowRole.UNKNOWN
+                else {}
+            )
+            for a in self._sink_family
+        }
 
     @property
     def sink_adapters_avoided_cost_rates(self) -> dict:
@@ -2027,12 +2197,11 @@ class PowerInsight:
         add the source side to the sink side.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
         return {
-            a.uid: self._avoided_cost_rate(a.uid)
-            for a in self.sink_adapters
-            if self._sink_channel(a.uid) == _CHANNEL_CONSUMPTION
+            a.uid: self._draw_value(a, lambda: self._avoided_cost_rate(a.uid))
+            for a in self.consumer_adapters.adapters
         }
 
     # -------------------------------------------------------------->
@@ -2058,23 +2227,16 @@ class PowerInsight:
     def home_base_load_source_shares(self) -> dict | None:
         """The home base load's own provenance row (``{source_uid: share}``).
 
-        ``None`` when gross power is unavailable, mirroring
+        Keyed by every adapter that can supply power, all zeros when there is
+        no base load. ``None`` when gross power is unavailable, mirroring
         ``sink_adapters_source_shares``.
         """
         if self.gross_power is None:
             return None
 
         allocation, _ = self._source_allocation
-        row = allocation.get(_HOME)
-        if not row:
-            return {}
 
-        total = sum(row.values())
-
-        return {
-            source_uid: (watts / total if total > _EPS else 0.0)
-            for source_uid, watts in row.items()
-        }
+        return self._share_row(allocation.get(_HOME, {}))
 
     @property
     def home_base_load_avoided_cost_rate(self) -> float | None:

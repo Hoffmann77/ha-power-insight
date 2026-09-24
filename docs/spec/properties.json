@@ -106,6 +106,21 @@
       "derivation_steps": ["Subtract export, charging and standby from gross power."]
     },
 
+    "metering_imbalance": {
+      "title": "Metering imbalance",
+      "unit": "W",
+      "layer": 1,
+      "definition": "How much more the metered sinks drew than the sources supplied — which cannot physically happen, and does when meters are sampled at different moments or are individually inaccurate. Every reading is balanced by meeting in the middle: sources move up and sinks down, each in proportion to its size, by the least that closes this gap. Zero whenever the readings balance.",
+      "formula": "metering_imbalance = max(Σ |reading(k)| over sinks − Σ reading(s) over sources, 0)",
+      "depends_on": [],
+      "answer_shape": "scalar",
+      "derivation_steps": [
+        "Add up every source's reading, and every sink's draw.",
+        "If the sinks draw more, the difference is the imbalance; otherwise it is 0."
+      ],
+      "note": "The raw totals (grid import and export, production, discharging) keep what the meters read; gross power, the channels and everything built on them use the balanced readings. A persistent imbalance points at a configuration error: an inverted sign, or a meter nested inside another metered circuit."
+    },
+
     "home_base_load_power": {
       "title": "Home base load",
       "unit": "W",
@@ -125,10 +140,11 @@
       "title": "Source provenance",
       "unit": "share",
       "layer": 2,
-      "definition": "For every drawing adapter, the fraction of its power supplied by each source. Each row sums to 1, or to 0 when every source that sink is allowed happens to be idle.",
+      "definition": "For every adapter, the fraction of its draw supplied by each source. A drawing adapter's row sums to 1 — a sink whose allowed sources are all idle is relaxed onto what did supply, and its whole draw is its restriction deficit; an adapter that is not drawing reads a row of zeros.",
       "formula": null,
       "depends_on": ["gross_power", "home_base_load_power"],
       "answer_shape": "nested_map_fixed_keys",
+      "keys": ["sinks", "sources"],
       "derivation_steps": [
         "List the sources and their output, and the sinks and their draw. Remember the home base load is a sink.",
         "For each sink, note which sources it is allowed to draw from. An empty restriction means the whole mix.",
@@ -148,6 +164,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "home_base_load_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "The home load is unrestricted, so it draws from whatever the restricted sinks leave.",
         "Express its intake as fractions of its own draw."
@@ -206,6 +223,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_consumption"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Take the consumption channel — the metered loads plus the home base load — as sinks with their own provenance rows.",
         "Sum, per source, the watts those rows drew from it."
@@ -221,6 +239,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_grid_export"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "The exporting grid is a sink, so its provenance row is the export mix.",
         "Multiply each source's share of that row by the exported watts."
@@ -235,6 +254,7 @@
       "formula": "source_adapters_export_power[uid] / combined_grid_export",
       "depends_on": ["source_adapters_export_power", "combined_grid_export"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": ["Divide each source's exported watts by the total export."]
     },
 
@@ -246,6 +266,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_standby_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "A PV system in standby is a sink with its own provenance row.",
         "Multiply each source's share of that row by the standby watts."
@@ -260,6 +281,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_charging_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Take the charging batteries as sinks with their own provenance rows.",
         "Sum, per source, the watts those rows drew from it."
@@ -275,6 +297,7 @@
       "formula": "source_adapters_consumption_ratios[s] = source_adapters_consumption_power[s] / reading(s)",
       "depends_on": ["source_adapters_consumption_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": ["Divide the self-consumed watts attributed to a source by that source's own reading. A source delivering nothing reads 0."]
     },
 
@@ -286,6 +309,7 @@
       "formula": "source_adapters_export_ratios[s] = source_adapters_export_power[s] / reading(s)",
       "depends_on": ["source_adapters_export_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": ["Divide the exported watts attributed to a source by that source's own reading. A source delivering nothing reads 0."]
     },
 
@@ -297,6 +321,7 @@
       "formula": "source_adapters_charging_ratios[s] = source_adapters_charging_power[s] / reading(s)",
       "depends_on": ["source_adapters_charging_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": ["Divide the charging watts attributed to a source by that source's own reading. A source delivering nothing reads 0."]
     },
 
@@ -308,6 +333,7 @@
       "formula": "source_adapters_standby_ratios[s] = source_adapters_standby_power[s] / reading(s)",
       "depends_on": ["source_adapters_standby_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": ["Divide the standby watts attributed to a source by that source's own reading. A source delivering nothing reads 0."]
     },
 
@@ -319,6 +345,7 @@
       "formula": "source_adapters_consumption_shares[s] = source_adapters_consumption_power[s] / Σ source_adapters_consumption_power",
       "depends_on": ["source_adapters_consumption_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Total the self-consumption watts across every source.",
         "Divide each source's contribution by that total."
@@ -333,6 +360,7 @@
       "formula": "source_adapters_charging_shares[s] = source_adapters_charging_power[s] / Σ source_adapters_charging_power",
       "depends_on": ["source_adapters_charging_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Total the charging watts across every source.",
         "Divide each source's contribution by that total."
@@ -347,6 +375,7 @@
       "formula": "source_adapters_standby_shares[s] = source_adapters_standby_power[s] / Σ source_adapters_standby_power",
       "depends_on": ["source_adapters_standby_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Total the standby watts across every source.",
         "Divide each source's contribution by that total."
@@ -361,9 +390,10 @@
       "formula": "sink_adapters_consumption_shares[k] = |reading(k)| / combined_consumption",
       "depends_on": ["combined_consumption"],
       "answer_shape": "map_fixed_keys",
+      "keys": "consumers",
       "derivation_steps": [
         "Take each sink in the consumption channel and divide its draw by combined consumption.",
-        "A charging battery does not appear — it belongs to the charging channel."
+        "Only consumers are keyed: a charging battery belongs to the charging channel. A consumer that is not drawing reads 0."
       ],
       "note": "These need not sum to 1: the remainder of the channel is the unmetered home base load, which has no adapter."
     },
@@ -447,11 +477,12 @@
       "formula": null,
       "depends_on": [],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "The grid costs its tariff.",
         "PV and batteries read zero — a discharging battery's energy was paid for when it was charged."
       ],
-      "note": "A battery appears here only while discharging, and the mix it charged on happened earlier, which a snapshot engine cannot see."
+      "note": "A source that is not delivering reads nothing at all: a price with no energy behind it is unknown, not free. A discharging battery's energy was charged on an earlier mix, which a snapshot engine cannot see."
     },
 
     "source_adapters_dynamic_lcoe": {
@@ -462,6 +493,7 @@
       "formula": null,
       "depends_on": ["source_adapters_dynamic_coe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "The grid costs its tariff.",
         "A PV system costs its configured LCOE; a discharging battery its flat LCOS."
@@ -476,6 +508,7 @@
       "formula": null,
       "depends_on": ["source_adapters_dynamic_coe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "For the grid, multiply its import in kW by the tariff.",
         "Every local source reads 0 — a marginal price of zero times any output."
@@ -490,6 +523,7 @@
       "formula": "rate[s] = (source_adapters_export_power[s] / 1000) × export_compensation(s)",
       "depends_on": ["source_adapters_export_power"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sources",
       "derivation_steps": [
         "Take each source's exported watts, convert to kW, multiply by its compensation.",
         "A device that may not export reads 0 — it is never attributed exported watts to begin with."
@@ -504,6 +538,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "source_adapters_dynamic_coe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": [
         "For each PV or battery that is drawing, read its provenance row.",
         "Price its draw against that mix at the marginal price of each source.",
@@ -520,6 +555,7 @@
       "formula": null,
       "depends_on": ["source_adapters_coo_rates", "source_adapters_dynamic_lcoe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": [
         "Repeat the operating-cost derivation, substituting each source's levelized price.",
         "The grid keeps its tariff; a PV system costs its LCOE and a discharging battery its LCOS."
@@ -534,9 +570,10 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "source_adapters_dynamic_coe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sinks",
       "derivation_steps": [
         "For each sink, price its draw against its own provenance row at each source's marginal price.",
-        "Keyed by sink, so a charging battery appears here and a producing one does not."
+        "Keyed by every adapter: one that is not drawing this snapshot reads 0."
       ]
     },
 
@@ -548,6 +585,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_coo_rates", "source_adapters_dynamic_lcoe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "sinks",
       "derivation_steps": ["Repeat the per-sink derivation with each source's levelized price in place of its marginal one."]
     },
 
@@ -559,6 +597,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "sink_adapters_consumption_shares"],
       "answer_shape": "map_fixed_keys",
+      "keys": "consumers",
       "derivation_steps": [
         "Take the locally supplied part of each load's provenance row.",
         "Price it at the grid tariff — that is the import it displaced."
@@ -588,7 +627,8 @@
       "formula": "combined_coe = combined_coe_rate / (gross_power / 1000)",
       "depends_on": ["combined_coe_rate", "gross_power"],
       "answer_shape": "scalar",
-      "derivation_steps": ["Divide the combined cost rate by gross power in kW."]
+      "derivation_steps": ["Divide the combined cost rate by gross power in kW."],
+      "note": "Nothing at all when gross power is 0: a price with no energy behind it is unknown, not free."
     },
 
     "combined_lcoe": {
@@ -599,7 +639,8 @@
       "formula": "combined_lcoe = combined_lcoe_rate / (gross_power / 1000)",
       "depends_on": ["combined_lcoe_rate", "gross_power"],
       "answer_shape": "scalar",
-      "derivation_steps": ["Divide the combined levelized cost rate by gross power in kW."]
+      "derivation_steps": ["Divide the combined levelized cost rate by gross power in kW."],
+      "note": "Nothing at all when gross power is 0: a price with no energy behind it is unknown, not free."
     },
 
     "combined_consumption_cost_rate": {
@@ -692,6 +733,7 @@
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_avoided_cost_rate"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": [
         "A producing or discharging device earns the tariff on the power it put into self-consumption.",
         "A charging or standby device is debited what its own draw cost, so its rate is negative.",
@@ -708,6 +750,7 @@
       "formula": null,
       "depends_on": ["adapters_saving_rates", "source_adapters_dynamic_lcoe"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": ["Repeat the saving derivation with levelized prices in place of marginal ones."]
     },
 
@@ -719,6 +762,7 @@
       "formula": "adapters_financial_return_rates[d] = adapters_saving_rates[d] + source_adapters_export_compensation_rates[d]",
       "depends_on": ["adapters_saving_rates", "source_adapters_export_compensation_rates"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": ["Add each device's export compensation to its saving rate."]
     },
 
@@ -730,6 +774,7 @@
       "formula": null,
       "depends_on": ["adapters_levelized_saving_rates", "source_adapters_export_compensation_rates"],
       "answer_shape": "map_fixed_keys",
+      "keys": "devices",
       "derivation_steps": [
         "Start from the device's levelized saving rate and add its export compensation.",
         "Subtract its exported kW times its own levelized price."

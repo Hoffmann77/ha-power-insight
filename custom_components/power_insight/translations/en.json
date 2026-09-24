@@ -372,7 +372,9 @@
             "charge_from_adapters": "Charges from",
             "power_from_adapters": "Powered by",
             "lifetime_production": "Lifetime production",
-            "lifetime_cost": "Lifetime cost"
+            "lifetime_cost": "Lifetime cost",
+            "exports_power": "Feeds into the grid",
+            "export_compensation": "Export compensation per kWh"
           },
           "data_description": {
             "power_entity": "Sensor with this device's power in W, kW or MW.\nGrid: positive = import, negative = export.\nPV system and battery: positive = producing or discharging, negative = drawing or charging.\nConsumer: negative = drawing. Most plugs report their draw as positive — then turn on **Invert power sign**.",
@@ -383,7 +385,9 @@
             "charge_from_adapters": "The sources this battery charges from. Only used with **Specific devices**.",
             "power_from_adapters": "The sources that power this consumer. Only used with **Specific devices**.",
             "lifetime_production": "Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
-            "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values."
+            "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
+            "exports_power": "Turn on if this device can feed power into the grid.",
+            "export_compensation": "What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors."
           }
         }
       },
@@ -391,7 +395,8 @@
         "invalid_name": "Enter a name.",
         "name_not_unique": "A device with this name already exists.",
         "invalid_power_entity": "This entity does not exist or does not report power in W, kW or MW.",
-        "invalid_price_entity": "This entity does not exist or is unavailable.",
+        "invalid_price_entity": "This entity does not exist, is unavailable, or does not report a price per unit of energy (for example EUR/kWh, ct/kWh or EUR/MWh).",
+        "power_entity_in_use": "Another device already uses this power sensor. Each device needs its own sensor, or its watts would be counted twice.",
         "invalid_co2_entity": "This entity does not exist or is unavailable.",
         "invalid_input": "Invalid value.",
         "required": "Required by the sensors you enabled.",
@@ -411,6 +416,26 @@
     "reconfigure_battery_adapters": {
       "title": "Check the charging sources of {battery_name}",
       "description": "A possible charging source was added or removed. Open **{battery_name}**, choose **Reconfigure**, and check which sources it charges from."
+    },
+    "reconfigure_consumer_sources": {
+      "title": "Check the power sources of {device_name}",
+      "description": "**{device_name}** is restricted to a power source that has been removed. Open **{device_name}**, choose **Reconfigure**, and check which sources it may draw from."
+    },
+    "price_unit": {
+      "title": "The electricity price of {entry_title} has an unknown unit",
+      "description": "**{entity_id}** reports its price in `{unit}`, which is not a price per unit of energy, so it is ignored and every cost that needs it reads unknown.\n\nUse a price sensor in a unit like `EUR/kWh`, `ct/kWh` or `EUR/MWh` — Power Insight converts those itself — and select it under **Reconfigure** on the grid connection."
+    },
+    "price_currency": {
+      "title": "The electricity price of {entry_title} is in another currency",
+      "description": "**{entity_id}** reports its price in **{currency}**, but Home Assistant is set to **{configured}**. Power Insight does not convert currencies, so every cost is shown in {configured} while being calculated in {currency}.\n\nUse a price sensor in {configured}, or change the currency under **Settings → System → General**."
+    },
+    "shared_power_entity": {
+      "title": "Two devices of {entry_title} share a power sensor",
+      "description": "**{devices}** all read **{entity_id}**. A power sensor measures one device: shared, its watts are counted twice and one of the devices never updates.\n\nOpen each device, choose **Reconfigure**, and give it its own power sensor — or remove the one that duplicates another."
+    },
+    "metering_imbalance": {
+      "title": "The meters of {entry_title} disagree",
+      "description": "For the last 15 minutes the metered devices of **{entry_title}** drew {share} more than the grid, PV systems and batteries supplied. Meters sampled at different moments cause brief gaps, which Power Insight evens out; a gap this persistent usually means a misconfigured meter.\n\nCheck that every power sensor has the right sign (turn on **Invert** where it reports the opposite way), and that no metered device sits inside another metered circuit, so its power is not counted twice. The **Metering imbalance** diagnostic sensor shows the gap as it happens.\n\nThis message disappears once the meters agree again."
     }
   },
   "services": {
@@ -455,6 +480,232 @@
     },
     "set_value_not_total": {
       "message": "{entity_id} is not a total sensor. Set value only works on sensors that add up over time."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "available_power": {
+        "name": "Available power"
+      },
+      "avoided_cost_rate": {
+        "name": "Avoided cost rate"
+      },
+      "battery_charging_power": {
+        "name": "Battery charging power"
+      },
+      "battery_charging_ratio": {
+        "name": "Battery charging ratio"
+      },
+      "charging_cost_rate": {
+        "name": "Charging cost rate"
+      },
+      "charging_share_from": {
+        "name": "Charging share from {source}"
+      },
+      "consumption_cost_rate": {
+        "name": "Consumption cost rate"
+      },
+      "consumption_share": {
+        "name": "Consumption share"
+      },
+      "cost_rate": {
+        "name": "Cost rate"
+      },
+      "cost_savings_rate": {
+        "name": "Cost savings rate"
+      },
+      "device_operating_cost_rate": {
+        "name": "Device operating cost rate"
+      },
+      "discharge_to_batteries": {
+        "name": "Discharge to batteries"
+      },
+      "discharge_to_batteries_ratio": {
+        "name": "Discharge to batteries ratio"
+      },
+      "discharge_to_grid": {
+        "name": "Discharge to grid"
+      },
+      "discharge_to_grid_ratio": {
+        "name": "Discharge to grid ratio"
+      },
+      "discharge_to_home_consumption": {
+        "name": "Discharge to home consumption"
+      },
+      "discharge_to_home_consumption_ratio": {
+        "name": "Discharge to home consumption ratio"
+      },
+      "discharge_to_system_standby": {
+        "name": "Discharge to system standby"
+      },
+      "discharge_to_system_standby_ratio": {
+        "name": "Discharge to system standby ratio"
+      },
+      "export_compensation_rate": {
+        "name": "Export compensation rate"
+      },
+      "export_power": {
+        "name": "Export power"
+      },
+      "export_ratio": {
+        "name": "Export ratio"
+      },
+      "financial_return_rate": {
+        "name": "Financial return rate"
+      },
+      "home_consumption_power": {
+        "name": "Home consumption power"
+      },
+      "home_consumption_ratio": {
+        "name": "Home consumption ratio"
+      },
+      "import_cost_rate": {
+        "name": "Import cost rate"
+      },
+      "import_power": {
+        "name": "Import power"
+      },
+      "import_to_batteries": {
+        "name": "Import to batteries"
+      },
+      "import_to_batteries_ratio": {
+        "name": "Import to batteries ratio"
+      },
+      "import_to_home_consumption": {
+        "name": "Import to home consumption"
+      },
+      "import_to_home_consumption_ratio": {
+        "name": "Import to home consumption ratio"
+      },
+      "import_to_system_standby": {
+        "name": "Import to system standby"
+      },
+      "import_to_system_standby_ratio": {
+        "name": "Import to system standby ratio"
+      },
+      "levelized_charging_cost_rate": {
+        "name": "Levelized charging cost rate"
+      },
+      "levelized_consumption_cost_rate": {
+        "name": "Levelized consumption cost rate"
+      },
+      "levelized_cost_rate": {
+        "name": "Levelized cost rate"
+      },
+      "levelized_cost_savings_rate": {
+        "name": "Levelized cost savings rate"
+      },
+      "levelized_device_operating_cost_rate": {
+        "name": "Levelized device operating cost rate"
+      },
+      "levelized_export_cost_rate": {
+        "name": "Levelized export cost rate"
+      },
+      "levelized_financial_return_rate": {
+        "name": "Levelized financial return rate"
+      },
+      "levelized_operating_cost_rate": {
+        "name": "Levelized operating cost rate"
+      },
+      "levelized_price_of_electricity": {
+        "name": "Levelized price of electricity"
+      },
+      "levelized_system_standby_cost_rate": {
+        "name": "Levelized system standby cost rate"
+      },
+      "metering_imbalance": {
+        "name": "Metering imbalance"
+      },
+      "operating_cost_rate": {
+        "name": "Operating cost rate"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "power_share_from": {
+        "name": "Power share from {source}"
+      },
+      "price_of_electricity": {
+        "name": "Price of electricity"
+      },
+      "production_to_batteries": {
+        "name": "Production to batteries"
+      },
+      "production_to_batteries_ratio": {
+        "name": "Production to batteries ratio"
+      },
+      "production_to_grid": {
+        "name": "Production to grid"
+      },
+      "production_to_grid_ratio": {
+        "name": "Production to grid ratio"
+      },
+      "production_to_home_consumption": {
+        "name": "Production to home consumption"
+      },
+      "production_to_home_consumption_ratio": {
+        "name": "Production to home consumption ratio"
+      },
+      "production_to_system_standby": {
+        "name": "Production to system standby"
+      },
+      "production_to_system_standby_ratio": {
+        "name": "Production to system standby ratio"
+      },
+      "share_of_battery_charging": {
+        "name": "Share of battery charging"
+      },
+      "share_of_grid_export": {
+        "name": "Share of grid export"
+      },
+      "share_of_home_consumption": {
+        "name": "Share of home consumption"
+      },
+      "share_of_system_standby": {
+        "name": "Share of system standby"
+      },
+      "system_standby_power": {
+        "name": "System standby power"
+      },
+      "system_standby_ratio": {
+        "name": "System standby ratio"
+      },
+      "total_avoided_cost": {
+        "name": "Total avoided cost"
+      },
+      "total_charging_cost": {
+        "name": "Total charging cost"
+      },
+      "total_consumption_cost": {
+        "name": "Total consumption cost"
+      },
+      "total_cost_savings": {
+        "name": "Total cost savings"
+      },
+      "total_export_compensation": {
+        "name": "Total export compensation"
+      },
+      "total_financial_return": {
+        "name": "Total financial return"
+      },
+      "total_import_cost": {
+        "name": "Total import cost"
+      },
+      "total_levelized_cost_savings": {
+        "name": "Total levelized cost savings"
+      },
+      "total_levelized_device_operating_cost": {
+        "name": "Total levelized device operating cost"
+      },
+      "total_levelized_financial_return": {
+        "name": "Total levelized financial return"
+      },
+      "total_levelized_operating_cost": {
+        "name": "Total levelized operating cost"
+      },
+      "total_operating_cost": {
+        "name": "Total operating cost"
+      }
     }
   }
 }

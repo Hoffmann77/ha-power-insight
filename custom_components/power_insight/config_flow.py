@@ -21,6 +21,7 @@ from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.const import CONF_NAME
 from homeassistant.util import slugify
 
+from .utils import parse_price_unit
 from .const import (
     DOMAIN,
     CONF_KEY,
@@ -278,6 +279,21 @@ def validate_entity_exists(hass, entity_id: str | None) -> bool:
         return True
     state = hass.states.get(entity_id)
     return state is not None and state.state != "unavailable"
+
+
+def validate_price_entity(hass, entity_id: str | None) -> bool:
+    """Validate a price entity exists and reports a price per unit of energy.
+
+    ``EUR/kWh``, ``ct/kWh`` and ``EUR/MWh`` all qualify and are normalised to
+    currency per kWh at runtime; a price in any other unit would silently make
+    every cost a hundred or a thousand times off, so it is refused here.
+    """
+    if entity_id is None:
+        return True
+    state = hass.states.get(entity_id)
+    if state is None or state.state == "unavailable":
+        return False
+    return parse_price_unit(state.attributes.get("unit_of_measurement")) is not None
 
 
 def validate_power_entity(hass, entity_id: str | None) -> bool:
@@ -959,7 +975,7 @@ GRID_FIELDS: dict[str, AdapterField] = {
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
-        validator=validate_entity_exists,
+        validator=validate_price_entity,
         error_key="invalid_price_entity",
     ),
     CONF_CO2_INTENSITY_ENTITY: AdapterField(
@@ -1000,21 +1016,24 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
+    # Editable on reconfigure; a change applies from then on only — a feed-in
+    # rate is a price that changes over time, not a lifetime average, so it
+    # never rewrites history. No default: a rate means nothing without its
+    # currency, so it is asked for whenever the device exports.
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=True,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
         currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
-        default=0.08,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     # Raw calculation inputs — optional by default, required when levelized is active.
@@ -1123,21 +1142,21 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
+    # Editable on reconfigure, from then on only — see the PV fields.
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=False,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
         currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
-        default=0.0,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     # Source mode selector — form-only (not persisted). "Whole mix" clears the
@@ -1495,6 +1514,39 @@ def split_by_storage(
     return adapter_config, top_level_data
 
 
+def require_compensation_when_exporting(
+    user_input: dict[str, Any], errors: dict[str, str]
+) -> None:
+    """Ask for the feed-in rate of a device that exports.
+
+    There is no default to fall back on: a rate is a number in a currency,
+    and one that fits one country is wrong in the next.
+    """
+    if user_input.get(CONF_EXPORTS_POWER) and user_input.get(
+        CONF_EXPORT_COMPENSATION
+    ) is None:
+        errors.setdefault(CONF_EXPORT_COMPENSATION, "required")
+
+
+def power_entity_in_use(
+    parent_entry: ConfigEntry, entity_id: str | None, exclude_id: str | None = None
+) -> bool:
+    """Whether another device of the entry already reads ``entity_id``.
+
+    A power sensor measures one device. Two devices on the same sensor would
+    count its watts twice — and the engine keys readings by sensor, so one of
+    the two would never update at all.
+    """
+    if not entity_id:
+        return False
+    return any(
+        subentry.data.get("adapter", {}).get("config", {}).get(CONF_POWER_ENTITY)
+        == entity_id
+        for subentry in parent_entry.subentries.values()
+        if subentry.subentry_id != exclude_id
+    )
+
+
 def check_existing_slugs(
     parent_entry: ConfigEntry, exclude_id: str | None = None
 ) -> set[str]:
@@ -1611,7 +1663,7 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 3
+    MINOR_VERSION = 4
 
     def __init__(self) -> None:
         self._title: str = ""
@@ -1769,6 +1821,10 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             # user_input so the stored list matches the chosen mode.
             apply_source_mode(self._adapter_type, user_input, errors)
 
+            if power_entity_in_use(parent_entry, user_input.get(CONF_POWER_ENTITY)):
+                errors[CONF_POWER_ENTITY] = "power_entity_in_use"
+            require_compensation_when_exporting(user_input, errors)
+
             if not errors:
                 # Determine key and title
                 if self._adapter_type == "grid":
@@ -1868,6 +1924,14 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             # configure step.
             apply_source_mode(self._adapter_type, user_input, errors)
 
+            if power_entity_in_use(
+                parent_entry,
+                user_input.get(CONF_POWER_ENTITY),
+                exclude_id=subentry.subentry_id,
+            ):
+                errors[CONF_POWER_ENTITY] = "power_entity_in_use"
+            require_compensation_when_exporting(user_input, errors)
+
             if not errors:
                 # Evaluate calculated fields (current_lcoe/lcos, correction
                 # factor) from the edited lifetime values, reading the immutable
@@ -1898,6 +1962,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 # user has reconfigured this battery.
                 ir.async_delete_issue(
                     self.hass, DOMAIN, f"reconfigure_battery_{subentry.subentry_id}"
+                )
+                ir.async_delete_issue(
+                    self.hass, DOMAIN, f"reconfigure_consumer_{subentry.subentry_id}"
                 )
                 # Update without reloading here: the subentry change fires the
                 # config-entry update listener, which performs the single

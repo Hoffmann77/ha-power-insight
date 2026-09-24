@@ -16,8 +16,8 @@ class CaptiveBattery(ReferenceCase):
 
     * A captive sink is served from its allowed source before flexible sinks
       share it.
-    * When every allowed source is idle the row collapses to zero rather than
-      dividing by zero.
+    * When every allowed source is idle the restriction is relaxed as a last
+      resort: the sink is booked for what it actually drew.
     * The unservable draw is reported as a restriction deficit.
     """
 
@@ -40,12 +40,10 @@ class CaptiveBattery(ReferenceCase):
 
     class SourceInStandby(Snapshot):
         """pv1 is drawing standby, so it is a sink; bat1's only allowed source
-        does not exist.
-
-        Open question: home_base_load_power includes the 400 W bat1 drew but
-        could not legally be attributed, so the 'unmetered' load contains a
-        device that has a meter on it. Its docstring says gross minus metered
-        draw, which would be 580 W rather than 980 W.
+        is not supplying. bat1's 400 W still came from the grid, so that is
+        where it is booked, and all 400 W are its deficit — a "PV only"
+        battery topping up from the grid. The base load is only what no
+        meter measured.
         """
 
         grid = 1000

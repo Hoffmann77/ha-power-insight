@@ -187,7 +187,8 @@ def test_names_and_registration_order_do_not_matter() -> None:
 
 def test_an_idle_device_changes_nothing() -> None:
     """A PV system, a battery and a plug all reading 0 W join the home. Every
-    result is as before; the only new entries are theirs, and read 0."""
+    result is as before; the only new entries are theirs, and read their idle
+    value — 0 for an amount, share or ratio, nothing at all for a price."""
     idle = {"idle_pv": Adapter.pv("idle_pv"), "idle_bat": Adapter.battery("idle_bat"),
             "idle_plug": Adapter.consumer("idle_plug")}
 
@@ -202,6 +203,13 @@ def test_an_idle_device_changes_nothing() -> None:
             return kept
         return value
 
+    def is_idle(name: str, value: Any) -> bool:
+        if isinstance(value, dict):
+            return all(is_idle(name, v) for v in value.values())
+        if CATALOG[name]["unit"] == "EUR/kWh":
+            return value is None
+        return value == 0
+
     def compare(home: Home) -> list[str]:
         before = results(home)
         after = results(
@@ -211,11 +219,13 @@ def test_an_idle_device_changes_nothing() -> None:
                 home.price,
             )
         )
-        found: list[Any] = []
-        stripped = {name: strip(value, found) for name, value in after.items()}
-        problems = differences(before, stripped)
-        if any(v != 0 for v in found):
-            problems.append(f"an idle device read non-zero: {found}")
+        problems = []
+        for name, value in after.items():
+            found: list[Any] = []
+            stripped = strip(value, found)
+            problems += differences({name: before[name]}, {name: stripped})
+            if not all(is_idle(name, v) for v in found):
+                problems.append(f"an idle device read non-idle in {name}: {found}")
         return problems
 
     check("Adding idle devices must change nothing.", HOMES, compare)
@@ -237,6 +247,14 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
         "source_adapters_dynamic_coe", "source_adapters_dynamic_lcoe",
     }
 
+    def combine(x: Any, y: Any) -> Any:
+        """The two halves' values added up, map by map."""
+        if isinstance(x, dict) and isinstance(y, dict) and x.keys() == y.keys():
+            return {k: combine(x[k], y[k]) for k in x}
+        if x is None or y is None or isinstance(x, dict) or isinstance(y, dict):
+            return {"halves do not add": (x, y)}
+        return x + y
+
     def merge(value: Any, a: str, b: str, into: str, *, add: bool) -> Any:
         if not isinstance(value, dict):
             return value
@@ -244,7 +262,7 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
                if k not in (a, b)}
         if a in value:
             if add:
-                out[into] = value[a] + value[b]
+                out[into] = merge(combine(value[a], value[b]), a, b, into, add=add)
             else:
                 if not matches(value[a], value[b], abs_tol=ABS_TOL):
                     return {"halves disagree": (value[a], value[b])}
@@ -289,19 +307,17 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
 def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
     """A grid, PV or battery sensor drops out: gross power is unknowable, so
     every property built on it publishes nothing at all — never a zero, never an
-    empty map. The raw totals that do not read the missing sensor are unmoved.
-
-    ``PUBLISH_WHILE_UNAVAILABLE`` lists the properties that do not yet obey.
-    They are held to it strictly the other way: once one starts obeying, this
-    test fails until it is taken off the list.
+    empty map. The raw totals that do not read the missing sensor are unmoved,
+    and a channel total over devices the house does not have stays a confident
+    zero: the missing meter says nothing about a device that is not there.
     """
     reads = {
         "combined_grid_import": "grid", "combined_grid_export": "grid",
-        "combined_production": "pv", "combined_standby_power": "pv",
-        "combined_charging_power": "battery", "combined_discharging_power": "battery",
+        "combined_production": "pv", "combined_discharging_power": "battery",
     }
-
-    still_publishing: set[str] = set()
+    # Channel totals are balanced across every meter, so they follow gross
+    # power — unless there is nothing to sum at all.
+    sums_over = {"combined_charging_power": "battery", "combined_standby_power": "pv"}
 
     def compare(home: Home) -> list[str]:
         before = results(home)
@@ -309,12 +325,11 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
         for dropped in [a for a in home.adapters if a.kind != "consumer"]:
             after = results(home.with_readings(**{dropped.uid: None}))
             for name, value in after.items():
-                if reads.get(name, dropped.kind) == dropped.kind:
-                    if value is None:
-                        continue
-                    if name in PUBLISH_WHILE_UNAVAILABLE:
-                        still_publishing.add(name)
-                    else:
+                if name in sums_over and not home.uids(sums_over[name]):
+                    if value != 0:
+                        problems.append(f"{name} over no devices = {show(value)}")
+                elif reads.get(name, dropped.kind) == dropped.kind:
+                    if value is not None:
                         problems.append(
                             f"{dropped.uid} unavailable, {name} = {show(value)}"
                         )
@@ -324,40 +339,94 @@ def test_an_unavailable_meter_publishes_nothing_downstream() -> None:
 
     check("An unavailable meter must collapse everything downstream to nothing.",
           HOMES, compare)
-    fixed = set(PUBLISH_WHILE_UNAVAILABLE) - still_publishing
-    assert not fixed, f"now publish nothing — take them off the list: {sorted(fixed)}"
 
 
-#: Properties that still publish a value while gross power is unknowable.
-#: Five return an empty map, which a sensor reads the same as "no such device";
-#: ``source_adapters_coe_rate`` returns a zero for every local source.
-PUBLISH_WHILE_UNAVAILABLE = {
-    "sink_adapters_consumption_shares",
-    "sink_adapters_coo_rates",
-    "sink_adapters_lcoo_rates",
-    "sink_adapters_avoided_cost_rates",
-    "source_adapters_export_compensation_rates",
-    "source_adapters_coe_rate",
-}
+def test_a_missing_price_moves_no_watt_and_invents_no_number() -> None:
+    """The grid tariff drops out. Routing never depends on prices, so no watt,
+    share or ratio moves; every monetary value is either exactly what it was
+    — it never needed the tariff — or nothing at all, and never a different
+    number. What cannot be known without the tariff (the cost of an import)
+    is blank."""
+    money = {"EUR/h", "EUR/kWh"}
+
+    def leaves(before: Any, after: Any, name: str) -> list[str]:
+        if isinstance(before, dict) and isinstance(after, dict):
+            if set(before) != set(after):
+                return [f"{name} changed its keys"]
+            return [p for k in before for p in leaves(before[k], after[k], f"{name}.{k}")]
+        if after is None or matches(before, after, abs_tol=ABS_TOL):
+            return []
+        return [f"{name}: {show(before)} became {show(after)}"]
+
+    def compare(home: Home) -> list[str]:
+        before = results(home)
+        after = results(replace(home, price=None))
+        problems = []
+        for name in PROPERTIES:
+            if CATALOG[name]["unit"] in money:
+                problems += leaves(before[name], after[name], name)
+            else:
+                problems += differences({name: before[name]}, {name: after[name]})
+        if home.readings["grid"] > 0 and after["combined_coe_rate"] is not None:
+            problems.append("an import was costed without a tariff")
+        return problems
+
+    check("A missing price must blank only what needs it.",
+          [h for h in HOMES if h.price is not None], compare)
+
+
+def test_every_map_is_keyed_by_its_whole_family() -> None:
+    """Every per-device map carries a key for every device of its family —
+    idle, drawing or supplying — at every level, so a device never drops out
+    of a map because it went quiet. The catalog's ``keys`` names the family."""
+    kinds = {
+        "sources": {"grid", "pv", "battery"},
+        "sinks": {"grid", "pv", "battery", "consumer"},
+        "consumers": {"consumer"},
+        "devices": {"pv", "battery"},
+    }
+    maps = {name: doc["keys"] for name, doc in CATALOG.items() if "keys" in doc}
+
+    def compare(home: Home) -> list[str]:
+        engine = home.engine()
+        problems = []
+        for name, keys in maps.items():
+            levels = [keys] if isinstance(keys, str) else list(keys)
+            value = getattr(engine, name)
+            if value is None:
+                continue  # unknowable as a whole: the unavailability law's business
+            stack = [(value, levels)]
+            while stack:
+                mapping, (level, *rest) = stack.pop()
+                want = {a.uid for a in home.adapters if a.kind in kinds[level]}
+                if set(mapping) != want:
+                    problems.append(
+                        f"{name} keyed by {sorted(mapping)}, not the {level} {sorted(want)}"
+                    )
+                    break
+                stack += [(v, rest) for v in mapping.values() if rest and v is not None]
+        return problems
+
+    check("Every map must be keyed by its whole family.", HOMES, compare)
 
 
 def test_the_books_balance() -> None:
     """The model's conservation laws.
 
-    * Every source's watts land in exactly one of the four channels.
+    * Every source's watts land in exactly one of the four channels, and each
+      channel carries exactly what its meters say: the export channel the grid
+      export, the charging channel what the batteries drew, the standby channel
+      what the PV systems drew.
+    * All of that in every home, those whose readings overdraw the sources
+      included — once the readings are balanced by meeting in the middle:
+      sources up by ``1 + λ``, sinks down by ``1 − λ``, with
+      ``λ = (drawn − supplied) / (drawn + supplied)`` when the sinks read more,
+      and 0 otherwise. The gap is published as ``metering_imbalance``.
     * Every euro of gross cost lands in exactly one channel's cost bucket, at
       marginal and at levelized prices alike.
     * The avoided cost measured at the sources equals the avoided cost
       measured at the loads, base load included.
-    * Self-consumption and the base load are never negative — this one in
-      every home, including those whose readings overdraw the sources.
-
-    Open question: when the readings overdraw (the metered sinks draw more
-    than the sources provide, as unsynchronised sensors do), the engine
-    attributes a source more watts than it read, so the first two do not hold
-    there. The engine docs promise source balance "in every snapshot"; either
-    that promise or the overdraw handling has to give, so for now the balance
-    is only checked where the readings balance.
+    * Self-consumption and the base load are never negative.
     """
     channels = ("consumption", "export", "charging", "standby")
 
@@ -366,16 +435,40 @@ def test_the_books_balance() -> None:
         problems = []
         if e.combined_consumption < 0 or e.home_base_load_power < 0:
             problems.append("negative self-consumption or base load")
-        if not home.balanced:
-            return problems
+        kind = {a.uid: a.kind for a in home.adapters}
+        supplied = sum(
+            w for u, w in home.readings.items() if w and w > 0 and kind[u] != "consumer"
+        )
+        drawn = sum(-w for w in home.readings.values() if w and w < 0)
+        shift = (drawn - supplied) / (drawn + supplied) if drawn > supplied else 0.0
+        if not matches(max(0.0, drawn - supplied), e.metering_imbalance, abs_tol=ABS_TOL):
+            problems.append(f"imbalance {show(e.metering_imbalance)} W, readings say "
+                            f"{show(drawn - supplied)} W")
         for source, reading in home.readings.items():
-            if reading is None or reading <= 0 or source.startswith("cons"):
+            if reading is None or reading <= 0 or kind[source] == "consumer":
                 continue
             routed = sum(
                 getattr(e, f"source_adapters_{c}_power")[source] for c in channels
             )
-            if not matches(reading, routed, abs_tol=ABS_TOL):
+            if not matches(reading * (1 + shift), routed, abs_tol=ABS_TOL):
                 problems.append(f"{source} read {reading} W but {show(routed)} W was routed")
+
+        def metered(kinds: set[str]) -> float:
+            return sum(-w for u, w in home.readings.items() if w < 0 and kind[u] in kinds)
+
+        for channel, meters, total in (
+            ("export", {"grid"}, None),
+            ("charging", {"battery"}, e.combined_charging_power),
+            ("standby", {"pv"}, e.combined_standby_power),
+        ):
+            expected = metered(meters) * (1 - shift)
+            carried = sum(getattr(e, f"source_adapters_{channel}_power").values())
+            for value in (carried, total):
+                if value is not None and not matches(expected, value, abs_tol=ABS_TOL):
+                    problems.append(
+                        f"the {channel} channel carried {show(value)} W, "
+                        f"its meters read {show(expected)} W once balanced"
+                    )
         for levelized, total in ((False, e.combined_coe_rate), (True, e.combined_lcoe_rate)):
             prefix = "combined_levelized_" if levelized else "combined_"
             buckets = sum(getattr(e, f"{prefix}{c}_cost_rate") for c in channels)

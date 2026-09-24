@@ -120,10 +120,10 @@ sensors use its LCOS in place of an LCOE.
 
 :::note
 
-Today LCOS is computed with the same `cost / throughput` formula as LCOE. A
-round-trip-efficiency-aware refinement is planned; the **Round-trip
-efficiency** field is already collected and used for charging-source
-attribution.
+LCOS is computed with the same `cost / throughput` formula as LCOE, where the
+throughput is the energy the battery **discharges** over its life. That energy
+is metered at the battery's AC port, so round-trip losses are already netted
+out of it — which is why Power Insight asks for no efficiency figure.
 
 :::
 
@@ -246,8 +246,9 @@ devices drawing power at the same instant can show different source mixes:
   larger one keeps more solar (a lower grid share) than one drawing from the
   smaller, because more of the larger system survives the earlier steps.
 
-The **round-trip efficiency** is used to account for the energy lost in a
-charge/discharge cycle when attributing these costs.
+Energy lost in a charge/discharge cycle needs no correction here: the battery's
+charging and discharging are both metered at its AC port, so the losses are
+already the difference between the two.
 
 :::info[The exact rules]
 
@@ -268,6 +269,10 @@ support, and a choice applies to *all* devices of that type. See
 ## Accumulation
 
 **Total** sensors integrate a rate (currency/h) over time using a left-Riemann
-method, and persist their running total in Home Assistant's recorder so it
-survives restarts. You can seed a starting value — for example to carry over
+method — each stretch of time is counted at the rate that held through it —
+and persist their running total in Home Assistant's recorder so it survives
+restarts. While a rate is unavailable (a meter has dropped out) the total
+pauses, and it resumes when the meter reports again; the time in between is
+not counted. There is no staleness timeout: a sensor that is still available
+is trusted, even if it has not reported for a while. You can seed a starting value — for example to carry over
 historical totals — with the [`power_insight.set_value` service](services.md).

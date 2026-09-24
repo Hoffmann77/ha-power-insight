@@ -114,6 +114,10 @@
           "value": "600"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "200"
         },
@@ -121,12 +125,44 @@
           "property": "sink_adapters_source_shares",
           "value": {
             "grid": {
+              "grid": "0",
               "pv1": "4/5",
+              "pv2": "0",
               "bat1": "1/5",
               "bat2": "0"
             },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
+            "pv2": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
+            "bat1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
+            "bat2": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
             "cons1": {
+              "grid": "0",
               "pv1": "8/15",
+              "pv2": "0",
               "bat1": "2/15",
               "bat2": "1/3"
             }
@@ -135,7 +171,9 @@
         {
           "property": "home_base_load_source_shares",
           "value": {
+            "grid": "0",
             "pv1": "8/15",
+            "pv2": "0",
             "bat1": "2/15",
             "bat2": "1/3"
           }
@@ -159,7 +197,9 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
+            "grid": "0",
             "pv1": "320",
+            "pv2": "0",
             "bat1": "80",
             "bat2": "200"
           }
@@ -167,7 +207,9 @@
         {
           "property": "source_adapters_export_power",
           "value": {
+            "grid": "0",
             "pv1": "480",
+            "pv2": "0",
             "bat1": "120",
             "bat2": "0"
           }
@@ -175,7 +217,9 @@
         {
           "property": "source_adapters_export_shares",
           "value": {
+            "grid": "0",
             "pv1": "4/5",
+            "pv2": "0",
             "bat1": "1/5",
             "bat2": "0"
           }
@@ -183,7 +227,9 @@
         {
           "property": "source_adapters_standby_power",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -191,7 +237,9 @@
         {
           "property": "source_adapters_charging_power",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -199,7 +247,9 @@
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
+            "grid": "0",
             "pv1": "2/5",
+            "pv2": "0",
             "bat1": "2/5",
             "bat2": "1"
           }
@@ -207,7 +257,9 @@
         {
           "property": "source_adapters_export_ratios",
           "value": {
+            "grid": "0",
             "pv1": "3/5",
+            "pv2": "0",
             "bat1": "3/5",
             "bat2": "0"
           }
@@ -215,7 +267,9 @@
         {
           "property": "source_adapters_charging_ratios",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -223,7 +277,9 @@
         {
           "property": "source_adapters_standby_ratios",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -231,7 +287,9 @@
         {
           "property": "source_adapters_consumption_shares",
           "value": {
+            "grid": "0",
             "pv1": "8/15",
+            "pv2": "0",
             "bat1": "2/15",
             "bat2": "1/3"
           }
@@ -239,7 +297,9 @@
         {
           "property": "source_adapters_charging_shares",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -247,7 +307,9 @@
         {
           "property": "source_adapters_standby_shares",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -281,7 +343,9 @@
         {
           "property": "source_adapters_dynamic_coe",
           "value": {
+            "grid": null,
             "pv1": "0",
+            "pv2": null,
             "bat1": "0",
             "bat2": "0"
           }
@@ -289,7 +353,9 @@
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
+            "grid": null,
             "pv1": "1/10",
+            "pv2": null,
             "bat1": "3/20",
             "bat2": "1/5"
           }
@@ -297,7 +363,9 @@
         {
           "property": "source_adapters_coe_rate",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -305,7 +373,9 @@
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
+            "grid": "0",
             "pv1": "24/625",
+            "pv2": "0",
             "bat1": "6/625",
             "bat2": "0"
           }
@@ -332,6 +402,10 @@
           "property": "sink_adapters_coo_rates",
           "value": {
             "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "0"
           }
         },
@@ -339,6 +413,10 @@
           "property": "sink_adapters_lcoo_rates",
           "value": {
             "grid": "33/500",
+            "pv1": "0",
+            "pv2": "0",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "7/125"
           }
         },
@@ -472,6 +550,10 @@
           "value": "550"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "150"
         },
@@ -479,17 +561,44 @@
           "property": "sink_adapters_source_shares",
           "value": {
             "grid": {
+              "grid": "0",
               "pv1": "4/5",
+              "pv2": "0",
               "bat1": "1/5",
               "bat2": "0"
             },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
             "pv2": {
+              "grid": "0",
               "pv1": "8/15",
+              "pv2": "0",
               "bat1": "2/15",
               "bat2": "1/3"
             },
+            "bat1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
+            "bat2": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
             "cons1": {
+              "grid": "0",
               "pv1": "8/15",
+              "pv2": "0",
               "bat1": "2/15",
               "bat2": "1/3"
             }
@@ -498,7 +607,9 @@
         {
           "property": "home_base_load_source_shares",
           "value": {
+            "grid": "0",
             "pv1": "8/15",
+            "pv2": "0",
             "bat1": "2/15",
             "bat2": "1/3"
           }
@@ -522,7 +633,9 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
+            "grid": "0",
             "pv1": "880/3",
+            "pv2": "0",
             "bat1": "220/3",
             "bat2": "550/3"
           }
@@ -530,7 +643,9 @@
         {
           "property": "source_adapters_export_power",
           "value": {
+            "grid": "0",
             "pv1": "480",
+            "pv2": "0",
             "bat1": "120",
             "bat2": "0"
           }
@@ -538,7 +653,9 @@
         {
           "property": "source_adapters_export_shares",
           "value": {
+            "grid": "0",
             "pv1": "4/5",
+            "pv2": "0",
             "bat1": "1/5",
             "bat2": "0"
           }
@@ -546,7 +663,9 @@
         {
           "property": "source_adapters_standby_power",
           "value": {
+            "grid": "0",
             "pv1": "80/3",
+            "pv2": "0",
             "bat1": "20/3",
             "bat2": "50/3"
           }
@@ -554,7 +673,9 @@
         {
           "property": "source_adapters_charging_power",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -562,7 +683,9 @@
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
+            "grid": "0",
             "pv1": "11/30",
+            "pv2": "0",
             "bat1": "11/30",
             "bat2": "11/12"
           }
@@ -570,7 +693,9 @@
         {
           "property": "source_adapters_export_ratios",
           "value": {
+            "grid": "0",
             "pv1": "3/5",
+            "pv2": "0",
             "bat1": "3/5",
             "bat2": "0"
           }
@@ -578,7 +703,9 @@
         {
           "property": "source_adapters_charging_ratios",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -586,7 +713,9 @@
         {
           "property": "source_adapters_standby_ratios",
           "value": {
+            "grid": "0",
             "pv1": "1/30",
+            "pv2": "0",
             "bat1": "1/30",
             "bat2": "1/12"
           }
@@ -594,7 +723,9 @@
         {
           "property": "source_adapters_consumption_shares",
           "value": {
+            "grid": "0",
             "pv1": "8/15",
+            "pv2": "0",
             "bat1": "2/15",
             "bat2": "1/3"
           }
@@ -602,7 +733,9 @@
         {
           "property": "source_adapters_charging_shares",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -610,7 +743,9 @@
         {
           "property": "source_adapters_standby_shares",
           "value": {
+            "grid": "0",
             "pv1": "8/15",
+            "pv2": "0",
             "bat1": "2/15",
             "bat2": "1/3"
           }
@@ -644,7 +779,9 @@
         {
           "property": "source_adapters_dynamic_coe",
           "value": {
+            "grid": null,
             "pv1": "0",
+            "pv2": null,
             "bat1": "0",
             "bat2": "0"
           }
@@ -652,7 +789,9 @@
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
+            "grid": null,
             "pv1": "1/10",
+            "pv2": null,
             "bat1": "3/20",
             "bat2": "1/5"
           }
@@ -660,7 +799,9 @@
         {
           "property": "source_adapters_coe_rate",
           "value": {
+            "grid": "0",
             "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -668,7 +809,9 @@
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
+            "grid": "0",
             "pv1": "24/625",
+            "pv2": "0",
             "bat1": "6/625",
             "bat2": "0"
           }
@@ -695,7 +838,10 @@
           "property": "sink_adapters_coo_rates",
           "value": {
             "grid": "0",
+            "pv1": "0",
             "pv2": "0",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "0"
           }
         },
@@ -703,7 +849,10 @@
           "property": "sink_adapters_lcoo_rates",
           "value": {
             "grid": "33/500",
+            "pv1": "0",
             "pv2": "7/1000",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "7/125"
           }
         },
@@ -837,6 +986,10 @@
           "value": "450"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "50"
         },
@@ -844,14 +997,44 @@
           "property": "sink_adapters_source_shares",
           "value": {
             "grid": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
               "bat1": "1",
               "bat2": "0"
             },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
             "pv2": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
               "bat1": "1/5",
               "bat2": "4/5"
             },
+            "bat1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
+            "bat2": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "0",
+              "bat2": "0"
+            },
             "cons1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
               "bat1": "1/5",
               "bat2": "4/5"
             }
@@ -860,6 +1043,9 @@
         {
           "property": "home_base_load_source_shares",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "1/5",
             "bat2": "4/5"
           }
@@ -883,6 +1069,9 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "90",
             "bat2": "360"
           }
@@ -890,6 +1079,9 @@
         {
           "property": "source_adapters_export_power",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "300",
             "bat2": "0"
           }
@@ -897,6 +1089,9 @@
         {
           "property": "source_adapters_export_shares",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "1",
             "bat2": "0"
           }
@@ -904,6 +1099,9 @@
         {
           "property": "source_adapters_standby_power",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "10",
             "bat2": "40"
           }
@@ -911,6 +1109,9 @@
         {
           "property": "source_adapters_charging_power",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -918,6 +1119,9 @@
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "9/40",
             "bat2": "9/10"
           }
@@ -925,6 +1129,9 @@
         {
           "property": "source_adapters_export_ratios",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "3/4",
             "bat2": "0"
           }
@@ -932,6 +1139,9 @@
         {
           "property": "source_adapters_charging_ratios",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -939,6 +1149,9 @@
         {
           "property": "source_adapters_standby_ratios",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "1/40",
             "bat2": "1/10"
           }
@@ -946,6 +1159,9 @@
         {
           "property": "source_adapters_consumption_shares",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "1/5",
             "bat2": "4/5"
           }
@@ -953,6 +1169,9 @@
         {
           "property": "source_adapters_charging_shares",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -960,6 +1179,9 @@
         {
           "property": "source_adapters_standby_shares",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "1/5",
             "bat2": "4/5"
           }
@@ -993,6 +1215,9 @@
         {
           "property": "source_adapters_dynamic_coe",
           "value": {
+            "grid": null,
+            "pv1": null,
+            "pv2": null,
             "bat1": "0",
             "bat2": "0"
           }
@@ -1000,6 +1225,9 @@
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
+            "grid": null,
+            "pv1": null,
+            "pv2": null,
             "bat1": "3/20",
             "bat2": "1/5"
           }
@@ -1007,6 +1235,9 @@
         {
           "property": "source_adapters_coe_rate",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "0",
             "bat2": "0"
           }
@@ -1014,6 +1245,9 @@
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
             "bat1": "3/125",
             "bat2": "0"
           }
@@ -1040,7 +1274,10 @@
           "property": "sink_adapters_coo_rates",
           "value": {
             "grid": "0",
+            "pv1": "0",
             "pv2": "0",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "0"
           }
         },
@@ -1048,7 +1285,10 @@
           "property": "sink_adapters_lcoo_rates",
           "value": {
             "grid": "9/200",
+            "pv1": "0",
             "pv2": "19/2000",
+            "bat1": "0",
+            "bat2": "0",
             "cons1": "19/250"
           }
         },

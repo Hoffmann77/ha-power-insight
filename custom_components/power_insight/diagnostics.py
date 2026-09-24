@@ -1,4 +1,9 @@
-"""Diagnostics support for PowerInsight."""
+"""Diagnostics support for PowerInsight.
+
+Nothing is redacted, deliberately: a dump holds entity ids, device titles,
+the options and computed figures — no credentials, addresses or location —
+and the entity ids are exactly what a bug report needs.
+"""
 
 from __future__ import annotations
 

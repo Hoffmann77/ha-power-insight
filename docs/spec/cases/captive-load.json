@@ -80,12 +80,24 @@
           "value": "1400"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "900"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
             "cons1": {
               "grid": "0",
               "pv1": "1"
@@ -268,12 +280,16 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "0"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "1/20"
           }
         },
@@ -392,12 +408,24 @@
           "value": "1100"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "600"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
             "cons1": {
               "grid": "2/5",
               "pv1": "3/5"
@@ -580,12 +608,16 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "3/50"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "cons1": "9/100"
           }
         },

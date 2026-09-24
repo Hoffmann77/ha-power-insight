@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from typing import Callable, Iterable
 
 from homeassistant.const import (
     EVENT_STATE_CHANGED,
@@ -24,7 +24,7 @@ from homeassistant.helpers.event import (
 )
 
 from .const import DOMAIN
-from .utils import state_to_value
+from .utils import price_to_value, state_to_value
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +60,8 @@ class EventHandler:
         # Prefix isolates custom events for this config entry from all others.
         self._event_prefix = f"{DOMAIN}_{entry_id}_"
         self._unsub_listeners: list = []
+        #: Called after every stored reading, once the engine holds it.
+        self.on_update: Callable[[], None] | None = None
 
     def track_entities(self, entity_ids: Iterable[str]) -> None:
         """Start tracking source entities and bootstrap PowerInsight immediately.
@@ -82,7 +84,7 @@ class EventHandler:
                 value = (
                     None
                     if state.state in _INVALID_STATES
-                    else state_to_value(state)
+                    else self._to_value(entity_id, state)
                 )
                 self.power_insight.set_value(entity_id, value)
 
@@ -99,6 +101,17 @@ class EventHandler:
                 self._update_on_state_report_callback,
             ),
         ])
+
+    def _to_value(self, entity_id: str, state) -> float | None:
+        """Return a tracked state as the engine stores it.
+
+        A price is normalised to currency per kWh (``ct/kWh`` and ``EUR/MWh``
+        included) and is ``None`` in a unit that is not a price per energy;
+        everything else is a power, normalised to W.
+        """
+        if entity_id in self.power_insight.source_entities_price:
+            return price_to_value(state)
+        return state_to_value(state)
 
     def untrack_entities(self) -> None:
         """Cancel all active event listeners."""
@@ -170,9 +183,11 @@ class EventHandler:
         elif new_state.state in _INVALID_STATES:
             value = None
         else:
-            value = state_to_value(new_state)
+            value = self._to_value(entity_id, new_state)
 
         value_changed = self.power_insight.set_value(entity_id, value)
+        if self.on_update is not None:
+            self.on_update()
 
         is_report = curr_state is not None
         event_type = (

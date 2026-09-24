@@ -37,11 +37,11 @@ class GridOnly(ReferenceCase):
         """The meter reads exactly 0 W: gross power is zero and every ratio has to
         survive it.
 
-        Open question: at exactly 0 W the grid is idle — in no flow group — so
-        every per-source map is empty and the sensors reading them publish
-        nothing. A connected meter reading zero is arguably not the same as an
-        absent one; whether these per-source sensors should show 0 (grid present,
-        delivering nothing) rather than go blank is unsettled.
+        A connected meter reading zero is not an absent one. The grid is idle —
+        in no flow group — but keeps its key in every per-source map: its
+        watts, shares and ratios read 0, and its price reads nothing at all,
+        because nothing was delivered to put a price on. The blended price of
+        electricity is blank for the same reason.
         """
 
         grid = 0

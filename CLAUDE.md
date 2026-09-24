@@ -42,7 +42,7 @@ HA state_changed/state_reported event
               → sensor reads PowerInsight property (pure calculation)
 ```
 
-`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It normalises all power values to Watts using SI prefixes before storing them.
+`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It normalises all power values to Watts using SI prefixes, and the grid price to currency per kWh (`ct/kWh`, `EUR/MWh` … included; any other unit reads as an unknown price), before storing them.
 
 ### PowerInsight calculation engine (`power_insight.py`)
 
@@ -75,7 +75,7 @@ The integration uses a **hub** pattern with one main `ConfigEntry` and multiple 
 {
     "adapter": {
         "adapter_type": "grid" | "pv_system" | "battery" | "consumer",
-        "key": "<slugified name>",
+        "key": "<slugified name>",  # only keeps names unique
         "config": { <adapter-specific fields> },
     },
     # Optional top-level raw inputs (pv/battery only):
@@ -84,6 +84,8 @@ The integration uses a **hub** pattern with one main `ConfigEntry` and multiple 
     "co2_footprint": ...,
 }
 ```
+
+An adapter's `uid` — the key of every per-device map and part of every per-device `unique_id` — is its **subentry id**, not the slugified name, so renaming a device never orphans a sensor.
 
 ### Config flow (`config_flow.py`)
 
@@ -103,22 +105,23 @@ Sensors are declared as `PowerInsightSensorDescription` / `PowerInsightIntegrati
 - `entities_fn(power_insight)` — returns the source entity IDs this sensor cares about
 - `exists_fn(options | adapter)` — gates registration based on user options or adapter config
 - `transform_fn` — post-processing (e.g. `lambda val: val * 100` for percentages)
+- `translation_key` — the name, which lives in `strings.json` (copied to `translations/en.json`) under `entity.sensor`; never a hardcoded `name=` (see `docs/dev/entity-naming.md`)
 
 Per-adapter sensors (`PowerInsightAdapterSensor`) additionally call `get_value(adapter.uid, dict_result)` since adapter-level properties return `dict[uid → value]`.
 
-Integration sensors (`BaseEventIntegrationSensorEntity`) accumulate rate values (EUR/h) over time using a left-Riemann method, restoring state across HA restarts.
+Integration sensors (`BaseEventIntegrationSensorEntity`) accumulate rate values (EUR/h) over time using a left-Riemann method — each slice at the rate that held through it, up to the moment a rate becomes unavailable, then paused until it returns — restoring state across HA restarts and starting at setup once the engine has its readings.
 
 ### Testing
 
 Engine-tier tests in `tests/engine/` import `power_insight.py` directly via `importlib.util` (in `tests/engine/home.py`) to bypass all HA dependencies. Every hand-written home is a **declarative home** (`tests/engine/home.py`); the generated homes and frozen snapshots use the plain data beneath it — `Adapter` / `Topology` / `State` / `Cell` — directly.
 
-**Declarative homes**: a home is a class subclassing `Home` whose attributes are its devices, each with its reading, Django-model style — the attribute name is the uid, the first argument the power in W (`None` = unavailable sensor), the rest the static config with the `Adapter` factory keywords and defaults: `grid = Grid(400, price=F(3, 10))`, `pv1 = Pv(1000, exports=True)`, `bat1 = Battery(-400, charge_from=(grid, pv1))`, `plug = Consumer(-100, power_from=(pv1,))`. The grid must be called `grid`; a miswired home (no grid, unknown restriction target, bad keyword) fails at class creation. Tests are plain methods: take the `power_insight` fixture for an engine holding the readings, or use `@expect("<property>")` on a method that takes only `self` and *returns* the expected value; returning `None` asserts the engine publishes nothing at all.
+**Declarative homes**: a home is a class subclassing `Home` whose attributes are its devices, each with its reading, Django-model style — the attribute name is the uid, the first argument the power in W (`None` = unavailable sensor), the rest the static config with the `Adapter` factory keywords and defaults: `grid = Grid(400, price=F(3, 10))`, `pv1 = Pv(1000, exports=True)`, `bat1 = Battery(-400, charge_from=(grid, pv1))`, `plug = Consumer(-100, power_from=(pv1,))`. The grid must be called `grid`; a miswired home (no grid, unknown restriction target, bad keyword) fails at class creation. Tests are plain methods: take the `power_insight` fixture for an engine holding the readings, or use `@expect("<property>")` on a method that takes only `self` and *returns* the expected value; returning `None` asserts the engine publishes nothing at all. Every per-device map is keyed by a whole family of devices (the catalog's `keys`), but an expected map need only list the devices it is about — `@expect` gives every other one its idle value (0, or `None` for a price).
 
 **Reference cases** use the same devices, declared *bare* (`grid = Grid()`, `pv1 = Pv(lcoe=0.10, exports=True)`), with one inner `Snapshot` class per set of readings: `class ExportSurplus(Snapshot)` with `grid = -400`, `pv1 = 900`, `price = F(1, 4)` as attributes. A snapshot must read *exactly* the case's devices, and publishes under its class name in snake_case (`export_surplus`).
 
 The strategy: **assume the engine is right**, enforce every *known* decision by hand, generalise with formulas and laws, and detect any other change by freezing outputs. One directory each:
 
-- **`tests/engine/automatic/`** — value-free checks over a few hundred seeded random homes (`random_homes.py`): `test_identities.py` (one executable formula per catalogued property over its published dependencies; provenance is the only root), `test_laws.py` (metamorphic laws — power/price scaling by catalog unit, renaming, idle devices, PV-system splitting, unavailability, conservation; known breaches held by a strict xfail and `PUBLISH_WHILE_UNAVAILABLE`), `test_source_shares_invariants.py` (provenance guarantees, with a max-flow feasibility oracle). No expected numbers.
+- **`tests/engine/automatic/`** — value-free checks over a few hundred seeded random homes (`random_homes.py`): `test_identities.py` (one executable formula per catalogued property over its published dependencies; provenance is the only root), `test_laws.py` (metamorphic laws — power/price scaling by catalog unit, renaming, idle devices, PV-system splitting, unavailability, every map keyed by its whole family, conservation), `test_source_shares_invariants.py` (provenance guarantees, with a max-flow feasibility oracle). No expected numbers.
 - **`tests/engine/manual/`** — one hand-derived harness per **engine decision**: one module per question, following the sections of the decision log (`test_flow_roles.py`, `test_allocation_rules.py`, `test_feasibility.py`, `test_restrictions.py`, `test_costs.py`, `test_savings.py`, `test_battery_pricing.py`, `test_edge_readings.py`; expected provenance is written in watts via `provenance.rows`), one `Home` class per decision, named after it (`TestBrokenRestrictionIsReported`) and unique across the engine tier — the smallest home that tells the decision apart from its alternatives, then `@expect` claims with short names (`test_source_shares`, `test_restriction_deficit`) derived by hand, never read back from the engine. Every test method has a docstring a first-time reader can follow: what it checks and why that value is right. The class docstring opens with `Decision: …` and names its note in `docs/dev/engine-calculations.md`; each note ends with `Pinned by `TestX` in …` (the exact classes) or `Not pinned in the engine tier:` plus a reason, every class must be named in that log, and `manual/test_decisions.py` enforces both directions (plus the module paths, unique class names and test docstrings). Whenever an engine decision is made (or a bug turns into one), add its note, its class and the fix together.
 - **`tests/engine/frozen/`** — the change detector: `snapshots/reference.json` and `snapshots/generated.json` record every catalogued output (plus the restriction deficit) for every reference-case snapshot and 60 fixed generated homes whose *inputs* are stored and replayed. `test_frozen.py` fails with a table of every output that moved. Values are stored to 12 significant digits and compared at rel 1e-9, so float noise is not a change.
 - **`tests/engine/reference/`** — the docs showcase: ten fixed homes (`ReferenceCase` subclasses with `case_id` / `title`, bare devices, a few `Snapshot`s, prose in docstrings) that assert nothing; `docs/spec/cases/*.json` holds every catalogued property the engine computes for them (generated — never hand-edit), and `reference/test_corpus.py` fails when it is stale. Prose: the class docstring above its `Shows:` list is the page summary, a `Snapshot` docstring is its caption, and an `Open question:` paragraph becomes a callout. Older docs versions are not kept compatible with the shared `CaseDiagram` component: if the case JSON format changes, remove the broken old pages instead.

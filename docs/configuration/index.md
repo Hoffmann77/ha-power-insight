@@ -25,7 +25,7 @@ Each device is a Home Assistant **config subentry** of the main hub entry. Its
 configuration is split into:
 
 - `adapter.config` — the device's own settings (power entity, price entity,
-  export compensation, efficiency, charge sources, and the derived LCOE/LCOS).
+  export compensation, charge sources, and the derived LCOE/LCOS).
 - top-level `data` — the raw **lifetime** inputs (`lifetime_production`,
   `lifetime_cost`, `co2_footprint`) used to derive levelized costs.
 

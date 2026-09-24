@@ -104,6 +104,10 @@
           "value": "400"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "0"
         },
@@ -111,11 +115,31 @@
           "property": "sink_adapters_source_shares",
           "value": {
             "grid": {
+              "grid": "0",
               "east": "4/9",
               "west": "4/9",
               "carport": "1/9"
             },
+            "east": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
+            "west": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
+            "carport": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
             "plug": {
+              "grid": "0",
               "east": "1/2",
               "west": "1/2",
               "carport": "0"
@@ -125,6 +149,7 @@
         {
           "property": "home_base_load_source_shares",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -149,6 +174,7 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
+            "grid": "0",
             "east": "200",
             "west": "200",
             "carport": "0"
@@ -157,6 +183,7 @@
         {
           "property": "source_adapters_export_power",
           "value": {
+            "grid": "0",
             "east": "800",
             "west": "800",
             "carport": "200"
@@ -165,6 +192,7 @@
         {
           "property": "source_adapters_export_shares",
           "value": {
+            "grid": "0",
             "east": "4/9",
             "west": "4/9",
             "carport": "1/9"
@@ -173,6 +201,7 @@
         {
           "property": "source_adapters_standby_power",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -181,6 +210,7 @@
         {
           "property": "source_adapters_charging_power",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -189,6 +219,7 @@
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
+            "grid": "0",
             "east": "1/5",
             "west": "1/5",
             "carport": "0"
@@ -197,6 +228,7 @@
         {
           "property": "source_adapters_export_ratios",
           "value": {
+            "grid": "0",
             "east": "4/5",
             "west": "4/5",
             "carport": "1"
@@ -205,6 +237,7 @@
         {
           "property": "source_adapters_charging_ratios",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -213,6 +246,7 @@
         {
           "property": "source_adapters_standby_ratios",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -221,6 +255,7 @@
         {
           "property": "source_adapters_consumption_shares",
           "value": {
+            "grid": "0",
             "east": "1/2",
             "west": "1/2",
             "carport": "0"
@@ -229,6 +264,7 @@
         {
           "property": "source_adapters_charging_shares",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -237,6 +273,7 @@
         {
           "property": "source_adapters_standby_shares",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -271,6 +308,7 @@
         {
           "property": "source_adapters_dynamic_coe",
           "value": {
+            "grid": null,
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -279,6 +317,7 @@
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
+            "grid": null,
             "east": "1/10",
             "west": "1/10",
             "carport": "1/10"
@@ -287,6 +326,7 @@
         {
           "property": "source_adapters_coe_rate",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -295,6 +335,7 @@
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
+            "grid": "0",
             "east": "0",
             "west": "0",
             "carport": "0"
@@ -320,6 +361,9 @@
           "property": "sink_adapters_coo_rates",
           "value": {
             "grid": "0",
+            "east": "0",
+            "west": "0",
+            "carport": "0",
             "plug": "0"
           }
         },
@@ -327,6 +371,9 @@
           "property": "sink_adapters_lcoo_rates",
           "value": {
             "grid": "9/50",
+            "east": "0",
+            "west": "0",
+            "carport": "0",
             "plug": "1/25"
           }
         },

@@ -17,6 +17,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
 from homeassistant.const import (
     PERCENTAGE,
+    EntityCategory,
     UnitOfPower,
 )
 from homeassistant.components.sensor import (
@@ -116,17 +117,33 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
 POWER_INSIGHT_SENSORS = (
     PowerInsightSensorDescription(
         key="available_power",
-        name="Available power",
+        translation_key="available_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.gross_power,
     ),
     PowerInsightSensorDescription(
+        # How much more the metered sinks drew than the sources supplied. The
+        # engine balances the readings by meeting in the middle; this is the
+        # gap it closed. Persistently large means a misconfigured meter.
+        key="metering_imbalance",
+        translation_key="metering_imbalance",
+        icon="mdi:scale-unbalanced",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.metering_imbalance,
+    ),
+    PowerInsightSensorDescription(
         key="combined_export_ratio",
-        name="Export ratio",
+        translation_key="export_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -137,7 +154,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_power",
-        name="Home consumption power",
+        translation_key="home_consumption_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -147,7 +164,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_self_consumption_ratio",
-        name="Home consumption ratio",
+        translation_key="home_consumption_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -158,7 +175,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_financial_return_rate",
-        name="Financial return rate",
+        translation_key="financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -170,7 +187,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_financial_return_rate",
-        name="Levelized financial return rate",
+        translation_key="levelized_financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -183,7 +200,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_power",
-        name="Battery charging power",
+        translation_key="battery_charging_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -193,7 +210,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_power",
-        name="System standby power",
+        translation_key="system_standby_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -203,7 +220,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_ratio",
-        name="Battery charging ratio",
+        translation_key="battery_charging_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -214,7 +231,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_ratio",
-        name="System standby ratio",
+        translation_key="system_standby_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -225,7 +242,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_price_of_electricity",
-        name="Price of electricity",
+        translation_key="price_of_electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
@@ -237,7 +254,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_price_of_electricity",
-        name="Levelized price of electricity",
+        translation_key="levelized_price_of_electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
@@ -250,7 +267,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_cost_rate",
-        name="Cost rate",
+        translation_key="cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -260,7 +277,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_cost_rate",
-        name="Levelized cost rate",
+        translation_key="levelized_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -271,7 +288,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_charging_cost_rate",
-        name="Charging cost rate",
+        translation_key="charging_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -283,7 +300,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_charging_cost_rate",
-        name="Levelized charging cost rate",
+        translation_key="levelized_charging_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -296,7 +313,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_device_operating_cost_rate",
-        name="Device operating cost rate",
+        translation_key="device_operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -308,7 +325,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_device_operating_cost_rate",
-        name="Levelized device operating cost rate",
+        translation_key="levelized_device_operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -321,7 +338,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_consumption_cost_rate",
-        name="Consumption cost rate",
+        translation_key="consumption_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -333,7 +350,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_consumption_cost_rate",
-        name="Levelized consumption cost rate",
+        translation_key="levelized_consumption_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -346,7 +363,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_standby_cost_rate",
-        name="Levelized system standby cost rate",
+        translation_key="levelized_system_standby_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -359,7 +376,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_export_cost_rate",
-        name="Levelized export cost rate",
+        translation_key="levelized_export_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -372,7 +389,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_cost_savings_rate",
-        name="Cost savings rate",
+        translation_key="cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -384,7 +401,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_cost_savings_rate",
-        name="Levelized cost savings rate",
+        translation_key="levelized_cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -409,7 +426,7 @@ POWER_INSIGHT_SENSORS = (
 POWER_INSIGHT_HOME_BASE_LOAD_SENSORS = (
     PowerInsightSensorDescription(
         key="home_base_load_power",
-        name="Power",
+        translation_key="power",
         icon="mdi:home-lightning-bolt-outline",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
@@ -421,7 +438,7 @@ POWER_INSIGHT_HOME_BASE_LOAD_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="home_base_load_avoided_cost_rate",
-        name="Avoided cost rate",
+        translation_key="avoided_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -437,7 +454,7 @@ POWER_INSIGHT_HOME_BASE_LOAD_SENSORS = (
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="combined_total_charging_cost",
-        name="Total charging cost",
+        translation_key="total_charging_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -449,7 +466,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_consumption_cost",
-        name="Total consumption cost",
+        translation_key="total_consumption_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -461,7 +478,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_financial_return",
-        name="Total financial return",
+        translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -473,7 +490,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_cost_savings",
-        name="Total cost savings",
+        translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -513,7 +530,7 @@ LEVELIZED_TOTAL_KEYS = frozenset(COMBINED_LEDGER_ADAPTER_KEYS.values())
 POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     PowerInsightSensorDescription(
         key="combined_total_levelized_device_operating_cost",
-        name="Total levelized device operating cost",
+        translation_key="total_levelized_device_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -526,7 +543,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_cost_savings",
-        name="Total levelized cost savings",
+        translation_key="total_levelized_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -539,7 +556,7 @@ POWER_INSIGHT_COMBINED_LEDGER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_total_levelized_financial_return",
-        name="Total levelized financial return",
+        translation_key="total_levelized_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -562,7 +579,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     # so the grid device owns both sides of the meter.
     PowerInsightSensorDescription(
         key="import_power",
-        name="Import power",
+        translation_key="import_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -572,7 +589,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_power",
-        name="Export power",
+        translation_key="export_power",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -582,7 +599,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="import_cost_rate",
-        name="Import cost rate",
+        translation_key="import_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -592,7 +609,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_compensation_rate",
-        name="Export compensation rate",
+        translation_key="export_compensation_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -602,7 +619,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_ratio",
-        name="Import to home consumption ratio",
+        translation_key="import_to_home_consumption_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -613,7 +630,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_share",
-        name="Share of home consumption",
+        translation_key="share_of_home_consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -624,7 +641,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="consumption_power",
-        name="Import to home consumption",
+        translation_key="import_to_home_consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -634,7 +651,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Import to batteries ratio",
+        translation_key="import_to_batteries_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -646,7 +663,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Share of battery charging",
+        translation_key="share_of_battery_charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -658,7 +675,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Import to batteries",
+        translation_key="import_to_batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -669,7 +686,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Import to system standby ratio",
+        translation_key="import_to_system_standby_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -680,7 +697,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Share of system standby",
+        translation_key="share_of_system_standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -691,7 +708,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Import to system standby",
+        translation_key="import_to_system_standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -704,7 +721,7 @@ POWER_INSIGHT_GRID_ADAPTER_SENSORS = (
 POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_import_cost",
-        name="Total import cost",
+        translation_key="total_import_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -714,7 +731,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
-        name="Total export compensation",
+        translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -732,7 +749,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
 POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="export_power",
-        name="Production to grid",
+        translation_key="production_to_grid",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -743,7 +760,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
-        name="Production to grid ratio",
+        translation_key="production_to_grid_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -755,7 +772,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_share",
-        name="Share of grid export",
+        translation_key="share_of_grid_export",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -767,7 +784,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_compensation_rate",
-        name="Export compensation rate",
+        translation_key="export_compensation_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -780,7 +797,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
-        name="Production to home consumption",
+        translation_key="production_to_home_consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -790,7 +807,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
-        name="Production to home consumption ratio",
+        translation_key="production_to_home_consumption_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -801,7 +818,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_share",
-        name="Share of home consumption",
+        translation_key="share_of_home_consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -812,7 +829,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Production to batteries ratio",
+        translation_key="production_to_batteries_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -824,7 +841,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Share of battery charging",
+        translation_key="share_of_battery_charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -836,7 +853,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Production to batteries",
+        translation_key="production_to_batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -847,7 +864,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Production to system standby ratio",
+        translation_key="production_to_system_standby_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -858,7 +875,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Share of system standby",
+        translation_key="share_of_system_standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -869,7 +886,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Production to system standby",
+        translation_key="production_to_system_standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -879,7 +896,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="financial_return_rate",
-        name="Financial return rate",
+        translation_key="financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -891,7 +908,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
-        name="Levelized financial return rate",
+        translation_key="levelized_financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -904,7 +921,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
-        name="Operating cost rate",
+        translation_key="operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -916,7 +933,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
-        name="Levelized operating cost rate",
+        translation_key="levelized_operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -929,7 +946,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
-        name="Cost savings rate",
+        translation_key="cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -941,7 +958,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
-        name="Levelized cost savings rate",
+        translation_key="levelized_cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -957,7 +974,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
 POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
-        name="Total export compensation",
+        translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -970,7 +987,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
-        name="Total operating cost",
+        translation_key="total_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -982,7 +999,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
-        name="Total levelized operating cost",
+        translation_key="total_levelized_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -997,7 +1014,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
-        name="Total cost savings",
+        translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1009,7 +1026,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
-        name="Total levelized cost savings",
+        translation_key="total_levelized_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1024,7 +1041,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_financial_return",
-        name="Total financial return",
+        translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1036,7 +1053,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
-        name="Total levelized financial return",
+        translation_key="total_levelized_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1062,7 +1079,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
 POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="export_power",
-        name="Discharge to grid",
+        translation_key="discharge_to_grid",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1073,7 +1090,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_ratio",
-        name="Discharge to grid ratio",
+        translation_key="discharge_to_grid_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1085,7 +1102,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_share",
-        name="Share of grid export",
+        translation_key="share_of_grid_export",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1097,7 +1114,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="export_compensation_rate",
-        name="Export compensation rate",
+        translation_key="export_compensation_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1110,7 +1127,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_power",
-        name="Discharge to home consumption",
+        translation_key="discharge_to_home_consumption",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1120,7 +1137,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_ratio",
-        name="Discharge to home consumption ratio",
+        translation_key="discharge_to_home_consumption_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1131,7 +1148,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="self_consumption_share",
-        name="Share of home consumption",
+        translation_key="share_of_home_consumption",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1142,7 +1159,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_ratio",
-        name="Discharge to batteries ratio",
+        translation_key="discharge_to_batteries_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1154,7 +1171,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_share",
-        name="Share of battery charging",
+        translation_key="share_of_battery_charging",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1166,7 +1183,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="charging_power",
-        name="Discharge to batteries",
+        translation_key="discharge_to_batteries",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1177,7 +1194,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_ratio",
-        name="Discharge to system standby ratio",
+        translation_key="discharge_to_system_standby_ratio",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1188,7 +1205,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_share",
-        name="Share of system standby",
+        translation_key="share_of_system_standby",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1199,7 +1216,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="standby_power",
-        name="Discharge to system standby",
+        translation_key="discharge_to_system_standby",
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
@@ -1209,7 +1226,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="financial_return_rate",
-        name="Financial return rate",
+        translation_key="financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1221,7 +1238,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_financial_return_rate",
-        name="Levelized financial return rate",
+        translation_key="levelized_financial_return_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1234,7 +1251,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
-        name="Operating cost rate",
+        translation_key="operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1246,7 +1263,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
-        name="Levelized operating cost rate",
+        translation_key="levelized_operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1259,7 +1276,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
-        name="Cost savings rate",
+        translation_key="cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1271,7 +1288,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_cost_savings_rate",
-        name="Levelized cost savings rate",
+        translation_key="levelized_cost_savings_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1287,7 +1304,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
 POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
-        name="Total export compensation",
+        translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1300,7 +1317,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
-        name="Total operating cost",
+        translation_key="total_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1312,7 +1329,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
-        name="Total levelized operating cost",
+        translation_key="total_levelized_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1327,7 +1344,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
-        name="Total cost savings",
+        translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1339,7 +1356,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
-        name="Total levelized cost savings",
+        translation_key="total_levelized_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1354,7 +1371,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_financial_return",
-        name="Total financial return",
+        translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1366,7 +1383,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
-        name="Total levelized financial return",
+        translation_key="total_levelized_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1389,7 +1406,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
 POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     PowerInsightSensorDescription(
         key="consumption_share",
-        name="Consumption share",
+        translation_key="consumption_share",
         icon="mdi:percent",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -1400,7 +1417,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="operating_cost_rate",
-        name="Operating cost rate",
+        translation_key="operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1413,7 +1430,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
-        name="Levelized operating cost rate",
+        translation_key="levelized_operating_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1426,7 +1443,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="avoided_cost_rate",
-        name="Avoided cost rate",
+        translation_key="avoided_cost_rate",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/h",
         state_class=SensorStateClass.MEASUREMENT,
@@ -1441,7 +1458,7 @@ POWER_INSIGHT_CONS_ADAPTER_SENSORS = (
 POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
-        name="Total operating cost",
+        translation_key="total_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1453,7 +1470,7 @@ POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
-        name="Total levelized operating cost",
+        translation_key="total_levelized_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1470,7 +1487,7 @@ POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_avoided_cost",
-        name="Total avoided cost",
+        translation_key="total_avoided_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
         device_class=SensorDeviceClass.MONETARY,
@@ -1526,6 +1543,7 @@ class OptionsWrapper:
 _SENSOR_OPTION_GATE: dict[str, str] = {
     # --- Diagnostics ---
     "available_power": CONF_ENABLE_DEBUG_ENTITIES,
+    "metering_imbalance": CONF_ENABLE_DEBUG_ENTITIES,
     # --- Power distribution (W) ---
     "import_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage
@@ -1889,10 +1907,11 @@ async def async_setup_entry(
             for source_adapter in power_insight.gross_power_adapters:
                 if source_adapter.uid not in adapter.charge_from_adapters:
                     continue
-                name = source_adapter.verbose_name
                 dynamic_description = PowerInsightSensorDescription(
-                    key=f"charging_share_from_{name}",
-                    name=f"Charging share from {name}",
+                    # Keyed by the source's subentry id, never its name: a
+                    # renamed device must not orphan this sensor's history.
+                    key=f"charging_share_from_{source_adapter.uid}",
+                    translation_key="charging_share_from",
                     icon="mdi:percent",
                     native_unit_of_measurement=PERCENTAGE,
                     state_class=SensorStateClass.MEASUREMENT,
@@ -1949,10 +1968,9 @@ async def async_setup_entry(
         # option.
         if options_wrapped.check(CONF_ENABLE_POWER_SOURCE_SHARES, "consumer"):
             for source_adapter in power_insight.gross_power_adapters:
-                name = source_adapter.verbose_name
                 dynamic_description = PowerInsightSensorDescription(
-                    key=f"power_share_from_{name}",
-                    name=f"Power share from {name}",
+                    key=f"power_share_from_{source_adapter.uid}",
+                    translation_key="power_share_from",
                     icon="mdi:percent",
                     native_unit_of_measurement=PERCENTAGE,
                     state_class=SensorStateClass.MEASUREMENT,
@@ -2116,6 +2134,12 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
     It stores no running total itself, so there is no reload double-count, and
     a lifetime-value correction is reflected retroactively and consistently in
     both the per-adapter and the combined totals.
+
+    It is unavailable while any *enabled* per-device total is unknown or
+    unavailable — at startup before its value is restored, or while its meter
+    is down — because a partial sum would record a false drop and rise in the
+    long-term statistics. A *disabled* per-device total is skipped: it is not
+    accumulating, so that device is simply not part of the combined total.
     """
 
     def __init__(
@@ -2129,9 +2153,11 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
         super().__init__(description, config_entry, source_entities, power_insight)
         self._per_adapter_key = COMBINED_LEDGER_ADAPTER_KEYS[description.key]
 
-    @property
-    def native_value(self) -> float | None:
-        """Return the summed per-adapter totals plus the retired ledger."""
+    def _ledger_total(self) -> float | None:
+        """Return the per-adapter totals plus the retired ledger, or ``None``.
+
+        ``None`` while an enabled part has no value to add.
+        """
         ent_reg = er.async_get(self.hass)
         total = 0.0
         for uid in self.power_insight.levelized_correction_factors:
@@ -2141,16 +2167,26 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
             entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
             if entity_id is None:
                 continue
-            state = self.hass.states.get(entity_id)
-            if state is None or state.state in ("unknown", "unavailable"):
+            registry_entry = ent_reg.async_get(entity_id)
+            if registry_entry is not None and registry_entry.disabled:
                 continue
+            state = self.hass.states.get(entity_id)
             try:
                 total += float(state.state)
-            except (ValueError, TypeError):
-                continue
+            except (AttributeError, ValueError, TypeError):
+                return None  # not restored yet, unknown or unavailable
 
-        total += _retired_ledger_sum(self.config_entry, self._per_adapter_key)
-        return total
+        return total + _retired_ledger_sum(self.config_entry, self._per_adapter_key)
+
+    @property
+    def available(self) -> bool:
+        """Unavailable while an enabled per-device total has no value."""
+        return self._ledger_total() is not None
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the summed per-adapter totals plus the retired ledger."""
+        return self._ledger_total()
 
 
 class PowerInsightAdapterSensor(BasePowerInsightSensor):
@@ -2180,12 +2216,11 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
     def native_value(self) -> float | None:
         """Return the state of the sensor.
 
-        A per-source map absent this adapter means it contributed nothing to
-        that channel this snapshot, which is 0 — not unavailable. The value goes
-        unavailable only when the whole map is None (an inflow meter down, so
-        gross power is unknowable) or this adapter's own reading is None. That
-        split is why a missing key reads 0 here rather than None: an idle grid
-        publishes ``{}``, but a dropped-out sensor publishes ``None``.
+        Every per-device map is keyed by the device's whole family, so an idle
+        device reads its idle value from the map itself. The value is unknown
+        when the whole map is ``None`` (an inflow meter down, so gross power is
+        unknowable), when this adapter's own reading is ``None``, or when the
+        engine publishes ``None`` for it (a price with nothing delivered).
         """
         mapping = self.entity_description.value_fn(self.power_insight)
         if mapping is None or self.device_adapter.power is None:
@@ -2207,8 +2242,11 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
             return None
 
         values = attributes_fn(self.power_insight) or {}
+        deficit = values.get(self.device_adapter.uid)
 
-        return {"restriction_deficit": round(values.get(self.device_adapter.uid, 0.0), 1)}
+        return {
+            "restriction_deficit": None if deficit is None else round(deficit, 1)
+        }
 
 
 class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
@@ -2231,6 +2269,8 @@ class PowerInsightDynamicAdapterSensor(BasePowerInsightSensor):
         super().__init__(description, config_entry, source_entities, power_insight)
         self.device_adapter = device_adapter
         self.dynamic_adapter = dynamic_adapter
+        # The name names the other device: "Charging share from Roof PV".
+        self._attr_translation_placeholders = {"source": dynamic_adapter.verbose_name}
 
         uid = f"{self.config_entry.entry_id}_{self.device_adapter.uid}"
         self._attr_unique_id = f"{uid}_{self.entity_description.key}"

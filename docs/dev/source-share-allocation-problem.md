@@ -236,7 +236,17 @@ correctly. **But it cannot produce exact values**, for two independent reasons:
 
 Median 2 iterations; only the degenerate cases hit the 200-iteration cap.
 
-## Open questions
+## Open questions (answered)
+
+These were open while the problem was unsolved and are kept as the record.
+Questions 1–5 asked for a solution method; the max-flow approach described at
+the top answers them — exact, feasibility-correct, and expressing the
+preferences as rules that choose among allocations that already work.
+Questions 6 and 7 were modelling questions and are decisions in
+[Engine calculation decisions](engine-calculations.md): restrictions stay
+hard, and a broken one is relaxed and reported ("a broken restriction is
+reported, not hidden"); the grid goes first ("choosing among valid
+allocations").
 
 1. **Is there a formulation that is exact, feasibility-correct, and
    preference-expressive at once?** Feasibility is a flow property; the

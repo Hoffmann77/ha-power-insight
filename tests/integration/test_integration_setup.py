@@ -48,8 +48,8 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
-    # Both migration steps run, so the entry lands on the current minor version.
-    assert entry.minor_version == 3
+    # Every migration step runs, so the entry lands on the current minor version.
+    assert entry.minor_version == 4
     assert entry.options["schema"] == 2
     grid = set(entry.options["scopes"]["grid"])
     # Cost rate + its accumulation carried over to the grid scope.
@@ -69,10 +69,12 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
 async def test_no_grid_creates_repair_issue(
     hass: HomeAssistant, mock_config_entry_no_grid: MockConfigEntry
 ) -> None:
-    """No grid adapter should create a 'no_grid_configured' repair issue."""
+    """No grid adapter should create this entry's 'no_grid_configured' issue."""
     await setup_integration(hass, mock_config_entry_no_grid)
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(DOMAIN, "no_grid_configured") is not None
+    assert issue_reg.async_get_issue(
+        DOMAIN, f"no_grid_configured_{mock_config_entry_no_grid.entry_id}"
+    ) is not None
 
 
 async def test_setup_succeeds_with_grid(
@@ -91,7 +93,9 @@ async def test_grid_issue_dismissed_on_successful_setup(
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(DOMAIN, "no_grid_configured") is None
+    assert issue_reg.async_get_issue(
+        DOMAIN, f"no_grid_configured_{mock_config_entry.entry_id}"
+    ) is None
 
 
 async def test_powerinsight_bootstrapped_from_ha_state(
@@ -222,7 +226,45 @@ async def test_migrate_drops_stored_battery_efficiency(hass: HomeAssistant) -> N
     # Everything else the battery was configured with survives untouched.
     assert config["default_lcos"] == 0.15
     assert config["charge_from_adapters"] == []
-    assert entry.minor_version == 3
+    assert entry.minor_version == 4
+
+
+async def test_migrate_rekeys_share_sensors_by_subentry_id(hass: HomeAssistant) -> None:
+    """A share sensor keyed by its source's name is re-keyed by the source's
+    subentry id in place, so its history survives and a rename cannot orphan it.
+    """
+    from homeassistant.helpers import entity_registry as er
+
+    from .conftest import make_battery_subentry_data
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=3,
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "sensor", DOMAIN, f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_Grid",
+        config_entry=entry,
+    )
+    for name in ("grid_power", "battery_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    migrated = registry.async_get(old.entity_id)
+    assert migrated is not None
+    assert migrated.unique_id == (
+        f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_{GRID_SUB_ID}"
+    )
+    assert entry.minor_version == 4
 
 
 async def test_migrate_refuses_newer_major_version(hass: HomeAssistant) -> None:
@@ -268,3 +310,116 @@ async def test_migrate_accepts_newer_minor_version(hass: HomeAssistant) -> None:
 
     assert entry.state is ConfigEntryState.LOADED
     assert entry.minor_version == 99
+
+
+def _grid_with_price() -> dict:
+    import copy
+
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
+    return grid
+
+
+@pytest.mark.parametrize(
+    ("unit", "issue"),
+    [("EUR", "price_unit"), ("GBP/kWh", "price_currency"), ("ct/kWh", None)],
+)
+async def test_a_price_that_cannot_be_used_raises_a_repair_issue(
+    hass: HomeAssistant, unit: str, issue: str | None
+) -> None:
+    """An unknown price unit, or a foreign currency, needs the user; ct/kWh does not."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[_grid_with_price()],
+    )
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": unit})
+    await setup_integration(hass, entry)
+
+    registry = ir.async_get(hass)
+    raised = {
+        kind for kind in ("price_unit", "price_currency")
+        if registry.async_get_issue(DOMAIN, f"{kind}_{entry.entry_id}")
+    }
+    assert raised == ({issue} if issue else set())
+
+
+async def test_ct_per_kwh_prices_are_converted(hass: HomeAssistant) -> None:
+    """A 30 ct/kWh tariff is 0.30 EUR/kWh: 1 kW imported costs 0.30 EUR/h."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[_grid_with_price()],
+    )
+    hass.states.async_set("sensor.grid_power", "1000", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": "ct/kWh"})
+    await setup_integration(hass, entry)
+
+    assert entry.runtime_data.power_insight.combined_coe_rate == pytest.approx(0.30)
+
+
+async def test_two_devices_on_one_power_sensor_raise_a_repair_issue(
+    hass: HomeAssistant,
+) -> None:
+    """An entry from before the flow refused it gets told, not silently miscounted."""
+    import copy
+
+    from .conftest import make_consumer_subentry_data
+
+    twin = copy.deepcopy(make_consumer_subentry_data())
+    twin["data"]["adapter"]["config"]["power_entity"] = "sensor.grid_power"
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), twin],
+    )
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    assert ir.async_get(hass).async_get_issue(
+        DOMAIN, f"shared_power_entity_{entry.entry_id}"
+    )
+
+
+async def test_one_entry_with_a_grid_keeps_anothers_no_grid_issue(
+    hass: HomeAssistant,
+) -> None:
+    """The no-grid issue is per entry: a healthy entry does not dismiss another's."""
+    without = MockConfigEntry(domain=DOMAIN, title="Cabin", options=BASE_OPTIONS)
+    with_grid = MockConfigEntry(
+        domain=DOMAIN, title="House", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, without)
+    await setup_integration(hass, with_grid)
+
+    issue_reg = ir.async_get(hass)
+    assert issue_reg.async_get_issue(DOMAIN, f"no_grid_configured_{without.entry_id}")
+
+
+async def test_a_consumer_restricted_to_a_removed_device_raises_an_issue(
+    hass: HomeAssistant,
+) -> None:
+    """A consumer's power_from is checked like a battery's charge_from, and the
+    issue goes away with the consumer."""
+    import copy
+
+    from .conftest import CONS_SUB_ID, make_consumer_subentry_data
+
+    consumer = copy.deepcopy(make_consumer_subentry_data())
+    consumer["data"]["adapter"]["config"]["power_from_adapters"] = ["01GONE"]
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), consumer],
+    )
+    for name in ("grid_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    issue_id = f"reconfigure_consumer_{CONS_SUB_ID}"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id)
+
+    hass.config_entries.async_remove_subentry(entry, CONS_SUB_ID)
+    await hass.async_block_till_done()
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None

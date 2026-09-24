@@ -4,7 +4,7 @@
   "summary": "bat1 may only charge from pv1. That single restriction changes the answer in two opposite ways depending on whether pv1 is producing: when it is, the captive sink depletes it before anyone else may share it; when it is not, the sink has nowhere legal to draw from.",
   "shows": [
     "A captive sink is served from its allowed source before flexible sinks share it.",
-    "When every allowed source is idle the row collapses to zero rather than dividing by zero.",
+    "When every allowed source is idle the restriction is relaxed as a last resort: the sink is booked for what it actually drew.",
     "The unservable draw is reported as a restriction deficit."
   ],
   "topology": [
@@ -92,19 +92,35 @@
           "value": "500"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "300"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            },
             "bat1": {
               "grid": "0",
-              "pv1": "1"
+              "pv1": "1",
+              "bat1": "0"
             },
             "cons1": {
               "grid": "1",
-              "pv1": "0"
+              "pv1": "0",
+              "bat1": "0"
             }
           }
         },
@@ -112,7 +128,8 @@
           "property": "home_base_load_source_shares",
           "value": {
             "grid": "1",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
@@ -135,84 +152,96 @@
           "property": "source_adapters_consumption_power",
           "value": {
             "grid": "500",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_power",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_shares",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_power",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_power",
           "value": {
             "grid": "0",
-            "pv1": "400"
+            "pv1": "400",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
             "grid": "1",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_ratios",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_ratios",
           "value": {
             "grid": "0",
-            "pv1": "1"
+            "pv1": "1",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_ratios",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_consumption_shares",
           "value": {
             "grid": "1",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_shares",
           "value": {
             "grid": "0",
-            "pv1": "1"
+            "pv1": "1",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_shares",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
@@ -245,28 +274,32 @@
           "property": "source_adapters_dynamic_coe",
           "value": {
             "grid": "3/10",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": null
           }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
             "grid": "3/10",
-            "pv1": "1/10"
+            "pv1": "1/10",
+            "bat1": null
           }
         },
         {
           "property": "source_adapters_coe_rate",
           "value": {
             "grid": "3/20",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
             "grid": "0",
-            "pv1": "0"
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
@@ -286,6 +319,8 @@
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "bat1": "0",
             "cons1": "3/50"
           }
@@ -293,6 +328,8 @@
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
+            "pv1": "0",
             "bat1": "1/25",
             "cons1": "3/50"
           }
@@ -375,7 +412,7 @@
     },
     {
       "id": "source_in_standby",
-      "note": "pv1 is drawing standby, so it is a sink; bat1's only allowed source does not exist.",
+      "note": "pv1 is drawing standby, so it is a sink; bat1's only allowed source is not supplying. bat1's 400 W still came from the grid, so that is where it is booked, and all 400 W are its deficit \u2014 a \"PV only\" battery topping up from the grid. The base load is only what no meter measured.",
       "readings": {
         "grid": "1000",
         "pv1": "-20",
@@ -417,27 +454,44 @@
           "value": "580"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
-          "value": "880"
+          "value": "480"
         },
         {
           "property": "sink_adapters_source_shares",
           "value": {
-            "pv1": {
-              "grid": "1"
+            "grid": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
             },
-            "cons1": {
-              "grid": "1"
+            "pv1": {
+              "grid": "1",
+              "pv1": "0",
+              "bat1": "0"
             },
             "bat1": {
-              "grid": "0"
+              "grid": "1",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "cons1": {
+              "grid": "1",
+              "pv1": "0",
+              "bat1": "0"
             }
           }
         },
         {
           "property": "home_base_load_source_shares",
           "value": {
-            "grid": "1"
+            "grid": "1",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
@@ -459,73 +513,97 @@
         {
           "property": "source_adapters_consumption_power",
           "value": {
-            "grid": "980"
+            "grid": "580",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_power",
           "value": {
-            "grid": "0"
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_shares",
           "value": {
-            "grid": "0"
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_power",
           "value": {
-            "grid": "20"
+            "grid": "20",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_power",
           "value": {
-            "grid": "0"
+            "grid": "400",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_consumption_ratios",
           "value": {
-            "grid": "49/50"
+            "grid": "29/50",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_ratios",
           "value": {
-            "grid": "0"
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_ratios",
           "value": {
-            "grid": "0"
+            "grid": "2/5",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_ratios",
           "value": {
-            "grid": "1/50"
+            "grid": "1/50",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_consumption_shares",
           "value": {
-            "grid": "1"
+            "grid": "1",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_charging_shares",
           "value": {
-            "grid": "0"
+            "grid": "1",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_standby_shares",
           "value": {
-            "grid": "1"
+            "grid": "1",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
@@ -548,7 +626,7 @@
         },
         {
           "property": "combined_saving_rate",
-          "value": "-3/500"
+          "value": "-63/500"
         },
         {
           "property": "combined_export_compensation_rate",
@@ -557,54 +635,64 @@
         {
           "property": "source_adapters_dynamic_coe",
           "value": {
-            "grid": "3/10"
+            "grid": "3/10",
+            "pv1": null,
+            "bat1": null
           }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
           "value": {
-            "grid": "3/10"
+            "grid": "3/10",
+            "pv1": null,
+            "bat1": null
           }
         },
         {
           "property": "source_adapters_coe_rate",
           "value": {
-            "grid": "3/10"
+            "grid": "3/10",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_export_compensation_rates",
           "value": {
-            "grid": "0"
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
           }
         },
         {
           "property": "source_adapters_coo_rates",
           "value": {
             "pv1": "3/500",
-            "bat1": "0"
+            "bat1": "3/25"
           }
         },
         {
           "property": "source_adapters_lcoo_rates",
           "value": {
             "pv1": "3/500",
-            "bat1": "0"
+            "bat1": "3/25"
           }
         },
         {
           "property": "sink_adapters_coo_rates",
           "value": {
+            "grid": "0",
             "pv1": "3/500",
-            "bat1": "0",
+            "bat1": "3/25",
             "cons1": "3/100"
           }
         },
         {
           "property": "sink_adapters_lcoo_rates",
           "value": {
+            "grid": "0",
             "pv1": "3/500",
-            "bat1": "0",
+            "bat1": "3/25",
             "cons1": "3/100"
           }
         },
@@ -628,15 +716,15 @@
         },
         {
           "property": "combined_consumption_cost_rate",
-          "value": "147/500"
+          "value": "87/500"
         },
         {
           "property": "combined_levelized_consumption_cost_rate",
-          "value": "147/500"
+          "value": "87/500"
         },
         {
           "property": "combined_charging_cost_rate",
-          "value": "0"
+          "value": "3/25"
         },
         {
           "property": "combined_levelized_export_cost_rate",
@@ -648,42 +736,41 @@
         },
         {
           "property": "combined_device_operating_cost_rate",
-          "value": "3/500"
+          "value": "63/500"
         },
         {
           "property": "adapters_saving_rates",
           "value": {
             "pv1": "-3/500",
-            "bat1": "0"
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_saving_rates",
           "value": {
             "pv1": "-3/500",
-            "bat1": "0"
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_financial_return_rates",
           "value": {
             "pv1": "-3/500",
-            "bat1": "0"
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates",
           "value": {
             "pv1": "-3/500",
-            "bat1": "0"
+            "bat1": "-3/25"
           }
         },
         {
           "property": "combined_financial_return_rate",
-          "value": "-3/500"
+          "value": "-63/500"
         }
-      ],
-      "open_question": "home_base_load_power includes the 400 W bat1 drew but could not legally be attributed, so the 'unmetered' load contains a device that has a meter on it. Its docstring says gross minus metered draw, which would be 580 W rather than 980 W."
+      ]
     }
   ]
 }

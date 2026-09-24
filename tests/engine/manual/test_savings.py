@@ -144,3 +144,36 @@ class TestCorrectionFactorScalesTheLcoe(Home):
         the saving instead would have given 6/25.
         """
         return {"pv1": F(3, 50)}
+
+
+class TestSavingsAreMeasuredWithoutTheDevice(Home):
+    """Decision: a saving is measured against a home without the device.
+
+    The house exports 300 W while pv1 also runs a 700 W plug. Without pv1
+    those 700 W would have been imported, so they save the import tariff —
+    not the 8 ct feed-in rate they could have been exported for. See "a
+    saving is measured against a home without the device" in
+    engine-calculations.md.
+    """
+
+    grid = Grid(-300, price=PRICE)
+    pv1 = Pv(1000, exports=True, export_comp=F(2, 25))
+    plug = Consumer(-700)
+
+    @expect("adapters_saving_rates")
+    def test_saving_rates(self):
+        """The 700 W self-consumed save the import tariff.
+
+        0.7 kW × 3/10 EUR/kWh = 21/100 EUR/h. At the feed-in rate it would
+        have been 0.7 × 2/25 = 7/125, which is a different question.
+        """
+        return {"pv1": F(21, 100)}
+
+    @expect("adapters_financial_return_rates")
+    def test_financial_return_rates(self):
+        """The exported 300 W are credited once, through the compensation.
+
+        21/100 EUR/h saved plus 0.3 kW × 2/25 EUR/kWh = 3/125 EUR/h paid:
+        117/500 EUR/h.
+        """
+        return {"pv1": F(117, 500)}

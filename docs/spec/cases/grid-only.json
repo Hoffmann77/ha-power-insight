@@ -59,12 +59,20 @@
           "value": "1200"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "1200"
         },
         {
           "property": "sink_adapters_source_shares",
-          "value": {}
+          "value": {
+            "grid": {
+              "grid": "0"
+            }
+          }
         },
         {
           "property": "home_base_load_source_shares",
@@ -218,11 +226,15 @@
         },
         {
           "property": "sink_adapters_coo_rates",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "sink_adapters_lcoo_rates",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "sink_adapters_avoided_cost_rates",
@@ -288,7 +300,7 @@
     },
     {
       "id": "grid_idle",
-      "note": "The meter reads exactly 0 W: gross power is zero and every ratio has to survive it.",
+      "note": "The meter reads exactly 0 W: gross power is zero and every ratio has to survive it.\n\nA connected meter reading zero is not an absent one. The grid is idle \u2014 in no flow group \u2014 but keeps its key in every per-source map: its watts, shares and ratios read 0, and its price reads nothing at all, because nothing was delivered to put a price on. The blended price of electricity is blank for the same reason.",
       "readings": {
         "grid": "0"
       },
@@ -327,16 +339,26 @@
           "value": "0"
         },
         {
+          "property": "metering_imbalance",
+          "value": "0"
+        },
+        {
           "property": "home_base_load_power",
           "value": "0"
         },
         {
           "property": "sink_adapters_source_shares",
-          "value": {}
+          "value": {
+            "grid": {
+              "grid": "0"
+            }
+          }
         },
         {
           "property": "home_base_load_source_shares",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "gross_power_export_ratio",
@@ -356,51 +378,75 @@
         },
         {
           "property": "source_adapters_consumption_power",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_export_power",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_export_shares",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_standby_power",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_charging_power",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_consumption_ratios",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_export_ratios",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_charging_ratios",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_standby_ratios",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_consumption_shares",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_charging_shares",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_standby_shares",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "sink_adapters_consumption_shares",
@@ -428,19 +474,27 @@
         },
         {
           "property": "source_adapters_dynamic_coe",
-          "value": {}
+          "value": {
+            "grid": null
+          }
         },
         {
           "property": "source_adapters_dynamic_lcoe",
-          "value": {}
+          "value": {
+            "grid": null
+          }
         },
         {
           "property": "source_adapters_coe_rate",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_export_compensation_rates",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "source_adapters_coo_rates",
@@ -452,11 +506,15 @@
         },
         {
           "property": "sink_adapters_coo_rates",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "sink_adapters_lcoo_rates",
-          "value": {}
+          "value": {
+            "grid": "0"
+          }
         },
         {
           "property": "sink_adapters_avoided_cost_rates",
@@ -468,11 +526,11 @@
         },
         {
           "property": "combined_coe",
-          "value": "0"
+          "value": null
         },
         {
           "property": "combined_lcoe",
-          "value": "0"
+          "value": null
         },
         {
           "property": "combined_consumption_cost_rate",
@@ -518,8 +576,7 @@
           "property": "combined_financial_return_rate",
           "value": "0"
         }
-      ],
-      "open_question": "at exactly 0 W the grid is idle \u2014 in no flow group \u2014 so every per-source map is empty and the sensors reading them publish nothing. A connected meter reading zero is arguably not the same as an absent one; whether these per-source sensors should show 0 (grid present, delivering nothing) rather than go blank is unsettled."
+      ]
     },
     {
       "id": "grid_unavailable",
@@ -559,6 +616,10 @@
         },
         {
           "property": "combined_consumption",
+          "value": null
+        },
+        {
+          "property": "metering_imbalance",
           "value": null
         },
         {
@@ -639,7 +700,7 @@
         },
         {
           "property": "sink_adapters_consumption_shares",
-          "value": {}
+          "value": null
         },
         {
           "property": "combined_coe_rate",
@@ -671,11 +732,11 @@
         },
         {
           "property": "source_adapters_coe_rate",
-          "value": {}
+          "value": null
         },
         {
           "property": "source_adapters_export_compensation_rates",
-          "value": {}
+          "value": null
         },
         {
           "property": "source_adapters_coo_rates",
@@ -687,15 +748,15 @@
         },
         {
           "property": "sink_adapters_coo_rates",
-          "value": {}
+          "value": null
         },
         {
           "property": "sink_adapters_lcoo_rates",
-          "value": {}
+          "value": null
         },
         {
           "property": "sink_adapters_avoided_cost_rates",
-          "value": {}
+          "value": null
         },
         {
           "property": "home_base_load_avoided_cost_rate",

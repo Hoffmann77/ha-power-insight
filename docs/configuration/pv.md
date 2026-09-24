@@ -33,7 +33,14 @@ Default: **on** for PV systems. When off, the *Production to grid* (+ ratio),
 
 > What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors.
 
-Default: `0.08`. This is your feed-in tariff.
+This is your feed-in tariff, in your currency per kWh. There is no default —
+a rate that fits one country is wrong in the next — so it is asked for whenever
+the device feeds into the grid; enter `0` if you are not paid for it.
+
+Both this and *Feeds into the grid* can be changed later under **Reconfigure**.
+A new rate applies from then on: a feed-in tariff is a price that changes over
+time, so the totals already accumulated keep the rate that held when they were
+earned.
 
 ### Lifetime production
 

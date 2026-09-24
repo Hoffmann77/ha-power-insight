@@ -90,10 +90,9 @@ with readings that slightly overdraw, as unsynchronised sensors do).
 - `test_laws.py` — how all properties must move together under a change whose
   effect is known in advance: scaling power, scaling prices, renaming and
   reordering devices, adding idle devices, splitting a PV system in two, a
-  meter dropping out, and the model's conservation laws. The catalog's `unit`
-  says how each property must react. Known breaches are held strictly (an
-  `xfail(strict=True)`, a `PUBLISH_WHILE_UNAVAILABLE` list), so a fix fails
-  the test until the marker is removed.
+  meter dropping out, every map keyed by its whole family, and the model's
+  conservation laws. The catalog's `unit` says how each property must react,
+  and its `keys` which devices a map is keyed by.
 - `test_source_shares_invariants.py` — the provenance root's own guarantees:
   rows are normalised, no source is over-drawn, and a restriction is only broken
   when no allocation could honour it (decided by an independent max-flow
@@ -239,12 +238,10 @@ anything else) if your PR needs green checks to merge.
 ### Known gaps
 
 - **Correction factors.** The eight `*_corrected` properties are not in the
-  catalog, and no engine test sets a factor other than 1.0; the integration
-  tier covers them in `test_correction_flow.py`.
-- **Open findings** held by `test_laws.py`: six properties still publish while
-  a meter is unavailable (`PUBLISH_WHILE_UNAVAILABLE`), and readings that
-  overdraw break source balance, so the conservation law only checks balanced
-  homes.
+  catalog, the harness's `Adapter.battery` ignores `correction_factor`, and
+  only one manual class sets a factor other than 1.0; the integration tier
+  covers them in `test_correction_flow.py`. Parked — see
+  [`docs/dev/production-readiness.md`](../docs/dev/production-readiness.md).
 
 ## Integration tier (`integration/`)
 
