@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from typing import Any, Iterator
 
 from tests.engine.reference import CATALOG, REFERENCE_CASES
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 HERE = pathlib.Path(__file__).resolve().parent
 SNAPSHOTS = HERE / "snapshots"

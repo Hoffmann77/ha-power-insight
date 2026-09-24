@@ -21,7 +21,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, replace
 
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 SEED = 20260923
 COUNT = 200

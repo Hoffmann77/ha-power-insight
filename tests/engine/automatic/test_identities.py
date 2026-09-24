@@ -38,7 +38,7 @@ from typing import Any, Callable
 import pytest
 
 from tests.engine.automatic.random_homes import Home, random_homes
-from tests.engine.scenario_framework import matches, show
+from tests.engine.home import matches, show
 
 CATALOG = json.loads(
     (Path(__file__).parents[3] / "docs" / "spec" / "properties.json").read_text()

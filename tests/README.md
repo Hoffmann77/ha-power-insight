@@ -25,6 +25,11 @@ blocks of `@topology` → `@state` → `test_` methods, and each test binds to t
 block declared above it (found by source line). See the module docstring for the
 authoring surface.
 
+`home.py` holds the plain data every engine test is built from — `Adapter`,
+`Topology`, `State`, `Cell` — and, on top of it, **declarative homes**: a
+class whose devices are class attributes declared with their readings
+(`grid = Grid(500)`), with tests as plain methods. See its docstring.
+
 The strategy is to **assume the engine is right** rather than try to derive
 every output by hand, and to layer three kinds of check on top of that
 assumption, plus the docs showcase:
@@ -166,6 +171,8 @@ anything else) if your PR needs green checks to merge.
   snapshot can ask.
 - `test_scenario_framework.py` — self-tests for the framework's validation and
   source-order binding.
+- `test_home.py` — self-tests for the declarative homes: the checks at class
+  creation, and that `@expect` really fails on a wrong value.
 
 ### Known gaps
 

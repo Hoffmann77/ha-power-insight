@@ -49,7 +49,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 #: Cases per test. Every test draws the same set (same seed), so a failure in
 #: one is reproducible in the others.
