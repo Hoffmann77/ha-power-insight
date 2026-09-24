@@ -15,6 +15,7 @@ from .const import (
     CONF_POWER_FROM_ADAPTERS,
     DOMAIN,
     PLATFORMS,
+    SOURCE_ADAPTER_TYPES,
 )
 from .power_insight import PowerInsight
 from .event_handler import EventHandler
@@ -113,17 +114,21 @@ def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> Non
     hidden" — but the user should decide.) The issue is dismissed when the
     device is reconfigured or removed.
     """
-    valid_source_ids = {
-        sub.subentry_id
+    types_by_id = {
+        sub.subentry_id: sub.data.get("adapter", {}).get("adapter_type")
         for sub in entry.subentries.values()
-        if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
     }
     for subentry in entry.subentries.values():
         adapter = subentry.data.get("adapter", {})
-        restriction = _RESTRICTIONS.get(adapter.get("adapter_type"))
+        adapter_type = adapter.get("adapter_type")
+        restriction = _RESTRICTIONS.get(adapter_type)
         if restriction is None:
             continue
         field, prefix, translation_key = restriction
+        valid_types = SOURCE_ADAPTER_TYPES[adapter_type]
+        valid_source_ids = {
+            uid for uid, kind in types_by_id.items() if kind in valid_types
+        }
         sources = adapter.get("config", {}).get(field) or []
         if any(source_id not in valid_source_ids for source_id in sources):
             ir.async_create_issue(
