@@ -2118,6 +2118,12 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
     It stores no running total itself, so there is no reload double-count, and
     a lifetime-value correction is reflected retroactively and consistently in
     both the per-adapter and the combined totals.
+
+    It is unavailable while any *enabled* per-device total is unknown or
+    unavailable — at startup before its value is restored, or while its meter
+    is down — because a partial sum would record a false drop and rise in the
+    long-term statistics. A *disabled* per-device total is skipped: it is not
+    accumulating, so that device is simply not part of the combined total.
     """
 
     def __init__(
@@ -2131,9 +2137,11 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
         super().__init__(description, config_entry, source_entities, power_insight)
         self._per_adapter_key = COMBINED_LEDGER_ADAPTER_KEYS[description.key]
 
-    @property
-    def native_value(self) -> float | None:
-        """Return the summed per-adapter totals plus the retired ledger."""
+    def _ledger_total(self) -> float | None:
+        """Return the per-adapter totals plus the retired ledger, or ``None``.
+
+        ``None`` while an enabled part has no value to add.
+        """
         ent_reg = er.async_get(self.hass)
         total = 0.0
         for uid in self.power_insight.levelized_correction_factors:
@@ -2143,16 +2151,26 @@ class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
             entity_id = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
             if entity_id is None:
                 continue
-            state = self.hass.states.get(entity_id)
-            if state is None or state.state in ("unknown", "unavailable"):
+            registry_entry = ent_reg.async_get(entity_id)
+            if registry_entry is not None and registry_entry.disabled:
                 continue
+            state = self.hass.states.get(entity_id)
             try:
                 total += float(state.state)
-            except (ValueError, TypeError):
-                continue
+            except (AttributeError, ValueError, TypeError):
+                return None  # not restored yet, unknown or unavailable
 
-        total += _retired_ledger_sum(self.config_entry, self._per_adapter_key)
-        return total
+        return total + _retired_ledger_sum(self.config_entry, self._per_adapter_key)
+
+    @property
+    def available(self) -> bool:
+        """Unavailable while an enabled per-device total has no value."""
+        return self._ledger_total() is not None
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the summed per-adapter totals plus the retired ledger."""
+        return self._ledger_total()
 
 
 class PowerInsightAdapterSensor(BasePowerInsightSensor):
@@ -2182,12 +2200,11 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
     def native_value(self) -> float | None:
         """Return the state of the sensor.
 
-        A per-source map absent this adapter means it contributed nothing to
-        that channel this snapshot, which is 0 — not unavailable. The value goes
-        unavailable only when the whole map is None (an inflow meter down, so
-        gross power is unknowable) or this adapter's own reading is None. That
-        split is why a missing key reads 0 here rather than None: an idle grid
-        publishes ``{}``, but a dropped-out sensor publishes ``None``.
+        Every per-device map is keyed by the device's whole family, so an idle
+        device reads its idle value from the map itself. The value is unknown
+        when the whole map is ``None`` (an inflow meter down, so gross power is
+        unknowable), when this adapter's own reading is ``None``, or when the
+        engine publishes ``None`` for it (a price with nothing delivered).
         """
         mapping = self.entity_description.value_fn(self.power_insight)
         if mapping is None or self.device_adapter.power is None:

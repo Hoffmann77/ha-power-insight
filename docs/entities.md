@@ -118,6 +118,12 @@ levelized total (scaled by its [correction factor](concepts.md#the-correction-fa
 plus a ledger of removed devices — so editing lifetime values is retroactive
 and removing a device never drops its historical contribution.
 
+While a device's own total has no value — at startup before it is restored,
+say — the combined total is **unavailable** rather than a partial sum, which
+would show up in the statistics as a false drop and rise. A device whose own
+total is **disabled** is left out of the combined total altogether: it is not
+accumulating anything.
+
 :::
 
 ---
