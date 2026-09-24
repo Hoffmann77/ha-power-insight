@@ -277,7 +277,7 @@ three bugs found while building this (source-to-sink edges capped at the sink's
 draw, and an unverified tight set) would have been caught in seconds that way,
 instead of surfacing as a wrong share several layers up.
 
-**The one obstacle, and its fix.** `tests/engine/scenario_framework.py:110` loads
+**The one obstacle, and its fix.** `tests/engine/home.py` loads
 `power_insight.py` standalone via `spec_from_file_location`, with no package
 context, so a relative `from .allocation import ...` raises *"attempted relative
 import with no known parent package"*. An absolute import is no good either: it

@@ -19,19 +19,15 @@ Pure-Python tests for the `PowerInsight` calculation engine. They import
 `custom_components/power_insight/power_insight.py` directly via `importlib`,
 so they need **no Home Assistant** and run in a few seconds.
 
-The hand-derived harnesses in `manual/` and the reference cases are
-**declarative homes** (`home.py`): a class whose devices are class attributes,
-declared with their readings — `grid = Grid(500)`, `bat1 = Battery(-400,
-charge_from=(grid, pv1))` — and whose tests are plain methods, most of them a
-one-line `@expect("<property>")` claim. A reference case declares the same
-devices without readings and gives each snapshot its own inner `Snapshot`
-class (see `reference/` below). `test_flow_view.py` still uses the
-**source-order scenario framework** (`scenario_framework.py`, wired in
-`conftest.py`), where a class's methods come in repeating blocks of
-`@topology` → `@state` → `test_` methods and each test binds to the block
-declared above it. The generated homes and the frozen snapshots use the plain
-data beneath — `Adapter`, `Topology`, `State`, `Cell` — directly. See each
-module's docstring for the authoring surface.
+Every hand-written home in the tier is a **declarative home** (`home.py`): a
+class whose devices are class attributes, declared with their readings —
+`grid = Grid(500)`, `bat1 = Battery(-400, charge_from=(grid, pv1))` — and whose
+tests are plain methods, most of them a one-line `@expect("<property>")`
+claim. A reference case declares the same devices without readings and gives
+each snapshot its own inner `Snapshot` class (see `reference/` below). The
+generated homes and the frozen snapshots use the plain data beneath —
+`Adapter`, `Topology`, `State`, `Cell` — directly. See `home.py`'s docstring
+for the authoring surface.
 
 The strategy is to **assume the engine is right** rather than try to derive
 every output by hand, and to layer three kinds of check on top of that
@@ -234,8 +230,6 @@ anything else) if your PR needs green checks to merge.
 - `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
   reading it was computed from: a question about time, which no single
   snapshot can ask.
-- `test_scenario_framework.py` — self-tests for the framework's validation and
-  source-order binding.
 - `test_home.py` — self-tests for the declarative homes and reference cases:
   the checks at class creation, and that `@expect` really fails on a wrong
   value.

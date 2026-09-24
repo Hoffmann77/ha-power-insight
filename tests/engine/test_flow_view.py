@@ -17,67 +17,39 @@ that ``gross_power`` totals its sources, goes ``None`` when an inflow meter
 drops out, and reads 0 under pure export are the reference cases' to make, and
 this file no longer repeats them.
 
-Two aspects, one class each:
+Four homes, one class each:
 
-* :class:`TestFlowPartition` — group membership and disjointness, and the empty
-  share vectors when an inflow sensor drops out.
-* :class:`TestGrossPowerShares` — the share vectors: sources sum to 1, sinks need
-  not (the remainder is the unmetered home load), and the zero-gross guard.
-
-Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
-produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
+* :class:`TestEveryFlowRoleAtOnce` — group membership and disjointness.
+* :class:`TestAnUnavailableInflowEmptiesTheShares` — the empty share vectors
+  when an inflow sensor drops out.
+* :class:`TestGrossPowerShares` — sources sum to 1, sinks need not (the
+  remainder is the unmetered home load).
+* :class:`TestZeroGrossPowerShares` — the zero-gross guard.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from tests.engine.scenario_framework import (
-    Adapter,
-    EngineScenario,
-    State,
-    state,
-    topology,
-)
+from tests.engine.home import Battery, Consumer, Grid, Home, Pv
 
 
 def _uids(adapters):
     return {a.uid for a in adapters}
 
 
-class TestFlowPartition(EngineScenario):
-    """Which adapters land in source / sink / grid, and gross-power totalling."""
+class TestEveryFlowRoleAtOnce(Home):
+    """Every role at once, grid importing. Producing PV and a discharging
+    battery are sources; standby PV, a charging battery and a load are sinks;
+    an idle (0 W) consumer belongs to neither."""
 
-    # -----------------------------------------------------------------------
-    # Block 1 — every role at once (grid importing). Producing PV and a
-    # discharging battery are sources; standby PV, a charging battery and a load
-    # are sinks; an idle (0 W) consumer belongs to neither.
-    # -----------------------------------------------------------------------
-
-    @topology
-    def all_roles(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", exports=True),  # producing -> source
-            Adapter.pv("pv2"),  # standby   -> sink
-            Adapter.battery("bat1"),  # discharging -> source
-            Adapter.battery("bat2"),  # charging  -> sink
-            Adapter.consumer("cons1"),  # load      -> sink
-            Adapter.consumer("cons2"),  # idle      -> neither
-        )
-
-    @state
-    def midday_mixed(self):
-        return State(
-            grid=500,
-            pv1=3000,
-            pv2=-15,
-            bat1=800,
-            bat2=-600,
-            cons1=-900,
-            cons2=0,
-            price=0.30,
-        )
+    grid = Grid(500, price=0.30)
+    pv1 = Pv(3000, exports=True)  # producing   -> source
+    pv2 = Pv(-15)  # standby     -> sink
+    bat1 = Battery(800)  # discharging -> source
+    bat2 = Battery(-600)  # charging    -> sink
+    cons1 = Consumer(-900)  # load        -> sink
+    cons2 = Consumer(0)  # idle        -> neither
 
     def test_sources_include_importing_grid(self, power_insight):
         # source_adapters is grid-inclusive: the grid joins while importing.
@@ -103,24 +75,16 @@ class TestFlowPartition(EngineScenario):
         )
         assert "cons2" not in grouped
 
-    # -----------------------------------------------------------------------
-    # Block 2 — an inflow sensor is unavailable, so the share vectors cannot be
-    # built and collapse to empty. (That ``gross_power`` itself goes None is a
-    # published value, asserted by the pv-self-consumption reference case.)
-    # -----------------------------------------------------------------------
 
-    @topology
-    def grid_and_two_pv(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", exports=True),
-            Adapter.pv("pv2", exports=True),
-        )
+class TestAnUnavailableInflowEmptiesTheShares(Home):
+    """pv2's sensor has dropped out, so the gross total is unreliable and the
+    share vectors cannot be built: they collapse to empty. (That
+    ``gross_power`` itself goes None is a published value, asserted by the
+    pv-self-consumption reference case.)"""
 
-    @state
-    def one_pv_unavailable(self):
-        # pv2's sensor has dropped out (None) -> the gross total is unreliable.
-        return State(grid=500, pv1=1000, pv2=None, price=0.30)
+    grid = Grid(500, price=0.30)
+    pv1 = Pv(1000, exports=True)
+    pv2 = Pv(None, exports=True)
 
     def test_source_shares_vector_is_empty(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
@@ -128,27 +92,14 @@ class TestFlowPartition(EngineScenario):
         assert arr == []
 
 
-class TestGrossPowerShares(EngineScenario):
-    """The gross-power share vectors and their guards."""
+class TestGrossPowerShares(Home):
+    """Sources sum to 1; sinks need not — the remainder is the unmetered home
+    load. Grid 1000 W + pv1 1000 W make 2000 W gross, 0.5 each; the single
+    500 W load meters 0.25 of it, and the other 0.75 is unmetered."""
 
-    # -----------------------------------------------------------------------
-    # Block 1 — sources sum to 1; sinks need not (the remainder is the
-    # unmetered home load).
-    # -----------------------------------------------------------------------
-
-    @topology
-    def grid_pv_consumer(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", exports=True),
-            Adapter.consumer("cons1"),
-        )
-
-    @state
-    def half_and_half(self):
-        # Sources: grid 1000 W + pv1 1000 W -> gross 2000 W (each 0.5). A single
-        # 500 W load meters 0.25 of gross; the other 0.75 is unmetered.
-        return State(grid=1000, pv1=1000, cons1=-500, price=0.30)
+    grid = Grid(1000, price=0.30)
+    pv1 = Pv(1000, exports=True)
+    cons1 = Consumer(-500)
 
     def test_source_shares_sum_to_one(self, power_insight):
         arr, index = power_insight.source_adapters_gross_power_shares
@@ -161,20 +112,15 @@ class TestGrossPowerShares(EngineScenario):
         assert index == ["cons1"]
         assert arr == pytest.approx([0.25])  # remainder is home load
 
-    # -----------------------------------------------------------------------
-    # Block 2 — pure export: no source provides, so gross power is 0. The share
-    # properties must guard the division rather than raise, and the exporting
-    # grid's sink share collapses to 0.
-    # -----------------------------------------------------------------------
 
-    @topology
-    def grid_and_pv(self):
-        return (Adapter.grid(), Adapter.pv("pv1", exports=True))
+class TestZeroGrossPowerShares(Home):
+    """Pure export: the grid exports 500 W while pv1 is idle, so no source
+    provides and gross power is 0. The share properties must guard the
+    division rather than raise, and the exporting grid's sink share collapses
+    to 0."""
 
-    @state
-    def export_with_idle_pv(self):
-        # Grid exports 500 W while pv1 is idle: no source, gross 0 W, one sink.
-        return State(grid=-500, pv1=0, price=0.30)
+    grid = Grid(-500, price=0.30)
+    pv1 = Pv(0, exports=True)
 
     def test_zero_gross_sink_share_guards_to_zero(self, power_insight):
         arr, index = power_insight.sink_adapters_gross_power_shares
