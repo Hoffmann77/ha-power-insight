@@ -147,7 +147,7 @@ and whether clearing the lifetime fields can silently re-base the correction
 | H9 | Repair issues: `no_grid_configured` gets a per-entry id; a consumer's `power_from` is checked like a battery's `charge_from`; an issue is deleted once it no longer applies (on reconfigure, or with its device). | done |
 | H10 | `exports_power` and `export_compensation` become reconfigurable and apply from then on (a feed-in rate is a time-varying price, not a lifetime average, so it never rewrites history). The currency-blind 0.08 default is dropped: a value is required when exporting. A feed-in *entity* is post-1.0. | done |
 | H11 | `iot_class: calculated`; `integration_type` stays `hub`; version by month (`2026.x.x`); entity names by `translation_key`; the diagnostic sensors (`metering_imbalance`, available power) get `entity_category: diagnostic` and are opt-in through the debug-sensors option; diagnostics hold only entity ids and titles, so nothing is redacted. | done |
-| H12 | Stale docs: the efficiency note in `concepts.md`, CLAUDE.md's description of uids (they are subentry ids) and of the integration method, the tests README's known gaps, and the allocation write-up's open questions. | settled |
+| H12 | Stale docs: the efficiency note in `concepts.md`, CLAUDE.md's description of uids (they are subentry ids) and of the integration method, the tests README's known gaps, and the allocation write-up's open questions. | done |
 
 ## Implementation order
 

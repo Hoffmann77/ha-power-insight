@@ -120,10 +120,10 @@ sensors use its LCOS in place of an LCOE.
 
 :::note
 
-Today LCOS is computed with the same `cost / throughput` formula as LCOE. A
-round-trip-efficiency-aware refinement is planned; the **Round-trip
-efficiency** field is already collected and used for charging-source
-attribution.
+LCOS is computed with the same `cost / throughput` formula as LCOE, where the
+throughput is the energy the battery **discharges** over its life. That energy
+is metered at the battery's AC port, so round-trip losses are already netted
+out of it — which is why Power Insight asks for no efficiency figure.
 
 :::
 
@@ -246,8 +246,9 @@ devices drawing power at the same instant can show different source mixes:
   larger one keeps more solar (a lower grid share) than one drawing from the
   smaller, because more of the larger system survives the earlier steps.
 
-The **round-trip efficiency** is used to account for the energy lost in a
-charge/discharge cycle when attributing these costs.
+Energy lost in a charge/discharge cycle needs no correction here: the battery's
+charging and discharging are both metered at its AC port, so the losses are
+already the difference between the two.
 
 :::info[The exact rules]
 

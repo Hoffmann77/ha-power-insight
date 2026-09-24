@@ -42,7 +42,7 @@ HA state_changed/state_reported event
               → sensor reads PowerInsight property (pure calculation)
 ```
 
-`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It normalises all power values to Watts using SI prefixes before storing them.
+`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It normalises all power values to Watts using SI prefixes, and the grid price to currency per kWh (`ct/kWh`, `EUR/MWh` … included; any other unit reads as an unknown price), before storing them.
 
 ### PowerInsight calculation engine (`power_insight.py`)
 
@@ -75,7 +75,7 @@ The integration uses a **hub** pattern with one main `ConfigEntry` and multiple 
 {
     "adapter": {
         "adapter_type": "grid" | "pv_system" | "battery" | "consumer",
-        "key": "<slugified name>",
+        "key": "<slugified name>",  # only keeps names unique
         "config": { <adapter-specific fields> },
     },
     # Optional top-level raw inputs (pv/battery only):
@@ -84,6 +84,8 @@ The integration uses a **hub** pattern with one main `ConfigEntry` and multiple 
     "co2_footprint": ...,
 }
 ```
+
+An adapter's `uid` — the key of every per-device map and part of every per-device `unique_id` — is its **subentry id**, not the slugified name, so renaming a device never orphans a sensor.
 
 ### Config flow (`config_flow.py`)
 
@@ -103,10 +105,11 @@ Sensors are declared as `PowerInsightSensorDescription` / `PowerInsightIntegrati
 - `entities_fn(power_insight)` — returns the source entity IDs this sensor cares about
 - `exists_fn(options | adapter)` — gates registration based on user options or adapter config
 - `transform_fn` — post-processing (e.g. `lambda val: val * 100` for percentages)
+- `translation_key` — the name, which lives in `strings.json` (copied to `translations/en.json`) under `entity.sensor`; never a hardcoded `name=` (see `docs/dev/entity-naming.md`)
 
 Per-adapter sensors (`PowerInsightAdapterSensor`) additionally call `get_value(adapter.uid, dict_result)` since adapter-level properties return `dict[uid → value]`.
 
-Integration sensors (`BaseEventIntegrationSensorEntity`) accumulate rate values (EUR/h) over time using a left-Riemann method, restoring state across HA restarts.
+Integration sensors (`BaseEventIntegrationSensorEntity`) accumulate rate values (EUR/h) over time using a left-Riemann method — each slice at the rate that held through it, up to the moment a rate becomes unavailable, then paused until it returns — restoring state across HA restarts and starting at setup once the engine has its readings.
 
 ### Testing
 
