@@ -107,10 +107,11 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 1. **The grid goes first.** A restricted sink that is allowed the grid draws it
    before competing for local generation. The grid is the balancing node, not a
    generator; local generation is the scarce thing worth attributing carefully.
-2. **Scarce sources are split in proportion to draw.** Which is also what makes
-   two sinks with the same restriction come out with the same row whatever their
-   draws — the split is proportional, never sink-by-sink, so there is no
-   ordering for them to diverge on.
+2. **Scarce sources are split in proportion to draw.** Two sinks with the same
+   restriction therefore come out with the same row whatever their draws. The
+   split is proportional, never sink-by-sink, but a reserve held by only one of
+   them can still tilt it; `_allocate` then pools the group's watts and deals
+   them out again by draw, which keeps every source's total and every reserve.
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
@@ -118,10 +119,8 @@ All three are pinned in `tests/engine/manual/test_allocation_rules.py`:
 rules 1 and 2 by `TestTheGridGoesFirst`, rule 3 by
 `TestRestrictedSinksAreServedFirst` (and, in `test_flow_roles.py`, by
 `TestPvStandbyIsAnUnrestrictedSink`), and rule 2's "same row" guarantee by
-`TestSameRestrictionGetsTheSameRow`, as a strict expected failure: when the
-draws exactly exhaust the sources, the engine hands a large sink its reserve
-first and the rows diverge (a 100 W and a 300 W load on the same two PV systems read
-9/13 and 10/13 on pv1 instead of 3/4 each).
+`TestSameRestrictionGetsTheSameRow`: a 100 W and a 300 W load on the same two
+PV systems, where only the larger one holds a reserve, both read 3/4 on pv1.
 
 :::note[Decision: a sink splits over what is *left*, not over total output]
 

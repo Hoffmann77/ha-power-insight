@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from fractions import Fraction as F
 
-import pytest
-
 from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 from tests.engine.manual.provenance import rows
 
@@ -78,23 +76,13 @@ class TestSameRestrictionGetsTheSameRow(Home):
     cons1 = Consumer(-100, power_from=(pv1, pv2))
     cons2 = Consumer(-300, power_from=(pv1, pv2))
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "Engine bug: when the draws exactly exhaust the sources, cons2 must "
-            "take at least 200 W of pv1 in every plan; the engine hands out "
-            "that reserve first and splits only the rest by draw, so the two "
-            "rows come out 9/13 and 10/13 on pv1 instead of 3/4 each. The "
-            "same-row answer is feasible and honours the reserve."
-        ),
-    )
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
         """Both loads read the same mix: 3/4 pv1, 1/4 pv2.
 
         Each PV system is split 100 : 300 by draw, so cons1 gets 75 W pv1 and
-        25 W pv2, and cons2 three times that. Known to fail today (see the
-        xfail reason).
+        25 W pv2, and cons2 three times that. cons2 must take 200 W of pv1 in
+        any valid plan, and 225 W honours that.
         """
         return rows({
             "cons1": {"grid": 0, "pv1": 75, "pv2": 25},
