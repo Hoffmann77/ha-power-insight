@@ -7,6 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryError
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
@@ -270,12 +271,13 @@ async def async_migrate_entry(
     is refused rather than loaded — a downgrade cannot know what changed.
     """
     if entry.version > 1:
-        _LOGGER.error(
-            "Config entry %s was written by a newer version of Power Insight "
-            "(version %s); downgrading is not supported",
-            entry.title, entry.version,
+        # Written by a newer release (the integration was downgraded). Its
+        # layout is unknown here, so refuse rather than load it as v1.
+        raise ConfigEntryError(
+            translation_domain=DOMAIN,
+            translation_key="migration_downgrade",
+            translation_placeholders={"version": str(entry.version)},
         )
-        return False
 
     if entry.minor_version < 2:
         _migrate_options_to_scopes(hass, entry)

@@ -267,8 +267,13 @@ async def test_migrate_rekeys_share_sensors_by_subentry_id(hass: HomeAssistant) 
     assert entry.minor_version == 4
 
 
-async def test_an_entry_from_a_newer_version_is_refused(hass: HomeAssistant) -> None:
-    """A downgrade is refused rather than loading data it cannot understand."""
+async def test_migrate_refuses_newer_major_version(hass: HomeAssistant) -> None:
+    """An entry saved by a newer major version is refused, not loaded as v1.
+
+    That only happens after a downgrade: this code cannot know the newer
+    layout, so migration stops with a translated error and leaves the stored
+    data exactly as the newer release wrote it.
+    """
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="My PowerInsight",
@@ -277,9 +282,34 @@ async def test_an_entry_from_a_newer_version_is_refused(hass: HomeAssistant) -> 
         options=BASE_OPTIONS,
         subentries_data=[make_grid_subentry_data()],
     )
-    entry.add_to_hass(hass)
-    assert not await hass.config_entries.async_setup(entry.entry_id)
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
+    assert entry.version == 2
+    assert entry.minor_version == 1
+    assert entry.options == BASE_OPTIONS
+
+
+async def test_migrate_accepts_newer_minor_version(hass: HomeAssistant) -> None:
+    """A newer minor version of v1 still loads.
+
+    Minor bumps are backwards compatible by Home Assistant convention, so the
+    guard only refuses a newer major version.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=99,
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.minor_version == 99
 
 
 def _grid_with_price() -> dict:

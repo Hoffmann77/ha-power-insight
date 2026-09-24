@@ -12,7 +12,7 @@ engine = [
 # Full suite: engine tier + the Home Assistant integration tier.
 dev = [
     "pytest>=8.0",
-    "pytest-homeassistant-custom-component==0.13.316",
+    "pytest-homeassistant-custom-component==0.13.366",
 ]
 
 [tool.pytest.ini_options]
