@@ -2,9 +2,9 @@
 
 Tests are split into **two tiers, one directory per dependency group**. Each
 tier maps to CI — the engine tier as one job per suite (`manual`, `automatic`,
-`frozen` with `reference`, and `other` for the rest), the integration tier as
-one job — and every tier is auto-discovered by directory: adding a file, or a
-new engine directory, needs no CI change.
+`frozen`, `docs` for `reference/`, and `other` for the rest), the integration
+tier as one job — and every tier is auto-discovered by directory: adding a
+file, or a new engine directory, needs no CI change.
 
 | Tier          | Directory        | Home Assistant | Network | How it loads the code                          |
 | ------------- | ---------------- | -------------- | ------- | ---------------------------------------------- |
@@ -67,8 +67,8 @@ reviewer needs to see.
    to [`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md),
    so the decision is enforced even if the snapshots are re-frozen later.
 
-In CI, a failing `engine-tests (frozen)` job puts the same table of moved
-outputs in the job summary.
+In CI, a failing `engine-tests (frozen)` or `engine-tests (docs)` job puts the
+same table of moved outputs in the job summary.
 
 ```bash
 uv run --group engine pytest tests/engine   # HA harness not required
