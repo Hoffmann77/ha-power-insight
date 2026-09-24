@@ -97,6 +97,8 @@ CONF_ENABLE_DISTRIBUTION_SHARES = "enable_distribution_shares"    # *_share %
 CONF_ENABLE_CHARGING_SOURCE_SHARES = "enable_charging_source_shares"  # battery
 CONF_ENABLE_HOME_BASE_LOAD = "enable_home_base_load"
 CONF_ENABLE_POWER_SOURCE_SHARES = "enable_power_source_shares"        # consumer
+CONF_ENABLE_POWER_SOURCE_POWER = "enable_power_source_power"          # consumer
+CONF_ACCUMULATE_POWER_SOURCE_ENERGY = "accumulate_power_source_energy"  # consumer
 
 # Export compensation (split out of the cost-rate / accumulate-cost keys)
 CONF_ENABLE_EXPORT_COMPENSATION_RATE = "enable_export_compensation_rate"
@@ -231,6 +233,9 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
         CONF_ACCUMULATE_COST_SAVING_RATES,
         CONF_ENABLE_DISTRIBUTION_SHARES,
         CONF_ENABLE_POWER_SOURCE_SHARES,
+        # The watts behind those shares, and the energy they add up to.
+        CONF_ENABLE_POWER_SOURCE_POWER,
+        CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
     },
 }
 

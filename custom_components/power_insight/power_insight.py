@@ -1179,6 +1179,37 @@ class PowerInsight:
             for adapter in self._sink_family
         }
 
+    @property
+    def sink_adapters_source_power(self) -> dict[str, dict[str, float]]:
+        """Return ``{sink_uid: {source_uid: watts}}`` — each sink's draw by source.
+
+        The watts behind ``sink_adapters_source_shares``: a row sums to the
+        sink's *balanced* draw, so it can read slightly less than its own meter
+        when the readings overdraw (see ``metering_imbalance``), and every
+        source's column adds up to what that source supplied.
+
+        Keyed and blanked like ``sink_adapters_source_shares``: every adapter,
+        each row by every adapter that can supply power; a device that is not
+        drawing reads a row of zeros, one whose own meter is unavailable reads
+        ``None``, and the whole map is ``None`` when gross power is unavailable.
+        """
+        if self.gross_power is None:
+            return None
+
+        allocation, _ = self._source_allocation
+
+        return {
+            adapter.uid: (
+                None if adapter.flow_role is FlowRole.UNKNOWN
+                else self._watt_row(allocation.get(adapter.uid, {}))
+            )
+            for adapter in self._sink_family
+        }
+
+    def _watt_row(self, row: dict[str, float]) -> dict[str, float]:
+        """Return a ``{source_uid: watts}`` row keyed by the whole source family."""
+        return {source.uid: row.get(source.uid, 0.0) for source in self._source_family}
+
     def _share_row(self, row: dict[str, float]) -> dict[str, float]:
         """Return a ``{source_uid: watts}`` row as shares over the source family."""
         total = sum(row.values())

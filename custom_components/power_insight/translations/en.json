@@ -273,10 +273,14 @@
             "name": "Power",
             "data": {
               "power_source_shares": "Power sources (%)",
+              "power_source_power": "Power from each source (W)",
+              "power_source_energy": "Energy from each source (kWh)",
               "distribution_shares": "Consumption share (%)"
             },
             "data_description": {
               "power_source_shares": "One sensor per source, e.g. *Power share from PV System*: how much of the consumer's power comes from that source.",
+              "power_source_power": "One sensor per source, e.g. *Power from PV System*: how many watts of the consumer's power come from that source right now.",
+              "power_source_energy": "One sensor per source, e.g. *Energy from PV System*: a running total of the energy the consumer has drawn from that source. Keeps counting across restarts. Don't add these to the Energy dashboard next to the consumer's own meter — they split the same energy, so it would be counted twice.",
               "distribution_shares": "The consumer's share of the home's total consumption."
             }
           },
@@ -541,6 +545,9 @@
       "discharge_to_system_standby_ratio": {
         "name": "Discharge to system standby ratio"
       },
+      "energy_from": {
+        "name": "Energy from {source}"
+      },
       "export_compensation_rate": {
         "name": "Export compensation rate"
       },
@@ -621,6 +628,9 @@
       },
       "power": {
         "name": "Power"
+      },
+      "power_from": {
+        "name": "Power from {source}"
       },
       "power_share_from": {
         "name": "Power share from {source}"
