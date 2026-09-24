@@ -247,6 +247,43 @@ async def test_consumer_consumption_share_registered(hass: HomeAssistant) -> Non
     assert f"{entry.entry_id}_{CONS_SUB_ID}_consumption_share" in uids
 
 
+@pytest.mark.parametrize(
+    ("power_from", "expected_pv_share"),
+    [([], 50.0), ([PV_SUB_ID], 100.0)],
+    ids=["whole_mix", "pv_only"],
+)
+async def test_consumer_source_selection_drives_its_power_share(
+    hass: HomeAssistant, power_from: list[str], expected_pv_share: float
+) -> None:
+    """The sources saved by the consumer's source mode decide its power share.
+
+    Grid imports 500 W and PV makes 500 W; the consumer draws 400 W and the
+    unmetered rest of the home 600 W. In the whole mix the consumer draws like
+    the rest of the home, half grid and half PV. Restricted to PV, it is served
+    first and PV covers all 400 W, leaving the grid to the rest of the home.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_consumer_subentry_data(power_from_adapters=power_from),
+        ],
+    )
+    for ent, watts in (("grid_power", 500), ("pv_power", 500), ("consumer_power", -400)):
+        hass.states.async_set(f"sensor.{ent}", str(watts), {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    ent_reg = er.async_get(hass)
+    entity_id = ent_reg.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_{CONS_SUB_ID}_power_share_from_{PV_SUB_ID}"
+    )
+    assert entity_id is not None
+    assert float(hass.states.get(entity_id).state) == pytest.approx(expected_pv_share)
+
+
 async def test_disabling_option_disables_entity_but_keeps_it(
     hass: HomeAssistant, mock_config_entry: MockConfigEntry
 ) -> None:

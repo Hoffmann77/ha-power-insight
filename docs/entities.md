@@ -230,6 +230,11 @@ Per consumer device. Consumer support is still under development. See
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
 
+On a battery or consumer set to **Specific devices**, both operating-cost rate
+sensors carry a `restriction_deficit` attribute: the watts the device currently
+draws from outside its selected sources. See
+[When a device draws from outside its sources](concepts.md#when-a-device-draws-from-outside-its-sources).
+
 ### Accumulated totals
 
 | Sensor | Unit | Meaning | Enabled by |
