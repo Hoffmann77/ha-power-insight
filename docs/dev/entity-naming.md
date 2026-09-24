@@ -30,7 +30,9 @@ Consequences for the `name=` string on a `PowerInsightSensorDescription`:
 - **`key`** feeds the `unique_id` (`{entry}_{key}` for the hub,
   `{entry}_{uid}_{key}` per adapter). Changing a `key` orphans the registry
   entry and **breaks history** for existing installs, so keys stay stable even
-  when the `name` changes — they need not echo it.
+  when the `name` changes — they need not echo it. A key that names another
+  device uses that device's subentry id, never its title
+  (`charging_share_from_{uid}`), so renaming the device cannot change it.
 - The **`entity_id`** is generated from the full name once, when the entity is
   first registered, and is then kept by the entity registry. Renaming `name`
   therefore leaves existing installs' entity ids alone and only changes the

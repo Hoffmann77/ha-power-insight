@@ -1891,7 +1891,9 @@ async def async_setup_entry(
                     continue
                 name = source_adapter.verbose_name
                 dynamic_description = PowerInsightSensorDescription(
-                    key=f"charging_share_from_{name}",
+                    # Keyed by the source's subentry id, never its name: a
+                    # renamed device must not orphan this sensor's history.
+                    key=f"charging_share_from_{source_adapter.uid}",
                     name=f"Charging share from {name}",
                     icon="mdi:percent",
                     native_unit_of_measurement=PERCENTAGE,
@@ -1951,7 +1953,7 @@ async def async_setup_entry(
             for source_adapter in power_insight.gross_power_adapters:
                 name = source_adapter.verbose_name
                 dynamic_description = PowerInsightSensorDescription(
-                    key=f"power_share_from_{name}",
+                    key=f"power_share_from_{source_adapter.uid}",
                     name=f"Power share from {name}",
                     icon="mdi:percent",
                     native_unit_of_measurement=PERCENTAGE,

@@ -4,6 +4,7 @@ import logging
 from dataclasses import dataclass
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
 from homeassistant.const import STATE_UNAVAILABLE
@@ -138,13 +139,54 @@ async def async_unload_entry(
 async def async_migrate_entry(
     hass: HomeAssistant, entry: MyConfigEntry,
 ) -> bool:
-    """Migrate the config entry to a newer version."""
-    if entry.version == 1 and entry.minor_version < 2:
+    """Migrate the config entry to a newer version.
+
+    Version 1.4 is the 1.0 baseline: every change to what is stored after it
+    needs a migration step here. An entry written by a newer major version
+    is refused rather than loaded — a downgrade cannot know what changed.
+    """
+    if entry.version > 1:
+        _LOGGER.error(
+            "Config entry %s was written by a newer version of Power Insight "
+            "(version %s); downgrading is not supported",
+            entry.title, entry.version,
+        )
+        return False
+
+    if entry.minor_version < 2:
         _migrate_options_to_scopes(hass, entry)
-    if entry.version == 1 and entry.minor_version < 3:
+    if entry.minor_version < 3:
         _migrate_drop_battery_efficiency(hass, entry)
+    if entry.minor_version < 4:
+        await _migrate_share_unique_ids(hass, entry)
 
     return True
+
+
+async def _migrate_share_unique_ids(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Key the source-share sensors by the source's subentry id, not its name.
+
+    ``charging_share_from_{name}`` / ``power_share_from_{name}`` used the
+    source device's display name, so renaming a device would orphan the
+    sensor's history. The registry entries are renamed in place, so the
+    history carries over.
+    """
+    by_name = {
+        subentry.title: subentry.subentry_id
+        for subentry in entry.subentries.values()
+        if subentry.data.get("adapter", {}).get("adapter_type")
+        in ("grid", "pv_system", "battery")
+    }
+
+    def rekey(entity_entry: er.RegistryEntry) -> dict[str, str] | None:
+        for kind in ("charging_share_from_", "power_share_from_"):
+            head, sep, name = entity_entry.unique_id.partition(f"_{kind}")
+            if sep and name in by_name:
+                return {"new_unique_id": f"{head}_{kind}{by_name[name]}"}
+        return None
+
+    await er.async_migrate_entries(hass, entry.entry_id, rekey)
+    hass.config_entries.async_update_entry(entry, minor_version=4)
 
 
 def _migrate_drop_battery_efficiency(hass: HomeAssistant, entry: MyConfigEntry) -> None:

@@ -48,8 +48,8 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, entry)
 
-    # Both migration steps run, so the entry lands on the current minor version.
-    assert entry.minor_version == 3
+    # Every migration step runs, so the entry lands on the current minor version.
+    assert entry.minor_version == 4
     assert entry.options["schema"] == 2
     grid = set(entry.options["scopes"]["grid"])
     # Cost rate + its accumulation carried over to the grid scope.
@@ -222,4 +222,57 @@ async def test_migrate_drops_stored_battery_efficiency(hass: HomeAssistant) -> N
     # Everything else the battery was configured with survives untouched.
     assert config["default_lcos"] == 0.15
     assert config["charge_from_adapters"] == []
-    assert entry.minor_version == 3
+    assert entry.minor_version == 4
+
+
+async def test_migrate_rekeys_share_sensors_by_subentry_id(hass: HomeAssistant) -> None:
+    """A share sensor keyed by its source's name is re-keyed by the source's
+    subentry id in place, so its history survives and a rename cannot orphan it.
+    """
+    from homeassistant.helpers import entity_registry as er
+
+    from .conftest import make_battery_subentry_data
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=3,
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[GRID_SUB_ID]),
+        ],
+    )
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "sensor", DOMAIN, f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_Grid",
+        config_entry=entry,
+    )
+    for name in ("grid_power", "battery_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    migrated = registry.async_get(old.entity_id)
+    assert migrated is not None
+    assert migrated.unique_id == (
+        f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_{GRID_SUB_ID}"
+    )
+    assert entry.minor_version == 4
+
+
+async def test_an_entry_from_a_newer_version_is_refused(hass: HomeAssistant) -> None:
+    """A downgrade is refused rather than loading data it cannot understand."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=2,
+        minor_version=1,
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    assert not await hass.config_entries.async_setup(entry.entry_id)
+    assert entry.state is ConfigEntryState.MIGRATION_ERROR

@@ -141,8 +141,9 @@ async def test_battery_charging_share_sensors_only_for_selected_sources(
     bat_prefix = f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_"
     charging_share_keys = {k for k in keys if k.startswith(bat_prefix)}
 
-    # Exactly one charging-share sensor (Grid), none for the unselected PV.
-    assert charging_share_keys == {f"{bat_prefix}Grid"}
+    # Exactly one charging-share sensor (Grid), none for the unselected PV —
+    # keyed by the grid's subentry id, so renaming it keeps the history.
+    assert charging_share_keys == {f"{bat_prefix}{GRID_SUB_ID}"}
 
 
 async def test_grid_charging_sensors_gated_on_charge_source(
