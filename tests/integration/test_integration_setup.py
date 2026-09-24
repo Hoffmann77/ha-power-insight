@@ -69,10 +69,12 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
 async def test_no_grid_creates_repair_issue(
     hass: HomeAssistant, mock_config_entry_no_grid: MockConfigEntry
 ) -> None:
-    """No grid adapter should create a 'no_grid_configured' repair issue."""
+    """No grid adapter should create this entry's 'no_grid_configured' issue."""
     await setup_integration(hass, mock_config_entry_no_grid)
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(DOMAIN, "no_grid_configured") is not None
+    assert issue_reg.async_get_issue(
+        DOMAIN, f"no_grid_configured_{mock_config_entry_no_grid.entry_id}"
+    ) is not None
 
 
 async def test_setup_succeeds_with_grid(
@@ -91,7 +93,9 @@ async def test_grid_issue_dismissed_on_successful_setup(
     hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
     await setup_integration(hass, mock_config_entry)
     issue_reg = ir.async_get(hass)
-    assert issue_reg.async_get_issue(DOMAIN, "no_grid_configured") is None
+    assert issue_reg.async_get_issue(
+        DOMAIN, f"no_grid_configured_{mock_config_entry.entry_id}"
+    ) is None
 
 
 async def test_powerinsight_bootstrapped_from_ha_state(
@@ -345,3 +349,47 @@ async def test_two_devices_on_one_power_sensor_raise_a_repair_issue(
     assert ir.async_get(hass).async_get_issue(
         DOMAIN, f"shared_power_entity_{entry.entry_id}"
     )
+
+
+async def test_one_entry_with_a_grid_keeps_anothers_no_grid_issue(
+    hass: HomeAssistant,
+) -> None:
+    """The no-grid issue is per entry: a healthy entry does not dismiss another's."""
+    without = MockConfigEntry(domain=DOMAIN, title="Cabin", options=BASE_OPTIONS)
+    with_grid = MockConfigEntry(
+        domain=DOMAIN, title="House", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, without)
+    await setup_integration(hass, with_grid)
+
+    issue_reg = ir.async_get(hass)
+    assert issue_reg.async_get_issue(DOMAIN, f"no_grid_configured_{without.entry_id}")
+
+
+async def test_a_consumer_restricted_to_a_removed_device_raises_an_issue(
+    hass: HomeAssistant,
+) -> None:
+    """A consumer's power_from is checked like a battery's charge_from, and the
+    issue goes away with the consumer."""
+    import copy
+
+    from .conftest import CONS_SUB_ID, make_consumer_subentry_data
+
+    consumer = copy.deepcopy(make_consumer_subentry_data())
+    consumer["data"]["adapter"]["config"]["power_from_adapters"] = ["01GONE"]
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), consumer],
+    )
+    for name in ("grid_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    issue_id = f"reconfigure_consumer_{CONS_SUB_ID}"
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id)
+
+    hass.config_entries.async_remove_subentry(entry, CONS_SUB_ID)
+    await hass.async_block_till_done()
+    assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None

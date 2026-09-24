@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_POWER_ENTITY,
+    CONF_POWER_FROM_ADAPTERS,
     DOMAIN,
     PLATFORMS,
 )
@@ -51,6 +52,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         model = model_cls.from_subentry(subentry)
         power_insight.register_adapter(model.create_adapter())
     
+    # The pre-1.0 issue id was shared by every entry; it is per entry now.
+    ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")
+    no_grid_issue = f"no_grid_configured_{entry.entry_id}"
+    _delete_issues_of_removed_devices(hass)
+
     if power_insight.grid_adapter is None:
         # Without a grid connection nothing can be calculated; raise a repair
         # issue and set up with no tracked entities. The shared tail below still
@@ -58,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         ir.async_create_issue(
             hass,
             DOMAIN,
-            "no_grid_configured",
+            no_grid_issue,
             is_fixable=False,
             severity=ir.IssueSeverity.WARNING,
             translation_key="no_grid_configured",
@@ -67,30 +73,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         source_entities: list[str] = []
     else:
         # Grid is present — dismiss any previously raised issue.
-        ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")
-
-        # Raise a repair issue for each battery adapter whose
-        # charge_from_adapters contains stale references (i.e. adapters that
-        # have since been removed).
-        valid_source_ids = {
-            sub.subentry_id
-            for sub in entry.subentries.values()
-            if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
-        }
-        for subentry in entry.subentries.values():
-            if subentry.data.get("adapter", {}).get("adapter_type") != "battery":
-                continue
-            charge_from = subentry.data["adapter"]["config"].get(CONF_CHARGE_FROM_ADAPTERS, [])
-            if any(source_id not in valid_source_ids for source_id in charge_from):
-                ir.async_create_issue(
-                    hass,
-                    DOMAIN,
-                    f"reconfigure_battery_{subentry.subentry_id}",
-                    is_fixable=False,
-                    severity=ir.IssueSeverity.WARNING,
-                    translation_key="reconfigure_battery_adapters",
-                    translation_placeholders={"battery_name": subentry.title},
-                )
+        ir.async_delete_issue(hass, DOMAIN, no_grid_issue)
+        _check_source_restrictions(hass, entry)
 
         source_entities = power_insight.source_entities
         _check_price_entity(hass, entry, power_insight)
@@ -107,6 +91,64 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     # sensor.py (async_setup_entry), so HA handles entity-target resolution.
 
     return True
+
+
+#: The restriction field and repair issue of each device kind that has one.
+_RESTRICTIONS = {
+    "battery": (CONF_CHARGE_FROM_ADAPTERS, "reconfigure_battery_", "reconfigure_battery_adapters"),
+    "consumer": (CONF_POWER_FROM_ADAPTERS, "reconfigure_consumer_", "reconfigure_consumer_sources"),
+}
+
+
+def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Raise a repair issue for a device restricted to a device that is gone.
+
+    A battery's ``charge_from`` and a consumer's ``power_from`` name devices by
+    subentry id; once one of those is removed, the restriction silently
+    narrows. (The engine copes — see "a broken restriction is reported, not
+    hidden" — but the user should decide.) The issue is dismissed when the
+    device is reconfigured or removed.
+    """
+    valid_source_ids = {
+        sub.subentry_id
+        for sub in entry.subentries.values()
+        if sub.data.get("adapter", {}).get("adapter_type") in ("grid", "pv_system")
+    }
+    for subentry in entry.subentries.values():
+        adapter = subentry.data.get("adapter", {})
+        restriction = _RESTRICTIONS.get(adapter.get("adapter_type"))
+        if restriction is None:
+            continue
+        field, prefix, translation_key = restriction
+        sources = adapter.get("config", {}).get(field) or []
+        if any(source_id not in valid_source_ids for source_id in sources):
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"{prefix}{subentry.subentry_id}",
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key=translation_key,
+                translation_placeholders={
+                    "battery_name": subentry.title,
+                    "device_name": subentry.title,
+                },
+            )
+
+
+def _delete_issues_of_removed_devices(hass: HomeAssistant) -> None:
+    """Dismiss every per-device repair issue whose device no longer exists."""
+    existing = {
+        subentry_id
+        for config_entry in hass.config_entries.async_entries(DOMAIN)
+        for subentry_id in config_entry.subentries
+    }
+    prefixes = tuple(prefix for _, prefix, _ in _RESTRICTIONS.values())
+    for domain, issue_id in list(ir.async_get(hass).issues):
+        if domain != DOMAIN or not issue_id.startswith(prefixes):
+            continue
+        if issue_id.split("_", 2)[2] not in existing:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
 
 
 def _check_shared_power_entities(hass: HomeAssistant, entry: MyConfigEntry) -> None:

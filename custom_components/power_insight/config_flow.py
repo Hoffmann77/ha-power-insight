@@ -1944,6 +1944,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 ir.async_delete_issue(
                     self.hass, DOMAIN, f"reconfigure_battery_{subentry.subentry_id}"
                 )
+                ir.async_delete_issue(
+                    self.hass, DOMAIN, f"reconfigure_consumer_{subentry.subentry_id}"
+                )
                 # Update without reloading here: the subentry change fires the
                 # config-entry update listener, which performs the single
                 # reload. Combining a reloading flow method with the update

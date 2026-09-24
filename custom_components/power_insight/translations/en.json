@@ -413,6 +413,10 @@
       "title": "Check the charging sources of {battery_name}",
       "description": "A possible charging source was added or removed. Open **{battery_name}**, choose **Reconfigure**, and check which sources it charges from."
     },
+    "reconfigure_consumer_sources": {
+      "title": "Check the power sources of {device_name}",
+      "description": "**{device_name}** is restricted to a power source that has been removed. Open **{device_name}**, choose **Reconfigure**, and check which sources it may draw from."
+    },
     "price_unit": {
       "title": "The electricity price of {entry_title} has an unknown unit",
       "description": "**{entity_id}** reports its price in `{unit}`, which is not a price per unit of energy, so it is ignored and every cost that needs it reads unknown.\n\nUse a price sensor in a unit like `EUR/kWh`, `ct/kWh` or `EUR/MWh` — Power Insight converts those itself — and select it under **Reconfigure** on the grid connection."
