@@ -755,12 +755,9 @@ def _adapter_native_value(mapping, uid, power, *, transform=lambda v: v):
     sensor.entity_description = SimpleNamespace(
         value_fn=lambda _pi: mapping,
         transform_fn=transform,
-        apply_correction_factor=False,
     )
     sensor.power_insight = None
-    sensor.device_adapter = SimpleNamespace(
-        uid=uid, power=power, correction_factor=1.0
-    )
+    sensor.device_adapter = SimpleNamespace(uid=uid, power=power)
     return sensor.native_value
 
 

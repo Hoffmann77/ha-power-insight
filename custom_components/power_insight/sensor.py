@@ -31,7 +31,7 @@ from .entity import (
     IntegrationSensorExtraStoredData,
 )
 from .utils import get_value
-from .power_insight import PowerInsight, AbstractBaseAdapter
+from .power_insight import PowerInsight, AbstractBaseAdapter, BaseProductionAdapter
 from . import MyConfigEntry
 from .const import (
     DOMAIN,
@@ -74,9 +74,6 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     # Optional uid-keyed dict of extra state attributes for a per-adapter
     # sensor, published alongside the value.
     attributes_fn: Callable[[PowerInsight], dict[str, float]] | None = None
-    # When True, a per-adapter sensor scales its displayed value by the
-    # adapter's correction factor (levelized quantities only).
-    apply_correction_factor: bool = False
     # When True, the sensor is only created when its provider device is a
     # configured charge source for at least one battery (charging channel).
     # exists_fn cannot express this — it has no reference to the battery set —
@@ -98,8 +95,7 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     integration_value_fn: Callable[[PowerInsight], dict[str, float | None] | float | None]
     # Splits integration_value_fn by which adapter's correction factor scales
     # each part, so the accumulated total can be re-corrected exactly. Without
-    # it the total is corrected by the owning adapter's factor alone, which is
-    # only right when the rate depends on that adapter's price and no other.
+    # it there is nothing to correct by, and the total displays unscaled.
     integration_components_fn: Callable[
         [PowerInsight], dict[str, dict[str, float] | None]
     ] | None = None
@@ -490,8 +486,8 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
 # Combined accumulated levelized sensors (derived + retired-adapter ledger)
 #
 # These do NOT integrate a pre-summed combined rate. Instead they derive their
-# value at read time as the sum of the per-adapter base accumulated totals
-# (each already scaled by that adapter's correction factor for display) plus a
+# value at read time as the sum of the per-adapter accumulated totals (each
+# already corrected, part by part, for display) plus a
 # persistent ledger of removed end-of-life adapters. This keeps the combined
 # total consistent with the per-adapter totals, makes lifetime-value
 # corrections retroactive, and prevents a removed device from dropping its
@@ -1691,6 +1687,20 @@ def _retired_ledger_sum(config_entry: ConfigEntry, per_adapter_key: str) -> floa
     return total
 
 
+def _retired_correction_factors(config_entry: ConfigEntry) -> dict[str, float]:
+    """Return ``{uid: correction factor}`` frozen with each retired device.
+
+    Other devices' accumulated totals keep components priced at a removed
+    device's LCOE. Its lifetime cost can no longer be edited, so those parts
+    stay at the factor it had when it was removed rather than reverting to 1.
+    """
+    return {
+        retired["subentry_id"]: retired["correction_factor"]
+        for retired in config_entry.data.get(CONF_RETIRED_ADAPTERS, [])
+        if retired.get("correction_factor") is not None
+    }
+
+
 # ---------------------------------------------------------------------------
 # Platform setup
 # ---------------------------------------------------------------------------
@@ -2110,9 +2120,9 @@ class PowerInsightHomeBaseLoadSensor(BasePowerInsightSensor):
 class PowerInsightCombinedLedgerSensor(PowerInsightSensor):
     """Combined accumulated levelized sensor derived from per-adapter totals.
 
-    Recomputes on every source event as the sum of the active per-adapter base
-    accumulated totals (each already scaled by its adapter's correction factor
-    for display) plus the frozen contributions of removed end-of-life adapters.
+    Recomputes on every source event as the sum of the active per-adapter
+    accumulated totals (each already corrected, part by part, for display) plus
+    the frozen contributions of removed end-of-life adapters.
     It stores no running total itself, so there is no reload double-count, and
     a lifetime-value correction is reflected retroactively and consistently in
     both the per-adapter and the combined totals.
@@ -2194,8 +2204,6 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
         if value is None:
             return None
         value = self.entity_description.transform_fn(value)
-        if self.entity_description.apply_correction_factor:
-            value = value * self.device_adapter.correction_factor
         return value
 
     @property
@@ -2383,10 +2391,10 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         if base is None or not self.entity_description.apply_correction_factor:
             return base
 
-        if not self._component_totals:
-            return base * Decimal(str(self.device_adapter.correction_factor))
-
-        factors = self.power_insight.levelized_correction_factors
+        factors = {
+            **_retired_correction_factors(self.config_entry),
+            **self.power_insight.levelized_correction_factors,
+        }
         corrected = Decimal(0)
         for uid, total in self._component_totals.items():
             corrected += total * Decimal(str(factors.get(uid, 1.0)))
@@ -2417,9 +2425,12 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         await super().async_will_remove_from_hass()
 
         key = self.entity_description.key
+        # Only PV and battery totals belong to the device ledger: a consumer's
+        # levelized operating cost shares the key but is not a device cost.
         if (
             not self.entity_description.apply_correction_factor
             or key not in LEVELIZED_TOTAL_KEYS
+            or not isinstance(self.device_adapter, BaseProductionAdapter)
         ):
             return
 
@@ -2428,7 +2439,7 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         if uid in self.config_entry.subentries:
             return
 
-        value = self.native_value  # corrected (base * factor) total
+        value = self.native_value  # the corrected total, as displayed
         if value is None:
             return
 
@@ -2445,6 +2456,7 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
                 "subentry_id": uid,
                 "title": self.device_adapter.verbose_name,
                 "totals": {key: float(value)},
+                "correction_factor": self.device_adapter.correction_factor,
             }
         )
         self.hass.config_entries.async_update_entry(

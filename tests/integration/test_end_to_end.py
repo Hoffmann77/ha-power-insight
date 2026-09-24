@@ -19,9 +19,11 @@ import homeassistant.util.dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from .conftest import (
+    CONS_SUB_ID,
     DOMAIN,
     GRID_SUB_ID,
     PV_SUB_ID,
+    make_consumer_subentry_data,
     make_grid_subentry_data,
     make_pv_subentry_data,
     setup_integration,
@@ -240,3 +242,126 @@ async def test_e2e_removal_ledger_lifecycle(hass: HomeAssistant) -> None:
         hass, entry, "combined_total_levelized_device_operating_cost"
     )
     assert combined_reloaded == pytest.approx(per_adapter, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — the ledger is the devices' ledger
+# ---------------------------------------------------------------------------
+
+
+def _pv_with_factor(factor: float) -> dict:
+    pv = copy.deepcopy(make_pv_subentry_data())
+    pv["data"]["adapter"]["config"]["correction_factor"] = factor
+    return pv
+
+
+def _consumer_on_pv() -> dict:
+    cons = copy.deepcopy(make_consumer_subentry_data())
+    cons["data"]["adapter"]["config"]["power_from_adapters"] = [PV_SUB_ID]
+    return cons
+
+
+async def _run_one_hour_of_pv_to_consumer(
+    hass: HomeAssistant, entry: MockConfigEntry
+) -> None:
+    """PV makes 1000 W, the consumer draws 500 W of it, the rest is exported.
+
+    At the PV's LCOE of 0.10 EUR/kWh the consumer's levelized operating cost
+    is 0.5 kW x 0.10 = 0.05 EUR/h, held for one hour.
+    """
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        _set(hass, "sensor.grid_power", -500)
+        _set(hass, "sensor.grid_price", 0.30, unit="EUR/kWh")
+        _set(hass, "sensor.pv_power", 1000)
+        _set(hass, "sensor.consumer_power", -500)
+        await setup_integration(hass, entry)
+
+        _set(hass, "sensor.consumer_power", -500)
+        await _settle(hass)
+        frozen.move_to(t0 + timedelta(hours=1))
+        _set(hass, "sensor.pv_power", 1000)
+        await _settle(hass)
+
+
+async def test_e2e_removing_a_consumer_leaves_the_device_ledger_alone(
+    hass: HomeAssistant,
+) -> None:
+    """A consumer's levelized operating cost is not a device operating cost.
+
+    The consumer's total shares its key with the PV and battery totals, but
+    the combined device operating cost sums PV and battery hardware only, so
+    removing the consumer must not freeze its total into that ledger.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={
+            "schema": 2,
+            "scopes": {
+                "combined": ["accumulate_levelized_cost_rates"],
+                "pv_system": ["accumulate_levelized_cost_rates"],
+                "consumer": ["accumulate_levelized_cost_rates"],
+            },
+        },
+        subentries_data=[_grid_with_price(), make_pv_subentry_data(), _consumer_on_pv()],
+    )
+    await _run_one_hour_of_pv_to_consumer(hass, entry)
+
+    consumer_total = _float(
+        hass, entry, f"{CONS_SUB_ID}_total_levelized_operating_cost"
+    )
+    assert consumer_total == pytest.approx(0.05, abs=1e-3)
+    combined_before = _float(
+        hass, entry, "combined_total_levelized_device_operating_cost"
+    )
+
+    hass.config_entries.async_remove_subentry(entry, CONS_SUB_ID)
+    await _settle(hass)
+
+    assert not any(
+        e.get("subentry_id") == CONS_SUB_ID
+        for e in entry.data.get("retired_adapters", [])
+    )
+    _set(hass, "sensor.grid_power", -1000)
+    await _settle(hass)
+    combined_after = _float(
+        hass, entry, "combined_total_levelized_device_operating_cost"
+    )
+    assert combined_after == pytest.approx(combined_before, abs=1e-6)
+
+
+async def test_e2e_a_removed_source_keeps_correcting_what_it_supplied(
+    hass: HomeAssistant,
+) -> None:
+    """History supplied by a removed PV stays at the PV's last correction.
+
+    The consumer's levelized operating cost came entirely from a PV whose
+    lifetime cost was restated at twice its original LCOE, so it reads
+    2 x 0.05 = 0.10 EUR. Removing the PV afterwards cannot make that energy
+    cheaper: its factor is frozen with it, as its own totals are.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={
+            "schema": 2,
+            "scopes": {
+                "combined": ["accumulate_levelized_cost_rates"],
+                "pv_system": ["accumulate_levelized_cost_rates"],
+                "consumer": ["accumulate_levelized_cost_rates"],
+            },
+        },
+        subentries_data=[_grid_with_price(), _pv_with_factor(2.0), _consumer_on_pv()],
+    )
+    await _run_one_hour_of_pv_to_consumer(hass, entry)
+
+    suffix = f"{CONS_SUB_ID}_total_levelized_operating_cost"
+    assert _float(hass, entry, suffix) == pytest.approx(0.10, abs=1e-3)
+
+    hass.config_entries.async_remove_subentry(entry, PV_SUB_ID)
+    await _settle(hass)
+    _set(hass, "sensor.consumer_power", 0)
+    await _settle(hass)
+
+    assert _float(hass, entry, suffix) == pytest.approx(0.10, abs=1e-3)

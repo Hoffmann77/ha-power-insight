@@ -230,7 +230,8 @@ async def test_combined_ledger_sensor_includes_retired_totals(
 #
 # A total accumulated from a blend of source prices can only be re-corrected
 # if the blend is persisted with it. These cover the storage contract itself;
-# the arithmetic it enables is pinned in tests/engine/test_full_topology.py.
+# the reconciliation it relies on is a law in tests/engine/automatic/test_laws.py
+# (test_every_breakdown_reconciles).
 # ---------------------------------------------------------------------------
 
 
@@ -284,3 +285,54 @@ def test_stored_data_without_components_restores_cleanly() -> None:
     assert restored is not None
     assert restored.native_value == Decimal("2.00")
     assert restored.component_totals is None
+
+
+async def test_a_total_restored_without_a_breakdown_displays_at_face_value(
+    hass: HomeAssistant,
+) -> None:
+    """A legacy total is shown unscaled, from the moment it is restored.
+
+    It has no record of whose energy it was priced at, so no factor applies
+    to it — not even its own device's, which would scale a finished saving.
+    Scaling it only until the first new breakdown is accumulated would also
+    make the display jump the moment one was.
+    """
+    from homeassistant.core import State
+    from pytest_homeassistant_custom_component.common import (
+        mock_restore_cache_with_extra_data,
+    )
+
+    pv_data = copy.deepcopy(make_pv_subentry_data())
+    pv_data["data"]["adapter"]["config"]["correction_factor"] = 2.0
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={
+            "schema": 2,
+            "scopes": {"pv_system": ["accumulate_levelized_cost_saving_rates"]},
+        },
+        subentries_data=[make_grid_subentry_data(), pv_data],
+    )
+    entity_id = "sensor.my_powerinsight_solar_pv_total_levelized_cost_savings"
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(entity_id, "10.0"),
+                {
+                    "native_value": {"__type": "<class 'decimal.Decimal'>", "decimal_str": "10.0"},
+                    "native_unit_of_measurement": "EUR",
+                    "last_valid_state": "10.0",
+                    "component_totals": None,
+                },
+            )
+        ],
+    )
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(entity_id)
+    assert state is not None
+    assert float(state.state) == pytest.approx(10.0)
