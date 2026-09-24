@@ -1,13 +1,44 @@
 name: Tests
 
+# Pull requests are tested through `pull_request`; testing their pushes too would
+# run every job twice. `main` is tested after each merge, and any other branch
+# can be tested from Actions -> Tests -> Run workflow.
 on:
   push:
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
 
 jobs:
   # Engine tier: pure-Python calculation engine, no Home Assistant harness.
+  # One job per suite, so the checks list names the suite that failed.
+  # `docs` runs `reference/`: the showcase cases are well formed and the
+  # published case JSON is current. `other` runs everything the rest ignore, so
+  # a new directory under tests/engine is still run without editing this file.
   engine-tests:
+    name: engine-tests (${{ matrix.suite }})
     runs-on: ubuntu-latest
+    strategy:
+      # Let every suite finish: one failing must not hide the others' results.
+      fail-fast: false
+      matrix:
+        include:
+          - suite: manual
+            paths: tests/engine/manual
+          - suite: automatic
+            paths: tests/engine/automatic
+          - suite: frozen
+            paths: tests/engine/frozen
+          - suite: docs
+            paths: tests/engine/reference
+          - suite: other
+            paths: >-
+              tests/engine
+              --ignore=tests/engine/manual
+              --ignore=tests/engine/automatic
+              --ignore=tests/engine/frozen
+              --ignore=tests/engine/reference
     steps:
       - uses: actions/checkout@v7
 
@@ -20,13 +51,14 @@ jobs:
       - name: Install dependencies
         run: uv sync --group engine
 
-      - name: Run engine tests
-        run: uv run --group engine pytest tests/engine -q
+      - name: Run engine tests (${{ matrix.suite }})
+        run: uv run --group engine pytest ${{ matrix.paths }} -q
 
-      # A frozen-snapshot failure is a list of engine outputs this change moved,
-      # not necessarily a bug. Put that list where a reviewer sees it first.
+      # A frozen-snapshot or stale-docs failure is a list of engine outputs this
+      # change moved, not necessarily a bug. Put that list where a reviewer sees
+      # it first.
       - name: Summarise moved engine outputs
-        if: failure()
+        if: failure() && (matrix.suite == 'frozen' || matrix.suite == 'docs')
         run: uv run --group engine python tools/snapshot.py --check >> "$GITHUB_STEP_SUMMARY" || true
 
   # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.

@@ -1,10 +1,15 @@
 name: Validate with hassfest
 
+# Pushes only on main: pull requests are validated through `pull_request`, and
+# validating their pushes too would run the check twice.
 on:
   push:
+    branches:
+      - main
   pull_request:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 jobs:
   validate:

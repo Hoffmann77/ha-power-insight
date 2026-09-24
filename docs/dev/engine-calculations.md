@@ -107,10 +107,11 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 1. **The grid goes first.** A restricted sink that is allowed the grid draws it
    before competing for local generation. The grid is the balancing node, not a
    generator; local generation is the scarce thing worth attributing carefully.
-2. **Scarce sources are split in proportion to draw.** Which is also what makes
-   two sinks with the same restriction come out with the same row whatever their
-   draws — the split is proportional, never sink-by-sink, so there is no
-   ordering for them to diverge on.
+2. **Scarce sources are split in proportion to draw.** Two sinks with the same
+   restriction therefore come out with the same row whatever their draws. The
+   split is proportional, never sink-by-sink, but a reserve held by only one of
+   them can still tilt it; `_allocate` then pools the group's watts and deals
+   them out again by draw, which keeps every source's total and every reserve.
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.
 
@@ -118,10 +119,8 @@ All three are pinned in `tests/engine/manual/test_allocation_rules.py`:
 rules 1 and 2 by `TestTheGridGoesFirst`, rule 3 by
 `TestRestrictedSinksAreServedFirst` (and, in `test_flow_roles.py`, by
 `TestPvStandbyIsAnUnrestrictedSink`), and rule 2's "same row" guarantee by
-`TestSameRestrictionGetsTheSameRow`, as a strict expected failure: when the
-draws exactly exhaust the sources, the engine hands a large sink its reserve
-first and the rows diverge (a 100 W and a 300 W load on the same two PV systems read
-9/13 and 10/13 on pv1 instead of 3/4 each).
+`TestSameRestrictionGetsTheSameRow`: a 100 W and a 300 W load on the same two
+PV systems, where only the larger one holds a reserve, both read 3/4 on pv1.
 
 :::note[Decision: a sink splits over what is *left*, not over total output]
 
@@ -147,9 +146,12 @@ Pinned by `TestASinkSplitsOverWhatIsLeft` in
 They genuinely conflict. In one snapshot the only valid allocation required
 a battery to take *more* grid than the proportional split would have given
 it. When that happens the rules give way — they only ever choose among
-allocations that already work.
+allocations that already work. Taken to the extreme, a sink allowed only
+the grid takes the whole import, and the other sinks allowed the grid get
+none of it.
 
-Pinned by `TestFeasibilityOutranksTheRules` in
+Pinned by `TestFeasibilityOutranksTheRules` and
+`TestACaptiveSinkTakesTheWholeImport` in
 `tests/engine/manual/test_feasibility.py`.
 
 :::
@@ -202,7 +204,14 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Pinned by `TestTheSinkWithSomewhereElseToGoYields` in
+Sinks with the *same* restriction are equally constrained, so neither has
+more somewhere else to go: they share the deficit in proportion to draw and
+read the same row. A larger draw is not a tighter restriction — a 100 W and a
+200 W load on the same two 100 W PV systems break theirs by 100/3 and 200/3 W,
+not 100 W and nothing.
+
+Pinned by `TestTheSinkWithSomewhereElseToGoYields` and
+`TestSameRestrictionSharesTheDeficit` in
 `tests/engine/manual/test_restrictions.py`. Shown in
 [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 
@@ -228,6 +237,27 @@ then lands on that one system as a reserve.
 Pinned by `TestReservesAreNeverScaledAway` in
 `tests/engine/manual/test_feasibility.py`; shown in
 [`two-pv-systems / every_watt_spoken_for`](../spec/two-pv-systems.mdx).
+
+:::
+
+:::note[Decision: sources the same sinks may use are drawn in proportion to their output]
+
+Two sources that exactly the same sinks may draw are interchangeable: no
+restriction tells them apart. The engine solves them as one source and deals
+each sink's watts back to them in proportion to what they produce. The grid
+is never merged, because it goes first rather than in proportion.
+
+Without this, metering one installation as one PV system or as two (an
+inverter reporting each MPP tracker, say) changed the answer. Reserves are
+found per source, and a sink that must take 400 W from one system has no
+reserve on either half once it can swap between them. A plug allowed east or
+west (1000 W each) was then offered 450 W for its 400 W draw, and the export,
+which may also use a 200 W carport, read 0.886 from east and west together
+instead of the 1600/1800 that one 2000 W system gets.
+
+Pinned by `TestInterchangeableSourcesAreDrawnAlike` in
+`tests/engine/manual/test_allocation_rules.py`; held in general by the
+split law in `tests/engine/automatic/test_laws.py`.
 
 :::
 

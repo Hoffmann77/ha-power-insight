@@ -1,8 +1,10 @@
 # Test layout
 
 Tests are split into **two tiers, one directory per dependency group**. Each
-tier maps to a CI job, and every tier is auto-discovered by directory — adding
-a file to an existing tier needs no CI change.
+tier maps to CI — the engine tier as one job per suite (`manual`, `automatic`,
+`frozen`, `docs` for `reference/`, and `other` for the rest), the integration
+tier as one job — and every tier is auto-discovered by directory: adding a
+file, or a new engine directory, needs no CI change.
 
 | Tier          | Directory        | Home Assistant | Network | How it loads the code                          |
 | ------------- | ---------------- | -------------- | ------- | ---------------------------------------------- |
@@ -65,8 +67,8 @@ reviewer needs to see.
    to [`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md),
    so the decision is enforced even if the snapshots are re-frozen later.
 
-In CI, a failing engine job puts the same table of moved outputs in the job
-summary.
+In CI, a failing `engine-tests (frozen)` or `engine-tests (docs)` job puts the
+same table of moved outputs in the job summary.
 
 ```bash
 uv run --group engine pytest tests/engine   # HA harness not required
@@ -239,14 +241,10 @@ anything else) if your PR needs green checks to merge.
 - **Correction factors.** The eight `*_corrected` properties are not in the
   catalog, and no engine test sets a factor other than 1.0; the integration
   tier covers them in `test_correction_flow.py`.
-- **Open finding** held by `manual/test_allocation_rules.py`: two sinks with the
-  same restriction can get different rows when the draws exactly exhaust the
-  sources (strict xfail in `TestSameRestrictionGetsTheSameRow`).
-- **Open findings** held by `test_laws.py`: the proportional split still drifts
-  when a PV system is split in two with a base load present (the strict xfail),
-  six properties still publish while a meter is unavailable
-  (`PUBLISH_WHILE_UNAVAILABLE`), and readings that overdraw break source
-  balance, so the conservation law only checks balanced homes.
+- **Open findings** held by `test_laws.py`: six properties still publish while
+  a meter is unavailable (`PUBLISH_WHILE_UNAVAILABLE`), and readings that
+  overdraw break source balance, so the conservation law only checks balanced
+  homes.
 
 ## Integration tier (`integration/`)
 

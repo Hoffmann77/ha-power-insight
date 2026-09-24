@@ -15,23 +15,17 @@ from __future__ import annotations
 
 from fractions import Fraction as F
 
-import pytest
-
 from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 from tests.engine.manual.provenance import rows
 
 
 class TestTheGridGoesFirst(Home):
-    """Decision: a restricted sink allowed the grid draws it before competing
-    for local generation, and a shared import splits in proportion to draw
-    (rules 1 and 2 of "Choosing among valid allocations"; the worked example
-    there).
+    """Decision: restricted sinks allowed the grid take it first, split by draw.
 
-    bat1 and bat2 may each use the grid and their own PV system. They take the
-    whole 400 W import, 200 W each, and their other 200 W from their own PV
-    system. That leaves pv1 800 W and pv2 400 W for bat3, cons1 and the 200 W
-    base load, all split 2 : 1. The base load, also allowed the grid, gets
-    none of it: the grid went first to the restricted sinks.
+    bat1 and bat2 may use the grid and take the whole 400 W import, so the
+    unrestricted base load gets none of it. See rules 1 and 2 of "Choosing
+    among valid allocations" (and its worked example) in
+    engine-calculations.md.
     """
 
     grid = Grid(400)
@@ -44,12 +38,11 @@ class TestTheGridGoesFirst(Home):
 
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """The two batteries allowed the grid take all of it, half each.
+        """bat1 and bat2 share the grid import evenly.
 
-        bat1 and bat2 draw the same 400 W, so the 400 W import splits evenly:
-        200 W each, the other 200 W from their own PV system. bat3 and
-        cons1, which may only use PV, then share what is left of pv1
-        (800 W) and pv2 (400 W) in that 2 : 1 ratio.
+        Each draws 400 W: 200 W from the grid and 200 W from its own PV
+        system. bat3 and cons1 split the leftover pv1 (800 W) and pv2 (400 W)
+        2 : 1.
         """
         return rows({
             "bat1": {"grid": 200, "pv1": 200, "pv2": 0},
@@ -60,23 +53,21 @@ class TestTheGridGoesFirst(Home):
 
     @expect("home_base_load_source_shares")
     def test_base_load_source_shares(self):
-        """The base load gets no grid power, although it was allowed some.
+        """The base load gets no grid power, although it is allowed some.
 
-        The 200 W base load is unrestricted, so it could have used the grid,
-        but the restricted batteries already took the whole import. It runs
-        on leftover PV instead, in the same 2 : 1 ratio as bat3 and cons1.
+        The batteries already took the whole import, so the 200 W base load
+        runs on leftover PV, 2 : 1 like bat3 and cons1.
         """
         return {"grid": 0, "pv1": F(2, 3), "pv2": F(1, 3)}
 
 
 class TestSameRestrictionGetsTheSameRow(Home):
-    """Decision: scarce sources are split in proportion to draw, so two sinks
-    with the same restriction come out with the same row (rule 2 of "Choosing
-    among valid allocations").
+    """Decision: sinks with the same restriction get the same row.
 
-    cons1 draws 100 W and cons2 300 W, exactly what pv1 and pv2 make together.
-    Each PV system is split 1 : 3 between them, so both read pv1 3/4, pv2 1/4
-    — serving them one at a time would have given one of them all of pv1.
+    Scarce sources are split in proportion to draw: cons1 (100 W) and cons2
+    (300 W) use all of pv1 and pv2, and each PV system is split 1 : 3 between
+    them. See rule 2 of "Choosing among valid allocations" in
+    engine-calculations.md.
     """
 
     grid = Grid(200)
@@ -85,24 +76,13 @@ class TestSameRestrictionGetsTheSameRow(Home):
     cons1 = Consumer(-100, power_from=(pv1, pv2))
     cons2 = Consumer(-300, power_from=(pv1, pv2))
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "Engine bug: when the draws exactly exhaust the sources, cons2 must "
-            "take at least 200 W of pv1 in every plan; the engine hands out "
-            "that reserve first and splits only the rest by draw, so the two "
-            "rows come out 9/13 and 10/13 on pv1 instead of 3/4 each. The "
-            "same-row answer is feasible and honours the reserve."
-        ),
-    )
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """Two loads with the same restriction read the same mix, 3/4 : 1/4.
+        """Both loads read the same mix: 3/4 pv1, 1/4 pv2.
 
-        Each PV system is shared between cons1 and cons2 in proportion to
-        their draws, 100 : 300, so cons1 gets 75 W of pv1 and 25 W of pv2 and
-        cons2 three times that. Both rows then read pv1 3/4, pv2 1/4. Known
-        to fail today — see the xfail reason.
+        Each PV system is split 100 : 300 by draw, so cons1 gets 75 W pv1 and
+        25 W pv2, and cons2 three times that. cons2 must take 200 W of pv1 in
+        any valid plan, and 225 W honours that.
         """
         return rows({
             "cons1": {"grid": 0, "pv1": 75, "pv2": 25},
@@ -111,12 +91,11 @@ class TestSameRestrictionGetsTheSameRow(Home):
 
 
 class TestRestrictedSinksAreServedFirst(Home):
-    """Decision: unrestricted sinks — the base load included — take what is
-    left after the restricted ones (rule 3 of "Choosing among valid
-    allocations").
+    """Decision: unrestricted sinks, the base load included, get what is left.
 
-    cons1 may only use pv1 and takes 500 of its 600 W. The 900 W base load
-    could have used pv1 too, but gets only the 100 W left, and 800 W grid.
+    cons1 may only use pv1 and takes 500 of its 600 W, so the base load gets
+    just the other 100 W and the rest from the grid. See rule 3 of "Choosing
+    among valid allocations" in engine-calculations.md.
     """
 
     grid = Grid(800)
@@ -125,33 +104,28 @@ class TestRestrictedSinksAreServedFirst(Home):
 
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """The restricted load runs entirely on the source it is allowed.
+        """cons1 runs entirely on pv1.
 
-        cons1 may only use pv1, and pv1's 600 W are enough for its 500 W
-        draw, so its row is all pv1 and none of the grid.
+        pv1's 600 W cover cons1's 500 W draw, so it needs no grid power.
         """
         return rows({"cons1": {"grid": 0, "pv1": 500}})
 
     @expect("home_base_load_source_shares")
     def test_base_load_source_shares(self):
-        """The unrestricted base load gets only the PV that cons1 left over.
+        """The base load gets only the pv1 power cons1 left over.
 
-        The 900 W base load may use anything, so it is served last: the
-        100 W of pv1 that cons1 did not need, and 800 W from the grid —
-        8/9 grid, 1/9 pv1. Serving it first or in proportion would have
-        given it more pv1.
+        The 900 W base load is served last: 100 W of pv1 and 800 W of grid,
+        so 1/9 pv1 and 8/9 grid.
         """
         return {"grid": F(8, 9), "pv1": F(1, 9)}
 
 
 class TestASinkSplitsOverWhatIsLeft(Home):
-    """Decision: a sink spreading its draw over several sources weights them by
-    what is *left* of each, not by their readings (engine-calculations.md, "a
-    sink splits over what is left"; its worked example).
+    """Decision: a sink splits its draw by what is left of each source.
 
-    cons1 is captive to pv1 and takes 250 W of its 3000 W first. The 1200 W
-    export may use pv1 and bat1, and splits over what is left of them,
-    2750 : 400 — pv1 55/63 — not the 3000 : 400 their readings would give.
+    cons1 takes 250 W of pv1 first, so the 1200 W export splits over what
+    remains, 2750 : 400, not over the readings, 3000 : 400. See "a sink splits
+    over what is left" (and its worked example) in engine-calculations.md.
     """
 
     grid = Grid(-1200)
@@ -161,14 +135,51 @@ class TestASinkSplitsOverWhatIsLeft(Home):
 
     @expect("sink_adapters_source_shares")
     def test_source_shares(self):
-        """The export is split by what pv1 and bat1 have left, not by output.
+        """The export splits 2750 : 400 between pv1 and bat1.
 
-        An exporting grid is a sink. cons1 is restricted to pv1 and takes
-        its 250 W first, leaving pv1 2750 W and bat1 400 W. The 1200 W export
-        splits 2750 : 400 — pv1 supplies 22000/21 W (55/63), bat1 3200/21 W.
-        Splitting by the readings, 3000 : 400, would have given pv1 15/17.
+        An exporting grid is a sink. After cons1's 250 W, pv1 has 2750 W left
+        and bat1 400 W, so pv1 supplies 55/63 of the export. Splitting by the
+        readings would have given 15/17.
         """
         return rows({
             "grid": {"pv1": F(22000, 21), "bat1": F(3200, 21)},
             "cons1": {"pv1": 250, "bat1": 0},
         })
+
+
+class TestInterchangeableSourcesAreDrawnAlike(Home):
+    """Decision: sources the same sinks may use are drawn in proportion to their output.
+
+    east and west may be used by the plug and the export alike, so they act as
+    one 2000 W system: metering them apart must not change the answer. See
+    "sources the same sinks may use are drawn in proportion to their output"
+    in engine-calculations.md.
+    """
+
+    grid = Grid(-1300)
+    east = Pv(1000, exports=True)
+    west = Pv(1000, exports=True)
+    carport = Pv(200, exports=True)
+    plug = Consumer(-400, power_from=(east, west))
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """The export reads 8/9 east and west, as from one 2000 W system.
+
+        The plug takes its 400 W from east and west, leaving them 1600 W
+        against the carport's 200 W. The export splits 1600 : 200, and east
+        and west, being equal, share their part evenly: 4/9 each.
+        """
+        return {
+            "grid": {"east": F(4, 9), "west": F(4, 9), "carport": F(1, 9)},
+            "plug": {"east": F(1, 2), "west": F(1, 2), "carport": 0},
+        }
+
+    @expect("home_base_load_source_shares")
+    def test_base_load_source_shares(self):
+        """The base load takes the same 4/9, 4/9, 1/9 mix as the export.
+
+        It gets what is left in the same 1600 : 200 proportion: 500 W, of
+        which east and west supply 8/9 between them.
+        """
+        return {"east": F(4, 9), "west": F(4, 9), "carport": F(1, 9)}

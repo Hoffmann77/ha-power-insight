@@ -303,9 +303,9 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
 
     Per source, each claimant is first given the reserve it cannot obtain
     anywhere else; whatever is left over is split in proportion to the draw each
-    claimant still has outstanding. Splitting proportionally (rather than
-    serving claimants one at a time) is what makes two sinks with the same
-    restriction come out with the same row whatever their draws.
+    claimant still has outstanding, rather than serving claimants one at a
+    time. A reserve can still split two sinks with the same restriction
+    unevenly; ``_allocate`` evens their rows out afterwards.
 
     Returns ``(allocation, unused supply, deficit)``.
     """
@@ -436,6 +436,23 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
     return allocation, pool, deficit
 
 
+def _interchangeable_sources(
+    supply: dict, demand: dict, allowed: dict, grid_uid: str
+) -> list[list[str]]:
+    """Group the sources by which restricted sinks may draw them.
+
+    Unrestricted sinks may draw anything, so they tell no two sources apart.
+    The grid is always its own group: it goes first, not in proportion.
+    """
+    groups: dict[object, list[str]] = {}
+    for source_uid in supply:
+        key = source_uid if source_uid == grid_uid else frozenset(
+            uid for uid in demand if allowed[uid] and _permits(allowed[uid], source_uid)
+        )
+        groups.setdefault(key, []).append(source_uid)
+    return list(groups.values())
+
+
 def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
     """Attribute every sink's draw to sources. Returns ``(allocation, deficit)``.
 
@@ -444,7 +461,30 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
     left, which they can always do. Before serving a group, any *tight* subset
     is split off and solved on its own — that group has no freedom, and leaving
     it in would let a flexible sink take supply the group needed.
+
+    Sources that exactly the same sinks may draw are interchangeable, so they
+    are solved as one and their watts dealt back in proportion to output.
+    Reserves are found per source, and splitting one system into halves the
+    sinks can swap between would otherwise shrink them and move the answer.
     """
+    twins = _interchangeable_sources(supply, demand, allowed, grid_uid)
+    if any(len(group) > 1 for group in twins):
+        merged = {group[0]: sum(supply[s] for s in group) for group in twins}
+        into = {s: group[0] for group in twins for s in group}
+        allocation, deficit = _allocate(
+            merged,
+            demand,
+            {uid: {into.get(s, s) for s in sources} for uid, sources in allowed.items()},
+            grid_uid,
+        )
+        return {
+            uid: {
+                s: row[into[s]] * supply[s] / merged[into[s]] if merged[into[s]] else 0.0
+                for s in supply
+            }
+            for uid, row in allocation.items()
+        }, deficit
+
     restricted = {uid: d for uid, d in demand.items() if allowed[uid]}
     flexible = {uid: d for uid, d in demand.items() if not allowed[uid]}
     allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
@@ -492,6 +532,26 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
         for uid, draw in tail.items():
             for source_uid in supply:
                 allocation[uid][source_uid] += draw * remaining[source_uid] / available
+
+    # Sinks with the same restriction share one row, in proportion to draw. The
+    # fill can split them unevenly when only one of them holds a reserve, so
+    # their watts (and any deficit) are pooled and dealt out again. Each
+    # source's total to the group is unchanged and every member is allowed the
+    # same sources, so the plan stays valid and still carries every reserve.
+    groups: dict[frozenset, list[str]] = {}
+    for uid in restricted:
+        groups.setdefault(frozenset(allowed[uid]), []).append(uid)
+    for members in groups.values():
+        total = sum(demand[u] for u in members)
+        if len(members) < 2 or total <= _EPS:
+            continue
+        pooled = {s: sum(allocation[u][s] for u in members) for s in supply}
+        short = sum(deficit.get(u, 0.0) for u in members)
+        for uid in members:
+            share = demand[uid] / total
+            allocation[uid] = {s: watts * share for s, watts in pooled.items()}
+            if short > _EPS:
+                deficit[uid] = short * share
 
     return allocation, deficit
 
