@@ -3,12 +3,12 @@
 Two base classes are provided:
 
 - ``BaseEventSensorEntity`` — a plain measurement sensor that re-reads its
-  value from the shared ``PowerInsight`` engine whenever the engine takes a
-  new reading from any of its source entities.
+  value from the shared ``PowerInsight`` engine whenever any of its source
+  entities fire a state-change or state-report event.
 
 - ``BaseEventIntegrationSensorEntity`` — a ``TOTAL`` sensor that accumulates
   a rate quantity (e.g. EUR/h) over time.  Integration is triggered both by
-  source-entity readings *and* by a periodic timer (``max_sub_interval``) so
+  source-entity events *and* by a periodic timer (``max_sub_interval``) so
   that steady-state periods — where source entities fire no events — are
   captured correctly.
 """
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 import logging
 from typing import Any, Self
@@ -29,11 +29,21 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import UnitOfTime
-from homeassistant.core import CALLBACK_TYPE, callback
+from homeassistant.core import (
+    CALLBACK_TYPE,
+    Event,
+    EventStateChangedData,
+    EventStateReportedData,
+    State,
+    callback,
+)
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
-from .event_handler import async_track_source_updates
+from .event import (
+    async_track_power_insight_state_change_event,
+    async_track_power_insight_state_report_event,
+)
 from .power_insight import PowerInsight, UNIT_PREFIXES
 
 
@@ -59,23 +69,27 @@ class BaseEventSensorEntity(SensorEntity):
 
     All sensor subclasses in this integration share a single ``PowerInsight``
     instance.  The ``EventHandler`` updates that instance with fresh W-values
-    whenever any tracked source entity changes or reports, then sends that
-    entity's dispatcher signal (``source_signal``).
+    whenever any tracked source entity changes, then fires a scoped custom
+    event on the HA bus.
 
-    This class listens for the signals of its source entities and calls
-    ``async_write_ha_state()`` in response, which causes HA to pull the new
-    value via the subclass's ``native_value`` property.  No state is stored
-    here — calculation is fully delegated to ``PowerInsight``.
+    This class listens for those events and calls ``async_write_ha_state()``
+    in response, which causes HA to pull the new value via the subclass's
+    ``native_value`` property.  No state is stored here — calculation is
+    fully delegated to ``PowerInsight``.
+
+    Both ``state_changed`` and ``state_reported`` events are tracked so that
+    the first known value is picked up via a state-report even before any
+    actual state change occurs.
 
     Write coalescing
     ----------------
     When several source entities change in the same event-loop tick (common at
-    HA startup or with multi-channel energy meters), each sends its own
-    signal.  Without coalescing every signal would produce a separate
+    HA startup or with multi-channel energy meters), each fires its own custom
+    event.  Without coalescing every event would produce a separate
     ``async_write_ha_state()`` call, each computing the same final
     ``PowerInsight`` result.  Instead, the first event sets a ``_pending_write``
     flag and schedules a single ``_flush_write`` with ``call_soon``; subsequent
-    signals in the same tick see the flag is already set and do nothing.  The
+    events in the same tick see the flag is already set and do nothing.  The
     flush runs in the next iteration when ``PowerInsight`` holds all updates.
     """
 
@@ -89,11 +103,11 @@ class BaseEventSensorEntity(SensorEntity):
         """Initialise the sensor.
 
         Args:
-            source_entities: Entity IDs whose readings should trigger a
-                state write.  Typically the power/price/co2 entities feeding this
+            source_entities: Entity IDs whose events should trigger a state
+                write.  Typically the power/price/co2 entities feeding this
                 sensor's calculation.
             power_insight: Shared calculation engine.  Already holds the
-                current values when a signal reaches this callback.
+                current values when an event reaches this callback.
 
         """
         self._source_entities = source_entities
@@ -101,14 +115,27 @@ class BaseEventSensorEntity(SensorEntity):
         self._pending_write = False
 
     async def async_added_to_hass(self) -> None:
-        """Listen for source readings once the entity is part of HA."""
+        """Register event listeners once the entity is part of HA."""
         await super().async_added_to_hass()
+
+        # Track both event types for each source entity.
+        # state_changed  — source value actually changed.
+        # state_reported — source value was re-reported without changing (gives
+        #                  us the initial value on startup before any change).
         self.async_on_remove(
-            async_track_source_updates(
+            async_track_power_insight_state_change_event(
                 self.hass,
                 self.config_entry.entry_id,
                 self._source_entities,
-                self._on_source_update,
+                self._update_on_state_change_callback,
+            )
+        )
+        self.async_on_remove(
+            async_track_power_insight_state_report_event(
+                self.hass,
+                self.config_entry.entry_id,
+                self._source_entities,
+                self._update_on_state_report_callback,
             )
         )
 
@@ -128,8 +155,17 @@ class BaseEventSensorEntity(SensorEntity):
         self.async_write_ha_state()
 
     @callback
-    def _on_source_update(self, timestamp: datetime) -> None:
-        """Schedule a coalesced state write on a new source reading."""
+    def _update_on_state_change_callback(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Schedule a coalesced state write on source state change."""
+        self._schedule_write()
+
+    @callback
+    def _update_on_state_report_callback(
+        self, event: Event[EventStateReportedData]
+    ) -> None:
+        """Schedule a coalesced state write on source state report."""
         self._schedule_write()
 
 
@@ -324,10 +360,10 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
 
     **Event-driven integration**
 
-    ``EventHandler`` updates ``PowerInsight`` before sending the source
-    entity's dispatcher signal.  The signal carries the reading's own
-    timestamp (rather than wall-clock time) to avoid adding processing-delay
-    error to the elapsed-time calculation.
+    ``EventHandler`` updates ``PowerInsight`` before firing a scoped custom
+    event.  Each event callback extracts the actual state-change timestamp
+    from the event data (rather than using wall-clock time) to avoid adding
+    processing-delay error to the elapsed-time calculation.
 
     **Left-Riemann method**
 
@@ -374,8 +410,8 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         """Initialise the integration sensor.
 
         Args:
-            source_entities: Entity IDs that trigger integration whenever the
-                engine takes a new reading from them.
+            source_entities: Entity IDs that trigger integration when they
+                fire a state-change or state-report event.
             power_insight: Shared calculation engine.
             max_sub_interval: How often to force an integration step when no
                 source event arrives.  Set to ``None`` to disable.  Defaults
@@ -554,7 +590,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     # ------------------------------------------------------------------
 
     async def async_added_to_hass(self) -> None:
-        """Restore persisted state and listen for source readings."""
+        """Restore persisted state and register event listeners."""
         await super().async_added_to_hass()
 
         # --- State restoration ---
@@ -587,29 +623,63 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
             self._last_integration_time = dt_util.utcnow()
             self._schedule_max_sub_interval()
 
-        # --- Source readings ---
+        # --- Event listeners ---
         self.async_on_remove(
-            async_track_source_updates(
+            async_track_power_insight_state_change_event(
                 self.hass,
                 self.config_entry.entry_id,
                 self._source_entities,
-                self._handle_integration_event,
+                self._integrate_on_state_change_callback,
             )
         )
+        self.async_on_remove(
+            async_track_power_insight_state_report_event(
+                self.hass,
+                self.config_entry.entry_id,
+                self._source_entities,
+                self._integrate_on_state_report_callback,
+            )
+        )
+
+    # ------------------------------------------------------------------
+    # Event callbacks
+    # ------------------------------------------------------------------
+
+    @callback
+    def _integrate_on_state_change_callback(
+        self, event: Event[EventStateChangedData]
+    ) -> None:
+        """Handle a source state-change event.
+
+        Uses the new state's ``last_updated`` timestamp so that the elapsed
+        time reflects when the physical value changed, not when this callback
+        ran.
+        """
+        new_state: State | None = event.data["new_state"]
+        # Fall back to wall-clock if the state object is unexpectedly absent.
+        timestamp = new_state.last_updated if new_state is not None else datetime.now(tz=UTC)
+        self._handle_integration_event(timestamp)
+
+    @callback
+    def _integrate_on_state_report_callback(
+        self, event: Event[EventStateReportedData]
+    ) -> None:
+        """Handle a source state-report event (value unchanged, re-reported).
+
+        Uses ``last_reported`` from the event data for the same accuracy
+        reason as the state-change handler.
+        """
+        self._handle_integration_event(event.data["last_reported"])
 
     # ------------------------------------------------------------------
     # Core integration logic
     # ------------------------------------------------------------------
 
-    @callback
     def _handle_integration_event(self, timestamp: datetime) -> None:
         """Integrate the slice since the last step and update HA state.
 
-        Called with the reading's own timestamp — ``last_updated`` for a
-        change, ``last_reported`` for a report — so the elapsed time reflects
-        when the physical value was read, not when this callback ran.
         ``PowerInsight`` is updated by ``EventHandler`` before this callback
-        runs, so ``self.integration_value`` already reflects the new source
+        fires, so ``self.integration_value`` already reflects the new source
         entity state.
 
         1. Integrate the rate that held since the last step (the left value)

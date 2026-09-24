@@ -2265,7 +2265,7 @@ class PowerInsight:
         """Update the value of the given entity_id to new_value.
 
         Returns True if the stored value changed, False if it was already
-        identical.  EventHandler uses this to suppress unnecessary sensor updates
+        identical.  EventHandler uses this to suppress unnecessary custom events
         when a source entity fires state_changed but the numeric value is the same.
         """
         adapter = self.get_adapter_by_entity(entity_id)

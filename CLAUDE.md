@@ -35,14 +35,14 @@ Tests are split into two tiers by dependency group: `tests/engine/` (pure Python
 
 ```
 HA state_changed/state_reported event
-  → EventHandler._update()
+  → EventHandler._update_on_state_change()
       → PowerInsight.set_value(entity_id, value)   # stores raw W value
-      → async_dispatcher_send(source_signal(entry_id, entity_id), timestamp)
+      → hass.bus.async_fire(custom_event)
           → BaseEventSensorEntity.async_write_ha_state()
               → sensor reads PowerInsight property (pure calculation)
 ```
 
-`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It notifies sensors through a per-config-entry, per-source-entity dispatcher signal (`source_signal`, subscribed with `async_track_source_updates`), never a bus event — the recorder would write every bus event to the database. It normalises all power values to Watts using SI prefixes, and the grid price to currency per kWh (`ct/kWh`, `EUR/MWh` … included; any other unit reads as an unknown price), before storing them.
+`EventHandler` (`event_handler.py`) is the single bridge between the HA event bus and the `PowerInsight` calculation engine. It normalises all power values to Watts using SI prefixes, and the grid price to currency per kWh (`ct/kWh`, `EUR/MWh` … included; any other unit reads as an unknown price), before storing them.
 
 ### PowerInsight calculation engine (`power_insight.py`)
 
