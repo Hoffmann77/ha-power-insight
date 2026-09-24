@@ -550,11 +550,17 @@ every component keyed by a real adapter instead of needing a sentinel.
 
 Totals accumulated before the breakdown existed restore without one. They
 are carried through unscaled: there is no attribution left to correct them
-by, and inventing one would be worse than leaving them at face value.
+by, and inventing one would be worse than leaving them at face value. That
+includes scaling them by the device's own factor, which would move a saving
+the wrong way and would jump back the moment the first component
+accumulated. A total seeded with `set_value` is the same: the seed replaces
+the history and its breakdown, and reads exactly what was set.
 
 Not pinned in the engine tier: the accumulation happens in the sensor layer.
 Covered by `tests/integration/test_correction_flow.py`
-(`test_stored_data_round_trips_the_component_breakdown` and its neighbour).
+(`test_stored_data_round_trips_the_component_breakdown` and its neighbour,
+`test_a_total_restored_without_a_breakdown_stays_at_face_value` and
+`test_a_seeded_total_reads_exactly_what_was_set`).
 
 :::
 

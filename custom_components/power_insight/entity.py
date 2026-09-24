@@ -765,9 +765,15 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         Lets the user set an accumulated sensor to a known starting figure —
         e.g. to carry over historical totals when adopting the integration.
         The new total persists across restarts via the existing restore path.
+
+        The seeded figure replaces the history, so its breakdown goes too: the
+        total then reads exactly *value*, which a later correction leaves at
+        face value, like any total with no attribution to correct it by.
         """
         self._state = Decimal(str(value))
         self._last_valid_state = self._state
+        self._component_totals = {}
+        self._component_factors = {}
         self.async_write_ha_state()
 
     @property

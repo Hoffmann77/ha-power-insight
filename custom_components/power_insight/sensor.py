@@ -2430,16 +2430,15 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
         Each accumulated component is scaled by *its own* adapter's correction
         factor, so editing one device's lifetime cost rescales exactly the
-        share of history that came from it. Anything accumulated before the
-        breakdown existed has no attribution left to correct by, so it is
-        carried through unscaled rather than guessed at.
+        share of history that came from it. Anything without a breakdown — a
+        total accumulated before the breakdown existed, or one seeded with
+        ``set_value`` — has no attribution left to correct by, so it is
+        carried through unscaled rather than guessed at. That holds whether or
+        not anything has been accumulated on top of it yet.
         """
         base = self._state
         if base is None or not self.entity_description.apply_correction_factor:
             return base
-
-        if not self._component_totals:
-            return base * Decimal(str(self.device_adapter.correction_factor))
 
         factors = self._component_factors_now()
         corrected = Decimal(0)

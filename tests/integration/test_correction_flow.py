@@ -395,3 +395,127 @@ async def test_removing_a_source_keeps_its_share_corrected(
 
     assert after == pytest.approx(before, abs=1e-6)
     assert combined_after == pytest.approx(combined_before, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# C8 — a total with no breakdown is carried at face value
+# ---------------------------------------------------------------------------
+
+_SAVINGS_OPTIONS = {
+    "schema": 2,
+    "scopes": {"pv_system": ["accumulate_levelized_cost_saving_rates"]},
+}
+
+
+def _corrected_pv_entry() -> MockConfigEntry:
+    """A PV with lcoe 0.10 corrected by 1.5, behind a priced grid."""
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
+    pv = copy.deepcopy(make_pv_subentry_data())
+    pv["data"]["adapter"]["config"]["correction_factor"] = 1.5
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=_SAVINGS_OPTIONS,
+        subentries_data=[grid, pv],
+    )
+
+
+def _set_pv_home(hass: HomeAssistant) -> None:
+    """1 kW imported at 0.30 and 2 kW of PV, all used in the house.
+
+    The PV's levelized saving is 2 kW × (0.30 − 0.10) = 0.40 EUR/h at base,
+    and 2 kW × (0.30 − 0.15) = 0.30 EUR/h corrected.
+    """
+    hass.states.async_set("sensor.grid_power", "1000", {"unit_of_measurement": "W"})
+    hass.states.async_set(
+        "sensor.grid_price", "0.30", {"unit_of_measurement": "EUR/kWh"}
+    )
+    hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
+
+
+async def test_a_total_restored_without_a_breakdown_stays_at_face_value(
+    hass: HomeAssistant,
+) -> None:
+    """History with no attribution is never scaled, before or after new slices.
+
+    A total saved before the breakdown existed restores as 10 EUR with no
+    components. It must read 10 EUR — not 15 EUR by the PV's own factor, which
+    would also scale a saving the wrong way — and must not jump when the first
+    component accumulates: after an hour at the corrected 0.30 EUR/h it reads
+    10.30 EUR.
+    """
+    from pytest_homeassistant_custom_component.common import (
+        mock_restore_cache_with_extra_data,
+    )
+    from homeassistant.core import State
+
+    entry = _corrected_pv_entry()
+    entry.add_to_hass(hass)
+    unique_id = f"{entry.entry_id}_{PV_SUB_ID}_total_levelized_cost_savings"
+    entity_id = "sensor.pv_total_levelized_cost_savings"
+    er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, unique_id,
+        config_entry=entry, config_subentry_id=PV_SUB_ID,
+        suggested_object_id="pv_total_levelized_cost_savings",
+    )
+    mock_restore_cache_with_extra_data(hass, [(
+        State(entity_id, "10.0"),
+        {
+            "native_value": {"__type": "<class 'decimal.Decimal'>", "decimal_str": "10.0"},
+            "native_unit_of_measurement": "EUR",
+            "last_valid_state": "10.0",
+        },
+    )])
+
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        _set_pv_home(hass)
+        await hass.config_entries.async_setup(entry.entry_id)
+        for _ in range(4):
+            await hass.async_block_till_done()
+        restored = float(hass.states.get(entity_id).state)
+
+        frozen.move_to(t0 + timedelta(hours=1))
+        hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
+        for _ in range(4):
+            await hass.async_block_till_done()
+        after_an_hour = float(hass.states.get(entity_id).state)
+
+    assert restored == pytest.approx(10.0, abs=1e-6)
+    assert after_an_hour == pytest.approx(10.30, abs=1e-6)
+
+
+async def test_a_seeded_total_reads_exactly_what_was_set(
+    hass: HomeAssistant,
+) -> None:
+    """``set_value`` replaces the history, breakdown included.
+
+    After an hour the total holds a corrected breakdown. Seeding 5 EUR must
+    then read 5 EUR; a breakdown left behind would still be corrected on top
+    of the seed and read 4.90 EUR. The seed is then carried at face value.
+    """
+    entry = _corrected_pv_entry()
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        _set_pv_home(hass)
+        await setup_integration(hass, entry)
+        frozen.move_to(t0 + timedelta(hours=1))
+        hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
+        for _ in range(4):
+            await hass.async_block_till_done()
+
+        suffix = f"{PV_SUB_ID}_total_levelized_cost_savings"
+        state = _pv_state(hass, entry, suffix)
+        assert float(state.state) == pytest.approx(0.30, abs=1e-6)
+
+        await hass.services.async_call(
+            DOMAIN, "set_value", {"value": 5.0},
+            target={"entity_id": state.entity_id}, blocking=True,
+        )
+        for _ in range(4):
+            await hass.async_block_till_done()
+
+    assert float(_pv_state(hass, entry, suffix).state) == pytest.approx(5.0, abs=1e-6)
