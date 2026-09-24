@@ -391,7 +391,8 @@
         "invalid_name": "Enter a name.",
         "name_not_unique": "A device with this name already exists.",
         "invalid_power_entity": "This entity does not exist or does not report power in W, kW or MW.",
-        "invalid_price_entity": "This entity does not exist or is unavailable.",
+        "invalid_price_entity": "This entity does not exist, is unavailable, or does not report a price per unit of energy (for example EUR/kWh, ct/kWh or EUR/MWh).",
+        "power_entity_in_use": "Another device already uses this power sensor. Each device needs its own sensor, or its watts would be counted twice.",
         "invalid_co2_entity": "This entity does not exist or is unavailable.",
         "invalid_input": "Invalid value.",
         "required": "Required by the sensors you enabled.",
@@ -411,6 +412,18 @@
     "reconfigure_battery_adapters": {
       "title": "Check the charging sources of {battery_name}",
       "description": "A possible charging source was added or removed. Open **{battery_name}**, choose **Reconfigure**, and check which sources it charges from."
+    },
+    "price_unit": {
+      "title": "The electricity price of {entry_title} has an unknown unit",
+      "description": "**{entity_id}** reports its price in `{unit}`, which is not a price per unit of energy, so it is ignored and every cost that needs it reads unknown.\n\nUse a price sensor in a unit like `EUR/kWh`, `ct/kWh` or `EUR/MWh` — Power Insight converts those itself — and select it under **Reconfigure** on the grid connection."
+    },
+    "price_currency": {
+      "title": "The electricity price of {entry_title} is in another currency",
+      "description": "**{entity_id}** reports its price in **{currency}**, but Home Assistant is set to **{configured}**. Power Insight does not convert currencies, so every cost is shown in {configured} while being calculated in {currency}.\n\nUse a price sensor in {configured}, or change the currency under **Settings → System → General**."
+    },
+    "shared_power_entity": {
+      "title": "Two devices of {entry_title} share a power sensor",
+      "description": "**{devices}** all read **{entity_id}**. A power sensor measures one device: shared, its watts are counted twice and one of the devices never updates.\n\nOpen each device, choose **Reconfigure**, and give it its own power sensor — or remove the one that duplicates another."
     }
   },
   "services": {

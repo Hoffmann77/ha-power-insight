@@ -7,17 +7,17 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
-from homeassistant.const import STATE_UNAVAILABLE
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_POWER_ENTITY,
     DOMAIN,
     PLATFORMS,
 )
-from .utils import state_to_value
 from .power_insight import PowerInsight
 from .event_handler import EventHandler
 from .adapter_models import ADAPTER_MODELS
+from .utils import parse_price_unit
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -93,15 +93,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
                 )
 
         source_entities = power_insight.source_entities
-
-        # Try to get the states of the entity ids to provide initial data.
-        for entity_id in source_entities:
-            state_obj = hass.states.get(entity_id)
-            if state_obj:
-                # Set initial data if the state is available.
-                if state_obj.state != STATE_UNAVAILABLE:
-                    value = state_to_value(state_obj)
-                    power_insight.set_value(entity_id, value)
+        _check_price_entity(hass, entry, power_insight)
+        _check_shared_power_entities(hass, entry)
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)
@@ -114,6 +107,92 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     # sensor.py (async_setup_entry), so HA handles entity-target resolution.
 
     return True
+
+
+def _check_shared_power_entities(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Raise a repair issue while two devices read the same power sensor.
+
+    The config flow refuses it, but an entry configured before that check can
+    still have one: its watts would be counted twice, and one of the devices
+    would never update.
+    """
+    issue_id = f"shared_power_entity_{entry.entry_id}"
+    devices_by_entity: dict[str, list[str]] = {}
+    for subentry in entry.subentries.values():
+        entity_id = subentry.data.get("adapter", {}).get("config", {}).get(
+            CONF_POWER_ENTITY
+        )
+        if entity_id:
+            devices_by_entity.setdefault(entity_id, []).append(subentry.title)
+
+    shared = {e: names for e, names in devices_by_entity.items() if len(names) > 1}
+    if not shared:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        return
+
+    entity_id, names = next(iter(shared.items()))
+    ir.async_create_issue(
+        hass, DOMAIN, issue_id,
+        is_fixable=False,
+        severity=ir.IssueSeverity.ERROR,
+        translation_key="shared_power_entity",
+        translation_placeholders={
+            "entry_title": entry.title,
+            "entity_id": entity_id,
+            "devices": ", ".join(sorted(names)),
+        },
+    )
+
+
+def _check_price_entity(
+    hass: HomeAssistant, entry: MyConfigEntry, power_insight: PowerInsight,
+) -> None:
+    """Raise a repair issue when the grid price cannot be used as it is.
+
+    A price in a unit that is not a price per energy is ignored (every cost
+    that needs it reads unknown), and one in another currency than Home
+    Assistant's is used but not converted — both need the user. Nothing is
+    decided while the price entity has no state yet.
+    """
+    unit_issue = f"price_unit_{entry.entry_id}"
+    currency_issue = f"price_currency_{entry.entry_id}"
+    for entity_id in power_insight.source_entities_price:
+        state = hass.states.get(entity_id)
+        if state is None or state.state in ("unavailable", "unknown"):
+            return
+        unit = state.attributes.get("unit_of_measurement")
+        parsed = parse_price_unit(unit)
+        if parsed is None:
+            ir.async_create_issue(
+                hass, DOMAIN, unit_issue,
+                is_fixable=False,
+                severity=ir.IssueSeverity.ERROR,
+                translation_key="price_unit",
+                translation_placeholders={
+                    "entry_title": entry.title,
+                    "entity_id": entity_id,
+                    "unit": unit or "—",
+                },
+            )
+        else:
+            ir.async_delete_issue(hass, DOMAIN, unit_issue)
+
+        currency = parsed[1] if parsed else None
+        if currency is not None and currency != hass.config.currency:
+            ir.async_create_issue(
+                hass, DOMAIN, currency_issue,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="price_currency",
+                translation_placeholders={
+                    "entry_title": entry.title,
+                    "entity_id": entity_id,
+                    "currency": currency,
+                    "configured": hass.config.currency,
+                },
+            )
+        else:
+            ir.async_delete_issue(hass, DOMAIN, currency_issue)
 
 
 async def async_update_listener(

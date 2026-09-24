@@ -21,6 +21,7 @@ from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.const import CONF_NAME
 from homeassistant.util import slugify
 
+from .utils import parse_price_unit
 from .const import (
     DOMAIN,
     CONF_KEY,
@@ -278,6 +279,21 @@ def validate_entity_exists(hass, entity_id: str | None) -> bool:
         return True
     state = hass.states.get(entity_id)
     return state is not None and state.state != "unavailable"
+
+
+def validate_price_entity(hass, entity_id: str | None) -> bool:
+    """Validate a price entity exists and reports a price per unit of energy.
+
+    ``EUR/kWh``, ``ct/kWh`` and ``EUR/MWh`` all qualify and are normalised to
+    currency per kWh at runtime; a price in any other unit would silently make
+    every cost a hundred or a thousand times off, so it is refused here.
+    """
+    if entity_id is None:
+        return True
+    state = hass.states.get(entity_id)
+    if state is None or state.state == "unavailable":
+        return False
+    return parse_price_unit(state.attributes.get("unit_of_measurement")) is not None
 
 
 def validate_power_entity(hass, entity_id: str | None) -> bool:
@@ -959,7 +975,7 @@ GRID_FIELDS: dict[str, AdapterField] = {
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
-        validator=validate_entity_exists,
+        validator=validate_price_entity,
         error_key="invalid_price_entity",
     ),
     CONF_CO2_INTENSITY_ENTITY: AdapterField(
@@ -1495,6 +1511,25 @@ def split_by_storage(
     return adapter_config, top_level_data
 
 
+def power_entity_in_use(
+    parent_entry: ConfigEntry, entity_id: str | None, exclude_id: str | None = None
+) -> bool:
+    """Whether another device of the entry already reads ``entity_id``.
+
+    A power sensor measures one device. Two devices on the same sensor would
+    count its watts twice — and the engine keys readings by sensor, so one of
+    the two would never update at all.
+    """
+    if not entity_id:
+        return False
+    return any(
+        subentry.data.get("adapter", {}).get("config", {}).get(CONF_POWER_ENTITY)
+        == entity_id
+        for subentry in parent_entry.subentries.values()
+        if subentry.subentry_id != exclude_id
+    )
+
+
 def check_existing_slugs(
     parent_entry: ConfigEntry, exclude_id: str | None = None
 ) -> set[str]:
@@ -1769,6 +1804,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             # user_input so the stored list matches the chosen mode.
             apply_source_mode(self._adapter_type, user_input, errors)
 
+            if power_entity_in_use(parent_entry, user_input.get(CONF_POWER_ENTITY)):
+                errors[CONF_POWER_ENTITY] = "power_entity_in_use"
+
             if not errors:
                 # Determine key and title
                 if self._adapter_type == "grid":
@@ -1867,6 +1905,13 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             # Reconcile the source-mode selector with its device list, as in the
             # configure step.
             apply_source_mode(self._adapter_type, user_input, errors)
+
+            if power_entity_in_use(
+                parent_entry,
+                user_input.get(CONF_POWER_ENTITY),
+                exclude_id=subentry.subentry_id,
+            ):
+                errors[CONF_POWER_ENTITY] = "power_entity_in_use"
 
             if not errors:
                 # Evaluate calculated fields (current_lcoe/lcos, correction

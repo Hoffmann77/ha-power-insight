@@ -553,3 +553,72 @@ async def test_options_flow_blocks_under_configured(hass: HomeAssistant) -> None
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "grid"
     assert result["errors"]["base"] == "reconfigure_adapters_first"
+
+
+# ---------------------------------------------------------------------------
+# Subentry flow — sensors that cannot be used as they are
+# ---------------------------------------------------------------------------
+
+
+async def test_subentry_rejects_a_power_sensor_another_device_uses(
+    hass: HomeAssistant,
+) -> None:
+    """A power sensor measures one device; sharing it would count it twice."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "consumer"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Heat pump",
+            "power_entity": "sensor.grid_power",
+            "power_entity_inverted": False,
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"].get("power_entity") == "power_entity_in_use"
+
+
+@pytest.mark.parametrize(("unit", "accepted"), [("ct/kWh", True), ("EUR", False)])
+async def test_subentry_grid_checks_the_price_unit(
+    hass: HomeAssistant, unit: str, accepted: bool
+) -> None:
+    """A price per unit of energy is accepted (and converted); anything else is not."""
+    entry = MockConfigEntry(domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS)
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": unit})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "grid"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.grid_power",
+            "power_entity_inverted": False,
+            "grid_electricity_price_entity": "sensor.grid_price",
+        },
+    )
+    if accepted:
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+    else:
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"].get("grid_electricity_price_entity") == (
+            "invalid_price_entity"
+        )

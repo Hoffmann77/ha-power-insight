@@ -276,3 +276,72 @@ async def test_an_entry_from_a_newer_version_is_refused(hass: HomeAssistant) -> 
     entry.add_to_hass(hass)
     assert not await hass.config_entries.async_setup(entry.entry_id)
     assert entry.state is ConfigEntryState.MIGRATION_ERROR
+
+
+def _grid_with_price() -> dict:
+    import copy
+
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
+    return grid
+
+
+@pytest.mark.parametrize(
+    ("unit", "issue"),
+    [("EUR", "price_unit"), ("GBP/kWh", "price_currency"), ("ct/kWh", None)],
+)
+async def test_a_price_that_cannot_be_used_raises_a_repair_issue(
+    hass: HomeAssistant, unit: str, issue: str | None
+) -> None:
+    """An unknown price unit, or a foreign currency, needs the user; ct/kWh does not."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[_grid_with_price()],
+    )
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": unit})
+    await setup_integration(hass, entry)
+
+    registry = ir.async_get(hass)
+    raised = {
+        kind for kind in ("price_unit", "price_currency")
+        if registry.async_get_issue(DOMAIN, f"{kind}_{entry.entry_id}")
+    }
+    assert raised == ({issue} if issue else set())
+
+
+async def test_ct_per_kwh_prices_are_converted(hass: HomeAssistant) -> None:
+    """A 30 ct/kWh tariff is 0.30 EUR/kWh: 1 kW imported costs 0.30 EUR/h."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[_grid_with_price()],
+    )
+    hass.states.async_set("sensor.grid_power", "1000", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "30", {"unit_of_measurement": "ct/kWh"})
+    await setup_integration(hass, entry)
+
+    assert entry.runtime_data.power_insight.combined_coe_rate == pytest.approx(0.30)
+
+
+async def test_two_devices_on_one_power_sensor_raise_a_repair_issue(
+    hass: HomeAssistant,
+) -> None:
+    """An entry from before the flow refused it gets told, not silently miscounted."""
+    import copy
+
+    from .conftest import make_consumer_subentry_data
+
+    twin = copy.deepcopy(make_consumer_subentry_data())
+    twin["data"]["adapter"]["config"]["power_entity"] = "sensor.grid_power"
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), twin],
+    )
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    assert ir.async_get(hass).async_get_issue(
+        DOMAIN, f"shared_power_entity_{entry.entry_id}"
+    )
