@@ -1,8 +1,7 @@
 """Property tests for ``sink_adapters_source_shares`` over random topologies.
 
-The hand-derived scenarios in ``test_source_shares.py`` and
-``test_full_topology.py`` pin *what* the provenance attribution answers for a
-handful of carefully chosen wirings. This file pins the things that must hold
+The hand-derived harnesses in ``tests/engine/manual/`` pin *what* the
+provenance attribution answers for a handful of carefully chosen wirings. This file pins the things that must hold
 for *every* wiring, and finds its own counterexamples: a seeded generator builds
 a few hundred random topologies and readings, and each test asserts one
 invariant across all of them.
@@ -37,8 +36,7 @@ turns "we know of no counterexample" into a number: how many of N random
 topologies hit it.
 
 These tests need no hand-derived expected values, so they complement the
-scenario files rather than duplicating them: the scenarios say what the answer
-is, these say what an answer must never be.
+manual harnesses rather than duplicating them: those say what the answer is, these say what an answer must never be.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -49,7 +47,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 #: Cases per test. Every test draws the same set (same seed), so a failure in
 #: one is reproducible in the others.

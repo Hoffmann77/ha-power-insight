@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class PvExport(ReferenceCase):
@@ -22,34 +22,30 @@ class PvExport(ReferenceCase):
     case_id = "pv-export"
     title = "PV export"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", lcoe=0.10, exports=True, export_comp=0.08),
-        )
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10, exports=True, export_comp=0.08)
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def export_surplus(self):
+    class ExportSurplus(Snapshot):
         """The PV system outruns the house; the surplus leaves through the grid."""
-        return State(grid=-400, pv1=900, price=F(1, 4))
 
-    # ----------------------------------------------------------------------
+        grid = -400
+        pv1 = 900
+        price = F(1, 4)
 
-    @state
-    def export_all(self):
+    class ExportAll(Snapshot):
         """Everything the PV system makes is exported: the home base load is exactly
         zero.
         """
-        return State(grid=-900, pv1=900, price=F(1, 4))
 
-    # ----------------------------------------------------------------------
+        grid = -900
+        pv1 = 900
+        price = F(1, 4)
 
-    @state
-    def zero_gross(self):
+    class ZeroGross(Snapshot):
         """The grid exports while nothing is producing — an impossible meter set
         that must not divide by zero.
         """
-        return State(grid=-500, pv1=0, price=F(1, 4))
+
+        grid = -500
+        pv1 = 0
+        price = F(1, 4)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Battery, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class GroupCaptivity(ReferenceCase):
@@ -24,47 +24,35 @@ class GroupCaptivity(ReferenceCase):
     case_id = "group-captivity"
     title = "Group captivity"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("east", lcoe=0.10, exports=True),
-            Adapter.pv("west", lcoe=0.10, exports=True),
-            Adapter.battery("bat_a", lcos=0.15, charge_from=("east", "west")),
-            Adapter.battery("bat_b", lcos=0.15, charge_from=("east", "west")),
-            Adapter.battery("bat_c", lcos=0.15, charge_from=("east",)),
-        )
+    grid = Grid()
+    east = Pv(lcoe=0.10, exports=True)
+    west = Pv(lcoe=0.10, exports=True)
+    bat_a = Battery(lcos=0.15, charge_from=(east, west))
+    bat_b = Battery(lcos=0.15, charge_from=(east, west))
+    bat_c = Battery(lcos=0.15, charge_from=(east,))
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def hall_tight_pair(self):
+    class HallTightPair(Snapshot):
         """bat_c idle. {bat_a, bat_b} exactly exhaust east+west, so the 200 W home
         load must be served entirely from the grid.
         """
-        return State(
-            grid=200,
-            east=100,
-            west=100,
-            bat_a=-100,
-            bat_b=-100,
-            bat_c=0,
-            price=F(3, 10),
-        )
 
-    # ----------------------------------------------------------------------
+        grid = 200
+        east = 100
+        west = 100
+        bat_a = -100
+        bat_b = -100
+        bat_c = 0
+        price = F(3, 10)
 
-    @state
-    def unsatisfiable_overlap(self):
+    class UnsatisfiableOverlap(Snapshot):
         """bat_c now draws 100 W and is captive to east alone. Captive demand (300
         W) exceeds local supply (200 W): someone must be deficited.
         """
-        return State(
-            grid=200,
-            east=100,
-            west=100,
-            bat_a=-100,
-            bat_b=-100,
-            bat_c=-100,
-            price=F(3, 10),
-        )
+
+        grid = 200
+        east = 100
+        west = 100
+        bat_a = -100
+        bat_b = -100
+        bat_c = -100
+        price = F(3, 10)

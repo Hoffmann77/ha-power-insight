@@ -6,7 +6,7 @@ A commit that moves any of those outputs fails ``test_frozen.py`` with a list
 of exactly which outputs moved in which home. If the change is intended, the
 contributor re-freezes (``uv run --group engine python tools/snapshot.py``) and
 the PR diff shows the moved outputs for review. If the change reveals a
-modelling decision, that decision gets a hand-derived block in
+modelling decision, that decision gets a hand-derived class in
 ``tests/engine/manual/``.
 
 Two corpora are frozen, one file each under ``snapshots/``:
@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from typing import Any, Iterator
 
 from tests.engine.reference import CATALOG, REFERENCE_CASES
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 HERE = pathlib.Path(__file__).resolve().parent
 SNAPSHOTS = HERE / "snapshots"
@@ -62,7 +62,7 @@ ABS_TOL = 1e-9
 
 
 @dataclass(frozen=True)
-class Home:
+class FrozenHome:
     """One frozen home: a name, a wiring and one snapshot of readings."""
 
     name: str
@@ -85,7 +85,7 @@ class Home:
         }
 
     @classmethod
-    def from_json(cls, name: str, data: dict[str, Any]) -> "Home":
+    def from_json(cls, name: str, data: dict[str, Any]) -> "FrozenHome":
         return cls(
             name,
             tuple(_adapter_from_json(a) for a in data["adapters"]),
@@ -119,28 +119,28 @@ def _adapter_from_json(data: dict[str, Any]) -> Adapter:
     )
 
 
-def reference_homes() -> list[Home]:
+def reference_homes() -> list[FrozenHome]:
     """Every snapshot of every reference case, in ladder order."""
     homes = []
     for case in REFERENCE_CASES:
-        for block in case.blocks():
+        for cell in case.cells():
             homes.append(
-                Home(
-                    f"{case.case_id}/{block.state.name}",
-                    block.topology.adapters,
-                    dict(block.state.readings),
-                    block.state.price,
+                FrozenHome(
+                    f"{case.case_id}/{cell.state.name}",
+                    cell.topology.adapters,
+                    dict(cell.state.readings),
+                    cell.state.price,
                 )
             )
     return homes
 
 
-def draw_generated_homes() -> list[Home]:
+def draw_generated_homes() -> list[FrozenHome]:
     """A fresh draw of the generated corpus. Only ``--redraw`` calls this."""
     from tests.engine.automatic.random_homes import random_homes
 
     return [
-        Home(f"generated/{i:03d}", h.adapters, dict(h.readings), h.price)
+        FrozenHome(f"generated/{i:03d}", h.adapters, dict(h.readings), h.price)
         for i, h in enumerate(random_homes(GENERATED_COUNT, GENERATED_SEED))
     ]
 
@@ -199,14 +199,14 @@ def load(corpus: str) -> dict[str, dict[str, Any]]:
     return json.loads(path.read_text())["homes"]
 
 
-def homes_of(corpus: str) -> list[Home]:
+def homes_of(corpus: str) -> list[FrozenHome]:
     """The homes a corpus freezes: reference from its modules, generated stored."""
     if corpus == "reference":
         return reference_homes()
-    return [Home.from_json(name, entry) for name, entry in load(corpus).items()]
+    return [FrozenHome.from_json(name, entry) for name, entry in load(corpus).items()]
 
 
-def render(homes: list[Home], corpus: str) -> str:
+def render(homes: list[FrozenHome], corpus: str) -> str:
     """A corpus's snapshot file, as it should read for the engine now."""
     data = {
         "$comment": (

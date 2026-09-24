@@ -1,156 +1,197 @@
-"""Edge-reading decisions, each pinned by a hand-derived harness.
+"""Edge readings: what the engine publishes when readings are missing or odd.
 
-What the engine publishes when a reading is missing or degenerate — a meter
-that has dropped out, a house where nothing flows. Same shape as
-``test_power_flow.py``: one block per decision, the smallest wiring that tells
-the decision apart from its alternatives, values derived by hand.
+A sensor can drop out (its reading is ``None``), and unsynchronised sensors
+can report a moment that cannot physically happen. The engine must then
+publish *nothing* (``None``) where a value cannot be known, a confident 0
+where it can, and never divide by zero. *Gross power* is the total all
+sources supply; much of what the engine publishes is derived from it. See
+"Gross power and its shares" in ``docs/dev/engine-calculations.md``.
 """
 
 from __future__ import annotations
 
 from fractions import Fraction as F
 
-from tests.engine.scenario_framework import (
-    Adapter,
-    EngineScenario,
-    State,
-    expect_attribute,
-    state,
-    topology,
-)
+from tests.engine.home import Consumer, Grid, Home, expect
 
 
-class TestEdgeReadings(EngineScenario):
-    """Missing and degenerate readings."""
+class TestUnavailableMeterPublishesNothing(Home):
+    """Decision: an unavailable meter collapses everything derived from it to
+    nothing, while a total over an empty device set stays zero
+    (engine-calculations.md, "gross power is None if any inflow sensor is
+    unavailable").
 
-    @topology
-    def grid_only(self):
-        return (Adapter.grid(),)
+    The grid is the only inflow, so without it gross power is unknowable and
+    so is everything built on it — published as nothing at all, never as a
+    stale or invented number. Production, charging and standby are sums over
+    devices this house does not have: the missing meter says nothing about
+    them, so they stay a confident 0.
+    """
 
-    # ----------------------------------------------------------------------
-    # Decision: an unavailable meter collapses everything derived from it to
-    # nothing, while a total over an empty device set stays zero.
+    grid = Grid(None, price=F(3, 10))
 
-    @state
-    def meter_unavailable(self):
-        """Decision: an unavailable meter collapses everything derived from it
-        to nothing, while a total over an empty device set stays zero.
+    @expect("gross_power")
+    def test_gross_power(self):
+        """Gross power is unknown, so the engine publishes nothing.
 
-        The grid is the only inflow, so without it gross power is unknowable
-        and so is everything built on it — published as nothing at all, never
-        as a stale or invented number. Production, charging and standby are
-        sums over devices this house does not have: the missing meter says
-        nothing about them, so they stay a confident 0.
+        The grid meter is the house's only source and it has dropped out.
+        Publishing 0 would claim the house draws nothing; ``None`` says the
+        value cannot be known.
         """
-        return State(grid=None, price=F(3, 10))
-
-    @expect_attribute("gross_power")
-    def test_meter_unavailable_gross_power(self):
         return None
 
-    @expect_attribute("combined_grid_import")
-    def test_meter_unavailable_combined_grid_import(self):
+    @expect("combined_grid_import")
+    def test_combined_grid_import(self):
+        """The grid import is read from the missing meter, so it is unknown."""
         return None
 
-    @expect_attribute("combined_consumption")
-    def test_meter_unavailable_combined_consumption(self):
+    @expect("combined_consumption")
+    def test_combined_consumption(self):
+        """Consumption is derived from gross power, so it is unknown too."""
         return None
 
-    @expect_attribute("sink_adapters_source_shares")
-    def test_meter_unavailable_sink_adapters_source_shares(self):
-        return None
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """Without gross power there is no provenance: nothing, not an empty map.
 
-    @expect_attribute("combined_coe_rate")
-    def test_meter_unavailable_combined_coe_rate(self):
-        return None
-
-    @expect_attribute("combined_production")
-    def test_meter_unavailable_combined_production(self):
-        """No PV system exists, so the sum over them is 0, known."""
-        return 0
-
-    @expect_attribute("combined_charging_power")
-    def test_meter_unavailable_combined_charging_power(self):
-        """No battery exists, so the sum over them is 0, known."""
-        return 0
-
-    @expect_attribute("combined_standby_power")
-    def test_meter_unavailable_combined_standby_power(self):
-        """No PV system exists, so the sum over them is 0, known."""
-        return 0
-
-    # ----------------------------------------------------------------------
-    # Decision: zero gross power guards every ratio to zero, and with nothing
-    # providing there is nothing to attribute.
-
-    @state
-    def export_with_nothing_producing(self):
-        """Decision: zero gross power guards every ratio to zero rather than
-        dividing by zero, and with nothing providing there is no provenance.
-
-        The meter shows 500 W leaving while nothing produces — impossible, but
-        exactly what unsynchronised sensors report for an instant. Gross power
-        is 0, so the export ratio is 500 / 0 and the others 0 / 0; every one
-        reads 0. No source is providing, so no sink has a row.
+        An empty map would claim that no device drew anything; ``None`` says
+        the answer is unknown.
         """
-        return State(grid=-500, price=F(3, 10))
+        return None
 
-    @expect_attribute("gross_power")
-    def test_export_with_nothing_producing_gross_power(self):
+    @expect("combined_coe_rate")
+    def test_combined_coe_rate(self):
+        """The cost rate needs the import, so it is unknown rather than free.
+
+        Publishing 0 EUR/h would claim the power cost nothing.
+        """
+        return None
+
+    @expect("combined_production")
+    def test_combined_production(self):
+        """Total production is a known 0: the house has no PV system.
+
+        It is a sum over the installed PV systems, and there are none, so
+        the missing grid meter does not make it unknown.
+        """
         return 0
 
-    @expect_attribute("gross_power_export_ratio")
-    def test_export_with_nothing_producing_gross_power_export_ratio(self):
+    @expect("combined_charging_power")
+    def test_combined_charging_power(self):
+        """Total charging power is a known 0: the house has no battery.
+
+        It is a sum over the installed batteries, and there are none.
+        """
         return 0
 
-    @expect_attribute("gross_power_consumption_ratio")
-    def test_export_with_nothing_producing_gross_power_consumption_ratio(self):
+    @expect("combined_standby_power")
+    def test_combined_standby_power(self):
+        """Total standby power is a known 0: the house has no PV system.
+
+        Standby is what idle PV systems draw, and there are none installed.
+        """
         return 0
 
-    @expect_attribute("gross_power_charging_ratio")
-    def test_export_with_nothing_producing_gross_power_charging_ratio(self):
+
+class TestZeroGrossPowerGuardsEveryRatio(Home):
+    """Decision: zero gross power guards every ratio to zero rather than
+    dividing by zero, and with nothing providing there is no provenance
+    (engine-calculations.md, "Gross power and its shares").
+
+    The meter shows 500 W leaving while nothing produces — impossible, but
+    exactly what unsynchronised sensors report for an instant. Gross power is
+    0, so the export ratio is 500 / 0 and the others 0 / 0; every one reads 0.
+    No source is providing, so no sink has a row.
+    """
+
+    grid = Grid(-500, price=F(3, 10))
+
+    @expect("gross_power")
+    def test_gross_power(self):
+        """Gross power is 0: the grid is exporting and nothing produces.
+
+        Gross power counts what sources supply. An exporting grid is not a
+        source, and there is no other device, so the total is 0 — even
+        though the meter reports 500 W leaving the house.
+        """
         return 0
 
-    @expect_attribute("gross_power_standby_ratio")
-    def test_export_with_nothing_producing_gross_power_standby_ratio(self):
+    @expect("gross_power_export_ratio")
+    def test_gross_power_export_ratio(self):
+        """The export ratio, 500 W / 0 W, is guarded to 0 instead of failing.
+
+        The ratios say which fraction of gross power goes into each channel;
+        with nothing supplied there is no fraction to publish but 0.
+        """
         return 0
 
-    @expect_attribute("sink_adapters_source_shares")
-    def test_export_with_nothing_producing_sink_adapters_source_shares(self):
+    @expect("gross_power_consumption_ratio")
+    def test_gross_power_consumption_ratio(self):
+        """The consumption ratio, 0 W / 0 W, is guarded to 0."""
+        return 0
+
+    @expect("gross_power_charging_ratio")
+    def test_gross_power_charging_ratio(self):
+        """The charging ratio, 0 W / 0 W, is guarded to 0."""
+        return 0
+
+    @expect("gross_power_standby_ratio")
+    def test_gross_power_standby_ratio(self):
+        """The standby ratio, 0 W / 0 W, is guarded to 0."""
+        return 0
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """No source supplies anything, so no sink has a provenance row.
+
+        Unlike with an unavailable meter the answer is known, so the map is
+        published — empty.
+        """
         return {}
 
-    # ----------------------------------------------------------------------
-    # Decision: a consumer dropping out does not make gross power unknowable.
 
-    @topology
-    def grid_and_a_plug(self):
-        return (Adapter.grid(), Adapter.consumer("plug"))
+class TestUnavailableConsumerKeepsGrossPower(Home):
+    """Decision: gross power is unknowable only when an *inflow* sensor — grid,
+    PV or battery — is unavailable; a consumer dropping out does not
+    invalidate it (engine-calculations.md, "gross power is None if any inflow
+    sensor is unavailable").
 
-    @state
-    def plug_unavailable(self):
-        """Decision: gross power is unknowable only when an *inflow* sensor —
-        grid, PV or battery — is unavailable; a consumer dropping out does not
-        invalidate it (engine-calculations.md, "gross power is None if any
-        inflow sensor is unavailable").
+    The grid still reads 500 W, so gross power and self-consumption are known.
+    The plug's sensor is gone: it is in no flow group, so it has no row, and
+    its draw is simply part of the 500 W base load.
+    """
 
-        The grid still reads 500 W, so gross power and self-consumption are
-        known. The plug's sensor is gone: it is in no flow group, so it has no
-        row, and its draw is simply part of the 500 W base load.
+    grid = Grid(500, price=F(3, 10))
+    plug = Consumer(None)
+
+    @expect("gross_power")
+    def test_gross_power(self):
+        """Gross power is still known: the missing plug is not a source.
+
+        Gross power adds up what sources supply, and the grid still reads
+        500 W. A consumer's reading never enters that sum.
         """
-        return State(grid=500, plug=None, price=F(3, 10))
-
-    @expect_attribute("gross_power")
-    def test_plug_unavailable_gross_power(self):
         return 500
 
-    @expect_attribute("combined_consumption")
-    def test_plug_unavailable_combined_consumption(self):
+    @expect("combined_consumption")
+    def test_combined_consumption(self):
+        """All 500 W supplied are consumed in the house."""
         return 500
 
-    @expect_attribute("home_base_load_power")
-    def test_plug_unavailable_home_base_load_power(self):
+    @expect("home_base_load_power")
+    def test_home_base_load_power(self):
+        """With the plug's reading gone, all 500 W count as base load.
+
+        The base load is what the house uses without a working meter on it,
+        and the plug's draw can no longer be told apart from the rest.
+        """
         return 500
 
-    @expect_attribute("sink_adapters_source_shares")
-    def test_plug_unavailable_sink_adapters_source_shares(self):
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """The unavailable plug has no provenance row, so the map is empty.
+
+        A device without a reading belongs to no flow group. The base load
+        is published through its own properties, not in this map.
+        """
         return {}

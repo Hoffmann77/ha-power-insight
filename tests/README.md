@@ -19,11 +19,15 @@ Pure-Python tests for the `PowerInsight` calculation engine. They import
 `custom_components/power_insight/power_insight.py` directly via `importlib`,
 so they need **no Home Assistant** and run in a few seconds.
 
-Engine tests use the **source-order scenario framework** (`scenario_framework.py`,
-wired in `conftest.py`). A scenario is a class whose methods come in repeating
-blocks of `@topology` → `@state` → `test_` methods, and each test binds to the
-block declared above it (found by source line). See the module docstring for the
-authoring surface.
+Every hand-written home in the tier is a **declarative home** (`home.py`): a
+class whose devices are class attributes, declared with their readings —
+`grid = Grid(500)`, `bat1 = Battery(-400, charge_from=(grid, pv1))` — and whose
+tests are plain methods, most of them a one-line `@expect("<property>")`
+claim. A reference case declares the same devices without readings and gives
+each snapshot its own inner `Snapshot` class (see `reference/` below). The
+generated homes and the frozen snapshots use the plain data beneath —
+`Adapter`, `Topology`, `State`, `Cell` — directly. See `home.py`'s docstring
+for the authoring surface.
 
 The strategy is to **assume the engine is right** rather than try to derive
 every output by hand, and to layer three kinds of check on top of that
@@ -37,7 +41,7 @@ assumption, plus the docs showcase:
 | `reference/` | What does the engine compute for these fixed homes? (docs showcase) | none — nothing is asserted |
 
 `manual/` is where knowledge accumulates: every time a decision is discovered,
-it gets a block. `automatic/` generalises what the formulas and laws say to
+it gets a class. `automatic/` generalises what the formulas and laws say to
 hundreds of homes. `frozen/` catches everything else by noticing *change* —
 it cannot say an output is right, only that it moved, which is exactly what a
 reviewer needs to see.
@@ -57,7 +61,7 @@ reviewer needs to see.
    Commit the regenerated files with the change. The PR diff then shows every
    moved output, and the PR template asks you to say why they moved.
 4. If the change settles a modelling decision — a moved output that is now
-   *meant* to be that way — add a hand-derived block to `manual/` and a note
+   *meant* to be that way — add a hand-derived class to `manual/` and a note
    to [`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md),
    so the decision is enforced even if the snapshots are re-frozen later.
 
@@ -95,24 +99,59 @@ with readings that slightly overdraw, as unsynchronised sensors do).
 
 ### `manual/` — one hand-derived harness per engine decision
 
-Each module covers one area with one class — `test_power_flow.py`
-(`TestPowerFlow`: where each sink's power comes from), `test_money.py`
-(`TestMoney`: what it costs, saves, and who gets the credit),
-`test_edge_readings.py` (`TestEdgeReadings`: missing and degenerate readings)
-— and each decision is one block in it: the smallest `@topology` and `@state` that tell the decision
-apart from its alternatives, then `@expect_attribute` claims derived **by
-hand** from the decision, never read back from the engine. The `@state`
-docstring names the decision and its note in
-[`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md), so a
-red test here reads as "this decision no longer holds". Any engine property can
-be claimed, catalogued or not (the restriction deficit, say).
+One module per question, following the sections of the decision log:
 
-**Add a block whenever a decision is made** — together with its note, and with
+| Module | Question |
+| --- | --- |
+| `test_flow_roles.py` | Which devices count as sources, which as sinks? |
+| `test_allocation_rules.py` | Among valid allocations, which one is chosen? |
+| `test_feasibility.py` | Which allocations honour every restriction at all? |
+| `test_restrictions.py` | What does a restriction mean, and what if it cannot hold? |
+| `test_costs.py` | What does the power cost, per channel and per device? |
+| `test_savings.py` | Who is credited with the money local power saves? |
+| `test_battery_pricing.py` | When is a battery's energy paid for, and at what price? |
+| `test_edge_readings.py` | What is published when readings are missing or odd? |
+
+In each module, **one class per decision**, named after it (class names are
+unique across the whole engine tier). The class declares the smallest home
+that tells the decision apart from its alternatives, and its tests claim
+values derived **by hand** from the decision, never read back from the
+engine:
+
+```python
+class TestBrokenRestrictionIsReported(Home):
+    """Decision: when the meter contradicts a restriction, the restriction
+    is relaxed and the shortfall reported as a deficit (...).
+
+    cons1 may only use pv1, draws 500 W, and pv1 makes 300 W. ...
+    """
+
+    grid = Grid(800)
+    pv1 = Pv(300)
+    cons1 = Consumer(-500, power_from=(pv1,))
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_restriction_deficit(self):
+        """The 200 W cons1 took from a forbidden source is its deficit."""
+        return {"cons1": 200}
+```
+
+Every test method has a docstring that says, in words a first-time reader
+can follow, what it checks and why that value is right. The class docstring
+opens with the decision and names its note in
+[`docs/dev/engine-calculations.md`](../docs/dev/engine-calculations.md), so a
+red test — `TestBrokenRestrictionIsReported::test_restriction_deficit` — reads
+as "this decision no longer holds". Any engine property can be claimed,
+catalogued or not (the restriction deficit, say); a test that needs more than
+one comparison takes the `power_insight` fixture and asserts.
+
+**Add a class whenever a decision is made** — together with its note, and with
 the engine fix when the decision was found as a bug. `test_decisions.py`
 enforces it: every `Decision:` note in `engine-calculations.md` must end with
-`Pinned by `TestX` in …` (a class that exists here) or `Not pinned in the
-engine tier:` and a reason, and every block's `@state` docstring must open with
-the decision it pins. A red block means either
+`Pinned by `TestX` in `tests/engine/manual/test_y.py`` (classes that exist,
+in that module) or `Not pinned in the engine tier:` and a reason; every class
+here must be named in the log, its docstring must open with the decision it
+pins, and each of its test methods must have a docstring. A red harness means either
 the engine or the derivation is wrong; resolving which is a human call. Never
 paste an answer out of a failing test's `actual:` line.
 
@@ -131,7 +170,7 @@ fails with a table of whatever moved. `store.py` holds the machinery:
 - A frozen corpus only notices what its homes exercise. The reserve bug fixed
   alongside `two-pv-systems` moved outputs in that one home and in none of the
   60 generated ones. When a bug is found, give its home a place in the
-  reference cases (and its decision a block in `manual/`), so the snapshot
+  reference cases (and its decision a class in `manual/`), so the snapshot
   covers it from then on.
 
 ### `reference/` — the fixed homes shown in the docs
@@ -143,9 +182,36 @@ snapshot through the engine and writes every catalogued property to
 and `reference/test_corpus.py` fails when it no longer matches the engine, so a
 docs version cut from any commit freezes that commit's own results.
 
-The prose lives in docstrings: a case class's is the page summary (everything
-above its `Shows:` list), and a `@state`'s is the caption under its snapshot
-card, where a paragraph opening `Open question:` becomes a callout.
+A case declares its devices bare and one `Snapshot` per set of readings:
+
+```python
+class PvExport(ReferenceCase):
+    """The same two devices, with the PV system now permitted to export. ...
+
+    Shows:
+
+    * An exporting grid is a sink, not a source with a negative reading.
+    """
+
+    case_id = "pv-export"
+    title = "PV export"
+
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10, exports=True, export_comp=0.08)
+
+    class ExportSurplus(Snapshot):
+        """The PV system outruns the house; the surplus leaves through the grid."""
+
+        grid = -400
+        pv1 = 900
+        price = F(1, 4)
+```
+
+A snapshot must read exactly the case's devices, and publishes under its class
+name in snake_case (`export_surplus`). The prose lives in docstrings: a case
+class's is the page summary (everything above its `Shows:` list), and a
+snapshot's is the caption under its card, where a paragraph opening `Open
+question:` becomes a callout.
 
 If you cannot run the command locally, **Actions → Update engine snapshots →
 Run workflow** does it on the branch you pick and commits the result (tick *dry
@@ -164,17 +230,18 @@ anything else) if your PR needs green checks to merge.
 - `test_snapshot_cache.py` — that the per-snapshot memo never outlives the
   reading it was computed from: a question about time, which no single
   snapshot can ask.
-- `test_scenario_framework.py` — self-tests for the framework's validation and
-  source-order binding.
+- `test_home.py` — self-tests for the declarative homes and reference cases:
+  the checks at class creation, and that `@expect` really fails on a wrong
+  value.
 
 ### Known gaps
 
 - **Correction factors.** The eight `*_corrected` properties are not in the
   catalog, and no engine test sets a factor other than 1.0; the integration
   tier covers them in `test_correction_flow.py`.
-- **Open finding** held by `manual/test_power_flow.py`: two sinks with the
+- **Open finding** held by `manual/test_allocation_rules.py`: two sinks with the
   same restriction can get different rows when the draws exactly exhaust the
-  sources (strict xfail on the `unequal_draws` block).
+  sources (strict xfail in `TestSameRestrictionGetsTheSameRow`).
 - **Open findings** held by `test_laws.py`: the proportional split still drifts
   when a PV system is split in two with a base load present (the strict xfail),
   six properties still publish while a meter is unavailable

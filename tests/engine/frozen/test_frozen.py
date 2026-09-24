@@ -7,7 +7,7 @@ intended, re-freeze and commit the result with the change:
     uv run --group engine python tools/snapshot.py
 
 If a moved output reflects a modelling decision, pin that decision with a
-hand-derived block in ``tests/engine/manual/`` as well.
+hand-derived class in ``tests/engine/manual/`` as well.
 """
 
 from __future__ import annotations

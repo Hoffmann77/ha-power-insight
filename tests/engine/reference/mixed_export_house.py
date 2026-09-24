@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Battery, Consumer, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class MixedExportHouse(ReferenceCase):
@@ -25,44 +25,46 @@ class MixedExportHouse(ReferenceCase):
     case_id = "mixed-export-house"
     title = "Mixed export house"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", lcoe=0.10, exports=True, export_comp=0.08),
-            Adapter.pv("pv2", lcoe=0.10, exports=True, export_comp=0.08),
-            Adapter.battery("bat1", lcos=0.15, exports=True, export_comp=0.08),
-            Adapter.battery("bat2", lcos=0.20, exports=False),
-            Adapter.consumer("cons1"),
-        )
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10, exports=True, export_comp=0.08)
+    pv2 = Pv(lcoe=0.10, exports=True, export_comp=0.08)
+    bat1 = Battery(lcos=0.15, exports=True, export_comp=0.08)
+    bat2 = Battery(lcos=0.20, exports=False)
+    cons1 = Consumer()
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def export_non_exporting_battery(self):
+    class ExportNonExportingBattery(Snapshot):
         """bat2 discharges but may not feed the grid, so the export mix excludes
         it.
         """
-        return State(
-            grid=-600, pv1=800, pv2=0, bat1=200, bat2=200, cons1=-400, price=F(1, 4)
-        )
 
-    # ----------------------------------------------------------------------
+        grid = -600
+        pv1 = 800
+        pv2 = 0
+        bat1 = 200
+        bat2 = 200
+        cons1 = -400
+        price = F(1, 4)
 
-    @state
-    def export_with_standby(self):
+    class ExportWithStandby(Snapshot):
         """pv2 in standby while the house exports; standby competes in the
         allocation.
         """
-        return State(
-            grid=-600, pv1=800, pv2=-50, bat1=200, bat2=200, cons1=-400, price=F(1, 4)
-        )
 
-    # ----------------------------------------------------------------------
+        grid = -600
+        pv1 = 800
+        pv2 = -50
+        bat1 = 200
+        bat2 = 200
+        cons1 = -400
+        price = F(1, 4)
 
-    @state
-    def discharge_dynamic_prices(self):
+    class DischargeDynamicPrices(Snapshot):
         """Both batteries discharging; the mix they charged on is in the past."""
-        return State(
-            grid=-300, pv1=0, pv2=-50, bat1=400, bat2=400, cons1=-400, price=F(1, 4)
-        )
+
+        grid = -300
+        pv1 = 0
+        pv2 = -50
+        bat1 = 400
+        bat2 = 400
+        cons1 = -400
+        price = F(1, 4)

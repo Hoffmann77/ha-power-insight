@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from tests.engine.reference.case import F, ReferenceCase
-from tests.engine.scenario_framework import Adapter, State, state, topology
+from tests.engine.home import Battery, Consumer, Grid, Pv
+from tests.engine.reference.case import F, ReferenceCase, Snapshot
 
 
 class BatteryBasics(ReferenceCase):
@@ -25,38 +25,40 @@ class BatteryBasics(ReferenceCase):
     case_id = "battery-basics"
     title = "Battery basics"
 
-    @topology
-    def wiring(self):
-        return (
-            Adapter.grid(),
-            Adapter.pv("pv1", lcoe=0.10),
-            Adapter.consumer("cons1"),
-            Adapter.battery("bat1", lcos=0.15),
-        )
+    grid = Grid()
+    pv1 = Pv(lcoe=0.10)
+    cons1 = Consumer()
+    bat1 = Battery(lcos=0.15)
 
-    # ----------------------------------------------------------------------
-
-    @state
-    def charging(self):
+    class Charging(Snapshot):
         """bat1 charges from the mix, taking the same proportions as the metered
         load beside it.
         """
-        return State(grid=800, pv1=600, cons1=-500, bat1=-600, price=F(3, 10))
 
-    # ----------------------------------------------------------------------
+        grid = 800
+        pv1 = 600
+        cons1 = -500
+        bat1 = -600
+        price = F(3, 10)
 
-    @state
-    def discharging(self):
+    class Discharging(Snapshot):
         """The sun is down and bat1 has become a source, supplying two thirds of
         the house.
         """
-        return State(grid=200, pv1=0, cons1=-500, bat1=400, price=F(3, 10))
 
-    # ----------------------------------------------------------------------
+        grid = 200
+        pv1 = 0
+        cons1 = -500
+        bat1 = 400
+        price = F(3, 10)
 
-    @state
-    def idle(self):
+    class Idle(Snapshot):
         """bat1 sits at exactly 0 W: neither a source nor a sink, and absent from
         both groups.
         """
-        return State(grid=900, pv1=600, cons1=-500, bat1=0, price=F(3, 10))
+
+        grid = 900
+        pv1 = 600
+        cons1 = -500
+        bat1 = 0
+        price = F(3, 10)

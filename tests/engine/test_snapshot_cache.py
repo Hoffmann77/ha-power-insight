@@ -13,7 +13,7 @@ the same readings, which is the definition the cache has to live up to.
 
 from __future__ import annotations
 
-from tests.engine.scenario_framework import Adapter, Cell, State, Topology
+from tests.engine.home import Adapter, Cell, State, Topology
 
 PRICE = "sensor.grid_price"
 

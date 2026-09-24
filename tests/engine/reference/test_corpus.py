@@ -26,10 +26,10 @@ def test_case_is_wellformed(case):
         f"on the ladder by showing something no lower rung can"
     )
     published = case.publish()
-    assert published["states"], f"{case.case_id} declares no @state"
+    assert published["states"], f"{case.case_id} declares no Snapshot"
     for state in published["states"]:
         assert state["note"], (
-            f"{case.case_id}/{state['id']} has no note — a @state's docstring "
+            f"{case.case_id}/{state['id']} has no note — a Snapshot's docstring "
             f"is the caption under its snapshot card"
         )
 
