@@ -2,26 +2,30 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 from typing import Callable, Iterable
 
-from homeassistant.const import (
-    EVENT_STATE_CHANGED,
-    EVENT_STATE_REPORTED,
-    STATE_UNAVAILABLE,
-    STATE_UNKNOWN,
-)
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import (
+    CALLBACK_TYPE,
     Event,
     EventStateChangedData,
     EventStateReportedData,
+    HomeAssistant,
     State,
     callback,
+)
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
 )
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_state_report_event,
 )
+from homeassistant.util import dt as dt_util
+from homeassistant.util.signal_type import SignalType
 
 from .const import DOMAIN
 from .utils import price_to_value, state_to_value
@@ -30,6 +34,43 @@ from .utils import price_to_value, state_to_value
 _LOGGER = logging.getLogger(__name__)
 
 _INVALID_STATES = frozenset({STATE_UNAVAILABLE, STATE_UNKNOWN})
+
+
+def source_signal(entry_id: str, entity_id: str) -> SignalType[datetime]:
+    """Return the dispatcher signal for one source entity of one config entry.
+
+    It is sent once the engine holds the entity's new reading, carrying the
+    time of the reading. A dispatcher signal rather than a bus event: the
+    recorder writes every bus event to the database, and nothing outside this
+    config entry needs to see these.
+    """
+    return SignalType(f"{DOMAIN}_{entry_id}_{entity_id}")
+
+
+@callback
+def async_track_source_updates(
+    hass: HomeAssistant,
+    entry_id: str,
+    entity_ids: Iterable[str],
+    action: Callable[[datetime], None],
+) -> CALLBACK_TYPE:
+    """Call ``action`` with the reading's time whenever a source is updated.
+
+    ``action`` runs once the engine already holds the new reading. Entity ids
+    are lower-cased like HA's own state trackers, and a repeated one is
+    connected once (the dispatcher keys its listeners by callable).
+    """
+    unsubs = [
+        async_dispatcher_connect(hass, source_signal(entry_id, entity_id), action)
+        for entity_id in dict.fromkeys(entity_id.lower() for entity_id in entity_ids)
+    ]
+
+    @callback
+    def _unsubscribe() -> None:
+        for unsub in unsubs:
+            unsub()
+
+    return _unsubscribe
 
 
 class EventHandler:
@@ -41,9 +82,9 @@ class EventHandler:
       entities registered across all adapters.
     - Translate raw HA state strings to numeric Watt values (applying SI prefix
       scaling) and store them on the shared ``PowerInsight`` instance.
-    - Fire scoped custom events — prefixed with ``"{DOMAIN}_{entry_id}_"`` — so
-      that sensor entities belonging to *this* config entry update without
-      interfering with other PowerInsight instances.
+    - Send the entity's ``source_signal`` once the engine holds the reading, so
+      that sensor entities belonging to *this* config entry — and only those
+      that read this entity — update, and never before the engine does.
 
     Initialisation
     --------------
@@ -57,8 +98,7 @@ class EventHandler:
         """Initialise the event handler."""
         self.hass = hass
         self.power_insight = power_insight
-        # Prefix isolates custom events for this config entry from all others.
-        self._event_prefix = f"{DOMAIN}_{entry_id}_"
+        self._entry_id = entry_id
         self._unsub_listeners: list = []
         #: Called after every stored reading, once the engine holds it.
         self.on_update: Callable[[], None] | None = None
@@ -124,12 +164,13 @@ class EventHandler:
         self, event: Event[EventStateChangedData]
     ) -> None:
         """Handle a source entity state change."""
-        self._update_on_state_change(
-            event.data,
+        new_state = event.data["new_state"]
+        self._update(
             event.data["entity_id"],
-            event.data["old_state"],
-            event.data["new_state"],
-            None,
+            new_state,
+            # The removed entity has no state to date the change by.
+            new_state.last_updated if new_state is not None else dt_util.utcnow(),
+            is_report=False,
         )
 
     @callback
@@ -137,46 +178,38 @@ class EventHandler:
         self, event: Event[EventStateReportedData]
     ) -> None:
         """Handle a source entity state report (same value, updated timestamp)."""
-        self._update_on_state_change(
-            event.data,
+        self._update(
             event.data["entity_id"],
-            None,
-            None,
             event.data["new_state"],
+            event.data["last_reported"],
+            is_report=True,
         )
 
-    def _update_on_state_change(
+    def _update(
         self,
-        event_data: EventStateChangedData | EventStateReportedData,
         entity_id: str,
-        old_state: State | None,
         new_state: State | None,
-        curr_state: State | None,
+        timestamp: datetime,
+        *,
+        is_report: bool,
     ) -> None:
         """Store the updated value on PowerInsight and notify sensor entities.
 
-        Translates the new HA state to a numeric Watts value and writes it to
-        the ``PowerInsight`` engine.  Then fires the appropriate scoped custom
-        event so downstream sensor entities know to re-read their calculated
-        values.
-
-        The custom event is always fired — even for ``state_reported`` where the
-        numeric value is unchanged — because integration sensors need to
-        accumulate the elapsed time regardless of whether the rate has changed.
+        Translates the new HA state to a numeric value and writes it to the
+        ``PowerInsight`` engine, then sends the entity's ``source_signal`` with
+        the reading's time so downstream sensors re-read their values. The
+        timestamp is the source's own (``last_updated`` for a change,
+        ``last_reported`` for a report), so running totals measure elapsed
+        time without this callback's processing delay.
 
         Args:
-            event_data: Raw event data forwarded verbatim to the custom event.
             entity_id:  The entity whose state changed or was reported.
-            old_state:  Previous state (``state_changed`` only, else ``None``).
-            new_state:  New state (``state_changed`` only, else ``None``).
-            curr_state: Current state (``state_reported`` only, else ``None``).
+            new_state:  Its state now (``None`` once the entity is removed).
+            timestamp:  When the reading was taken.
+            is_report:  ``True`` for ``state_reported``, ``False`` for
+                ``state_changed``.
 
         """
-        # Unify the two event paths: curr_state is set for state_reported,
-        # new_state for state_changed.
-        if curr_state is not None:
-            new_state = curr_state
-
         if new_state is None:
             # Entity was removed from HA; mark as unavailable.
             value = None
@@ -189,17 +222,12 @@ class EventHandler:
         if self.on_update is not None:
             self.on_update()
 
-        is_report = curr_state is not None
-        event_type = (
-            self._event_prefix + EVENT_STATE_REPORTED
-            if is_report
-            else self._event_prefix + EVENT_STATE_CHANGED
-        )
-
-        # state_reported: always fire — integration sensors need the new
-        # timestamp to advance their accumulation even if the rate is unchanged.
-        # state_changed: only fire when the stored numeric value actually
+        # state_reported: always send — running totals need the new timestamp
+        # to advance their accumulation even if the rate is unchanged.
+        # state_changed: only send when the stored numeric value actually
         # changed; if the HA state string changed but the float is identical
         # there is nothing for sensors to recalculate.
         if is_report or value_changed:
-            self.hass.bus.async_fire(event_type, event_data)
+            async_dispatcher_send(
+                self.hass, source_signal(self._entry_id, entity_id), timestamp
+            )
