@@ -119,6 +119,16 @@ class Snap:
         cfg = self.home.adapter(source).config
         return cfg["lcoe"] if self.kind[source] == "pv" else cfg["lcos"]
 
+    def corrected(self, source: str) -> float:
+        """As levelized, with the lifetime cost restated by the device's factor.
+
+        The factor is ``current / default`` lifetime cost, so it multiplies
+        the price itself; the grid has no lifetime cost and never scales.
+        """
+        if source == "grid":
+            return self.price
+        return self.levelized(source) * self.home.adapter(source).config["correction_factor"]
+
     def compensation(self, source: str) -> float:
         """Feed-in tariff; a device that may not export earns nothing."""
         if source == "grid":
@@ -382,6 +392,12 @@ def _(s):
     return priced(s.sources, s.levelized)
 
 
+@identity("combined_lcoe_rate_corrected")
+def _(s):
+    """Every source's output at its own corrected levelized price."""
+    return priced(s.sources, s.corrected)
+
+
 @identity("combined_avoided_cost_rate")
 def _(s):
     """Locally supplied CON watts, valued at the tariff they displaced."""
@@ -468,6 +484,7 @@ identity("source_adapters_coo_rates")(_own_draw(lambda s: s.marginal))
 identity("source_adapters_lcoo_rates")(_own_draw(lambda s: s.levelized))
 identity("sink_adapters_coo_rates")(_sink_cost(lambda s: s.marginal))
 identity("sink_adapters_lcoo_rates")(_sink_cost(lambda s: s.levelized))
+identity("source_adapters_lcoo_rates_corrected")(_own_draw(lambda s: s.corrected))
 
 
 def _local(watts: dict[str, float]) -> float:
@@ -521,6 +538,7 @@ identity("combined_levelized_export_cost_rate")(
 identity("combined_levelized_standby_cost_rate")(
     _channel_cost(STB, lambda s: s.levelized)
 )
+identity("combined_lcoo_rate_corrected")(_channel_cost(CHG, lambda s: s.corrected))
 
 
 @identity("combined_device_operating_cost_rate")
@@ -529,18 +547,29 @@ def _(s):
     return sum(s.e.source_adapters_coo_rates.values())
 
 
-def _saving(levelized: bool) -> Callable:
+@identity("combined_levelized_device_operating_cost_rate_corrected")
+def _(s):
+    """The device view at corrected prices, summed over devices."""
+    return sum(s.e.source_adapters_lcoo_rates_corrected.values())
+
+
+def _saving(price: str) -> Callable:
     """Producing: CON watts × (tariff − own price). Drawing: −own draw cost.
 
-    Idle devices read 0 rather than going absent.
+    ``price`` is ``marginal``, ``levelized`` or ``corrected``: which price a
+    device's own energy, and its own draw, is valued at. Idle devices read 0
+    rather than going absent.
     """
+    own_costs = {
+        "marginal": "source_adapters_coo_rates",
+        "levelized": "source_adapters_lcoo_rates",
+        "corrected": "source_adapters_lcoo_rates_corrected",
+    }
 
     def fn(s):
-        own_cost = (
-            s.e.source_adapters_lcoo_rates if levelized else s.e.source_adapters_coo_rates
-        )
+        own_cost = getattr(s.e, own_costs[price])
         served = s.e.source_adapters_consumption_power
-        own = s.levelized if levelized else s.marginal
+        own = getattr(s, price)
         out = {}
         for d in s.devices:
             if d in s.sources:
@@ -554,8 +583,14 @@ def _saving(levelized: bool) -> Callable:
     return fn
 
 
-identity("adapters_saving_rates")(_saving(levelized=False))
-identity("adapters_levelized_saving_rates")(_saving(levelized=True))
+identity("adapters_saving_rates")(_saving("marginal"))
+identity("adapters_levelized_saving_rates")(_saving("levelized"))
+identity("adapters_levelized_saving_rates_corrected")(_saving("corrected"))
+
+
+@identity("combined_levelized_saving_rate_corrected")
+def _(s):
+    return sum(s.e.adapters_levelized_saving_rates_corrected.values())
 
 
 @identity("adapters_financial_return_rates")
@@ -579,9 +614,25 @@ def _(s):
     }
 
 
+@identity("adapters_levelized_financial_return_rates_corrected")
+def _(s):
+    """As the levelized return, with every own cost at its corrected price."""
+    comp = s.e.source_adapters_export_compensation_rates
+    exported = s.e.source_adapters_export_power
+    return {
+        d: saving + comp.get(d, 0.0) - kw(exported.get(d, 0.0)) * s.corrected(d)
+        for d, saving in s.e.adapters_levelized_saving_rates_corrected.items()
+    }
+
+
 @identity("combined_financial_return_rate")
 def _(s):
     return sum(s.e.adapters_financial_return_rates.values())
+
+
+@identity("combined_levelized_financial_return_rate_corrected")
+def _(s):
+    return sum(s.e.adapters_levelized_financial_return_rates_corrected.values())
 
 
 # ---------------------------------------------------------------------------

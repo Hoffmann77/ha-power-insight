@@ -90,9 +90,11 @@ with readings that slightly overdraw, as unsynchronised sensors do).
 - `test_laws.py` — how all properties must move together under a change whose
   effect is known in advance: scaling power, scaling prices, renaming and
   reordering devices, adding idle devices, splitting a PV system in two, a
-  meter dropping out, every map keyed by its whole family, and the model's
-  conservation laws. The catalog's `unit` says how each property must react,
-  and its `keys` which devices a map is keyed by.
+  meter dropping out, every map keyed by its whole family, the model's
+  conservation laws, a correction factor being nothing but a restated lifetime
+  cost, and the `*_components` families adding up before and after
+  correction. The catalog's `unit` says how each property must react, and its
+  `keys` which devices a map is keyed by.
 - `test_source_shares_invariants.py` — the provenance root's own guarantees:
   rows are normalised, no source is over-drawn, and a restriction is only broken
   when no allocation could honour it (decided by an independent max-flow
@@ -234,14 +236,6 @@ anything else) if your PR needs green checks to merge.
 - `test_home.py` — self-tests for the declarative homes and reference cases:
   the checks at class creation, and that `@expect` really fails on a wrong
   value.
-
-### Known gaps
-
-- **Correction factors.** The eight `*_corrected` properties are not in the
-  catalog, the harness's `Adapter.battery` ignores `correction_factor`, and
-  only one manual class sets a factor other than 1.0; the integration tier
-  covers them in `test_correction_flow.py`. Parked — see
-  [`docs/dev/production-readiness.md`](../docs/dev/production-readiness.md).
 
 ## Integration tier (`integration/`)
 

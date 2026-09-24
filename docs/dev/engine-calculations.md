@@ -525,9 +525,12 @@ belongs on the `lcoe` inside the bracket, which is where the engine's
 
 The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
-factor is not merely misplaced there, it is unrelated.
+factor is not merely misplaced there, it is unrelated. A battery's factor
+scales its own `LCOS`, which prices its discharge; what it pays to charge is
+priced by the factors of the devices it charged from.
 
-Pinned by `TestCorrectionFactorScalesTheLcoe` in
+Pinned by `TestCorrectionFactorScalesTheLcoe` and
+`TestBatteryFactorScalesItsOwnLcosOnly` in
 `tests/engine/manual/test_savings.py`.
 
 :::

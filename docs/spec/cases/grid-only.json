@@ -181,6 +181,10 @@
           "value": "9/25"
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": "9/25"
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": "0"
         },
@@ -222,6 +226,10 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": {}
         },
         {
@@ -273,7 +281,15 @@
           "value": "0"
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "combined_device_operating_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
           "value": "0"
         },
         {
@@ -285,6 +301,14 @@
           "value": {}
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": {}
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": {}
         },
@@ -293,7 +317,15 @@
           "value": {}
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": {}
+        },
+        {
           "property": "combined_financial_return_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
           "value": "0"
         }
       ]
@@ -461,6 +493,10 @@
           "value": "0"
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": "0"
         },
@@ -502,6 +538,10 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": {}
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": {}
         },
         {
@@ -553,7 +593,15 @@
           "value": "0"
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "combined_device_operating_cost_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
           "value": "0"
         },
         {
@@ -565,6 +613,14 @@
           "value": {}
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": {}
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": "0"
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": {}
         },
@@ -573,7 +629,15 @@
           "value": {}
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": {}
+        },
+        {
           "property": "combined_financial_return_rate",
+          "value": "0"
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
           "value": "0"
         }
       ]
@@ -711,6 +775,10 @@
           "value": null
         },
         {
+          "property": "combined_lcoe_rate_corrected",
+          "value": null
+        },
+        {
           "property": "combined_avoided_cost_rate",
           "value": null
         },
@@ -744,6 +812,10 @@
         },
         {
           "property": "source_adapters_lcoo_rates",
+          "value": null
+        },
+        {
+          "property": "source_adapters_lcoo_rates_corrected",
           "value": null
         },
         {
@@ -791,7 +863,15 @@
           "value": null
         },
         {
+          "property": "combined_lcoo_rate_corrected",
+          "value": null
+        },
+        {
           "property": "combined_device_operating_cost_rate",
+          "value": null
+        },
+        {
+          "property": "combined_levelized_device_operating_cost_rate_corrected",
           "value": null
         },
         {
@@ -803,6 +883,14 @@
           "value": null
         },
         {
+          "property": "adapters_levelized_saving_rates_corrected",
+          "value": null
+        },
+        {
+          "property": "combined_levelized_saving_rate_corrected",
+          "value": null
+        },
+        {
           "property": "adapters_financial_return_rates",
           "value": null
         },
@@ -811,7 +899,15 @@
           "value": null
         },
         {
+          "property": "adapters_levelized_financial_return_rates_corrected",
+          "value": null
+        },
+        {
           "property": "combined_financial_return_rate",
+          "value": null
+        },
+        {
+          "property": "combined_levelized_financial_return_rate_corrected",
           "value": null
         }
       ]
