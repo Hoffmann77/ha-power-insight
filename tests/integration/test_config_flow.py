@@ -10,10 +10,14 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from .conftest import (
     DOMAIN,
     GRID_SUB_ID,
+    PV_SUB_ID,
     BAT_SUB_ID,
+    CONS_SUB_ID,
     BASE_OPTIONS,
     make_grid_subentry_data,
+    make_pv_subentry_data,
     make_battery_subentry_data,
+    make_consumer_subentry_data,
 )
 
 pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
@@ -445,6 +449,244 @@ async def test_reconfigure_battery_switch_to_whole_mix_clears_sources(
 
     config = entry.subentries[BAT_SUB_ID].data["adapter"]["config"]
     assert config["charge_from_adapters"] == []
+
+
+# ---------------------------------------------------------------------------
+# Subentry flow — consumer source mode
+# ---------------------------------------------------------------------------
+
+
+def _consumer_config_input(**overrides) -> dict:
+    """Base consumer configure-step input; override the source-mode fields per test."""
+    data = {
+        "name": "Smart Plug",
+        "power_entity": "sensor.plug_power",
+        "power_entity_inverted": False,
+    }
+    data.update(overrides)
+    return data
+
+
+def _consumer_source_entry(hass, *extra_subentries) -> MockConfigEntry:
+    """An entry with a grid and a PV system to draw from, plus ``extra_subentries``."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            *extra_subentries,
+        ],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.plug_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.consumer_power", "0", {"unit_of_measurement": "W"})
+    return entry
+
+
+async def _start_consumer_flow(hass, entry):
+    """Init a subentry flow and advance to the consumer configure step."""
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    return await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "consumer"}
+    )
+
+
+def _schema_field(result, name: str):
+    """Return the schema key called ``name`` from a form result."""
+    for key in result["data_schema"].schema:
+        if str(getattr(key, "schema", key)) == name:
+            return key
+    raise AssertionError(f"{name!r} is not on the form")
+
+
+async def test_subentry_consumer_form_offers_source_mode(
+    hass: HomeAssistant,
+) -> None:
+    """The consumer form asks for the source mode, defaulting to 'Whole mix'.
+
+    The mode comes right before the device list it governs, so the form reads
+    as "where does the power come from — and if specific, which devices".
+    """
+    entry = _consumer_source_entry(hass)
+
+    result = await _start_consumer_flow(hass, entry)
+    assert result["step_id"] == "configure"
+
+    keys = [str(getattr(k, "schema", k)) for k in result["data_schema"].schema]
+    assert keys.index("source_mode") + 1 == keys.index("power_from_adapters")
+    assert _schema_field(result, "source_mode").default() == "mix"
+
+
+async def test_subentry_consumer_specific_mode_requires_a_source(
+    hass: HomeAssistant,
+) -> None:
+    """'Specific devices' with no source selected is rejected on the device list."""
+    entry = _consumer_source_entry(hass)
+
+    result = await _start_consumer_flow(hass, entry)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_consumer_config_input(
+            source_mode="devices", power_from_adapters=[]
+        ),
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"power_from_adapters": "source_devices_required"}
+
+
+async def test_subentry_consumer_specific_mode_creates_with_sources(
+    hass: HomeAssistant,
+) -> None:
+    """'Specific devices' stores exactly the selected sources, and not the mode.
+
+    The mode is form-only: it is realised entirely through the device list.
+    """
+    entry = _consumer_source_entry(hass)
+
+    result = await _start_consumer_flow(hass, entry)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_consumer_config_input(
+            source_mode="devices", power_from_adapters=[PV_SUB_ID]
+        ),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["adapter_type"] == "consumer"
+    assert adapter["config"]["power_from_adapters"] == [PV_SUB_ID]
+    assert "source_mode" not in adapter["config"]
+
+
+async def test_subentry_consumer_whole_mix_stores_empty_list(
+    hass: HomeAssistant,
+) -> None:
+    """'Whole mix' stores an empty list (the engine reads it as the whole mix).
+
+    Any stray device selection is cleared, so 'Whole mix' always persists ``[]``.
+    """
+    entry = _consumer_source_entry(hass)
+
+    result = await _start_consumer_flow(hass, entry)
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input=_consumer_config_input(
+            source_mode="mix", power_from_adapters=[PV_SUB_ID]
+        ),
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    adapter = list(entry.subentries.values())[-1].data["adapter"]
+    assert adapter["config"]["power_from_adapters"] == []
+
+
+@pytest.mark.parametrize(
+    ("power_from", "expected_mode"),
+    [([PV_SUB_ID], "devices"), ([], "mix"), (None, "mix")],
+    ids=["restricted", "empty_list", "saved_before_restrictions"],
+)
+async def test_reconfigure_consumer_preselects_source_mode(
+    hass: HomeAssistant, power_from: list[str] | None, expected_mode: str
+) -> None:
+    """Reconfigure derives the mode from the saved list.
+
+    A restricted consumer opens on 'Specific devices'; an empty list, or a
+    consumer saved before the field existed, opens on 'Whole mix'.
+    """
+    entry = _consumer_source_entry(
+        hass, make_consumer_subentry_data(power_from_adapters=power_from)
+    )
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": CONS_SUB_ID},
+    )
+    assert result["step_id"] == "reconfigure"
+    assert _schema_field(result, "source_mode").default() == expected_mode
+
+
+async def test_reconfigure_consumer_switch_to_specific_devices(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfiguring a whole-mix consumer to 'Specific devices' stores its sources."""
+    entry = _consumer_source_entry(hass, make_consumer_subentry_data())
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": CONS_SUB_ID},
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.consumer_power",
+            "power_entity_inverted": False,
+            "source_mode": "devices",
+            "power_from_adapters": [GRID_SUB_ID, PV_SUB_ID],
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+
+    config = entry.subentries[CONS_SUB_ID].data["adapter"]["config"]
+    assert config["power_from_adapters"] == [GRID_SUB_ID, PV_SUB_ID]
+
+
+async def test_reconfigure_consumer_switch_to_whole_mix_clears_sources(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfiguring a restricted consumer to 'Whole mix' clears its sources."""
+    entry = _consumer_source_entry(
+        hass, make_consumer_subentry_data(power_from_adapters=[PV_SUB_ID])
+    )
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": CONS_SUB_ID},
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.consumer_power",
+            "power_entity_inverted": False,
+            "source_mode": "mix",
+            "power_from_adapters": [PV_SUB_ID],  # cleared because mode is mix
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+
+    config = entry.subentries[CONS_SUB_ID].data["adapter"]["config"]
+    assert config["power_from_adapters"] == []
+
+
+async def test_reconfigure_consumer_specific_mode_requires_a_source(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfigure rejects 'Specific devices' with nothing selected, as setup does."""
+    entry = _consumer_source_entry(
+        hass, make_consumer_subentry_data(power_from_adapters=[PV_SUB_ID])
+    )
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": CONS_SUB_ID},
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.consumer_power",
+            "power_entity_inverted": False,
+            "source_mode": "devices",
+            "power_from_adapters": [],
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"power_from_adapters": "source_devices_required"}
+
+    config = entry.subentries[CONS_SUB_ID].data["adapter"]["config"]
+    assert config["power_from_adapters"] == [PV_SUB_ID]
 
 
 # ---------------------------------------------------------------------------

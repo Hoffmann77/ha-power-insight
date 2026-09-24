@@ -216,8 +216,19 @@ def make_battery_subentry_data(
 def make_consumer_subentry_data(
     subentry_id: str = CONS_SUB_ID,
     power_entity: str = "sensor.consumer_power",
+    power_from_adapters: list[str] | None = None,
 ) -> dict:
-    """Return subentry data for a consumer adapter."""
+    """Return subentry data for a consumer adapter.
+
+    ``power_from_adapters`` is stored only when given, so the default consumer
+    keeps the config of one saved before the source restriction existed.
+    """
+    config = {
+        "power_entity": power_entity,
+        "power_entity_inverted": False,
+    }
+    if power_from_adapters is not None:
+        config["power_from_adapters"] = power_from_adapters
     return {
         "subentry_id": subentry_id,
         "subentry_type": "adapter",
@@ -227,10 +238,7 @@ def make_consumer_subentry_data(
             "adapter": {
                 "adapter_type": "consumer",
                 "key": "consumer",
-                "config": {
-                    "power_entity": power_entity,
-                    "power_entity_inverted": False,
-                },
+                "config": config,
             },
         },
     }
