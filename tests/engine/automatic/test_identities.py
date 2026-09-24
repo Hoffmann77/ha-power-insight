@@ -277,6 +277,16 @@ def _(s):
 # whatever each source has left once the metered sinks are served.
 
 
+@identity("sink_adapters_source_power")
+def _(s):
+    """Each share of a sink's row times its balanced draw; zeros when idle."""
+    return {
+        k: {src: s.draw_watts(k).get(src, 0.0) for src in s.source_family}
+        if k in s.sinks else {src: 0.0 for src in s.source_family}
+        for k in s.sink_family
+    }
+
+
 @identity("home_base_load_source_shares")
 def _(s):
     """Each source's reading, less what the metered rows took, over the base load."""

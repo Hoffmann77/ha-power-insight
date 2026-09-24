@@ -156,6 +156,19 @@
       "note": "Two guarantees hold in every snapshot: the watts attributed to a source across all sinks equal its reading, and a restriction is only ever broken when no allocation could have honoured every restriction at once."
     },
 
+    "sink_adapters_source_power": {
+      "title": "Source provenance in watts",
+      "unit": "W",
+      "layer": 2,
+      "definition": "For every adapter, the watts of its draw supplied by each source — the provenance row before it is divided by the draw. A drawing adapter's row sums to its balanced draw; an adapter that is not drawing reads a row of zeros.",
+      "formula": "sink_adapters_source_power[k][s] = sink_adapters_source_shares[k][s] × balanced draw(k)",
+      "depends_on": ["sink_adapters_source_shares"],
+      "answer_shape": "nested_map_fixed_keys",
+      "keys": ["sinks", "sources"],
+      "derivation_steps": ["Multiply each share in the sink's provenance row by the sink's draw."],
+      "note": "Summed over the sinks and the home base load, each source's column is exactly what that source supplied."
+    },
+
     "home_base_load_source_shares": {
       "title": "Home base load provenance",
       "unit": "share",

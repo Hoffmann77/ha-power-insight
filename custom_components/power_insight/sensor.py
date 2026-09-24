@@ -18,6 +18,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
+    UnitOfEnergy,
     UnitOfPower,
 )
 from homeassistant.components.sensor import (
@@ -32,7 +33,7 @@ from .entity import (
     IntegrationSensorExtraStoredData,
 )
 from .utils import get_value
-from .power_insight import PowerInsight, AbstractBaseAdapter
+from .power_insight import PowerInsight, AbstractBaseAdapter, UNIT_PREFIXES
 from . import MyConfigEntry
 from .const import (
     DOMAIN,
@@ -44,6 +45,8 @@ from .const import (
     CONF_ENABLE_HOME_BASE_LOAD,
     CONF_ENABLE_CHARGING_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_SHARES,
+    CONF_ENABLE_POWER_SOURCE_POWER,
+    CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
     CONF_CALCULATE_COST_RATES,
@@ -108,6 +111,9 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     # When True, the per-adapter integration sensor accumulates the base rate
     # but displays the running total corrected for edited lifetime costs.
     apply_correction_factor: bool = False
+    # SI prefix of the accumulated unit relative to the rate's: "k" turns a
+    # rate in W into a total in kWh. None keeps EUR/h -> EUR.
+    unit_prefix: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1988,6 +1994,53 @@ async def async_setup_entry(
                     dynamic_adapter=source_adapter,
                 ))
 
+        # The watts behind those shares, and their running energy: "Power
+        # from {Source}" (W) and "Energy from {Source}" (kWh). One of each per
+        # power-providing adapter, not only the consumer's allowed sources — a
+        # restriction the meters contradict is relaxed, so a "PV only"
+        # consumer can really draw from the grid. Keyed by the source's
+        # subentry id, never its name, so a rename keeps the history.
+        for source_adapter in power_insight.gross_power_adapters:
+            if options_wrapped.check(CONF_ENABLE_POWER_SOURCE_POWER, "consumer"):
+                power_description = PowerInsightSensorDescription(
+                    key=f"power_from_{source_adapter.uid}",
+                    translation_key="power_from",
+                    native_unit_of_measurement=UnitOfPower.WATT,
+                    device_class=SensorDeviceClass.POWER,
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=0,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    value_fn=lambda obj: obj.sink_adapters_source_power,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=power_description,
+                    config_entry=entry,
+                    source_entities=power_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
+            if options_wrapped.check(CONF_ACCUMULATE_POWER_SOURCE_ENERGY, "consumer"):
+                energy_description = PowerInsightIntegrationSensorDescription(
+                    key=f"energy_from_{source_adapter.uid}",
+                    translation_key="energy_from",
+                    native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+                    device_class=SensorDeviceClass.ENERGY,
+                    state_class=SensorStateClass.TOTAL,
+                    suggested_display_precision=2,
+                    entities_fn=lambda obj: obj.source_entities_power,
+                    integration_value_fn=lambda obj: obj.sink_adapters_source_power,
+                    unit_prefix="k",
+                )
+                entities.append(PowerInsightDynamicAdapterIntegrationSensor(
+                    description=energy_description,
+                    config_entry=entry,
+                    source_entities=energy_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
+
         _add(entities, config_subentry_id=adapter.uid)
 
     # Disable entities whose controlling option is now off (keeping their
@@ -2324,6 +2377,7 @@ class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
         super().__init__(source_entities, power_insight)
         self.entity_description = description
         self.config_entry = config_entry
+        self._unit_prefix = UNIT_PREFIXES[description.unit_prefix]
 
     @property
     def native_unit_of_measurement(self) -> str | None:
@@ -2361,6 +2415,56 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+
+class PowerInsightDynamicAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
+    """Per-adapter integration sensor over a nested uid-keyed dict.
+
+    The accumulating twin of :class:`PowerInsightDynamicAdapterSensor`:
+    ``integration_value_fn`` returns ``{device_uid: {dynamic_uid: value}}`` and
+    this sensor integrates one pairing, e.g. the energy a consumer drew from
+    one source. It carries no price, so there is nothing to correct.
+    """
+
+    def __init__(
+            self,
+            description: PowerInsightIntegrationSensorDescription,
+            config_entry: ConfigEntry,
+            source_entities: list[str],
+            power_insight: PowerInsight,
+            device_adapter: AbstractBaseAdapter,
+            dynamic_adapter: AbstractBaseAdapter,
+    ) -> None:
+        """Initialize the dynamic adapter integration sensor entity."""
+        super().__init__(description, config_entry, source_entities, power_insight)
+        self.device_adapter = device_adapter
+        self.dynamic_adapter = dynamic_adapter
+        # The name names the other device: "Energy from Roof PV".
+        self._attr_translation_placeholders = {"source": dynamic_adapter.verbose_name}
+
+        uid = f"{self.config_entry.entry_id}_{self.device_adapter.uid}"
+        self._attr_unique_id = f"{uid}_{self.entity_description.key}"
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, self.device_adapter.uid)},
+            name=f"{self.config_entry.title} {self.device_adapter.verbose_name}",
+        )
+
+    @property
+    def integration_value(self) -> float | None:
+        """Return this pairing's current rate, as the dynamic sensor reads it.
+
+        ``None`` — so the total pauses — when the whole map is ``None`` or this
+        device's own reading is unavailable.
+        """
+        mapping = self.entity_description.integration_value_fn(self.power_insight)
+        if mapping is None or self.device_adapter.power is None:
+            return None
+        row = mapping.get(self.device_adapter.uid)
+        value = 0.0 if row is None else row.get(self.dynamic_adapter.uid, 0.0)
+        if value is None:
+            return None
+        return self.entity_description.transform_fn(value)
 
 
 class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):

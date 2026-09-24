@@ -105,6 +105,23 @@
           }
         },
         {
+          "property": "sink_adapters_source_power",
+          "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "cons1": {
+              "grid": "0",
+              "pv1": "500"
+            }
+          }
+        },
+        {
           "property": "home_base_load_source_shares",
           "value": {
             "grid": "8/9",
@@ -467,6 +484,23 @@
             "cons1": {
               "grid": "2/5",
               "pv1": "3/5"
+            }
+          }
+        },
+        {
+          "property": "sink_adapters_source_power",
+          "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0"
+            },
+            "cons1": {
+              "grid": "200",
+              "pv1": "300"
             }
           }
         },
