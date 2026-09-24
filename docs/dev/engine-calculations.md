@@ -535,6 +535,35 @@ Pinned by `TestCorrectionFactorScalesTheLcoe` and
 
 :::
 
+:::note[Decision: a correction restates the device's whole history]
+
+Editing a device's lifetime cost or production re-prices every kWh it has
+ever recorded, not only the energy from the edit onward. An LCOE / LCOS is a
+lifetime average: whether the first estimate was wrong, a repair or a new
+inverter added to the lifetime cost, or degradation lowered the expected
+production, the revised figure is the right price for past energy too.
+Applying it only from now on would leave a mix of two averages, neither of
+which is the device's cost.
+
+Two consequences are accepted. The restatement reaches the long-term
+statistics as one step in the hour of the edit, because past statistics are
+not rewritten. And replaced hardware is not an edit: new panels or a new
+battery are a new asset with a lifetime of their own, so they are added as a
+new device and the old one removed, which freezes its totals into the
+retired ledger. There is no "replace hardware" action.
+
+The base the factor is measured against is set once and never re-based: a
+reconfigure that arrives without lifetime values keeps the stored base,
+current price and factor.
+
+Not pinned in the engine tier: the engine only ever sees the factor; its
+reach over history is in the sensor layer and the config flow. Covered by
+`tests/integration/test_correction_flow.py`
+(`test_an_edit_restates_the_whole_history` and
+`test_reconfigure_without_lifetime_values_keeps_the_base`).
+
+:::
+
 :::note[Decision: accumulated totals persist their price breakdown]
 
 A running total mixes prices from several devices, so it cannot be

@@ -120,7 +120,7 @@ The open questions in
 1–5 were answered by the max-flow solver, 6 (hard restrictions) and 7 (grid
 first) are decisions in the log.
 
-### 3. Correction factors — done, one question open
+### 3. Correction factors — done
 
 The engine was already consistent; what was missing was the promise and its
 tests. Now:
@@ -137,18 +137,12 @@ tests. Now:
   breakdown, restored or seeded with `set_value`, reads at face value.
 - CO₂ is deliberately uncorrected until something publishes it ("CO₂ is not
   corrected until something publishes it").
-- Clearing the lifetime fields cannot re-base the correction: the reconfigure
-  form seeds them as defaults, so an emptied field is refilled, and the
-  selectors reject `0`.
-
-Still open:
-
-- **How far back a correction reaches.** Today an edit restates the device's
-  whole history, and the field's help text says so. Whether that is the
-  promise — and so whether replaced hardware must be added as a new device
-  rather than edited in place — is still to be discussed.
-- The `depends_on` branch of `calculate_fields` would wipe `default_lcoe` if
-  a falsy lifetime value ever got past the form; it wants a guard.
+- A correction restates the device's whole history, and replaced hardware is
+  added as a new device — there is no "replace hardware" action ("a
+  correction restates the device's whole history"). A reconfigure without
+  lifetime values keeps the stored base, so the correction is never
+  re-based: the form already refills emptied fields and rejects `0`, and
+  `calculate_fields` now keeps the stored values if one ever got through.
 
 ## Home Assistant layer
 
@@ -177,6 +171,5 @@ Still open:
    after a release), then H1/H2, H3, H4, H5, H9, H10, H11, H12, and the
    `metering_imbalance` sensor and repair issue.
 
-Parked for later sessions: the open question in item 3 (how far back a
-correction reaches), H6 (dispatcher signal), decision D, and the age-weighted
-refinement of item 2.
+Parked for later sessions: H6 (dispatcher signal), decision D, and the
+age-weighted refinement of item 2.

@@ -1466,8 +1466,11 @@ def calculate_fields(
 ) -> dict[str, Any]:
     """Evaluate CalculatedAdapterFields and merge results into a copy of user_input.
 
-    A calculated field is skipped (set to None) when any of its depends_on
-    inputs are absent or falsy.
+    A calculated field is skipped when any of its depends_on inputs are
+    absent or falsy: set to None, or on reconfigure kept at its stored value.
+    Keeping it matters for the base LCOE/LCOS, which every later correction
+    factor is measured against — writing None over it would silently re-base
+    the device's corrected history the next time lifetime values arrive.
     """
     result = user_input.copy()
 
@@ -1485,7 +1488,7 @@ def calculate_fields(
         if field_def.depends_on and any(
             not result.get(dep) for dep in field_def.depends_on
         ):
-            result[field_name] = None
+            result[field_name] = (existing_data or {}).get(field_name)
             continue
 
         result[field_name] = field_def.calculator(result, existing_data)

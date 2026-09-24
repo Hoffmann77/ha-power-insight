@@ -519,3 +519,91 @@ async def test_a_seeded_total_reads_exactly_what_was_set(
             await hass.async_block_till_done()
 
     assert float(_pv_state(hass, entry, suffix).state) == pytest.approx(5.0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# C9 — an edit restates the device's whole history
+# ---------------------------------------------------------------------------
+
+
+async def test_an_edit_restates_the_whole_history(hass: HomeAssistant) -> None:
+    """Raising the lifetime cost re-prices every kWh already recorded.
+
+    LCOE is a lifetime average, so a revised lifetime cost is the right price
+    for past energy too. An hour at 2 kW, 0.30 tariff and lcoe 0.10 saves
+    0.40 EUR. Raising the lifetime cost from 1000 to 1500 EUR makes the lcoe
+    0.15 (factor 1.5); after the reload the same hour reads
+    2 × (0.30 − 0.15) = 0.30 EUR, with nothing accumulated since.
+    """
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = (
+        "sensor.grid_price"
+    )
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=_SAVINGS_OPTIONS,
+        subentries_data=[grid, make_pv_subentry_data()],
+    )
+    suffix = f"{PV_SUB_ID}_total_levelized_cost_savings"
+
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        _set_pv_home(hass)
+        await setup_integration(hass, entry)
+        frozen.move_to(t0 + timedelta(hours=1))
+        hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
+        for _ in range(4):
+            await hass.async_block_till_done()
+        before = float(_pv_state(hass, entry, suffix).state)
+
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, "adapter"),
+            context={"source": "reconfigure", "subentry_id": PV_SUB_ID},
+        )
+        await hass.config_entries.subentries.async_configure(
+            result["flow_id"],
+            user_input={
+                "power_entity": "sensor.pv_power",
+                "power_entity_inverted": False,
+                "lifetime_production": 10000.0,
+                "lifetime_cost": 1500.0,
+            },
+        )
+        for _ in range(4):
+            await hass.async_block_till_done()
+        after = float(_pv_state(hass, entry, suffix).state)
+
+    assert entry.subentries[PV_SUB_ID].data["adapter"]["config"][
+        "correction_factor"
+    ] == pytest.approx(1.5)
+    assert before == pytest.approx(0.40, abs=1e-6)
+    assert after == pytest.approx(0.30, abs=1e-6)
+
+
+def test_reconfigure_without_lifetime_values_keeps_the_base() -> None:
+    """Lifetime values missing on reconfigure leave the stored figures alone.
+
+    The form refills emptied fields and rejects 0, so this should not happen
+    through the UI; if it ever did, writing None over ``default_lcoe`` would
+    make the next lifetime values the new base, and the device's corrected
+    history would silently fall back to factor 1.0.
+    """
+    from custom_components.power_insight.config_flow import (
+        BATTERY_FIELDS,
+        PV_SYSTEM_FIELDS,
+        calculate_fields,
+    )
+
+    for fields, price in ((PV_SYSTEM_FIELDS, "lcoe"), (BATTERY_FIELDS, "lcos")):
+        stored = {
+            f"default_{price}": 0.10,
+            f"current_{price}": 0.15,
+            "correction_factor": 1.5,
+        }
+        for missing in ({}, {"lifetime_cost": 0.0, "lifetime_production": 10000.0}):
+            result = calculate_fields(
+                fields, missing, "reconfigure", existing_data=stored,
+            )
+            for key, value in stored.items():
+                assert result[key] == value, (price, missing, key)

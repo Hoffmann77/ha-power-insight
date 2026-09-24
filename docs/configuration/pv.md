@@ -68,7 +68,11 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 If you reconfigure the lifetime cost or production, Power Insight applies a
 [**correction factor**](../concepts.md#the-correction-factor) that retroactively
 rescales this device's already-recorded levelized values so history stays
-consistent.
+consistent. The rescaling reaches the whole history and shows in the long-term
+statistics as one step at the time of the edit.
+
+If you replace the hardware itself, add it as a new device and remove the old
+one instead: the new hardware has a lifetime of its own.
 
 ## Sensors this device can create
 
