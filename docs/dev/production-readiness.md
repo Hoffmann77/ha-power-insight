@@ -57,7 +57,7 @@ issue. The balance law gains channel-total checks (the charging channel equals
 what the batteries drew, the export channel equals the grid export), which is
 what would have caught this.
 
-### 2. Readings that overdraw — done in the engine (sensor and repair issue: Home Assistant layer)
+### 2. Readings that overdraw — done
 
 Meters are sampled at different times (a grid meter every 60 s, smart plugs
 every 30 s) and are individually inaccurate, so the metered sinks sometimes
@@ -79,10 +79,11 @@ The raw-reading properties (`combined_production`, `combined_grid_import` /
 `_export`, each device's own power) keep what the meters say. `gross_power`,
 the channels, the ratios and every cost and avoided cost use the balanced
 figures, so every ledger balances in every snapshot. The gap is published as
-`metering_imbalance` (W): a diagnostic sensor, disabled by default, plus a
-repair issue when it persists (on the order of >10 % of gross power over
-15 minutes — a sustained imbalance means an inverted sign or a meter nested
-inside another metered circuit). Only overdraw is corrected; an underdraw is
+`metering_imbalance` (W): a diagnostic sensor, created with the other debug
+sensors (the integration's opt-in for diagnostics), plus a repair issue when it
+persists — raised above 10 % of gross power averaged over 15 minutes, cleared
+below 5 %. A sustained imbalance means an inverted sign or a meter nested
+inside another metered circuit. Only overdraw is corrected; an underdraw is
 indistinguishable from real unmetered consumption and stays in the base load.
 
 *Possible later refinement:* weight each reading by its age (`last_reported`),

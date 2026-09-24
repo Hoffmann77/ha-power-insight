@@ -432,6 +432,10 @@
     "shared_power_entity": {
       "title": "Two devices of {entry_title} share a power sensor",
       "description": "**{devices}** all read **{entity_id}**. A power sensor measures one device: shared, its watts are counted twice and one of the devices never updates.\n\nOpen each device, choose **Reconfigure**, and give it its own power sensor — or remove the one that duplicates another."
+    },
+    "metering_imbalance": {
+      "title": "The meters of {entry_title} disagree",
+      "description": "For the last 15 minutes the metered devices of **{entry_title}** drew {share} more than the grid, PV systems and batteries supplied. Meters sampled at different moments cause brief gaps, which Power Insight evens out; a gap this persistent usually means a misconfigured meter.\n\nCheck that every power sensor has the right sign (turn on **Invert** where it reports the opposite way), and that no metered device sits inside another metered circuit, so its power is not counted twice. The **Metering imbalance** diagnostic sensor shows the gap as it happens.\n\nThis message disappears once the meters agree again."
     }
   },
   "services": {

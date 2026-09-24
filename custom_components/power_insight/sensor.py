@@ -17,6 +17,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
 from homeassistant.const import (
     PERCENTAGE,
+    EntityCategory,
     UnitOfPower,
 )
 from homeassistant.components.sensor import (
@@ -120,9 +121,25 @@ POWER_INSIGHT_SENSORS = (
         native_unit_of_measurement=UnitOfPower.WATT,
         state_class=SensorStateClass.MEASUREMENT,
         device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=0,
         entities_fn=lambda obj: obj.source_entities_power,
         value_fn=lambda obj: obj.gross_power,
+    ),
+    PowerInsightSensorDescription(
+        # How much more the metered sinks drew than the sources supplied. The
+        # engine balances the readings by meeting in the middle; this is the
+        # gap it closed. Persistently large means a misconfigured meter.
+        key="metering_imbalance",
+        name="Metering imbalance",
+        icon="mdi:scale-unbalanced",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        entities_fn=lambda obj: obj.source_entities_power,
+        value_fn=lambda obj: obj.metering_imbalance,
     ),
     PowerInsightSensorDescription(
         key="combined_export_ratio",
@@ -1526,6 +1543,7 @@ class OptionsWrapper:
 _SENSOR_OPTION_GATE: dict[str, str] = {
     # --- Diagnostics ---
     "available_power": CONF_ENABLE_DEBUG_ENTITIES,
+    "metering_imbalance": CONF_ENABLE_DEBUG_ENTITIES,
     # --- Power distribution (W) ---
     "import_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid
     "export_power": CONF_ENABLE_DISTRIBUTION_POWER,                # grid / pv / storage

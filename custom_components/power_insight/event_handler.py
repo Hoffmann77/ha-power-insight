@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from typing import Callable, Iterable
 
 from homeassistant.const import (
     EVENT_STATE_CHANGED,
@@ -60,6 +60,8 @@ class EventHandler:
         # Prefix isolates custom events for this config entry from all others.
         self._event_prefix = f"{DOMAIN}_{entry_id}_"
         self._unsub_listeners: list = []
+        #: Called after every stored reading, once the engine holds it.
+        self.on_update: Callable[[], None] | None = None
 
     def track_entities(self, entity_ids: Iterable[str]) -> None:
         """Start tracking source entities and bootstrap PowerInsight immediately.
@@ -184,6 +186,8 @@ class EventHandler:
             value = self._to_value(entity_id, new_state)
 
         value_changed = self.power_insight.set_value(entity_id, value)
+        if self.on_update is not None:
+            self.on_update()
 
         is_report = curr_state is not None
         event_type = (

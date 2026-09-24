@@ -17,6 +17,7 @@ from .const import (
 )
 from .power_insight import PowerInsight
 from .event_handler import EventHandler
+from .imbalance import ImbalanceMonitor
 from .adapter_models import ADAPTER_MODELS
 from .utils import parse_price_unit
 
@@ -82,6 +83,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)
+    if power_insight.grid_adapter is not None:
+        event_handler.on_update = ImbalanceMonitor(hass, entry, power_insight).update
     event_handler.track_entities(source_entities)
     entry.runtime_data = MyData(power_insight, event_handler)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

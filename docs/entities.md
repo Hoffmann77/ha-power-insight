@@ -74,7 +74,8 @@ repeat it.
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
-| Available power | W | Gross power entering the home (grid import + PV production + battery discharge). Diagnostic, **disabled by default**. | *Debug sensors* |
+| Available power | W | Gross power entering the home (grid import + PV production + battery discharge). Diagnostic. | *Debug sensors* |
+| Metering imbalance | W | How much more the metered devices drew than the sources supplied. Meters sampled at different moments make this briefly non-zero; Power Insight then balances the readings by moving every one of them in proportion to its size. Persistently large, it points at a misconfigured meter — an inverted sign, or a meter inside another metered circuit — and a repair issue says so. Diagnostic. | *Debug sensors* |
 | Home consumption power | W | Everything your home's appliances draw right now — metered consumers plus the unmetered base load — from any source (grid, solar or battery). | Power split (W) |
 | Battery charging power | W | Power currently going into battery charging. | Power split (W) |
 | System standby power | W | Power currently drawn by your energy system's own equipment while idle (e.g. PV inverters at night) — not household appliances on standby. | Power split (W) |
