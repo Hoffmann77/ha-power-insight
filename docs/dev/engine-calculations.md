@@ -204,7 +204,14 @@ holds off a **flexible** sink that could have taken local power. Here every
 contender is captive and the configuration is simply unsatisfiable, so the
 question is not who is served but who is blamed.
 
-Pinned by `TestTheSinkWithSomewhereElseToGoYields` in
+Sinks with the *same* restriction are equally constrained, so neither has
+more somewhere else to go: they share the deficit in proportion to draw and
+read the same row. A larger draw is not a tighter restriction — a 100 W and a
+200 W load on the same two 100 W PV systems break theirs by 100/3 and 200/3 W,
+not 100 W and nothing.
+
+Pinned by `TestTheSinkWithSomewhereElseToGoYields` and
+`TestSameRestrictionSharesTheDeficit` in
 `tests/engine/manual/test_restrictions.py`. Shown in
 [`group-captivity / unsatisfiable_overlap`](../spec/group-captivity.mdx).
 

@@ -14,6 +14,8 @@ expected provenance is written.
 
 from __future__ import annotations
 
+from fractions import Fraction as F
+
 from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 from tests.engine.manual.provenance import rows
 
@@ -127,6 +129,44 @@ class TestTheSinkWithSomewhereElseToGoYields(Home):
         Each reports 50 W; bat_c, which had nowhere else to go, reports none.
         """
         return {"bat_a": 50, "bat_b": 50}
+
+
+class TestSameRestrictionSharesTheDeficit(Home):
+    """Decision: sinks with the same restriction share a deficit in proportion to draw.
+
+    cons1 and cons2 may both use only pv1 and pv2, and need 100 W more than
+    the two make. Neither is more constrained, so neither takes the whole
+    deficit. See "the sink with somewhere else to go is the one that yields" in
+    engine-calculations.md.
+    """
+
+    grid = Grid(100)
+    pv1 = Pv(100)
+    pv2 = Pv(100)
+    cons1 = Consumer(-100, power_from=(pv1, pv2))
+    cons2 = Consumer(-200, power_from=(pv1, pv2))
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """Both loads read the same mix: a third each of grid, pv1 and pv2.
+
+        Together they get all 200 W of PV and the missing 100 W from the grid,
+        split 100 : 200 by draw. So cons1 gets 100/3 W from each source and
+        cons2 twice that.
+        """
+        return rows({
+            "cons1": {"grid": F(100, 3), "pv1": F(100, 3), "pv2": F(100, 3)},
+            "cons2": {"grid": F(200, 3), "pv1": F(200, 3), "pv2": F(200, 3)},
+        })
+
+    @expect("sink_adapters_restriction_deficit")
+    def test_restriction_deficit(self):
+        """The 100 W deficit is split 1 : 2, like the draws.
+
+        cons1 reports 100/3 W and cons2 200/3 W. Blaming cons1 alone would
+        treat the larger load as the more constrained one, which it is not.
+        """
+        return {"cons1": F(100, 3), "cons2": F(200, 3)}
 
 
 class TestExportIsRestrictedToExporters(Home):
