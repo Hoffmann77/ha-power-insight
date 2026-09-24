@@ -372,7 +372,9 @@
             "charge_from_adapters": "Charges from",
             "power_from_adapters": "Powered by",
             "lifetime_production": "Lifetime production",
-            "lifetime_cost": "Lifetime cost"
+            "lifetime_cost": "Lifetime cost",
+            "exports_power": "Feeds into the grid",
+            "export_compensation": "Export compensation per kWh"
           },
           "data_description": {
             "power_entity": "Sensor with this device's power in W, kW or MW.\nGrid: positive = import, negative = export.\nPV system and battery: positive = producing or discharging, negative = drawing or charging.\nConsumer: negative = drawing. Most plugs report their draw as positive — then turn on **Invert power sign**.",
@@ -383,7 +385,9 @@
             "charge_from_adapters": "The sources this battery charges from. Only used with **Specific devices**.",
             "power_from_adapters": "The sources that power this consumer. Only used with **Specific devices**.",
             "lifetime_production": "Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
-            "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values."
+            "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
+            "exports_power": "Turn on if this device can feed power into the grid.",
+            "export_compensation": "What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors."
           }
         }
       },

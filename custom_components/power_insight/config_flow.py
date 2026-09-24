@@ -1016,21 +1016,24 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
+    # Editable on reconfigure; a change applies from then on only — a feed-in
+    # rate is a price that changes over time, not a lifetime average, so it
+    # never rewrites history. No default: a rate means nothing without its
+    # currency, so it is asked for whenever the device exports.
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=True,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
         currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
-        default=0.08,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     # Raw calculation inputs — optional by default, required when levelized is active.
@@ -1139,21 +1142,21 @@ BATTERY_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
+    # Editable on reconfigure, from then on only — see the PV fields.
     CONF_EXPORTS_POWER: AdapterField(
         selector=BOOLEAN_SELECTOR,
         required=True,
         default=False,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     CONF_EXPORT_COMPENSATION: AdapterField(
         currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
-        default=0.0,
         in_config_flow=True,
-        in_reconfigure_flow=False,
+        in_reconfigure_flow=True,
         store_in_adapter_config=True,
     ),
     # Source mode selector — form-only (not persisted). "Whole mix" clears the
@@ -1511,6 +1514,20 @@ def split_by_storage(
     return adapter_config, top_level_data
 
 
+def require_compensation_when_exporting(
+    user_input: dict[str, Any], errors: dict[str, str]
+) -> None:
+    """Ask for the feed-in rate of a device that exports.
+
+    There is no default to fall back on: a rate is a number in a currency,
+    and one that fits one country is wrong in the next.
+    """
+    if user_input.get(CONF_EXPORTS_POWER) and user_input.get(
+        CONF_EXPORT_COMPENSATION
+    ) is None:
+        errors.setdefault(CONF_EXPORT_COMPENSATION, "required")
+
+
 def power_entity_in_use(
     parent_entry: ConfigEntry, entity_id: str | None, exclude_id: str | None = None
 ) -> bool:
@@ -1806,6 +1823,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
             if power_entity_in_use(parent_entry, user_input.get(CONF_POWER_ENTITY)):
                 errors[CONF_POWER_ENTITY] = "power_entity_in_use"
+            require_compensation_when_exporting(user_input, errors)
 
             if not errors:
                 # Determine key and title
@@ -1912,6 +1930,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 exclude_id=subentry.subentry_id,
             ):
                 errors[CONF_POWER_ENTITY] = "power_entity_in_use"
+            require_compensation_when_exporting(user_input, errors)
 
             if not errors:
                 # Evaluate calculated fields (current_lcoe/lcos, correction
