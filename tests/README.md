@@ -239,14 +239,10 @@ anything else) if your PR needs green checks to merge.
 - **Correction factors.** The eight `*_corrected` properties are not in the
   catalog, and no engine test sets a factor other than 1.0; the integration
   tier covers them in `test_correction_flow.py`.
-- **Open finding** held by `manual/test_allocation_rules.py`: two sinks with the
-  same restriction can get different rows when the draws exactly exhaust the
-  sources (strict xfail in `TestSameRestrictionGetsTheSameRow`).
-- **Open findings** held by `test_laws.py`: the proportional split still drifts
-  when a PV system is split in two with a base load present (the strict xfail),
-  six properties still publish while a meter is unavailable
-  (`PUBLISH_WHILE_UNAVAILABLE`), and readings that overdraw break source
-  balance, so the conservation law only checks balanced homes.
+- **Open findings** held by `test_laws.py`: six properties still publish while
+  a meter is unavailable (`PUBLISH_WHILE_UNAVAILABLE`), and readings that
+  overdraw break source balance, so the conservation law only checks balanced
+  homes.
 
 ## Integration tier (`integration/`)
 

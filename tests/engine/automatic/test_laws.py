@@ -221,19 +221,6 @@ def test_an_idle_device_changes_nothing() -> None:
     check("Adding idle devices must change nothing.", HOMES, compare)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Open: the allocation is not split-invariant. With a sink restricted "
-        "to *several* sources and an unmetered base load in the house, the "
-        "export no longer splits in proportion to what each source has left "
-        "once one source becomes two. Repro: grid=-1300, east=west=1000, "
-        "carport=200, plug=-400[east, west] gives the export 0.886 from east "
-        "and west together, where one 2000 W system gets 1600/1800. (The "
-        "spurious deficit this law also found is fixed and "
-        "pinned by the two-pv-systems reference case.)"
-    ),
-)
 def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
     """One producing PV system replaced by two identical half-size ones.
 

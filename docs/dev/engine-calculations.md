@@ -240,6 +240,27 @@ Pinned by `TestReservesAreNeverScaledAway` in
 
 :::
 
+:::note[Decision: sources the same sinks may use are drawn in proportion to their output]
+
+Two sources that exactly the same sinks may draw are interchangeable: no
+restriction tells them apart. The engine solves them as one source and deals
+each sink's watts back to them in proportion to what they produce. The grid
+is never merged, because it goes first rather than in proportion.
+
+Without this, metering one installation as one PV system or as two (an
+inverter reporting each MPP tracker, say) changed the answer. Reserves are
+found per source, and a sink that must take 400 W from one system has no
+reserve on either half once it can swap between them. A plug allowed east or
+west (1000 W each) was then offered 450 W for its 400 W draw, and the export,
+which may also use a 200 W carport, read 0.886 from east and west together
+instead of the 1600/1800 that one 2000 W system gets.
+
+Pinned by `TestInterchangeableSourcesAreDrawnAlike` in
+`tests/engine/manual/test_allocation_rules.py`; held in general by the
+split law in `tests/engine/automatic/test_laws.py`.
+
+:::
+
 **Worked example** — grid `+400`, `pv_1 1000`, `pv_2 600` (gross 2000);
 `bat_1` on grid+`pv_1` and `bat_2` on grid+`pv_2` drawing 400 W each; `bat_3`
 and `cons_1` on PV only, 500 W each; home base load 200 W.

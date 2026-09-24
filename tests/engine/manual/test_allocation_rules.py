@@ -145,3 +145,41 @@ class TestASinkSplitsOverWhatIsLeft(Home):
             "grid": {"pv1": F(22000, 21), "bat1": F(3200, 21)},
             "cons1": {"pv1": 250, "bat1": 0},
         })
+
+
+class TestInterchangeableSourcesAreDrawnAlike(Home):
+    """Decision: sources the same sinks may use are drawn in proportion to their output.
+
+    east and west may be used by the plug and the export alike, so they act as
+    one 2000 W system: metering them apart must not change the answer. See
+    "sources the same sinks may use are drawn in proportion to their output"
+    in engine-calculations.md.
+    """
+
+    grid = Grid(-1300)
+    east = Pv(1000, exports=True)
+    west = Pv(1000, exports=True)
+    carport = Pv(200, exports=True)
+    plug = Consumer(-400, power_from=(east, west))
+
+    @expect("sink_adapters_source_shares")
+    def test_source_shares(self):
+        """The export reads 8/9 east and west, as from one 2000 W system.
+
+        The plug takes its 400 W from east and west, leaving them 1600 W
+        against the carport's 200 W. The export splits 1600 : 200, and east
+        and west, being equal, share their part evenly: 4/9 each.
+        """
+        return {
+            "grid": {"east": F(4, 9), "west": F(4, 9), "carport": F(1, 9)},
+            "plug": {"east": F(1, 2), "west": F(1, 2), "carport": 0},
+        }
+
+    @expect("home_base_load_source_shares")
+    def test_base_load_source_shares(self):
+        """The base load takes the same 4/9, 4/9, 1/9 mix as the export.
+
+        It gets what is left in the same 1600 : 200 proportion: 500 W, of
+        which east and west supply 8/9 between them.
+        """
+        return {"east": F(4, 9), "west": F(4, 9), "carport": F(1, 9)}

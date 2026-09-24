@@ -436,6 +436,23 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
     return allocation, pool, deficit
 
 
+def _interchangeable_sources(
+    supply: dict, demand: dict, allowed: dict, grid_uid: str
+) -> list[list[str]]:
+    """Group the sources by which restricted sinks may draw them.
+
+    Unrestricted sinks may draw anything, so they tell no two sources apart.
+    The grid is always its own group: it goes first, not in proportion.
+    """
+    groups: dict[object, list[str]] = {}
+    for source_uid in supply:
+        key = source_uid if source_uid == grid_uid else frozenset(
+            uid for uid in demand if allowed[uid] and _permits(allowed[uid], source_uid)
+        )
+        groups.setdefault(key, []).append(source_uid)
+    return list(groups.values())
+
+
 def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
     """Attribute every sink's draw to sources. Returns ``(allocation, deficit)``.
 
@@ -444,7 +461,30 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
     left, which they can always do. Before serving a group, any *tight* subset
     is split off and solved on its own — that group has no freedom, and leaving
     it in would let a flexible sink take supply the group needed.
+
+    Sources that exactly the same sinks may draw are interchangeable, so they
+    are solved as one and their watts dealt back in proportion to output.
+    Reserves are found per source, and splitting one system into halves the
+    sinks can swap between would otherwise shrink them and move the answer.
     """
+    twins = _interchangeable_sources(supply, demand, allowed, grid_uid)
+    if any(len(group) > 1 for group in twins):
+        merged = {group[0]: sum(supply[s] for s in group) for group in twins}
+        into = {s: group[0] for group in twins for s in group}
+        allocation, deficit = _allocate(
+            merged,
+            demand,
+            {uid: {into.get(s, s) for s in sources} for uid, sources in allowed.items()},
+            grid_uid,
+        )
+        return {
+            uid: {
+                s: row[into[s]] * supply[s] / merged[into[s]] if merged[into[s]] else 0.0
+                for s in supply
+            }
+            for uid, row in allocation.items()
+        }, deficit
+
     restricted = {uid: d for uid, d in demand.items() if allowed[uid]}
     flexible = {uid: d for uid, d in demand.items() if not allowed[uid]}
     allocation = {uid: {s: 0.0 for s in supply} for uid in demand}
