@@ -1476,7 +1476,7 @@ class PowerInsight:
 
     def _adapter_levelized_components(
         self, *, financial_return: bool,
-    ) -> dict[str, dict[str, float] | None]:
+    ) -> dict[str, dict[str, float] | None] | None:
         """Return ``{device: {correction target: EUR/h}}`` for the P&L families.
 
         A producing device's saving splits into the grid price it displaced
@@ -1484,9 +1484,11 @@ class PowerInsight:
         levelized cost (which does). A drawing device's is the negated blend of
         whatever supplied it. Each component sums back to the base rate, and
         multiplying each by its own key's factor gives the corrected one.
+
+        ``None`` when gross power is unavailable, like the rates it splits.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
         grid_uid = self.grid_adapter.uid
         grid_price = self.grid_adapter.coe
@@ -1742,12 +1744,12 @@ class PowerInsight:
         return self._adapter_saving_rates(levelized=True)
 
     @property
-    def adapters_levelized_saving_rate_components(self) -> dict:
+    def adapters_levelized_saving_rate_components(self) -> dict | None:
         """Per-device savings split by which correction factor scales them."""
         return self._adapter_levelized_components(financial_return=False)
 
     @property
-    def adapters_levelized_financial_return_rate_components(self) -> dict:
+    def adapters_levelized_financial_return_rate_components(self) -> dict | None:
         """Per-device financial return split by correction factor."""
         return self._adapter_levelized_components(financial_return=True)
 
@@ -1886,10 +1888,13 @@ class PowerInsight:
         return self._own_draw_cost_rates(levelized=True, corrected=True)
 
     @property
-    def source_adapters_lcoo_rate_components(self) -> dict:
-        """Per-device operating cost split by which correction factor applies."""
+    def source_adapters_lcoo_rate_components(self) -> dict | None:
+        """Per-device operating cost split by which correction factor applies.
+
+        ``None`` when gross power is unavailable, like the rates it splits.
+        """
         if self.gross_power is None:
-            return {}
+            return None
 
         return {
             a.uid: (
@@ -2009,9 +2014,11 @@ class PowerInsight:
         is a blend of the *source* devices' prices, so its accumulated total
         has to be corrected per supplying device rather than by one factor of
         its own — a consumer has no lifetime cost to correct by.
+
+        ``None`` when gross power is unavailable, like the rates it splits.
         """
         if self.gross_power is None:
-            return {}
+            return None
 
         return {a.uid: self._sink_cost_components(a.uid) for a in self.sink_adapters}
 

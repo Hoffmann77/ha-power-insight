@@ -8,9 +8,9 @@ sources provide — and a tenth overdraw slightly, the way unsynchronised
 sensors do.
 
 Everything a result can hinge on is varied, not just the readings: the grid
-price, every device's LCOE / LCOS, which devices may export and what they are
-paid for it, and restrictions that can name the grid as well as local devices.
-The draw is seeded, so a failure reproduces.
+price, every device's LCOE / LCOS and its correction factor, which devices may
+export and what they are paid for it, and restrictions that can name the grid
+as well as local devices. The draw is seeded, so a failure reproduces.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
 produce/discharge / ``-`` standby/charge; consumer ``-`` = load.
@@ -25,6 +25,10 @@ from tests.engine.home import Adapter, Cell, State, Topology
 
 SEED = 20260923
 COUNT = 200
+
+#: The correction factors a PV system or battery is drawn with: mostly an
+#: unedited lifetime cost, otherwise one restated up or down.
+FACTORS = (1.0, 1.0, 0.8, 1.25, 1.5, 2.0)
 
 
 @dataclass(frozen=True)
@@ -80,7 +84,7 @@ def _split(rng: random.Random, total: int, parts: int) -> list[int]:
     return [bounds[i + 1] - bounds[i] for i in range(parts)]
 
 
-def _make_home(rng: random.Random) -> Home | None:
+def _make_home(rng: random.Random, factor_rng: random.Random) -> Home | None:
     pv = [f"pv{i}" for i in range(rng.randint(0, 3))]
     bat = [f"bat{i}" for i in range(rng.randint(0, 2))]
     cons = [f"cons{i}" for i in range(rng.randint(0, 3))]
@@ -146,6 +150,7 @@ def _make_home(rng: random.Random) -> Home | None:
             lcoe=rng.choice(lcoe),
             exports=rng.random() < 0.8,
             export_comp=rng.choice(comp),
+            correction_factor=factor_rng.choice(FACTORS),
         )
         for uid in pv
     ]
@@ -156,6 +161,7 @@ def _make_home(rng: random.Random) -> Home | None:
             exports=rng.random() < 0.3,
             export_comp=rng.choice(comp),
             charge_from=restrictions.get(uid, ()),
+            correction_factor=factor_rng.choice(FACTORS),
         )
         for uid in bat
     ]
@@ -169,9 +175,12 @@ def _make_home(rng: random.Random) -> Home | None:
 def random_homes(count: int = COUNT, seed: int = SEED) -> list[Home]:
     """``count`` random homes, the same ones every call."""
     rng = random.Random(seed)
+    # The factors come from a stream of their own, so adding them left every
+    # other draw — and therefore every home — exactly as it was.
+    factor_rng = random.Random(seed + 1)
     homes: list[Home] = []
     while len(homes) < count:
-        home = _make_home(rng)
+        home = _make_home(rng, factor_rng)
         if home is not None:
             homes.append(home)
     return homes

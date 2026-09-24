@@ -78,7 +78,7 @@ uv run --group engine pytest tests/engine   # HA harness not required
 
 Nothing here holds an expected number; each check is true of *every* home, and
 runs over a few hundred seeded random ones (`random_homes.py` — varied prices,
-LCOE/LCOS, export permissions, restrictions that name the grid, and a tenth
+LCOE/LCOS and correction factors, export permissions, restrictions that name the grid, and a tenth
 with readings that slightly overdraw, as unsynchronised sensors do).
 
 - `test_identities.py` — one executable formula per catalogued property, in
@@ -90,7 +90,9 @@ with readings that slightly overdraw, as unsynchronised sensors do).
 - `test_laws.py` — how all properties must move together under a change whose
   effect is known in advance: scaling power, scaling prices, renaming and
   reordering devices, adding idle devices, splitting a PV system in two, a
-  meter dropping out, and the model's conservation laws. The catalog's `unit`
+  meter dropping out, a correction factor acting as a change of LCOE, every
+  breakdown by correction target reconciling with its rates, and the model's
+  conservation laws. The catalog's `unit`
   says how each property must react. Known breaches are held strictly (an
   `xfail(strict=True)`, a `PUBLISH_WHILE_UNAVAILABLE` list), so a fix fails
   the test until the marker is removed.
@@ -238,9 +240,11 @@ anything else) if your PR needs green checks to merge.
 
 ### Known gaps
 
-- **Correction factors.** The eight `*_corrected` properties are not in the
-  catalog, and no engine test sets a factor other than 1.0; the integration
-  tier covers them in `test_correction_flow.py`.
+- **Correction factors in the frozen corpora.** The generated homes were
+  frozen before they drew correction factors, and no reference case sets one,
+  so every frozen corrected output is at a factor of 1. Nothing is lost: the
+  laws pin the corrected results to the uncorrected ones, which are frozen,
+  and the identities run over random homes that do draw factors.
 - **Open findings** held by `test_laws.py`: six properties still publish while
   a meter is unavailable (`PUBLISH_WHILE_UNAVAILABLE`), and readings that
   overdraw break source balance, so the conservation law only checks balanced

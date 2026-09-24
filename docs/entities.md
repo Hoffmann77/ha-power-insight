@@ -114,9 +114,10 @@ repeat it.
 :::note[Combined levelized totals are derived, not integrated]
 
 The *levelized* totals are computed as the sum of each device's own
-levelized total (scaled by its [correction factor](concepts.md#the-correction-factor))
-plus a ledger of removed devices — so editing lifetime values is retroactive
-and removing a device never drops its historical contribution.
+levelized total (already restated by the [correction factors](concepts.md#the-correction-factor)
+of the devices whose energy it was priced at) plus a ledger of removed
+devices — so editing lifetime values is retroactive and removing a device
+never drops its historical contribution.
 
 :::
 

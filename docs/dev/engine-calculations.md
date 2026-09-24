@@ -416,33 +416,69 @@ belongs on the `lcoe` inside the bracket, which is where the engine's
 
 The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
-factor is not merely misplaced there, it is unrelated.
+factor is not merely misplaced there, it is unrelated. Each supplier's
+part is scaled by that supplier's factor; the battery's own factor only
+restates what its *discharged* energy costs.
 
-Pinned by `TestCorrectionFactorScalesTheLcoe` in
+Put another way, a correction is exactly a change of levelized price:
+every `*_corrected` result equals the uncorrected one for a home whose
+LCOE / LCOS were multiplied by the factors instead, and the factors move
+nothing that is not corrected. `test_laws.py` holds that in every
+generated home.
+
+Pinned by `TestCorrectionFactorScalesTheLcoe` and
+`TestOperatingCostIsCorrectedBySupplier` in
 `tests/engine/manual/test_savings.py`.
 
 :::
 
-:::note[Decision: accumulated totals persist their price breakdown]
+:::note[Decision: every levelized rate is published with its breakdown by correction target]
 
 A running total mixes prices from several devices, so it cannot be
 re-corrected from a single scalar. The `*_rate_components` families split
-each rate by *which adapter's factor scales that part*, and the sensor
-layer accumulates the parts alongside the total. Editing one device's
-lifetime cost then rescales exactly the share of history that came from
-it, however long afterwards.
+each levelized rate by *which adapter's factor scales that part*: a
+producing device's saving into the tariff it displaced and its own cost, a
+drawing device's cost into one part per supplier.
 
 Terms that must never scale — the import tariff, an export compensation —
 are keyed to the grid, whose correction factor is always `1.0`. That keeps
 every component keyed by a real adapter instead of needing a sentinel.
 
+Each device's parts add up to its rate, and weighted by their keys'
+factors to its corrected rate; `test_laws.py` holds both in every
+generated home, overdrawn ones included, because the sensor layer relies
+on them.
+
+Pinned by `TestBreakdownKeysTheTariffToTheGrid` in
+`tests/engine/manual/test_savings.py`.
+
+:::
+
+:::note[Decision: accumulated totals are corrected part by part, retroactively]
+
+The sensor layer accumulates the parts alongside the total, and displays
+each accumulated part scaled by its key's *current* factor. Editing one
+device's lifetime cost then rescales exactly the share of history that
+came from it, however long afterwards.
+
 Totals accumulated before the breakdown existed restore without one. They
 are carried through unscaled: there is no attribution left to correct them
 by, and inventing one would be worse than leaving them at face value.
 
+A removed device keeps its last factor. Its own totals are frozen into the
+retired-adapter ledger, and its factor is frozen with them, so it goes on
+scaling the parts of other devices' totals that it supplied: its lifetime
+cost can no longer be edited, and falling back to `1.0` would quietly make
+that history cheaper. Only PV and battery totals enter the ledger — a
+consumer's levelized operating cost shares their key but is not a device
+cost, so removing a consumer leaves the combined device totals alone.
+
 Not pinned in the engine tier: the accumulation happens in the sensor layer.
 Covered by `tests/integration/test_correction_flow.py`
-(`test_stored_data_round_trips_the_component_breakdown` and its neighbour).
+(`test_stored_data_round_trips_the_component_breakdown` and its neighbour)
+and `tests/integration/test_end_to_end.py`
+(`test_e2e_a_removed_source_keeps_correcting_what_it_supplied`,
+`test_e2e_removing_a_consumer_leaves_the_device_ledger_alone`).
 
 :::
 

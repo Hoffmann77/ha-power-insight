@@ -745,6 +745,173 @@
       "depends_on": ["adapters_financial_return_rates"],
       "answer_shape": "scalar",
       "derivation_steps": ["Add up the per-device financial return rates."]
+    },
+
+    "combined_lcoe_rate_corrected": {
+      "title": "Levelized cost of electricity rate (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "The levelized cost rate with every PV system's and battery's price restated by its correction factor — current LCOE over the LCOE it was set up with, so an edited lifetime cost is reflected. The grid tariff is never corrected.",
+      "formula": "combined_lcoe_rate_corrected = Σ (output(source) / 1000) × price(source) × factor(source), with factor(grid) = 1",
+      "depends_on": ["combined_lcoe_rate"],
+      "answer_shape": "scalar",
+      "derivation_steps": [
+        "Repeat the levelized cost derivation.",
+        "Multiply each local source's LCOE / LCOS by its correction factor before pricing its output."
+      ],
+      "note": "The factor multiplies the price, never a finished result. With every factor at 1 this equals the uncorrected rate."
+    },
+
+    "source_adapters_lcoo_rate_components": {
+      "title": "Levelized operating cost per device, by supplier",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each PV system's or battery's levelized operating cost, split by the source that supplied the draw. Each part is priced at that supplier's own levelized price, so it is the supplier's correction factor that scales it — never the drawing device's own.",
+      "formula": "components[d][s] = (draw of d from s / 1000) × levelized price(s)",
+      "depends_on": ["sink_adapters_source_shares", "source_adapters_lcoo_rates"],
+      "answer_shape": "nested_map_fixed_keys",
+      "derivation_steps": [
+        "For each PV or battery that is drawing, read its provenance row and turn it into watts.",
+        "Price each source's watts at that source's levelized price.",
+        "A device that is producing, discharging or idle has no parts."
+      ],
+      "note": "The parts of a device add up to its levelized operating cost rate. The sensor layer accumulates them alongside the total, so editing one supplier's lifetime cost later rescales exactly the share of history that came from it."
+    },
+
+    "sink_adapters_lcoo_rate_components": {
+      "title": "Levelized operating cost per sink, by supplier",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each drawing adapter's levelized operating cost, split by the source that supplied it. A consumer has no lifetime cost of its own, so its accumulated cost is corrected part by part, by the factor of the device each part came from.",
+      "formula": "components[k][s] = (draw of k from s / 1000) × levelized price(s)",
+      "depends_on": ["sink_adapters_source_shares", "sink_adapters_lcoo_rates"],
+      "answer_shape": "nested_map_fixed_keys",
+      "derivation_steps": [
+        "For each sink, turn its provenance row into watts.",
+        "Price each source's watts at that source's levelized price."
+      ],
+      "note": "The parts of a sink add up to its levelized operating cost rate."
+    },
+
+    "source_adapters_lcoo_rates_corrected": {
+      "title": "Levelized operating cost rate per device (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each PV system's or battery's levelized operating cost with every supplier's price restated by that supplier's correction factor. A battery charging from a PV system is corrected by the PV system's factor, not its own.",
+      "formula": "rate[d] = Σ_s source_adapters_lcoo_rate_components[d][s] × factor(s)",
+      "depends_on": ["source_adapters_lcoo_rate_components"],
+      "answer_shape": "map_fixed_keys",
+      "derivation_steps": [
+        "Take the device's operating cost split by supplier.",
+        "Multiply each part by its supplier's correction factor (the grid's is 1) and add them up."
+      ]
+    },
+
+    "combined_lcoo_rate_corrected": {
+      "title": "Levelized charging cost rate (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What the watts charged into storage cost per hour, priced at each supplying source's corrected levelized price.",
+      "formula": null,
+      "depends_on": ["source_adapters_charging_power"],
+      "answer_shape": "scalar",
+      "derivation_steps": [
+        "Take the watts in the charging channel, split by the source that supplied each one.",
+        "Price each part at that source's levelized price times its correction factor, and add them up."
+      ]
+    },
+
+    "combined_levelized_device_operating_cost_rate_corrected": {
+      "title": "Levelized device operating cost rate (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What running the PV and battery hardware costs per hour at corrected levelized prices: charging plus PV standby, summed over the devices.",
+      "formula": "Σ source_adapters_lcoo_rates_corrected",
+      "depends_on": ["source_adapters_lcoo_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized operating cost rates."]
+    },
+
+    "adapters_levelized_saving_rate_components": {
+      "title": "Levelized saving per device, by correction target",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each device's levelized saving rate, split by whose correction factor scales each part. A producing device's saving is the tariff it displaced — keyed to the grid, whose factor is always 1 — less its own levelized cost, keyed to itself. A drawing device's is its operating cost by supplier, negated.",
+      "formula": null,
+      "depends_on": ["adapters_levelized_saving_rates", "source_adapters_lcoo_rate_components"],
+      "answer_shape": "nested_map_fixed_keys",
+      "derivation_steps": [
+        "A producing or discharging device: its self-consumed kW at the tariff under the grid, and minus those kW at its own levelized price under itself.",
+        "A charging or standby device: its operating cost by supplier, each part negated.",
+        "An idle device has no parts."
+      ],
+      "note": "The parts of a device add up to its levelized saving rate, and weighting each by its key's correction factor gives the corrected one."
+    },
+
+    "adapters_levelized_saving_rates_corrected": {
+      "title": "Levelized cost saving rate per device (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each device's levelized saving at corrected prices. A dearer device can only save less: doubling a PV system's lifetime cost raises the price inside the bracket, tariff − LCOE × factor, rather than doubling the saving.",
+      "formula": "rate[d] = Σ_key adapters_levelized_saving_rate_components[d][key] × factor(key)",
+      "depends_on": ["adapters_levelized_saving_rate_components"],
+      "answer_shape": "map_fixed_keys",
+      "derivation_steps": [
+        "Repeat the levelized saving derivation with each device's price multiplied by its correction factor.",
+        "A drawing device is debited its corrected operating cost."
+      ]
+    },
+
+    "combined_levelized_saving_rate_corrected": {
+      "title": "Levelized cost saving rate (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "The whole installation's levelized saving at corrected prices.",
+      "formula": "Σ adapters_levelized_saving_rates_corrected",
+      "depends_on": ["adapters_levelized_saving_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized saving rates."]
+    },
+
+    "adapters_levelized_financial_return_rate_components": {
+      "title": "Levelized financial return per device, by correction target",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each device's levelized financial return, split by whose correction factor scales each part: its saving parts, plus the export compensation keyed to the grid (it never scales) and the exported watts at its own levelized price keyed to itself.",
+      "formula": "components[d] = adapters_levelized_saving_rate_components[d] + {grid: compensation(d), d: −(exported(d) / 1000) × levelized price(d)}",
+      "depends_on": ["adapters_levelized_saving_rate_components", "source_adapters_export_compensation_rates", "source_adapters_export_power"],
+      "answer_shape": "nested_map_fixed_keys",
+      "derivation_steps": [
+        "Start from the device's saving parts.",
+        "Add its export compensation to the grid's part.",
+        "Subtract its exported kW at its own levelized price from its own part."
+      ],
+      "note": "The parts of a device add up to its levelized financial return rate, and weighting each by its key's correction factor gives the corrected one."
+    },
+
+    "adapters_levelized_financial_return_rates_corrected": {
+      "title": "Levelized financial return rate per device (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each device's corrected levelized saving plus its export earnings, less its exported watts at its corrected levelized price.",
+      "formula": "rate[d] = adapters_levelized_saving_rates_corrected[d] + compensation(d) − (exported(d) / 1000) × levelized price(d) × factor(d)",
+      "depends_on": ["adapters_levelized_saving_rates_corrected", "source_adapters_export_compensation_rates", "source_adapters_export_power"],
+      "answer_shape": "map_fixed_keys",
+      "derivation_steps": [
+        "Start from the device's corrected levelized saving rate and add its export compensation.",
+        "Subtract its exported kW times its levelized price times its correction factor."
+      ]
+    },
+
+    "combined_levelized_financial_return_rate_corrected": {
+      "title": "Levelized financial return rate (corrected)",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "The whole installation's levelized financial return at corrected prices.",
+      "formula": "Σ adapters_levelized_financial_return_rates_corrected",
+      "depends_on": ["adapters_levelized_financial_return_rates_corrected"],
+      "answer_shape": "scalar",
+      "derivation_steps": ["Add up the corrected per-device levelized financial return rates."]
     }
   }
 }

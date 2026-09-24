@@ -178,6 +178,7 @@ class Adapter:
         exports: bool = False,
         export_comp: float = 0.0,
         charge_from: tuple[str, ...] = (),
+        correction_factor: float = 1.0,
         inverted: bool = False,
         name: str | None = None,
     ) -> "Adapter":
@@ -191,6 +192,7 @@ class Adapter:
                 "exports_power": exports,
                 "export_compensation": export_comp,
                 "charge_from_adapters": tuple(charge_from),
+                "correction_factor": correction_factor,
             },
             inverted=inverted,
         )
@@ -261,6 +263,8 @@ class Adapter:
                 exports_power=cfg["exports_power"],
                 export_compensation=cfg["export_compensation"],
                 charge_from_adapters=list(cfg["charge_from_adapters"]),
+                # Frozen homes stored before batteries took a factor have none.
+                correction_factor=cfg.get("correction_factor", 1.0),
             )
         if self.kind == "consumer":
             return ConsumerAdapter(

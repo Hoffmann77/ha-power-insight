@@ -209,6 +209,57 @@
      "bat1": 0.0102
     },
     "combined_financial_return_rate": 0.1952,
+    "combined_lcoe_rate_corrected": 0.185,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0,
+      "bat1": 0.0495
+     },
+     "grid": {
+      "bat0": 0.0,
+      "bat1": 0.063
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.05,
+      "grid": 0.05
+     },
+     "bat1": {
+      "bat1": -0.072,
+      "grid": 0.12
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.048
+    },
+    "combined_levelized_saving_rate_corrected": 0.048,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.05,
+      "grid": 0.05
+     },
+     "bat1": {
+      "bat1": -0.135,
+      "grid": 0.1452
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0102
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0102,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -506,6 +557,109 @@
      "pv2": 0.193900990099
     },
     "combined_financial_return_rate": 0.381,
+    "combined_lcoe_rate_corrected": 1.155,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0801089108911,
+      "pv2": 0.132594059406
+     },
+     "pv0": {
+      "grid": 0.075801980198,
+      "pv2": 0.125465346535
+     },
+     "pv1": {
+      "grid": 0.0447920792079,
+      "pv2": 0.0741386138614
+     },
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0801089108911,
+      "pv2": 0.132594059406
+     },
+     "cons0": {
+      "grid": 0.0206732673267,
+      "pv2": 0.0342178217822
+     },
+     "cons1": {
+      "grid": 0.0060297029703,
+      "pv2": 0.0099801980198
+     },
+     "cons2": {
+      "grid": 0.0964752475248,
+      "pv2": 0.159683168317
+     },
+     "pv0": {
+      "grid": 0.075801980198,
+      "pv2": 0.125465346535
+     },
+     "pv1": {
+      "grid": 0.0447920792079,
+      "pv2": 0.0741386138614
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.212702970297,
+     "pv0": 0.201267326733,
+     "pv1": 0.118930693069,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.212702970297,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.532900990099,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.0801089108911,
+      "pv2": -0.132594059406
+     },
+     "pv0": {
+      "grid": -0.075801980198,
+      "pv2": -0.125465346535
+     },
+     "pv1": {
+      "grid": -0.0447920792079,
+      "pv2": -0.0741386138614
+     },
+     "pv2": {
+      "grid": 0.581702970297,
+      "pv2": -0.387801980198
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.212702970297,
+     "pv0": -0.201267326733,
+     "pv1": -0.118930693069,
+     "pv2": 0.193900990099
+    },
+    "combined_levelized_saving_rate_corrected": -0.339,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.0801089108911,
+      "pv2": -0.132594059406
+     },
+     "pv0": {
+      "grid": -0.075801980198,
+      "pv0": 0.0,
+      "pv2": -0.125465346535
+     },
+     "pv1": {
+      "grid": -0.0447920792079,
+      "pv1": 0.0,
+      "pv2": -0.0741386138614
+     },
+     "pv2": {
+      "grid": 0.581702970297,
+      "pv2": -0.387801980198
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.212702970297,
+     "pv0": -0.201267326733,
+     "pv1": -0.118930693069,
+     "pv2": 0.193900990099
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.339,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -780,6 +934,86 @@
      "pv2": 0.0045
     },
     "combined_financial_return_rate": 0.4278,
+    "combined_lcoe_rate_corrected": 0.2795,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.0352,
+      "pv2": 0.0
+     },
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.0432,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "pv0": 0.0112,
+      "pv2": 0.0
+     },
+     "cons2": {
+      "pv0": 0.0,
+      "pv2": 0.0
+     },
+     "grid": {
+      "pv0": 0.052,
+      "pv2": 0.0075
+     },
+     "pv1": {
+      "pv0": 0.0352,
+      "pv2": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0352,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0352,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.4158,
+      "pv0": -0.1848
+     },
+     "pv1": {
+      "pv0": -0.0352,
+      "pv2": 0.0
+     },
+     "pv2": {
+      "grid": 0.0,
+      "pv2": 0.0
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.231,
+     "pv1": -0.0352,
+     "pv2": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": 0.1958,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.4158,
+      "pv0": -0.2368
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.0352,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv2": {
+      "grid": 0.012,
+      "pv2": -0.0075
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.179,
+     "pv1": -0.0352,
+     "pv2": 0.0045
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.1483,
     "sink_adapters_restriction_deficit": {
      "cons2": 400.0,
      "grid": 650.0
@@ -1081,6 +1315,101 @@
      "pv1": 0.425462505654
     },
     "combined_financial_return_rate": 1.57004255319,
+    "combined_lcoe_rate_corrected": 1.224,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat0": 0.083710990502,
+      "pv0": 0.369893953829,
+      "pv1": 0.172996556868
+     },
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "bat0": 0.083710990502,
+      "pv0": 0.369893953829,
+      "pv1": 0.172996556868
+     },
+     "cons0": {
+      "bat0": 0.135,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "bat0": 0.0375508819539,
+      "pv0": 0.165926171849,
+      "pv1": 0.0776023942185
+     },
+     "grid": {
+      "bat0": 0.0,
+      "pv0": 0.053475177305,
+      "pv1": 0.025009929078
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.626601501198,
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.626601501198,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.626601501198,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.186289009498,
+      "grid": 0.521609226594
+     },
+     "bat1": {
+      "bat0": -0.083710990502,
+      "pv0": -0.369893953829,
+      "pv1": -0.172996556868
+     },
+     "pv0": {
+      "grid": 0.47592482462,
+      "pv0": -0.226630868866
+     },
+     "pv1": {
+      "grid": 0.556465948786,
+      "pv1": -0.105993514054
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.335320217096,
+     "bat1": -0.626601501198,
+     "pv0": 0.249293955753,
+     "pv1": 0.450472434732
+    },
+    "combined_levelized_saving_rate_corrected": 0.408485106383,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.186289009498,
+      "grid": 0.521609226594
+     },
+     "bat1": {
+      "bat0": -0.083710990502,
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": -0.369893953829,
+      "pv1": -0.172996556868
+     },
+     "pv0": {
+      "grid": 0.491967377811,
+      "pv0": -0.280106046171
+     },
+     "pv1": {
+      "grid": 0.556465948786,
+      "pv1": -0.131003443132
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.335320217096,
+     "bat1": -0.626601501198,
+     "pv0": 0.21186133164,
+     "pv1": 0.425462505654
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.346042553191,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -1262,6 +1591,41 @@
      "pv0": 0.33
     },
     "combined_financial_return_rate": 0.4125,
+    "combined_lcoe_rate_corrected": 0.545,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.4625,
+      "pv0": 0.072
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.4125,
+      "pv0": -0.0825
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.33
+    },
+    "combined_levelized_saving_rate_corrected": 0.33,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.4125,
+      "pv0": -0.0825
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.33
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.33,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -1459,6 +1823,45 @@
      "pv0": 0.28
     },
     "combined_financial_return_rate": 0.504,
+    "combined_lcoe_rate_corrected": 0.701,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.105902752294,
+      "pv0": 0.0497321100917
+     },
+     "cons1": {
+      "grid": 0.0603908256881,
+      "pv0": 0.0283596330275
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.504,
+      "pv0": -0.224
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.28
+    },
+    "combined_levelized_saving_rate_corrected": 0.28,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.504,
+      "pv0": -0.224
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.28
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.28,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -1729,6 +2132,83 @@
      "pv1": 0.237498181818
     },
     "combined_financial_return_rate": 0.1512,
+    "combined_lcoe_rate_corrected": 0.574,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {},
+     "pv0": {
+      "grid": 0.177643636364,
+      "pv1": 0.0686545454545
+     },
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "grid": 0.03312,
+      "pv1": 0.0128
+     },
+     "pv0": {
+      "grid": 0.177643636364,
+      "pv1": 0.0686545454545
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.246298181818,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.246298181818,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {},
+     "pv0": {
+      "grid": -0.177643636364,
+      "pv1": -0.0686545454545
+     },
+     "pv1": {
+      "grid": 0.328843636364,
+      "pv1": -0.0913454545455
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": -0.246298181818,
+     "pv1": 0.237498181818
+    },
+    "combined_levelized_saving_rate_corrected": -0.0088,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0
+     },
+     "pv0": {
+      "grid": -0.177643636364,
+      "pv0": 0.0,
+      "pv1": -0.0686545454545
+     },
+     "pv1": {
+      "grid": 0.328843636364,
+      "pv1": -0.0913454545455
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": -0.246298181818,
+     "pv1": 0.237498181818
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.0088,
     "sink_adapters_restriction_deficit": {
      "cons0": 1050.0
     }
@@ -1955,6 +2435,52 @@
      "bat1": 0.0
     },
     "combined_financial_return_rate": 0.0,
+    "combined_lcoe_rate_corrected": 0.69,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.312
+     },
+     "cons1": {
+      "grid": 0.06
+     },
+     "cons2": {
+      "grid": 0.024
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {}
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": 0.0,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -2102,6 +2628,41 @@
      "bat0": -0.0432
     },
     "combined_financial_return_rate": -0.0432,
+    "combined_lcoe_rate_corrected": 0.171,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0432
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0432
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0432
+    },
+    "combined_lcoo_rate_corrected": 0.0432,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0432,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.0432
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0432
+    },
+    "combined_levelized_saving_rate_corrected": -0.0432,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.0432
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0432
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.0432,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -2408,6 +2969,101 @@
      "pv2": 0.4851
     },
     "combined_financial_return_rate": 2.022,
+    "combined_lcoe_rate_corrected": 1.3235,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0705,
+      "pv0": 0.01525,
+      "pv1": 0.027,
+      "pv2": 0.0196
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0705,
+      "pv0": 0.01525,
+      "pv1": 0.027,
+      "pv2": 0.0196
+     },
+     "cons0": {
+      "grid": 0.128435643564,
+      "pv0": 0.0277821782178,
+      "pv1": 0.0491881188119,
+      "pv2": 0.0357069306931
+     },
+     "cons1": {
+      "grid": 0.0237326732673,
+      "pv0": 0.00513366336634,
+      "pv1": 0.00908910891089,
+      "pv2": 0.00659801980198
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.13235,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.13235,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.13235,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.0705,
+      "pv0": -0.01525,
+      "pv1": -0.027,
+      "pv2": -0.0196
+     },
+     "pv0": {
+      "grid": 0.8235,
+      "pv0": -0.13725
+     },
+     "pv1": {
+      "grid": 0.6075,
+      "pv1": -0.243
+     },
+     "pv2": {
+      "grid": 0.6615,
+      "pv2": -0.1764
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.13235,
+     "pv0": 0.68625,
+     "pv1": 0.3645,
+     "pv2": 0.4851
+    },
+    "combined_levelized_saving_rate_corrected": 1.4035,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.0705,
+      "pv0": -0.01525,
+      "pv1": -0.027,
+      "pv2": -0.0196
+     },
+     "pv0": {
+      "grid": 0.8235,
+      "pv0": -0.13725
+     },
+     "pv1": {
+      "grid": 0.6075,
+      "pv1": -0.243
+     },
+     "pv2": {
+      "grid": 0.6615,
+      "pv2": -0.1764
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.13235,
+     "pv0": 0.68625,
+     "pv1": 0.3645,
+     "pv2": 0.4851
+    },
+    "combined_levelized_financial_return_rate_corrected": 1.4035,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -2726,6 +3382,112 @@
      "pv2": -0.23715
     },
     "combined_financial_return_rate": 0.0252,
+    "combined_lcoe_rate_corrected": 0.603,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.1134,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {
+      "grid": 0.16065,
+      "pv0": 0.0765,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.1134,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "cons0": {
+      "grid": 0.070875,
+      "pv0": 0.03375,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "grid": 0.05985,
+      "pv0": 0.0285,
+      "pv1": 0.006
+     },
+     "cons2": {
+      "grid": 0.036225,
+      "pv0": 0.01725,
+      "pv1": 0.0
+     },
+     "pv2": {
+      "grid": 0.16065,
+      "pv0": 0.0765,
+      "pv1": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.1134,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.23715
+    },
+    "combined_lcoo_rate_corrected": 0.1134,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.35055,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.1134,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "pv0": {
+      "grid": 0.27825,
+      "pv0": -0.0795
+     },
+     "pv1": {
+      "grid": 0.021,
+      "pv1": -0.006
+     },
+     "pv2": {
+      "grid": -0.16065,
+      "pv0": -0.0765,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.1134,
+     "pv0": 0.19875,
+     "pv1": 0.015,
+     "pv2": -0.23715
+    },
+    "combined_levelized_saving_rate_corrected": -0.1368,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.1134,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "pv0": {
+      "grid": 0.27825,
+      "pv0": -0.0795
+     },
+     "pv1": {
+      "grid": 0.021,
+      "pv1": -0.006
+     },
+     "pv2": {
+      "grid": -0.16065,
+      "pv0": -0.0765,
+      "pv1": 0.0,
+      "pv2": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.1134,
+     "pv0": 0.19875,
+     "pv1": 0.015,
+     "pv2": -0.23715
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.1368,
     "sink_adapters_restriction_deficit": {
      "cons1": 380.0
     }
@@ -2966,6 +3728,95 @@
      "pv2": -0.100465116279
     },
     "combined_financial_return_rate": 0.77,
+    "combined_lcoe_rate_corrected": 0.8,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0142325581395,
+      "pv1": 0.112279069767
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {
+      "pv0": 0.0113023255814,
+      "pv1": 0.0891627906977
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0142325581395,
+      "pv1": 0.112279069767
+     },
+     "grid": {
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "pv2": {
+      "pv0": 0.0113023255814,
+      "pv1": 0.0891627906977
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.126511627907,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.100465116279
+    },
+    "combined_lcoo_rate_corrected": 0.126511627907,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.226976744186,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "pv0": -0.0142325581395,
+      "pv1": -0.112279069767
+     },
+     "pv0": {
+      "grid": 0.134302325581,
+      "pv0": -0.0644651162791
+     },
+     "pv1": {
+      "grid": 0.635697674419,
+      "pv1": -0.508558139535
+     },
+     "pv2": {
+      "pv0": -0.0113023255814,
+      "pv1": -0.0891627906977
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.126511627907,
+     "pv0": 0.0698372093023,
+     "pv1": 0.127139534884,
+     "pv2": -0.100465116279
+    },
+    "combined_levelized_saving_rate_corrected": -0.03,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": -0.0142325581395,
+      "pv1": -0.112279069767
+     },
+     "pv0": {
+      "grid": 0.134302325581,
+      "pv0": -0.0644651162791
+     },
+     "pv1": {
+      "grid": 0.635697674419,
+      "pv1": -0.508558139535
+     },
+     "pv2": {
+      "grid": 0.0,
+      "pv0": -0.0113023255814,
+      "pv1": -0.0891627906977,
+      "pv2": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.126511627907,
+     "pv0": 0.0698372093023,
+     "pv1": 0.127139534884,
+     "pv2": -0.100465116279
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.03,
     "sink_adapters_restriction_deficit": {
      "grid": 1120.0
     }
@@ -3172,6 +4023,50 @@
      "pv0": -0.042
     },
     "combined_financial_return_rate": -0.042,
+    "combined_lcoe_rate_corrected": 0.189,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {
+      "grid": 0.042
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.0672
+     },
+     "cons1": {
+      "grid": 0.0756
+     },
+     "cons2": {
+      "grid": 0.0042
+     },
+     "pv0": {
+      "grid": 0.042
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.042
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.042,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": -0.042
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": -0.042
+    },
+    "combined_levelized_saving_rate_corrected": -0.042,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": -0.042,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": -0.042
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.042,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -3307,6 +4202,22 @@
     "adapters_financial_return_rates": {},
     "adapters_levelized_financial_return_rates": {},
     "combined_financial_return_rate": 0.0,
+    "combined_lcoe_rate_corrected": 0.025,
+    "source_adapters_lcoo_rate_components": {},
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.0075
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {},
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {},
+    "adapters_levelized_saving_rates_corrected": {},
+    "combined_levelized_saving_rate_corrected": 0.0,
+    "adapters_levelized_financial_return_rate_components": {},
+    "adapters_levelized_financial_return_rates_corrected": {},
+    "combined_levelized_financial_return_rate_corrected": 0.0,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -3634,6 +4545,112 @@
      "pv1": 0.221711627907
     },
     "combined_financial_return_rate": 0.395,
+    "combined_lcoe_rate_corrected": 0.45,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.0,
+      "grid": 0.0025,
+      "pv1": 0.0
+     },
+     "bat1": {},
+     "pv0": {
+      "bat1": 0.0,
+      "grid": 0.0171395348837,
+      "pv1": 0.00207209302326
+     },
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.0,
+      "grid": 0.0025,
+      "pv1": 0.0
+     },
+     "cons0": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0095
+     },
+     "cons1": {
+      "bat1": 0.055,
+      "grid": 0.179186046512,
+      "pv1": 0.0216627906977
+     },
+     "cons2": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0075
+     },
+     "pv0": {
+      "bat1": 0.0,
+      "grid": 0.0171395348837,
+      "pv1": 0.00207209302326
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0025,
+     "bat1": 0.0,
+     "pv0": 0.019211627907,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0025,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.021711627907,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat1": 0.0,
+      "grid": -0.0025,
+      "pv1": 0.0
+     },
+     "bat1": {
+      "bat1": -0.055,
+      "grid": 0.1375
+     },
+     "pv0": {
+      "bat1": 0.0,
+      "grid": -0.0171395348837,
+      "pv1": -0.00207209302326
+     },
+     "pv1": {
+      "grid": 0.277139534884,
+      "pv1": -0.0554279069767
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0025,
+     "bat1": 0.0825,
+     "pv0": -0.019211627907,
+     "pv1": 0.221711627907
+    },
+    "combined_levelized_saving_rate_corrected": 0.2825,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "bat1": 0.0,
+      "grid": -0.0025,
+      "pv1": 0.0
+     },
+     "bat1": {
+      "bat1": -0.055,
+      "grid": 0.1375
+     },
+     "pv0": {
+      "bat1": 0.0,
+      "grid": -0.0171395348837,
+      "pv0": 0.0,
+      "pv1": -0.00207209302326
+     },
+     "pv1": {
+      "grid": 0.277139534884,
+      "pv1": -0.0554279069767
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0025,
+     "bat1": 0.0825,
+     "pv0": -0.019211627907,
+     "pv1": 0.221711627907
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.2825,
     "sink_adapters_restriction_deficit": {
      "cons1": 1150.0
     }
@@ -3862,6 +4879,55 @@
      "bat1": 0.0
     },
     "combined_financial_return_rate": 0.025,
+    "combined_lcoe_rate_corrected": 0.015,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0
+     },
+     "cons1": {
+      "bat0": 0.0
+     },
+     "grid": {
+      "bat0": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.015,
+      "grid": 0.025
+     },
+     "bat1": {}
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.01,
+     "bat1": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": 0.01,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.015,
+      "grid": 0.025
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.01,
+     "bat1": 0.0
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.01,
     "sink_adapters_restriction_deficit": {
      "cons0": 10.0,
      "cons1": 20.0,
@@ -4125,6 +5191,95 @@
      "pv1": 0.442933333333
     },
     "combined_financial_return_rate": 0.906,
+    "combined_lcoe_rate_corrected": 0.479,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0,
+      "pv1": 0.0744
+     },
+     "bat1": {
+      "pv0": 0.00703703703704,
+      "pv1": 0.0743111111111
+     },
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0,
+      "pv1": 0.0744
+     },
+     "bat1": {
+      "pv0": 0.00703703703704,
+      "pv1": 0.0743111111111
+     },
+     "cons0": {
+      "pv0": 0.0184259259259,
+      "pv1": 0.194577777778
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0744,
+     "bat1": 0.0813481481481,
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.155748148148,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.155748148148,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "pv0": 0.0,
+      "pv1": -0.0744
+     },
+     "bat1": {
+      "pv0": -0.00703703703704,
+      "pv1": -0.0743111111111
+     },
+     "pv0": {
+      "grid": 0.167777777778,
+      "pv0": -0.027962962963
+     },
+     "pv1": {
+      "grid": 0.738222222222,
+      "pv1": -0.295288888889
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0744,
+     "bat1": -0.0813481481481,
+     "pv0": 0.139814814815,
+     "pv1": 0.442933333333
+    },
+    "combined_levelized_saving_rate_corrected": 0.427,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.0744
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": -0.00703703703704,
+      "pv1": -0.0743111111111
+     },
+     "pv0": {
+      "grid": 0.167777777778,
+      "pv0": -0.027962962963
+     },
+     "pv1": {
+      "grid": 0.738222222222,
+      "pv1": -0.295288888889
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0744,
+     "bat1": -0.0813481481481,
+     "pv0": 0.139814814815,
+     "pv1": 0.442933333333
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.427,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -4350,6 +5505,49 @@
      "bat0": 0.0075
     },
     "combined_financial_return_rate": 0.045,
+    "combined_lcoe_rate_corrected": 0.1545,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0,
+      "grid": 0.0288
+     },
+     "cons1": {
+      "bat0": 0.0,
+      "grid": 0.0306
+     },
+     "cons2": {
+      "bat0": 0.0375,
+      "grid": 0.0612
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.0375,
+      "grid": 0.045
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0075
+    },
+    "combined_levelized_saving_rate_corrected": 0.0075,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.0375,
+      "grid": 0.045
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0075
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0075,
     "sink_adapters_restriction_deficit": {
      "cons2": 340.0
     }
@@ -4664,6 +5862,101 @@
      "pv2": 0.613169031311
     },
     "combined_financial_return_rate": 2.478,
+    "combined_lcoe_rate_corrected": 1.704,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": 0.0487793542074,
+      "pv2": 0.0727323874755
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": 0.0487793542074,
+      "pv2": 0.0727323874755
+     },
+     "cons0": {
+      "grid": 0.478659217877,
+      "pv0": 0.0241307031539,
+      "pv1": 0.23726823866,
+      "pv2": 0.186348577114
+     },
+     "cons1": {
+      "grid": 0.0,
+      "pv0": 0.0642397362901,
+      "pv1": 0.29893377285,
+      "pv2": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.121511741683,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.121511741683,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.121511741683,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.0487793542074,
+      "pv2": -0.0727323874755
+     },
+     "pv0": {
+      "grid": 0.336,
+      "pv0": -0.096
+     },
+     "pv1": {
+      "grid": 1.28356335616,
+      "pv1": -0.611220645793
+     },
+     "pv2": {
+      "grid": 0.858436643836,
+      "pv2": -0.245267612524
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.121511741683,
+     "pv0": 0.24,
+     "pv1": 0.672342710372,
+     "pv2": 0.613169031311
+    },
+    "combined_levelized_saving_rate_corrected": 1.404,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.0487793542074,
+      "pv2": -0.0727323874755
+     },
+     "pv0": {
+      "grid": 0.336,
+      "pv0": -0.096
+     },
+     "pv1": {
+      "grid": 1.28356335616,
+      "pv1": -0.611220645793
+     },
+     "pv2": {
+      "grid": 0.858436643836,
+      "pv2": -0.245267612524
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.121511741683,
+     "pv0": 0.24,
+     "pv1": 0.672342710372,
+     "pv2": 0.613169031311
+    },
+    "combined_levelized_financial_return_rate_corrected": 1.404,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -4913,6 +6206,74 @@
      "pv0": 0.00788475836431
     },
     "combined_financial_return_rate": 0.0394237918216,
+    "combined_lcoe_rate_corrected": 0.8375,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "grid": 0.0,
+      "pv0": 0.172
+     },
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "grid": 0.0,
+      "pv0": 0.172
+     },
+     "cons0": {
+      "grid": 0.471607806691,
+      "pv0": 0.0207137546468
+     },
+     "cons1": {
+      "grid": 0.246468401487,
+      "pv0": 0.0108252788104
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.172,
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.172,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.172,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "grid": 0.0,
+      "pv0": -0.172
+     },
+     "pv0": {
+      "grid": 0.0394237918216,
+      "pv0": -0.0315390334572
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": -0.172,
+     "pv0": 0.00788475836431
+    },
+    "combined_levelized_saving_rate_corrected": -0.164115241636,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": -0.172
+     },
+     "pv0": {
+      "grid": 0.0394237918216,
+      "pv0": -0.0315390334572
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": -0.172,
+     "pv0": 0.00788475836431
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.164115241636,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -5058,6 +6419,40 @@
      "pv0": 0.5501
     },
     "combined_financial_return_rate": 0.6726,
+    "combined_lcoe_rate_corrected": 0.1225,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "grid": {
+      "pv0": 0.0495
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.6132,
+      "pv0": -0.073
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.5402
+    },
+    "combined_levelized_saving_rate_corrected": 0.5402,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.6726,
+      "pv0": -0.1225
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.5501
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.5501,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -5335,6 +6730,100 @@
      "pv2": -0.0183454545455
     },
     "combined_financial_return_rate": 0.511472727273,
+    "combined_lcoe_rate_corrected": 0.4235,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "pv0": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "pv0": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "grid": {
+      "pv0": 0.0826597402597,
+      "pv1": 0.0128311688312,
+      "pv2": 0.0189090909091
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "pv0": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv0": {
+      "grid": 0.33501038961,
+      "pv0": -0.22334025974
+     },
+     "pv1": {
+      "grid": 0.124807792208,
+      "pv1": -0.0346688311688
+     },
+     "pv2": {
+      "grid": 0.0459818181818,
+      "pv2": -0.0510909090909
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.11167012987,
+     "pv1": 0.090138961039,
+     "pv2": -0.00510909090909
+    },
+    "combined_levelized_saving_rate_corrected": 0.1967,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv0": {
+      "grid": 0.33501038961,
+      "pv0": -0.306
+     },
+     "pv1": {
+      "grid": 0.124807792208,
+      "pv1": -0.0475
+     },
+     "pv2": {
+      "grid": 0.0516545454545,
+      "pv2": -0.07
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.0290103896104,
+     "pv1": 0.0773077922078,
+     "pv2": -0.0183454545455
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0879727272727,
     "sink_adapters_restriction_deficit": {
      "bat1": 1070.0
     }
@@ -5576,6 +7065,59 @@
      "pv0": 0.247
     },
     "combined_financial_return_rate": 0.5125,
+    "combined_lcoe_rate_corrected": 0.7755,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0225,
+      "grid": 0.405,
+      "pv0": 0.228
+     },
+     "cons1": {
+      "bat0": 0.0,
+      "grid": 0.12,
+      "pv0": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.0225,
+      "grid": 0.0375
+     },
+     "pv0": {
+      "grid": 0.475,
+      "pv0": -0.228
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.015,
+     "pv0": 0.247
+    },
+    "combined_levelized_saving_rate_corrected": 0.262,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.0225,
+      "grid": 0.0375
+     },
+     "pv0": {
+      "grid": 0.475,
+      "pv0": -0.228
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.015,
+     "pv0": 0.247
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.262,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -5906,6 +7448,128 @@
      "pv2": 0.343794357367
     },
     "combined_financial_return_rate": 1.2528,
+    "combined_lcoe_rate_corrected": 0.615,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat1": {
+      "pv1": 0.0,
+      "pv2": 0.037
+     },
+     "pv0": {
+      "pv1": 0.0355673981191,
+      "pv2": 0.00660815047022
+     },
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat1": {
+      "pv1": 0.0,
+      "pv2": 0.037
+     },
+     "cons0": {
+      "pv1": 0.144,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "pv1": 0.120470219436,
+      "pv2": 0.0223824451411
+     },
+     "cons2": {
+      "pv1": 0.0240940438871,
+      "pv2": 0.00447648902821
+     },
+     "grid": {
+      "pv1": 0.0826081504702,
+      "pv2": 0.0153479623824
+     },
+     "pv0": {
+      "pv1": 0.0355673981191,
+      "pv2": 0.00660815047022
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.037,
+     "pv0": 0.0421755485893,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.037,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0791755485893,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat1": {
+      "pv1": 0.0,
+      "pv2": -0.037
+     },
+     "pv0": {
+      "pv1": -0.0355673981191,
+      "pv2": -0.00660815047022
+     },
+     "pv1": {
+      "grid": 0.822831347962,
+      "pv1": -0.391824451411
+     },
+     "pv2": {
+      "grid": 0.386768652038,
+      "pv2": -0.0460438871473
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": -0.037,
+     "pv0": -0.0421755485893,
+     "pv1": 0.431006896552,
+     "pv2": 0.34072476489
+    },
+    "combined_levelized_saving_rate_corrected": 0.692556112853,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": -0.037
+     },
+     "pv0": {
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.0355673981191,
+      "pv2": -0.00660815047022
+     },
+     "pv1": {
+      "grid": 0.847613793103,
+      "pv1": -0.474432601881
+     },
+     "pv2": {
+      "grid": 0.405186206897,
+      "pv2": -0.0613918495298
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": -0.037,
+     "pv0": -0.0421755485893,
+     "pv1": 0.373181191223,
+     "pv2": 0.343794357367
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.6378,
     "sink_adapters_restriction_deficit": {
      "bat0": 560.0
     }
@@ -6119,6 +7783,74 @@
      "pv2": 0.0005625
     },
     "combined_financial_return_rate": 0.1575,
+    "combined_lcoe_rate_corrected": 0.1,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.001,
+      "pv2": 0.0015
+     },
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "grid": {
+      "pv0": 0.0075,
+      "pv2": 0.01125
+     },
+     "pv1": {
+      "pv0": 0.001,
+      "pv2": 0.0015
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0025,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0025,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.0984375,
+      "pv0": -0.0315
+     },
+     "pv1": {
+      "pv0": -0.001,
+      "pv2": -0.0015
+     },
+     "pv2": {
+      "grid": 0.0590625,
+      "pv2": -0.04725
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.0669375,
+     "pv1": -0.0025,
+     "pv2": 0.0118125
+    },
+    "combined_levelized_saving_rate_corrected": 0.07625,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.0984375,
+      "pv0": -0.039
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.001,
+      "pv1": 0.0,
+      "pv2": -0.0015
+     },
+     "pv2": {
+      "grid": 0.0590625,
+      "pv2": -0.0585
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.0594375,
+     "pv1": -0.0025,
+     "pv2": 0.0005625
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0575,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -6357,6 +8089,81 @@
      "pv1": -0.00984281842818
     },
     "combined_financial_return_rate": 0.7975,
+    "combined_lcoe_rate_corrected": 0.643,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": 0.0048
+     },
+     "pv0": {},
+     "pv1": {
+      "grid": 0.00271002710027,
+      "pv0": 0.00713279132791
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": 0.0048
+     },
+     "cons0": {
+      "grid": 0.275,
+      "pv0": 0.0
+     },
+     "pv1": {
+      "grid": 0.00271002710027,
+      "pv0": 0.00713279132791
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0048,
+     "pv0": 0.0,
+     "pv1": 0.00984281842818
+    },
+    "combined_lcoo_rate_corrected": 0.0048,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0146428184282,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": 0.0,
+      "pv0": -0.0048
+     },
+     "pv0": {
+      "grid": 0.8002100271,
+      "pv0": -0.256067208672
+     },
+     "pv1": {
+      "grid": -0.00271002710027,
+      "pv0": -0.00713279132791
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0048,
+     "pv0": 0.544142818428,
+     "pv1": -0.00984281842818
+    },
+    "combined_levelized_saving_rate_corrected": 0.5295,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": -0.0048
+     },
+     "pv0": {
+      "grid": 0.8002100271,
+      "pv0": -0.256067208672
+     },
+     "pv1": {
+      "grid": -0.00271002710027,
+      "pv0": -0.00713279132791,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0048,
+     "pv0": 0.544142818428,
+     "pv1": -0.00984281842818
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.5295,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -6620,6 +8427,71 @@
      "pv1": 0.042
     },
     "combined_financial_return_rate": 0.603,
+    "combined_lcoe_rate_corrected": 0.5315,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0825,
+      "pv0": 0.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "bat0": 0.0,
+      "pv0": 0.0,
+      "pv1": 0.048
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.2475,
+      "grid": 0.297
+     },
+     "pv0": {
+      "grid": 0.18,
+      "pv0": -0.2
+     },
+     "pv1": {
+      "grid": 0.126,
+      "pv1": -0.084
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0495,
+     "pv0": -0.02,
+     "pv1": 0.042
+    },
+    "combined_levelized_saving_rate_corrected": 0.0715,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.2475,
+      "grid": 0.297
+     },
+     "pv0": {
+      "grid": 0.18,
+      "pv0": -0.2
+     },
+     "pv1": {
+      "grid": 0.126,
+      "pv1": -0.084
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0495,
+     "pv0": -0.02,
+     "pv1": 0.042
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0715,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -6843,6 +8715,66 @@
      "pv2": -0.0575
     },
     "combined_financial_return_rate": 0.063,
+    "combined_lcoe_rate_corrected": 0.476,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "grid": {
+      "pv0": 0.0525,
+      "pv1": 0.366,
+      "pv2": 0.0575
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.0,
+      "pv0": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv2": {
+      "grid": 0.0,
+      "pv2": 0.0
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": 0.0,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.063,
+      "pv0": -0.0525
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": -0.366
+     },
+     "pv2": {
+      "grid": 0.0,
+      "pv2": -0.0575
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.0105,
+     "pv1": -0.366,
+     "pv2": -0.0575
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.413,
     "sink_adapters_restriction_deficit": {
      "grid": 4200.0
     }
@@ -7068,6 +9000,57 @@
      "pv1": 0.2405
     },
     "combined_financial_return_rate": 1.175,
+    "combined_lcoe_rate_corrected": 0.45,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.0,
+      "pv1": 0.0084
+     },
+     "cons1": {
+      "pv0": 0.0,
+      "pv1": 0.1668
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.7125,
+      "pv0": -0.228
+     },
+     "pv1": {
+      "grid": 0.4625,
+      "pv1": -0.222
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.4845,
+     "pv1": 0.2405
+    },
+    "combined_levelized_saving_rate_corrected": 0.725,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.7125,
+      "pv0": -0.228
+     },
+     "pv1": {
+      "grid": 0.4625,
+      "pv1": -0.222
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.4845,
+     "pv1": 0.2405
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.725,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -7300,6 +9283,72 @@
      "pv1": -0.0882
     },
     "combined_financial_return_rate": 0.1242,
+    "combined_lcoe_rate_corrected": 0.234,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {
+      "pv1": 0.0216
+     },
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv1": 0.0252
+     },
+     "cons1": {
+      "pv1": 0.0
+     },
+     "grid": {
+      "pv1": 0.1296
+     },
+     "pv0": {
+      "pv1": 0.0216
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0216,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0216,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "pv0": {
+      "pv1": -0.0216
+     },
+     "pv1": {
+      "grid": 0.1242,
+      "pv1": -0.0828
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": -0.0216,
+     "pv1": 0.0414
+    },
+    "combined_levelized_saving_rate_corrected": 0.0198,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "pv0": {
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.0216
+     },
+     "pv1": {
+      "grid": 0.1242,
+      "pv1": -0.2124
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": -0.0216,
+     "pv1": -0.0882
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.1098,
     "sink_adapters_restriction_deficit": {
      "cons1": 40.0
     }
@@ -7509,6 +9558,57 @@
      "pv1": 0.374
     },
     "combined_financial_return_rate": 1.1786,
+    "combined_lcoe_rate_corrected": 0.568,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.1296,
+      "pv1": 0.136
+     },
+     "grid": {
+      "pv0": 0.2244,
+      "pv1": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.519,
+      "pv0": -0.2076
+     },
+     "pv1": {
+      "grid": 0.51,
+      "pv1": -0.136
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.3114,
+     "pv1": 0.374
+    },
+    "combined_levelized_saving_rate_corrected": 0.6854,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.6686,
+      "pv0": -0.432
+     },
+     "pv1": {
+      "grid": 0.51,
+      "pv1": -0.136
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.2366,
+     "pv1": 0.374
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.6106,
     "sink_adapters_restriction_deficit": {
      "cons0": 1080.0
     }
@@ -7758,6 +9858,74 @@
      "pv0": -0.0021
     },
     "combined_financial_return_rate": 0.3725,
+    "combined_lcoe_rate_corrected": 0.7875,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {},
+     "pv0": {
+      "bat1": 0.0006,
+      "grid": 0.0015
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat1": 0.0,
+      "grid": 0.0
+     },
+     "cons1": {
+      "bat1": 0.0894,
+      "grid": 0.2235
+     },
+     "pv0": {
+      "bat1": 0.0006,
+      "grid": 0.0015
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.0021
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0021,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat1": -0.2244,
+      "grid": 0.374
+     },
+     "pv0": {
+      "bat1": -0.0006,
+      "grid": -0.0015
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.1496,
+     "pv0": -0.0021
+    },
+    "combined_levelized_saving_rate_corrected": 0.1475,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": -0.2244,
+      "grid": 0.374
+     },
+     "pv0": {
+      "bat1": -0.0006,
+      "grid": -0.0015,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.1496,
+     "pv0": -0.0021
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.1475,
     "sink_adapters_restriction_deficit": {
      "cons0": 1900.0
     }
@@ -8000,6 +10168,63 @@
      "pv1": 0.165
     },
     "combined_financial_return_rate": 1.47,
+    "combined_lcoe_rate_corrected": 1.462,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.784091803279,
+      "pv0": 0.157967213115,
+      "pv1": 0.107704918033
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "pv0": {
+      "grid": 1.155,
+      "pv0": -0.22
+     },
+     "pv1": {
+      "grid": 0.315,
+      "pv1": -0.15
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.935,
+     "pv1": 0.165
+    },
+    "combined_levelized_saving_rate_corrected": 1.1,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "pv0": {
+      "grid": 1.155,
+      "pv0": -0.22
+     },
+     "pv1": {
+      "grid": 0.315,
+      "pv1": -0.15
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.935,
+     "pv1": 0.165
+    },
+    "combined_levelized_financial_return_rate_corrected": 1.1,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -8233,6 +10458,65 @@
      "bat1": -0.015
     },
     "combined_financial_return_rate": 0.24,
+    "combined_lcoe_rate_corrected": 0.175,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat0": 0.0,
+      "grid": 0.015
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "bat0": 0.0,
+      "grid": 0.015
+     },
+     "cons0": {
+      "bat0": 0.022,
+      "grid": 0.0
+     },
+     "cons1": {
+      "bat0": 0.0,
+      "grid": 0.027
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.015
+    },
+    "combined_lcoo_rate_corrected": 0.015,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.015,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.085,
+      "grid": 0.255
+     },
+     "bat1": {
+      "bat0": 0.0,
+      "grid": -0.015
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.17,
+     "bat1": -0.015
+    },
+    "combined_levelized_saving_rate_corrected": 0.155,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.085,
+      "grid": 0.255
+     },
+     "bat1": {
+      "bat0": 0.0,
+      "bat1": 0.0,
+      "grid": -0.015
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.17,
+     "bat1": -0.015
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.155,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -8434,6 +10718,53 @@
      "pv1": 0.858
     },
     "combined_financial_return_rate": 2.499,
+    "combined_lcoe_rate_corrected": 0.944,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.0,
+      "pv1": 0.64
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.861,
+      "pv0": -0.164
+     },
+     "pv1": {
+      "grid": 1.638,
+      "pv1": -0.78
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.697,
+     "pv1": 0.858
+    },
+    "combined_levelized_saving_rate_corrected": 1.555,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.861,
+      "pv0": -0.164
+     },
+     "pv1": {
+      "grid": 1.638,
+      "pv1": -0.78
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.697,
+     "pv1": 0.858
+    },
+    "combined_levelized_financial_return_rate_corrected": 1.555,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -8744,6 +11075,101 @@
      "pv2": 0.00825
     },
     "combined_financial_return_rate": 1.47,
+    "combined_lcoe_rate_corrected": 1.442,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {
+      "bat0": 0.11875,
+      "grid": 0.08925,
+      "pv1": 0.15,
+      "pv2": 0.0025
+     },
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "bat0": 0.248146551724,
+      "grid": 0.186501724138,
+      "pv1": 0.313448275862,
+      "pv2": 0.00522413793103
+     },
+     "pv0": {
+      "bat0": 0.11875,
+      "grid": 0.08925,
+      "pv1": 0.15,
+      "pv2": 0.0025
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.3605,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.3605,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.35625,
+      "grid": 0.5985
+     },
+     "pv0": {
+      "bat0": -0.11875,
+      "grid": -0.08925,
+      "pv1": -0.15,
+      "pv2": -0.0025
+     },
+     "pv1": {
+      "grid": 0.945,
+      "pv1": -0.45
+     },
+     "pv2": {
+      "grid": 0.01575,
+      "pv2": -0.0075
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.24225,
+     "pv0": -0.3605,
+     "pv1": 0.495,
+     "pv2": 0.00825
+    },
+    "combined_levelized_saving_rate_corrected": 0.385,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.35625,
+      "grid": 0.5985
+     },
+     "pv0": {
+      "bat0": -0.11875,
+      "grid": -0.08925,
+      "pv0": 0.0,
+      "pv1": -0.15,
+      "pv2": -0.0025
+     },
+     "pv1": {
+      "grid": 0.945,
+      "pv1": -0.45
+     },
+     "pv2": {
+      "grid": 0.01575,
+      "pv2": -0.0075
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.24225,
+     "pv0": -0.3605,
+     "pv1": 0.495,
+     "pv2": 0.00825
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.385,
     "sink_adapters_restriction_deficit": {
      "cons0": 1620.0
     }
@@ -8937,6 +11363,60 @@
      "pv1": -0.0952
     },
     "combined_financial_return_rate": 0.315,
+    "combined_lcoe_rate_corrected": 0.164,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.0952
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.06
+     },
+     "grid": {
+      "pv0": 0.0128
+     },
+     "pv1": {
+      "pv0": 0.0952
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0952
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0952,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.315,
+      "pv0": -0.06
+     },
+     "pv1": {
+      "pv0": -0.0952
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.255,
+     "pv1": -0.0952
+    },
+    "combined_levelized_saving_rate_corrected": 0.1598,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.315,
+      "pv0": -0.0728
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.0952,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.2422,
+     "pv1": -0.0952
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.147,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -9084,6 +11564,40 @@
      "bat0": 0.09
     },
     "combined_financial_return_rate": 0.15,
+    "combined_lcoe_rate_corrected": 0.06,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "grid": {
+      "bat0": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.06,
+      "grid": 0.15
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.09
+    },
+    "combined_levelized_saving_rate_corrected": 0.09,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.06,
+      "grid": 0.15
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.09
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.09,
     "sink_adapters_restriction_deficit": {
      "grid": 600.0
     }
@@ -9414,6 +11928,112 @@
      "pv2": 1.16389913793
     },
     "combined_financial_return_rate": 4.8342,
+    "combined_lcoe_rate_corrected": 1.538,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat0": 0.000853448275862,
+      "grid": 0.0,
+      "pv0": 0.0023275862069,
+      "pv1": 0.00204827586207,
+      "pv2": 0.00214137931034
+     },
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "bat0": 0.000853448275862,
+      "grid": 0.0,
+      "pv0": 0.0023275862069,
+      "pv1": 0.00204827586207,
+      "pv2": 0.00214137931034
+     },
+     "cons0": {
+      "bat0": 0.0596465517241,
+      "grid": 0.588,
+      "pv0": 0.162672413793,
+      "pv1": 0.143151724138,
+      "pv2": 0.14965862069
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.00737068965517,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.00737068965517,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.00737068965517,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.109146551724,
+      "grid": 0.458415517241
+     },
+     "bat1": {
+      "bat0": -0.000853448275862,
+      "grid": 0.0,
+      "pv0": -0.0023275862069,
+      "pv1": -0.00204827586207,
+      "pv2": -0.00214137931034
+     },
+     "pv0": {
+      "grid": 1.56278017241,
+      "pv0": -0.297672413793
+     },
+     "pv1": {
+      "grid": 1.37524655172,
+      "pv1": -0.261951724138
+     },
+     "pv2": {
+      "grid": 1.43775775862,
+      "pv2": -0.27385862069
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.349268965517,
+     "bat1": -0.00737068965517,
+     "pv0": 1.26510775862,
+     "pv1": 1.11329482759,
+     "pv2": 1.16389913793
+    },
+    "combined_levelized_saving_rate_corrected": 3.8842,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.109146551724,
+      "grid": 0.458415517241
+     },
+     "bat1": {
+      "bat0": -0.000853448275862,
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": -0.0023275862069,
+      "pv1": -0.00204827586207,
+      "pv2": -0.00214137931034
+     },
+     "pv0": {
+      "grid": 1.56278017241,
+      "pv0": -0.297672413793
+     },
+     "pv1": {
+      "grid": 1.37524655172,
+      "pv1": -0.261951724138
+     },
+     "pv2": {
+      "grid": 1.43775775862,
+      "pv2": -0.27385862069
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.349268965517,
+     "bat1": -0.00737068965517,
+     "pv0": 1.26510775862,
+     "pv1": 1.11329482759,
+     "pv2": 1.16389913793
+    },
+    "combined_levelized_financial_return_rate_corrected": 3.8842,
     "sink_adapters_restriction_deficit": {
      "cons0": 6290.0
     }
@@ -9602,6 +12222,57 @@
      "pv0": 0.37
     },
     "combined_financial_return_rate": 0.357,
+    "combined_lcoe_rate_corrected": 0.158,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.063,
+      "pv0": 0.045
+     },
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.063,
+      "pv0": 0.045
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.108,
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.108,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.108,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.063,
+      "pv0": -0.045
+     },
+     "pv0": {
+      "grid": 0.42,
+      "pv0": -0.05
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.108,
+     "pv0": 0.37
+    },
+    "combined_levelized_saving_rate_corrected": 0.262,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.063,
+      "pv0": -0.045
+     },
+     "pv0": {
+      "grid": 0.42,
+      "pv0": -0.05
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.108,
+     "pv0": 0.37
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.262,
     "sink_adapters_restriction_deficit": {
      "bat0": 900.0
     }
@@ -9775,6 +12446,28 @@
     "adapters_financial_return_rates": {},
     "adapters_levelized_financial_return_rates": {},
     "combined_financial_return_rate": 0.0,
+    "combined_lcoe_rate_corrected": 0.0625,
+    "source_adapters_lcoo_rate_components": {},
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.0225
+     },
+     "cons1": {
+      "grid": 0.0125
+     },
+     "cons2": {
+      "grid": 0.005
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {},
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {},
+    "adapters_levelized_saving_rates_corrected": {},
+    "combined_levelized_saving_rate_corrected": 0.0,
+    "adapters_levelized_financial_return_rate_components": {},
+    "adapters_levelized_financial_return_rates_corrected": {},
+    "combined_levelized_financial_return_rate_corrected": 0.0,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -10030,6 +12723,82 @@
      "pv1": -0.021
     },
     "combined_financial_return_rate": -0.207,
+    "combined_lcoe_rate_corrected": 0.315,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.078
+     },
+     "pv0": {
+      "grid": 0.108
+     },
+     "pv1": {
+      "grid": 0.021
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.078
+     },
+     "cons0": {
+      "grid": 0.0
+     },
+     "cons1": {
+      "grid": 0.015
+     },
+     "cons2": {
+      "grid": 0.033
+     },
+     "pv0": {
+      "grid": 0.108
+     },
+     "pv1": {
+      "grid": 0.021
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.078,
+     "pv0": 0.108,
+     "pv1": 0.021
+    },
+    "combined_lcoo_rate_corrected": 0.078,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.207,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.078
+     },
+     "pv0": {
+      "grid": -0.108
+     },
+     "pv1": {
+      "grid": -0.021
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.078,
+     "pv0": -0.108,
+     "pv1": -0.021
+    },
+    "combined_levelized_saving_rate_corrected": -0.207,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.078
+     },
+     "pv0": {
+      "grid": -0.108,
+      "pv0": 0.0
+     },
+     "pv1": {
+      "grid": -0.021,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.078,
+     "pv0": -0.108,
+     "pv1": -0.021
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.207,
     "sink_adapters_restriction_deficit": {
      "cons0": 200.0
     }
@@ -10285,6 +13054,79 @@
      "pv0": -0.01
     },
     "combined_financial_return_rate": -0.075,
+    "combined_lcoe_rate_corrected": 0.4,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.025
+     },
+     "bat1": {
+      "grid": 0.04
+     },
+     "pv0": {
+      "grid": 0.01
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.025
+     },
+     "bat1": {
+      "grid": 0.04
+     },
+     "cons1": {
+      "grid": 0.015
+     },
+     "cons2": {
+      "grid": 0.0
+     },
+     "pv0": {
+      "grid": 0.01
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.025,
+     "bat1": 0.04,
+     "pv0": 0.01
+    },
+    "combined_lcoo_rate_corrected": 0.065,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.075,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.025
+     },
+     "bat1": {
+      "grid": -0.04
+     },
+     "pv0": {
+      "grid": -0.01
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.025,
+     "bat1": -0.04,
+     "pv0": -0.01
+    },
+    "combined_levelized_saving_rate_corrected": -0.075,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.025
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": -0.04
+     },
+     "pv0": {
+      "grid": -0.01,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.025,
+     "bat1": -0.04,
+     "pv0": -0.01
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.075,
     "sink_adapters_restriction_deficit": {
      "cons2": 320.0
     }
@@ -10532,6 +13374,78 @@
      "pv2": 0.124195121951
     },
     "combined_financial_return_rate": 0.1975,
+    "combined_lcoe_rate_corrected": 0.295,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {
+      "grid": 0.0476219512195,
+      "pv0": 0.0380975609756,
+      "pv2": 0.0164512195122
+     },
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.0898780487805,
+      "pv0": 0.0719024390244,
+      "pv2": 0.0310487804878
+     },
+     "pv1": {
+      "grid": 0.0476219512195,
+      "pv0": 0.0380975609756,
+      "pv2": 0.0164512195122
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.102170731707,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.102170731707,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.0898780487805,
+      "pv0": -0.0719024390244
+     },
+     "pv1": {
+      "grid": -0.0476219512195,
+      "pv0": -0.0380975609756,
+      "pv2": -0.0164512195122
+     },
+     "pv2": {
+      "grid": 0.155243902439,
+      "pv2": -0.0310487804878
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.0179756097561,
+     "pv1": -0.102170731707,
+     "pv2": 0.124195121951
+    },
+    "combined_levelized_saving_rate_corrected": 0.04,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.0898780487805,
+      "pv0": -0.0719024390244
+     },
+     "pv1": {
+      "grid": -0.0476219512195,
+      "pv0": -0.0380975609756,
+      "pv1": 0.0,
+      "pv2": -0.0164512195122
+     },
+     "pv2": {
+      "grid": 0.155243902439,
+      "pv2": -0.0310487804878
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.0179756097561,
+     "pv1": -0.102170731707,
+     "pv2": 0.124195121951
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.04,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -10775,6 +13689,86 @@
      "pv1": -0.0216
     },
     "combined_financial_return_rate": 0.359,
+    "combined_lcoe_rate_corrected": 0.198,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "pv0": 0.0
+     },
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.0216
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "pv0": 0.0
+     },
+     "cons0": {
+      "pv0": 0.0012
+     },
+     "grid": {
+      "pv0": 0.006
+     },
+     "pv1": {
+      "pv0": 0.0216
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0216
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0216,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "pv0": 0.0
+     },
+     "pv0": {
+      "grid": 0.355,
+      "pv0": -0.1704
+     },
+     "pv1": {
+      "pv0": -0.0216
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.1846,
+     "pv1": -0.0216
+    },
+    "combined_levelized_saving_rate_corrected": 0.163,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv0": 0.0
+     },
+     "pv0": {
+      "grid": 0.359,
+      "pv0": -0.1764
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.0216,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.1826,
+     "pv1": -0.0216
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.161,
     "sink_adapters_restriction_deficit": {
      "bat1": 210.0
     }
@@ -11050,6 +14044,86 @@
      "pv2": 0.313474903475
     },
     "combined_financial_return_rate": 1.055,
+    "combined_lcoe_rate_corrected": 0.3075,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.0458687258687,
+      "pv2": 0.0366312741313
+     },
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "pv0": 0.0108416988417,
+      "pv2": 0.0086583011583
+     },
+     "cons1": {
+      "pv0": 0.0272432432432,
+      "pv2": 0.0217567567568
+     },
+     "cons2": {
+      "pv0": 0.0345,
+      "pv2": 0.0
+     },
+     "grid": {
+      "pv0": 0.014,
+      "pv2": 0.0
+     },
+     "pv1": {
+      "pv0": 0.0458687258687,
+      "pv2": 0.0366312741313
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0825,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0825,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.663156370656,
+      "pv0": -0.132631274131
+     },
+     "pv1": {
+      "pv0": -0.0458687258687,
+      "pv2": -0.0366312741313
+     },
+     "pv2": {
+      "grid": 0.391843629344,
+      "pv2": -0.0783687258687
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.530525096525,
+     "pv1": -0.0825,
+     "pv2": 0.313474903475
+    },
+    "combined_levelized_saving_rate_corrected": 0.7615,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.663156370656,
+      "pv0": -0.146631274131
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.0458687258687,
+      "pv1": 0.0,
+      "pv2": -0.0366312741313
+     },
+     "pv2": {
+      "grid": 0.391843629344,
+      "pv2": -0.0783687258687
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.516525096525,
+     "pv1": -0.0825,
+     "pv2": 0.313474903475
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.7475,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -11280,6 +14354,60 @@
      "pv2": 0.296
     },
     "combined_financial_return_rate": 2.667,
+    "combined_lcoe_rate_corrected": 2.149,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {},
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 1.071,
+      "pv0": -0.51
+     },
+     "pv1": {
+      "grid": 1.26,
+      "pv1": -0.36
+     },
+     "pv2": {
+      "grid": 0.336,
+      "pv2": -0.04
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.561,
+     "pv1": 0.9,
+     "pv2": 0.296
+    },
+    "combined_levelized_saving_rate_corrected": 1.757,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 1.071,
+      "pv0": -0.51
+     },
+     "pv1": {
+      "grid": 1.26,
+      "pv1": -0.36
+     },
+     "pv2": {
+      "grid": 0.336,
+      "pv2": -0.04
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.561,
+     "pv1": 0.9,
+     "pv2": 0.296
+    },
+    "combined_levelized_financial_return_rate_corrected": 1.757,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -11463,6 +14591,47 @@
      "bat0": -0.1134
     },
     "combined_financial_return_rate": -0.1134,
+    "combined_lcoe_rate_corrected": 0.903,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.1134
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.1134
+     },
+     "cons0": {
+      "grid": 0.084
+     },
+     "cons1": {
+      "grid": 0.0714
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.1134
+    },
+    "combined_lcoo_rate_corrected": 0.1134,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.1134,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.1134
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.1134
+    },
+    "combined_levelized_saving_rate_corrected": -0.1134,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.1134
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.1134
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.1134,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -11634,6 +14803,57 @@
      "pv0": -0.3808
     },
     "combined_financial_return_rate": 0.1632,
+    "combined_lcoe_rate_corrected": 0.7,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.206
+     },
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.206
+     },
+     "grid": {
+      "pv0": 0.544
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.206,
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.206,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.206,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "pv0": -0.206
+     },
+     "pv0": {
+      "grid": 0.0,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.206,
+     "pv0": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": -0.206,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": -0.206
+     },
+     "pv0": {
+      "grid": 0.1632,
+      "pv0": -0.544
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.206,
+     "pv0": -0.3808
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.5868,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -11822,6 +15042,52 @@
      "bat1": 0.0
     },
     "combined_financial_return_rate": 0.0625,
+    "combined_lcoe_rate_corrected": 0.0625,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat1": 0.0
+     },
+     "grid": {
+      "bat1": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat1": -0.0625,
+      "grid": 0.0625
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_levelized_saving_rate_corrected": 0.0,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": -0.0625,
+      "grid": 0.0625
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.0,
     "sink_adapters_restriction_deficit": {
      "cons0": 80.0,
      "grid": 130.0
@@ -12126,6 +15392,105 @@
      "pv2": 0.300933774834
     },
     "combined_financial_return_rate": 0.8625,
+    "combined_lcoe_rate_corrected": 0.689,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.023178807947,
+      "grid": 0.0695364238411,
+      "pv0": 0.0649006622517,
+      "pv1": 0.0394039735099,
+      "pv2": 0.12238410596
+     },
+     "bat1": {},
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.023178807947,
+      "grid": 0.0695364238411,
+      "pv0": 0.0649006622517,
+      "pv1": 0.0394039735099,
+      "pv2": 0.12238410596
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.31940397351,
+     "bat1": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.31940397351,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.31940397351,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat1": -0.023178807947,
+      "grid": -0.0695364238411,
+      "pv0": -0.0649006622517,
+      "pv1": -0.0394039735099,
+      "pv2": -0.12238410596
+     },
+     "bat1": {
+      "bat1": -0.026821192053,
+      "grid": 0.026821192053
+     },
+     "pv0": {
+      "grid": 0.234685430464,
+      "pv0": -0.0750993377483
+     },
+     "pv1": {
+      "grid": 0.22798013245,
+      "pv1": -0.0455960264901
+     },
+     "pv2": {
+      "grid": 0.442549668874,
+      "pv2": -0.14161589404
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.31940397351,
+     "bat1": 0.0,
+     "pv0": 0.159586092715,
+     "pv1": 0.18238410596,
+     "pv2": 0.300933774834
+    },
+    "combined_levelized_saving_rate_corrected": 0.3235,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "bat1": -0.023178807947,
+      "grid": -0.0695364238411,
+      "pv0": -0.0649006622517,
+      "pv1": -0.0394039735099,
+      "pv2": -0.12238410596
+     },
+     "bat1": {
+      "bat1": -0.026821192053,
+      "grid": 0.026821192053
+     },
+     "pv0": {
+      "grid": 0.234685430464,
+      "pv0": -0.0750993377483
+     },
+     "pv1": {
+      "grid": 0.22798013245,
+      "pv1": -0.0455960264901
+     },
+     "pv2": {
+      "grid": 0.442549668874,
+      "pv2": -0.14161589404
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.31940397351,
+     "bat1": 0.0,
+     "pv0": 0.159586092715,
+     "pv1": 0.18238410596,
+     "pv2": 0.300933774834
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.3235,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -12363,6 +15728,59 @@
      "pv1": 0.682
     },
     "combined_financial_return_rate": 1.428,
+    "combined_lcoe_rate_corrected": 1.799,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.240390243902,
+      "pv0": 0.00499512195122,
+      "pv1": 0.129040650407
+     },
+     "cons1": {
+      "grid": 0.445097560976,
+      "pv0": 0.0092487804878,
+      "pv1": 0.238926829268
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.126,
+      "pv0": -0.024
+     },
+     "pv1": {
+      "grid": 1.302,
+      "pv1": -0.62
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.102,
+     "pv1": 0.682
+    },
+    "combined_levelized_saving_rate_corrected": 0.784,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.126,
+      "pv0": -0.024
+     },
+     "pv1": {
+      "grid": 1.302,
+      "pv1": -0.62
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.102,
+     "pv1": 0.682
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.784,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -12585,6 +16003,77 @@
      "pv1": -0.0072
     },
     "combined_financial_return_rate": 1.23,
+    "combined_lcoe_rate_corrected": 0.284,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0
+     },
+     "pv0": {},
+     "pv1": {
+      "pv0": 0.0072
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "pv0": 0.0
+     },
+     "cons0": {
+      "pv0": 0.0704
+     },
+     "grid": {
+      "pv0": 0.0496
+     },
+     "pv1": {
+      "pv0": 0.0072
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0072
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0072,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "pv0": 0.0
+     },
+     "pv0": {
+      "grid": 1.1928,
+      "pv0": -0.2272
+     },
+     "pv1": {
+      "pv0": -0.0072
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.9656,
+     "pv1": -0.0072
+    },
+    "combined_levelized_saving_rate_corrected": 0.9584,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv0": 0.0
+     },
+     "pv0": {
+      "grid": 1.23,
+      "pv0": -0.2768
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv0": -0.0072,
+      "pv1": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.9532,
+     "pv1": -0.0072
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.946,
     "sink_adapters_restriction_deficit": {
      "bat0": 690.0
     }
@@ -12866,6 +16355,73 @@
      "pv2": 0.117
     },
     "combined_financial_return_rate": 0.789084507042,
+    "combined_lcoe_rate_corrected": 0.81,
+    "source_adapters_lcoo_rate_components": {
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.430985915493,
+      "pv0": 0.0304225352113,
+      "pv1": 0.157183098592,
+      "pv2": 0.078
+     },
+     "cons1": {
+      "grid": 0.114929577465,
+      "pv0": 0.00811267605634,
+      "pv1": 0.0419154929577,
+      "pv2": 0.0
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "pv0": {
+      "grid": 0.096338028169,
+      "pv0": -0.0385352112676
+     },
+     "pv1": {
+      "grid": 0.497746478873,
+      "pv1": -0.199098591549
+     },
+     "pv2": {
+      "grid": 0.195,
+      "pv2": -0.078
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "pv0": 0.0578028169014,
+     "pv1": 0.298647887324,
+     "pv2": 0.117
+    },
+    "combined_levelized_saving_rate_corrected": 0.473450704225,
+    "adapters_levelized_financial_return_rate_components": {
+     "pv0": {
+      "grid": 0.096338028169,
+      "pv0": -0.0385352112676
+     },
+     "pv1": {
+      "grid": 0.497746478873,
+      "pv1": -0.199098591549
+     },
+     "pv2": {
+      "grid": 0.195,
+      "pv2": -0.078
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "pv0": 0.0578028169014,
+     "pv1": 0.298647887324,
+     "pv2": 0.117
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.473450704225,
     "sink_adapters_restriction_deficit": {
      "cons0": 3000.0
     }
@@ -13147,6 +16703,76 @@
      "pv2": 0.0950740740741
     },
     "combined_financial_return_rate": 0.850111111111,
+    "combined_lcoe_rate_corrected": 1.01,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "pv0": {},
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "grid": 0.838888888889,
+      "pv0": 0.055,
+      "pv1": 0.0391481481481,
+      "pv2": 0.190148148148
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "pv0": {
+      "grid": 0.33,
+      "pv0": -0.055
+     },
+     "pv1": {
+      "grid": 0.234888888889,
+      "pv1": -0.0391481481481
+     },
+     "pv2": {
+      "grid": 0.285222222222,
+      "pv2": -0.190148148148
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.275,
+     "pv1": 0.195740740741,
+     "pv2": 0.0950740740741
+    },
+    "combined_levelized_saving_rate_corrected": 0.565814814815,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "pv0": {
+      "grid": 0.33,
+      "pv0": -0.055
+     },
+     "pv1": {
+      "grid": 0.234888888889,
+      "pv1": -0.0391481481481
+     },
+     "pv2": {
+      "grid": 0.285222222222,
+      "pv2": -0.190148148148
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "pv0": 0.275,
+     "pv1": 0.195740740741,
+     "pv2": 0.0950740740741
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.565814814815,
     "sink_adapters_restriction_deficit": {
      "cons0": 4530.0
     }
@@ -13346,6 +16972,60 @@
      "pv0": -0.21
     },
     "combined_financial_return_rate": -0.294,
+    "combined_lcoe_rate_corrected": 0.903,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.084
+     },
+     "pv0": {
+      "grid": 0.21
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "grid": 0.084
+     },
+     "cons0": {
+      "grid": 0.0084
+     },
+     "pv0": {
+      "grid": 0.21
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.084,
+     "pv0": 0.21
+    },
+    "combined_lcoo_rate_corrected": 0.084,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.294,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "grid": -0.084
+     },
+     "pv0": {
+      "grid": -0.21
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.084,
+     "pv0": -0.21
+    },
+    "combined_levelized_saving_rate_corrected": -0.294,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": -0.084
+     },
+     "pv0": {
+      "grid": -0.21,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.084,
+     "pv0": -0.21
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.294,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -13650,6 +17330,117 @@
      "pv2": -0.451721052632
     },
     "combined_financial_return_rate": 0.2394,
+    "combined_lcoe_rate_corrected": 1.0675,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {},
+     "pv0": {},
+     "pv1": {
+      "bat0": 0.0555789473684,
+      "bat1": 0.0364736842105,
+      "grid": 0.0187578947368,
+      "pv0": 0.0375157894737
+     },
+     "pv2": {
+      "bat0": 0.169263157895,
+      "bat1": 0.111078947368,
+      "grid": 0.0571263157895,
+      "pv0": 0.114252631579
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "pv1": {
+      "bat0": 0.0555789473684,
+      "bat1": 0.0364736842105,
+      "grid": 0.0187578947368,
+      "pv0": 0.0375157894737
+     },
+     "pv2": {
+      "bat0": 0.169263157895,
+      "bat1": 0.111078947368,
+      "grid": 0.0571263157895,
+      "pv0": 0.114252631579
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.148326315789,
+     "pv2": 0.451721052632
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.600047368421,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.175157894737,
+      "grid": 0.126113684211
+     },
+     "bat1": {
+      "bat1": -0.114947368421,
+      "grid": 0.0827621052632
+     },
+     "pv0": {
+      "grid": 0.106408421053,
+      "pv0": -0.118231578947
+     },
+     "pv1": {
+      "bat0": -0.0555789473684,
+      "bat1": -0.0364736842105,
+      "grid": -0.0187578947368,
+      "pv0": -0.0375157894737
+     },
+     "pv2": {
+      "bat0": -0.169263157895,
+      "bat1": -0.111078947368,
+      "grid": -0.0571263157895,
+      "pv0": -0.114252631579
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0490442105263,
+     "bat1": -0.0321852631579,
+     "pv0": -0.0118231578947,
+     "pv1": -0.148326315789,
+     "pv2": -0.451721052632
+    },
+    "combined_levelized_saving_rate_corrected": -0.6931,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.175157894737,
+      "grid": 0.126113684211
+     },
+     "bat1": {
+      "bat1": -0.114947368421,
+      "grid": 0.0827621052632
+     },
+     "pv0": {
+      "grid": 0.106408421053,
+      "pv0": -0.118231578947
+     },
+     "pv1": {
+      "bat0": -0.0555789473684,
+      "bat1": -0.0364736842105,
+      "grid": -0.0187578947368,
+      "pv0": -0.0375157894737,
+      "pv1": 0.0
+     },
+     "pv2": {
+      "bat0": -0.169263157895,
+      "bat1": -0.111078947368,
+      "grid": -0.0571263157895,
+      "pv0": -0.114252631579,
+      "pv2": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0490442105263,
+     "bat1": -0.0321852631579,
+     "pv0": -0.0118231578947,
+     "pv1": -0.148326315789,
+     "pv2": -0.451721052632
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.6931,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -13915,6 +17706,83 @@
      "pv0": 0.0801204819277
     },
     "combined_financial_return_rate": 0.6625,
+    "combined_lcoe_rate_corrected": 0.7625,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.0105421686747,
+      "grid": 0.0242469879518,
+      "pv0": 0.0295180722892
+     },
+     "bat1": {},
+     "pv0": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat0": {
+      "bat1": 0.0105421686747,
+      "grid": 0.0242469879518,
+      "pv0": 0.0295180722892
+     },
+     "cons0": {
+      "bat1": 0.010843373494,
+      "grid": 0.0249397590361,
+      "pv0": 0.0303614457831
+     },
+     "cons1": {
+      "bat1": 0.0325301204819,
+      "grid": 0.0748192771084,
+      "pv0": 0.0910843373494
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0643072289157,
+     "bat1": 0.0,
+     "pv0": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.0643072289157,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.0643072289157,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat1": -0.0105421686747,
+      "grid": -0.0242469879518,
+      "pv0": -0.0295180722892
+     },
+     "bat1": {
+      "bat1": -0.114457831325,
+      "grid": 0.286144578313
+     },
+     "pv0": {
+      "grid": 0.400602409639,
+      "pv0": -0.320481927711
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": -0.0643072289157,
+     "bat1": 0.171686746988,
+     "pv0": 0.0801204819277
+    },
+    "combined_levelized_saving_rate_corrected": 0.1875,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "bat1": -0.0105421686747,
+      "grid": -0.0242469879518,
+      "pv0": -0.0295180722892
+     },
+     "bat1": {
+      "bat1": -0.114457831325,
+      "grid": 0.286144578313
+     },
+     "pv0": {
+      "grid": 0.400602409639,
+      "pv0": -0.320481927711
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": -0.0643072289157,
+     "bat1": 0.171686746988,
+     "pv0": 0.0801204819277
+    },
+    "combined_levelized_financial_return_rate_corrected": 0.1875,
     "sink_adapters_restriction_deficit": {}
    }
   },
@@ -14166,6 +18034,74 @@
      "pv0": -0.14
     },
     "combined_financial_return_rate": -0.04,
+    "combined_lcoe_rate_corrected": 0.3875,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {},
+     "pv0": {
+      "bat1": 0.0361290322581,
+      "grid": 0.103870967742
+     }
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "cons0": {
+      "bat1": 0.00645161290323,
+      "grid": 0.0185483870968
+     },
+     "cons1": {
+      "bat1": 0.0,
+      "grid": 0.0
+     },
+     "pv0": {
+      "bat1": 0.0361290322581,
+      "grid": 0.103870967742
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": 0.14
+    },
+    "combined_lcoo_rate_corrected": 0.0,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.14,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat1": -0.0638709677419,
+      "grid": 0.0638709677419
+     },
+     "pv0": {
+      "bat1": -0.0361290322581,
+      "grid": -0.103870967742
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": -0.14
+    },
+    "combined_levelized_saving_rate_corrected": -0.14,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": 0.0,
+      "grid": 0.0
+     },
+     "bat1": {
+      "bat1": -0.0638709677419,
+      "grid": 0.0638709677419
+     },
+     "pv0": {
+      "bat1": -0.0361290322581,
+      "grid": -0.103870967742,
+      "pv0": 0.0
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "pv0": -0.14
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.14,
     "sink_adapters_restriction_deficit": {
      "cons1": 200.0
     }
@@ -14531,6 +18467,135 @@
      "pv2": -0.015348098434
     },
     "combined_financial_return_rate": 0.4122,
+    "combined_lcoe_rate_corrected": 1.351,
+    "source_adapters_lcoo_rate_components": {
+     "bat0": {},
+     "bat1": {
+      "bat0": 0.000302013422819,
+      "grid": 0.396,
+      "pv1": 0.0157046979866,
+      "pv2": 0.00189261744966
+     },
+     "pv0": {
+      "bat0": 0.000738255033557,
+      "grid": 0.0,
+      "pv1": 0.038389261745,
+      "pv2": 0.00462639821029
+     },
+     "pv1": {},
+     "pv2": {}
+    },
+    "sink_adapters_lcoo_rate_components": {
+     "bat1": {
+      "bat0": 0.000302013422819,
+      "grid": 0.396,
+      "pv1": 0.0157046979866,
+      "pv2": 0.00189261744966
+     },
+     "cons0": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "bat0": 0.00684563758389,
+      "grid": 0.0,
+      "pv1": 0.355973154362,
+      "pv2": 0.0428993288591
+     },
+     "cons2": {
+      "bat0": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.066
+     },
+     "pv0": {
+      "bat0": 0.000738255033557,
+      "grid": 0.0,
+      "pv1": 0.038389261745,
+      "pv2": 0.00462639821029
+     }
+    },
+    "source_adapters_lcoo_rates_corrected": {
+     "bat0": 0.0,
+     "bat1": 0.413899328859,
+     "pv0": 0.0437539149888,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
+    "combined_lcoo_rate_corrected": 0.413899328859,
+    "combined_levelized_device_operating_cost_rate_corrected": 0.457653243848,
+    "adapters_levelized_saving_rate_components": {
+     "bat0": {
+      "bat0": -0.0139597315436,
+      "grid": 0.0167516778523
+     },
+     "bat1": {
+      "bat0": -0.000302013422819,
+      "grid": -0.396,
+      "pv1": -0.0157046979866,
+      "pv2": -0.00189261744966
+     },
+     "pv0": {
+      "bat0": -0.000738255033557,
+      "grid": 0.0,
+      "pv1": -0.038389261745,
+      "pv2": -0.00462639821029
+     },
+     "pv1": {
+      "grid": 0.653315436242,
+      "pv1": -0.725906040268
+     },
+     "pv2": {
+      "grid": 0.138132885906,
+      "pv2": -0.15348098434
+     }
+    },
+    "adapters_levelized_saving_rates_corrected": {
+     "bat0": 0.00279194630872,
+     "bat1": -0.413899328859,
+     "pv0": -0.0437539149888,
+     "pv1": -0.0725906040268,
+     "pv2": -0.015348098434
+    },
+    "combined_levelized_saving_rate_corrected": -0.5428,
+    "adapters_levelized_financial_return_rate_components": {
+     "bat0": {
+      "bat0": -0.0139597315436,
+      "grid": 0.0167516778523
+     },
+     "bat1": {
+      "bat0": -0.000302013422819,
+      "bat1": 0.0,
+      "grid": -0.396,
+      "pv1": -0.0157046979866,
+      "pv2": -0.00189261744966
+     },
+     "pv0": {
+      "bat0": -0.000738255033557,
+      "grid": 0.0,
+      "pv0": 0.0,
+      "pv1": -0.038389261745,
+      "pv2": -0.00462639821029
+     },
+     "pv1": {
+      "grid": 0.653315436242,
+      "pv1": -0.725906040268
+     },
+     "pv2": {
+      "grid": 0.138132885906,
+      "pv2": -0.15348098434
+     }
+    },
+    "adapters_levelized_financial_return_rates_corrected": {
+     "bat0": 0.00279194630872,
+     "bat1": -0.413899328859,
+     "pv0": -0.0437539149888,
+     "pv1": -0.0725906040268,
+     "pv2": -0.015348098434
+    },
+    "combined_levelized_financial_return_rate_corrected": -0.5428,
     "sink_adapters_restriction_deficit": {
      "bat1": 90.0,
      "cons0": 1300.0

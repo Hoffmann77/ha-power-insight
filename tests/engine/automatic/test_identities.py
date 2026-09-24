@@ -101,6 +101,16 @@ class Snap:
         cfg = self.home.adapter(source).config
         return cfg["lcoe"] if self.kind[source] == "pv" else cfg["lcos"]
 
+    def factor(self, uid: str) -> float:
+        """A device's correction factor; the grid's tariff is never corrected."""
+        if uid == "grid":
+            return 1.0
+        return self.home.adapter(uid).config["correction_factor"]
+
+    def corrected(self, source: str) -> float:
+        """The levelized price with the source's correction factor applied."""
+        return self.levelized(source) * self.factor(source)
+
     def compensation(self, source: str) -> float:
         """Feed-in tariff; a device that may not export earns nothing."""
         if source == "grid":
@@ -487,18 +497,21 @@ def _(s):
     return sum(s.e.source_adapters_coo_rates.values())
 
 
-def _saving(levelized: bool) -> Callable:
+def _saving(prices: str) -> Callable:
     """Producing: CON watts × (tariff − own price). Drawing: −own draw cost.
 
-    Idle devices read 0 rather than going absent.
+    Idle devices read 0 rather than going absent. ``prices`` is ``marginal``,
+    ``levelized`` or ``corrected``.
     """
 
     def fn(s):
-        own_cost = (
-            s.e.source_adapters_lcoo_rates if levelized else s.e.source_adapters_coo_rates
-        )
+        own_cost = {
+            "marginal": s.e.source_adapters_coo_rates,
+            "levelized": s.e.source_adapters_lcoo_rates,
+            "corrected": s.e.source_adapters_lcoo_rates_corrected,
+        }[prices]
         served = s.e.source_adapters_consumption_power
-        own = s.levelized if levelized else s.marginal
+        own = getattr(s, prices)
         out = {}
         for d in s.devices:
             if d in s.sources:
@@ -512,8 +525,8 @@ def _saving(levelized: bool) -> Callable:
     return fn
 
 
-identity("adapters_saving_rates")(_saving(levelized=False))
-identity("adapters_levelized_saving_rates")(_saving(levelized=True))
+identity("adapters_saving_rates")(_saving("marginal"))
+identity("adapters_levelized_saving_rates")(_saving("levelized"))
 
 
 @identity("adapters_financial_return_rates")
@@ -540,6 +553,101 @@ def _(s):
 @identity("combined_financial_return_rate")
 def _(s):
     return sum(s.e.adapters_financial_return_rates.values())
+
+
+# Layer 4, corrected — a correction factor restates a device's levelized price,
+# never a finished result ("Corrections apply to prices, not to results"). The
+# components split a levelized rate by whose factor scales each part, keyed to
+# the grid for the parts that never scale.
+
+
+@identity("combined_lcoe_rate_corrected")
+def _(s):
+    """Every source's output at its corrected levelized price."""
+    return priced(s.sources, s.corrected)
+
+
+def _by_supplier(s: Snap, sink: str) -> dict[str, float]:
+    """A sink's levelized draw cost, one part per supplying source."""
+    return {src: kw(w) * s.levelized(src) for src, w in s.draw_watts(sink).items()}
+
+
+@identity("source_adapters_lcoo_rate_components")
+def _(s):
+    """A drawing device's cost by supplier; any other device has no parts."""
+    return {d: _by_supplier(s, d) if d in s.sinks else {} for d in s.devices}
+
+
+@identity("sink_adapters_lcoo_rate_components")
+def _(s):
+    return {k: _by_supplier(s, k) for k in s.sinks}
+
+
+identity("source_adapters_lcoo_rates_corrected")(_own_draw(lambda s: s.corrected))
+identity("combined_lcoo_rate_corrected")(_channel_cost(CHG, lambda s: s.corrected))
+
+
+@identity("combined_levelized_device_operating_cost_rate_corrected")
+def _(s):
+    return sum(s.e.source_adapters_lcoo_rates_corrected.values())
+
+
+@identity("adapters_levelized_saving_rate_components")
+def _(s):
+    """Producing: the displaced tariff under the grid, minus the device's own
+    levelized cost under itself. Drawing: its cost by supplier, negated."""
+    served = s.e.source_adapters_consumption_power
+    own_cost = s.e.source_adapters_lcoo_rate_components
+    out = {}
+    for d in s.devices:
+        if d in s.sources:
+            out[d] = {"grid": kw(served[d]) * s.price, d: -kw(served[d]) * s.levelized(d)}
+        elif d in s.sinks:
+            out[d] = {src: -cost for src, cost in own_cost[d].items()}
+        else:
+            out[d] = {}
+    return out
+
+
+identity("adapters_levelized_saving_rates_corrected")(_saving("corrected"))
+
+
+@identity("combined_levelized_saving_rate_corrected")
+def _(s):
+    return sum(s.e.adapters_levelized_saving_rates_corrected.values())
+
+
+@identity("adapters_levelized_financial_return_rate_components")
+def _(s):
+    """The saving parts, plus the export compensation under the grid and the
+    exported watts at the device's own levelized price under itself."""
+    comp = s.e.source_adapters_export_compensation_rates
+    exported = s.e.source_adapters_export_power
+    out = {}
+    for d, parts in s.e.adapters_levelized_saving_rate_components.items():
+        export = {"grid": comp.get(d, 0.0), d: -kw(exported.get(d, 0.0)) * s.levelized(d)}
+        out[d] = {
+            key: parts.get(key, 0.0) + export.get(key, 0.0)
+            for key in parts.keys() | export.keys()
+        }
+    return out
+
+
+@identity("adapters_levelized_financial_return_rates_corrected")
+def _(s):
+    """Corrected saving plus export earnings, less the exported watts at the
+    corrected own price."""
+    comp = s.e.source_adapters_export_compensation_rates
+    exported = s.e.source_adapters_export_power
+    return {
+        d: saving + comp.get(d, 0.0) - kw(exported.get(d, 0.0)) * s.corrected(d)
+        for d, saving in s.e.adapters_levelized_saving_rates_corrected.items()
+    }
+
+
+@identity("combined_levelized_financial_return_rate_corrected")
+def _(s):
+    return sum(s.e.adapters_levelized_financial_return_rates_corrected.values())
 
 
 # ---------------------------------------------------------------------------

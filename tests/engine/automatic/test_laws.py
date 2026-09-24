@@ -185,9 +185,17 @@ def test_names_and_registration_order_do_not_matter() -> None:
     check("Renaming and reordering devices must change nothing.", HOMES, compare)
 
 
+def zero(value: Any) -> bool:
+    """Whether ``value`` is 0, or a map of nothing but zeros (or of nothing)."""
+    if isinstance(value, dict):
+        return all(zero(v) for v in value.values())
+    return value == 0
+
+
 def test_an_idle_device_changes_nothing() -> None:
     """A PV system, a battery and a plug all reading 0 W join the home. Every
-    result is as before; the only new entries are theirs, and read 0."""
+    result is as before; the only new entries are theirs, and read 0 — or, for
+    a breakdown by correction target, hold nothing but zeros."""
     idle = {"idle_pv": Adapter.pv("idle_pv"), "idle_bat": Adapter.battery("idle_bat"),
             "idle_plug": Adapter.consumer("idle_plug")}
 
@@ -214,7 +222,7 @@ def test_an_idle_device_changes_nothing() -> None:
         found: list[Any] = []
         stripped = {name: strip(value, found) for name, value in after.items()}
         problems = differences(before, stripped)
-        if any(v != 0 for v in found):
+        if not all(zero(v) for v in found):
             problems.append(f"an idle device read non-zero: {found}")
         return problems
 
@@ -237,18 +245,30 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
         "source_adapters_dynamic_coe", "source_adapters_dynamic_lcoe",
     }
 
+    def plus(x: Any, y: Any) -> Any:
+        """Two halves' values added, entry by entry for a breakdown."""
+        if isinstance(x, dict) and isinstance(y, dict):
+            return {k: plus(x.get(k, 0.0), y.get(k, 0.0)) for k in x.keys() | y.keys()}
+        return x + y
+
     def merge(value: Any, a: str, b: str, into: str, *, add: bool) -> Any:
         if not isinstance(value, dict):
             return value
         out = {k: merge(v, a, b, into, add=add) for k, v in value.items()
                if k not in (a, b)}
-        if a in value:
+        if a in value or b in value:
+            # A breakdown by correction target names only the half it is for:
+            # the other half's part of it is nothing.
+            present = value.get(a, value.get(b))
+            nothing = {} if isinstance(present, dict) else 0.0
+            half_a = merge(value.get(a, nothing), a, b, into, add=add)
+            half_b = merge(value.get(b, nothing), a, b, into, add=add)
             if add:
-                out[into] = value[a] + value[b]
+                out[into] = plus(half_a, half_b)
             else:
-                if not matches(value[a], value[b], abs_tol=ABS_TOL):
-                    return {"halves disagree": (value[a], value[b])}
-                out[into] = value[a]
+                if not matches(half_a, half_b, abs_tol=ABS_TOL):
+                    return {"halves disagree": (half_a, half_b)}
+                out[into] = half_a
         return out
 
     candidates = [
@@ -284,6 +304,131 @@ def test_splitting_a_pv_system_in_two_changes_nothing_in_total() -> None:
 
     check("Splitting a PV system in two must not change any total.",
           candidates, compare)
+
+
+#: Every corrected property, and the uncorrected property it restates. The
+#: combined ones' counterparts are not catalogued, so they are read directly.
+CORRECTED = {
+    "combined_lcoe_rate_corrected": "combined_lcoe_rate",
+    "combined_lcoo_rate_corrected": "combined_lcoo_rate",
+    "combined_levelized_device_operating_cost_rate_corrected":
+        "combined_levelized_device_operating_cost_rate",
+    "source_adapters_lcoo_rates_corrected": "source_adapters_lcoo_rates",
+    "adapters_levelized_saving_rates_corrected": "adapters_levelized_saving_rates",
+    "combined_levelized_saving_rate_corrected": "combined_levelized_saving_rate",
+    "adapters_levelized_financial_return_rates_corrected":
+        "adapters_levelized_financial_return_rates",
+    "combined_levelized_financial_return_rate_corrected":
+        "combined_levelized_financial_return_rate",
+}
+
+
+def factor(adapter: Adapter) -> float:
+    return adapter.config.get("correction_factor", 1.0)
+
+
+def test_a_correction_is_a_price_change() -> None:
+    """A correction factor restates a device's levelized price, nothing else.
+
+    Take every factor out and multiply each device's LCOE / LCOS by it instead:
+    every corrected result must equal the uncorrected one of that re-priced
+    home. And the factors themselves must move nothing that is not corrected —
+    not a watt, not a base rate, not a breakdown.
+    """
+    corrected_homes = [
+        h for h in HOMES if any(factor(a) != 1.0 for a in h.adapters)
+    ]
+    assert corrected_homes, "no random home draws a correction factor"
+
+    def compare(home: Home) -> list[str]:
+        repriced, unfactored = [], []
+        for a in home.adapters:
+            if a.kind in ("pv", "battery"):
+                price = "lcoe" if a.kind == "pv" else "lcos"
+                repriced.append(with_config(
+                    a, **{price: a.config[price] * factor(a), "correction_factor": 1.0}
+                ))
+                unfactored.append(with_config(a, correction_factor=1.0))
+            else:
+                repriced.append(a)
+                unfactored.append(a)
+        engine = home.engine()
+        at_price = replace(home, adapters=tuple(repriced)).engine()
+        problems = [
+            f"{name}: {show(getattr(engine, name))}, but re-priced "
+            f"{base} is {show(getattr(at_price, base))}"
+            for name, base in CORRECTED.items()
+            if not matches(getattr(at_price, base), getattr(engine, name), abs_tol=ABS_TOL)
+        ]
+        before = results(replace(home, adapters=tuple(unfactored)))
+        after = results(home)
+        problems += differences(
+            {n: v for n, v in before.items() if n not in CORRECTED},
+            {n: v for n, v in after.items() if n not in CORRECTED},
+        )
+        return problems
+
+    check("A correction must act as a change of levelized price.",
+          corrected_homes, compare)
+
+
+#: Each breakdown by correction target, the rate it splits, and the corrected
+#: rate it weights back up to (``None`` where no corrected rate is published).
+BREAKDOWNS = {
+    "source_adapters_lcoo_rate_components":
+        ("source_adapters_lcoo_rates", "source_adapters_lcoo_rates_corrected"),
+    "sink_adapters_lcoo_rate_components": ("sink_adapters_lcoo_rates", None),
+    "adapters_levelized_saving_rate_components":
+        ("adapters_levelized_saving_rates", "adapters_levelized_saving_rates_corrected"),
+    "adapters_levelized_financial_return_rate_components": (
+        "adapters_levelized_financial_return_rates",
+        "adapters_levelized_financial_return_rates_corrected",
+    ),
+}
+
+
+def test_every_breakdown_reconciles() -> None:
+    """The contract the accumulated totals are corrected by.
+
+    The sensor layer accumulates each breakdown alongside its rate and later
+    corrects the total part by part, so in every home — overdrawn ones too —
+    each device's parts must add up to its rate, and each part weighted by its
+    key's correction factor (the grid's is 1) to its corrected rate.
+    """
+
+    def compare(home: Home) -> list[str]:
+        e = home.engine()
+        factors = {a.uid: factor(a) for a in home.adapters}
+        problems = []
+        for name, (base, corrected) in BREAKDOWNS.items():
+            parts = getattr(e, name)
+            rates = getattr(e, base)
+            if parts is None or rates is None:
+                if parts is not rates:
+                    problems.append(f"{name} is {show(parts)} but {base} is {show(rates)}")
+                continue
+            if set(parts) != set(rates):
+                problems.append(f"{name} covers {sorted(parts)}, {base} {sorted(rates)}")
+                continue
+            weighted = getattr(e, corrected) if corrected else None
+            for uid, split in parts.items():
+                if split is None or rates[uid] is None:
+                    if split is not rates[uid]:
+                        problems.append(f"{name}[{uid}] = {show(split)}, rate {show(rates[uid])}")
+                    continue
+                total = sum(split.values())
+                if not matches(rates[uid], total, abs_tol=ABS_TOL):
+                    problems.append(f"{name}[{uid}] adds up to {show(total)}, not {show(rates[uid])}")
+                if weighted is not None:
+                    scaled = sum(v * factors[key] for key, v in split.items())
+                    if not matches(weighted[uid], scaled, abs_tol=ABS_TOL):
+                        problems.append(
+                            f"{name}[{uid}] weights up to {show(scaled)}, "
+                            f"not {corrected} {show(weighted[uid])}"
+                        )
+        return problems
+
+    check("Every breakdown must reconcile with its rates.", HOMES, compare)
 
 
 def test_an_unavailable_meter_publishes_nothing_downstream() -> None:

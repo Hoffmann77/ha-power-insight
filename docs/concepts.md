@@ -139,10 +139,31 @@ Power Insight solves this with a **correction factor**:
 correction_factor = current_lcoe / default_lcoe
 ```
 
-Because the factor is constant, multiplying a device's recorded base total by it
-**retroactively and exactly rescales** all its displayed levelized values to the
-new cost basis. When a device is removed, its final corrected contribution is
-frozen into a ledger so the combined totals never drop.
+where `default_lcoe` is the LCOE (or LCOS) the device was first given lifetime
+values with, and never changes afterwards.
+
+The factor restates **what that device's energy costs**, not the results built
+on it. Every levelized value priced with the device's energy uses
+`LCOE × correction_factor` in place of the LCOE:
+
+- A PV system's **saving** is `served × (grid price − LCOE × factor)`. Making its
+  energy dearer makes it save *less* — the saving is not simply multiplied.
+- A battery's (or consumer's) **levelized operating cost** is priced at the
+  devices that *supplied* it. A battery charging from your PV system is
+  corrected by the PV system's factor; the battery's own factor applies to the
+  energy it discharges.
+- The grid price and export compensation are never corrected.
+
+Because each accumulated total also records how much of it came from which
+device's energy, editing one device's lifetime values **retroactively and
+exactly rescales** that device's share of every total — its own, and those of
+the batteries and consumers it supplied — however long ago it was recorded.
+Totals recorded by a version of Power Insight that did not keep this breakdown
+yet are kept at face value.
+
+When a device is removed, its final corrected totals are frozen into a ledger so
+the combined totals never drop, and its last correction factor is frozen with
+them, so the history it supplied to other devices keeps its price.
 
 This is why the reconfigure page warns:
 

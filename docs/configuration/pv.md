@@ -59,9 +59,10 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 ## Changing lifetime values later
 
 If you reconfigure the lifetime cost or production, Power Insight applies a
-[**correction factor**](../concepts.md#the-correction-factor) that retroactively
-rescales this device's already-recorded levelized values so history stays
-consistent.
+[**correction factor**](../concepts.md#the-correction-factor) to this device's
+LCOE. It retroactively restates every levelized value priced with this device's
+energy — its own savings and financial return, and the levelized operating
+costs of the batteries and consumers it supplied — so history stays consistent.
 
 ## Sensors this device can create
 

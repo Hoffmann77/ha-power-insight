@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from fractions import Fraction as F
 
-from tests.engine.home import Consumer, Grid, Home, Pv, expect
+from tests.engine.home import Battery, Consumer, Grid, Home, Pv, expect
 
 PRICE = F(3, 10)
 
@@ -144,3 +144,70 @@ class TestCorrectionFactorScalesTheLcoe(Home):
         the saving instead would have given 6/25.
         """
         return {"pv1": F(3, 50)}
+
+
+class TestOperatingCostIsCorrectedBySupplier(Home):
+    """Decision: a device's operating cost is corrected by its suppliers' factors.
+
+    bat1 charges on pv1 alone. What that charging costs is pv1's energy, so
+    pv1's factor of 2 applies to it and bat1's own factor of 3 does not — it
+    only restates what bat1's *discharged* energy costs. See "the factor
+    multiplies the lcoe, never the finished number" in engine-calculations.md.
+    """
+
+    grid = Grid(0, price=PRICE)
+    pv1 = Pv(1000, correction_factor=2.0)
+    bat1 = Battery(-400, charge_from=(pv1,), correction_factor=3.0)
+
+    @expect("source_adapters_lcoo_rates_corrected")
+    def test_operating_cost(self):
+        """bat1's 400 W of pv1 energy at pv1's corrected LCOE.
+
+        0.4 kW × 1/10 × 2 = 2/25 EUR/h. Scaling by bat1's own factor would
+        have given 3/25, and by both 6/25. pv1 draws nothing, so it reads 0.
+        """
+        return {"pv1": 0, "bat1": F(2, 25)}
+
+    @expect("adapters_levelized_saving_rates_corrected")
+    def test_saving(self):
+        """pv1 saves on the 600 W the house takes, at its corrected LCOE of 2/10.
+
+        0.6 × (3/10 − 2/10) = 3/50 EUR/h. bat1 is debited its corrected
+        charging cost, −2/25.
+        """
+        return {"pv1": F(3, 50), "bat1": -F(2, 25)}
+
+
+class TestBreakdownKeysTheTariffToTheGrid(Home):
+    """Decision: every levelized rate is published with its breakdown by
+    correction target, and the parts that never scale are keyed to the grid.
+
+    pv1 feeds 600 W to the house and exports 400 W at a feed-in tariff of
+    2/25. The tariff it displaced and the compensation it earns are never
+    corrected, so they sit under the grid; its own LCOE sits under pv1. See
+    "every levelized rate is published with its breakdown by correction
+    target" in engine-calculations.md.
+    """
+
+    grid = Grid(-400, price=PRICE)
+    pv1 = Pv(1000, exports=True, export_comp=F(2, 25))
+
+    @expect("adapters_levelized_saving_rate_components")
+    def test_saving_components(self):
+        """The saving on the 600 W served, split by what scales each part.
+
+        The displaced tariff, 0.6 × 3/10 = 9/50, under the grid; pv1's own
+        cost of those watts, −0.6 × 1/10 = −3/50, under pv1. Together they
+        are the 3/25 EUR/h saving.
+        """
+        return {"pv1": {"grid": F(9, 50), "pv1": -F(3, 50)}}
+
+    @expect("adapters_levelized_financial_return_rate_components")
+    def test_financial_return_components(self):
+        """The export adds a part to each key.
+
+        Under the grid, the compensation 0.4 × 2/25 = 4/125 joins the
+        tariff: 9/50 + 4/125 = 53/250. Under pv1, the exported watts' own
+        cost joins the served ones': −(0.6 + 0.4) × 1/10 = −1/10.
+        """
+        return {"pv1": {"grid": F(53, 250), "pv1": -F(1, 10)}}
