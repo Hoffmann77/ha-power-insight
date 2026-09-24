@@ -686,8 +686,13 @@ async def test_home_base_load_device_and_sensors(hass: HomeAssistant) -> None:
     assert f"{prefix}home_base_load_avoided_cost_rate" in keys
 
     dev_reg = dr.async_get(hass)
-    device = dev_reg.async_get_device(
-        identifiers={(DOMAIN, f"{entry.entry_id}_home_base_load")}
+    device = next(
+        (
+            d
+            for d in dr.async_entries_for_config_entry(dev_reg, entry.entry_id)
+            if (DOMAIN, f"{entry.entry_id}_home_base_load") in d.identifiers
+        ),
+        None,
     )
     assert device is not None, "the home base load should have its own device"
     assert "Home base load" in device.name
