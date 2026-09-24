@@ -1,0 +1,360 @@
+/* PROTOTYPE Sankey. Same palette tokens as CaseDiagram (--cd-c-*), because the
+ * shared DeviceIcon reads them; channel colours are new (--fs-ch-*). Theming is
+ * pure CSS, as in the current diagram. */
+
+.root {
+  --cd-bg: #ffffff;
+  --cd-fg: #24292f;
+  --cd-mut: #6a737d;
+  --cd-line: #d8dde3;
+  --cd-card: #f6f8fa;
+  --cd-amber: #c77e12;
+  --cd-c-grid: #3d6b9e;
+  --cd-c-pv: #b3861e;
+  --cd-c-battery: #b05577;
+  --cd-c-consumer: #38897c;
+  --cd-c-home: #7a8290;
+  --fs-ch-export: #4b5563;
+  --fs-ch-consumption: #4b5563;
+  --fs-ch-charging: #4b5563;
+  --fs-ch-standby: #4b5563;
+
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--cd-fg);
+  background: var(--cd-bg);
+  border: 1px solid var(--cd-line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+:global([data-theme='dark']) .root {
+  --cd-bg: #1b1f27;
+  --cd-fg: #e6e9ef;
+  --cd-mut: #99a1b0;
+  --cd-line: #363d4a;
+  --cd-card: #232833;
+  --cd-amber: #e0a44a;
+  --cd-c-grid: #6f9fd4;
+  --cd-c-pv: #d4a63f;
+  --cd-c-battery: #d17e9d;
+  --cd-c-consumer: #5aab9e;
+  --cd-c-home: #99a1af;
+  --fs-ch-export: #aab2bf;
+  --fs-ch-consumption: #aab2bf;
+  --fs-ch-charging: #aab2bf;
+  --fs-ch-standby: #aab2bf;
+}
+
+.root * {
+  box-sizing: border-box;
+}
+
+.root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* ---- snapshot tabs ---- */
+
+.states {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  border-bottom: 1px solid var(--cd-line);
+  background: var(--cd-card);
+}
+
+.state {
+  text-align: left;
+  padding: 10px 14px;
+  border-right: 1px solid var(--cd-line) !important;
+  border-bottom: 3px solid transparent !important;
+  color: var(--cd-mut);
+}
+
+.state.on {
+  color: var(--cd-fg);
+  background: var(--cd-bg);
+  border-bottom-color: var(--cd-fg) !important;
+}
+
+.stnum {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  margin-right: 6px;
+}
+
+.sttitle {
+  font-weight: 600;
+}
+
+.stnote {
+  display: block;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ---- kpis + view switch ---- */
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--cd-line);
+}
+
+.kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  color: var(--cd-mut);
+  font-size: 12.5px;
+}
+
+.kpis b {
+  color: var(--cd-fg);
+  margin-left: 4px;
+}
+
+.kpis .warn b {
+  color: var(--cd-amber);
+}
+
+.views {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 4px;
+  background: var(--cd-card);
+  border: 1px solid var(--cd-line);
+}
+
+.view {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 3px;
+  color: var(--cd-mut);
+}
+
+.view.on {
+  color: var(--cd-fg);
+  font-weight: 600;
+  background: var(--cd-bg);
+  box-shadow: 0 1px 2px rgba(16, 22, 33, 0.14);
+}
+
+/* ---- svg ---- */
+
+.svgwrap {
+  padding: 12px 6px 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.colhead {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  fill: var(--cd-mut);
+}
+
+.ribbon {
+  opacity: 0.42;
+  cursor: pointer;
+  transition: opacity 120ms;
+}
+
+.ribbon.lit {
+  opacity: 0.78;
+}
+
+.ribbon.dim {
+  opacity: 0.09;
+}
+
+.rlabel {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--cd-fg);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--cd-bg);
+  stroke-width: 3px;
+  stroke-opacity: 0.8;
+}
+
+.dimtext {
+  opacity: 0.25;
+}
+
+.node {
+  cursor: pointer;
+  outline: none;
+}
+
+.node:focus-visible .nbar,
+.node.sel .nbar {
+  stroke: var(--cd-fg);
+  stroke-width: 2px;
+}
+
+.dimnode {
+  opacity: 0.35;
+}
+
+.virtual {
+  fill-opacity: 0.55;
+  stroke: var(--cd-c-home);
+  stroke-dasharray: 3 2;
+}
+
+.nlabel {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--cd-fg);
+}
+
+.nvalue {
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--cd-mut);
+}
+
+.nsub {
+  font-size: 11px;
+  fill: var(--cd-mut);
+}
+
+.deficit {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--cd-amber);
+}
+
+/* ---- idle strip ---- */
+
+.idle {
+  padding: 4px 14px 10px;
+  font-size: 12px;
+  color: var(--cd-mut);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.idle i {
+  font-style: normal;
+  opacity: 0.8;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+/* ---- detail ---- */
+
+.detail {
+  border-top: 1px solid var(--cd-line);
+  background: var(--cd-card);
+  padding: 10px 14px 12px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--cd-mut);
+  font-size: 12.5px;
+}
+
+.dhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.dhead b {
+  font-size: 15px;
+  margin-right: 10px;
+}
+
+.dhead span {
+  color: var(--cd-mut);
+  font-size: 12.5px;
+}
+
+.dhead button {
+  font-size: 18px !important;
+  line-height: 1;
+  color: var(--cd-mut) !important;
+}
+
+.table {
+  width: 100%;
+  display: table;
+  margin: 8px 0 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table caption {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cd-mut);
+  padding: 4px 0 2px;
+}
+
+.table tr,
+.table td {
+  border: none;
+  background: none !important;
+}
+
+.table td {
+  padding: 3px 8px 3px 0;
+  border-top: 1px solid var(--cd-line);
+  vertical-align: top;
+}
+
+.table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 0;
+}
+
+.prop {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--cd-mut);
+  word-break: break-all;
+}
+
+.frac {
+  font-weight: 400;
+  color: var(--cd-mut);
+  font-size: 11.5px;
+}
+
+.derived td {
+  font-style: italic;
+  color: var(--cd-mut);
+}
+
+@media (max-width: 600px) {
+  .prop {
+    display: none;
+  }
+}
