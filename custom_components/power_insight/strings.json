@@ -450,6 +450,9 @@
     }
   },
   "exceptions": {
+    "migration_downgrade": {
+      "message": "This configuration was saved by a newer version of Power Insight (config version {version}). Reinstall that version or newer, or remove and re-add the integration."
+    },
     "set_value_not_total": {
       "message": "{entity_id} is not a total sensor. Set value only works on sensors that add up over time."
     }
