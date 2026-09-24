@@ -133,7 +133,7 @@ async def test_e2e_accumulated_value_over_time(hass: HomeAssistant) -> None:
     """A constant rate held across an hour integrates into the total sensor.
 
     A constant rate (1 kW import * 0.30 = 0.30 EUR/h) is held and re-reported an
-    hour later, so the trapezoidal step is exact regardless of propagation lag.
+    hour later, so the step is exact regardless of propagation lag.
     """
     entry = MockConfigEntry(
         domain=DOMAIN,

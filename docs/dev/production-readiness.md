@@ -135,8 +135,8 @@ and whether clearing the lifetime fields can silently re-base the correction
 
 | # | Decision | Status |
 | --- | --- | --- |
-| H1 | Running totals integrate up to the moment a reading becomes unavailable, then pause until it returns. No staleness timeout — HA's availability is trusted, and sensors that only report on change are legitimately silent. At startup a total starts as soon as the engine has all its readings, not at the first source event. Idle devices no longer pause a total (item 1). | settled |
-| H2 | Left-Riemann integration: every engine input is a held value between events, so every rate is a step function and left-Riemann is exact; trapezoidal smears each step backwards. | settled |
+| H1 | Running totals integrate up to the moment a reading becomes unavailable, then pause until it returns. No staleness timeout — HA's availability is trusted, and sensors that only report on change are legitimately silent. At startup a total starts as soon as the engine has all its readings, not at the first source event. Idle devices no longer pause a total (item 1). | done |
+| H2 | Left-Riemann integration: every engine input is a held value between events, so every rate is a step function and left-Riemann is exact; trapezoidal smears each step backwards. | done |
 | H3 | Price units: normalise EUR/kWh, ct/kWh, EUR/MWh and EUR/Wh; reject any other unit in the config flow; at runtime an unknown unit makes the price `None` (decision B). A price in another currency than Home Assistant's raises a repair issue instead of being converted. | settled |
 | H4 | A power entity may belong to one device only: the config flow rejects a duplicate, and existing entries that have one get a repair issue. | settled |
 | H5 | The combined levelized totals keep summing the per-device totals plus the retired-adapter ledger, but read `unavailable` while any *enabled* per-device total is unknown or unavailable (no more false drops in the statistics). A *disabled* per-device total is skipped, and that is documented on the sensor. | settled |

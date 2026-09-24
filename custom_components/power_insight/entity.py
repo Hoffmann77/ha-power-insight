@@ -38,6 +38,7 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.helpers.event import async_call_later
+from homeassistant.util import dt as dt_util
 
 from .event import (
     async_track_power_insight_state_change_event,
@@ -364,14 +365,22 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     from the event data (rather than using wall-clock time) to avoid adding
     processing-delay error to the elapsed-time calculation.
 
-    **Trapezoidal method**
+    **Left-Riemann method**
 
-    The default integration method is trapezoidal: the area of each slice is
-    ``elapsed_time × (left + right) / 2``.  Because both endpoints are fully
-    computed ``PowerInsight`` values (left = previous calculation result,
-    right = current calculation result), trapezoidal averaging is appropriate
-    and more accurate than left- or right-rectangle rules for smoothly varying
-    rate values.
+    Every input to the engine is a held value between two events — a meter's
+    reading stands until it reports again — so every rate the engine computes
+    is a step function, constant from one event to the next. The left-Riemann
+    rule is exact for a step function: each slice is ``elapsed_time × left``,
+    the rate that held over it. A trapezoid would smear each step back over
+    the interval before it.
+
+    **Unavailability**
+
+    A rate that becomes unavailable is integrated up to the moment it did —
+    the old rate held until then — and the total pauses until a rate is
+    known again. There is no staleness timeout: a sensor that is still
+    available is trusted, because sensors that only report on change are
+    legitimately silent for hours.
 
     **max_sub_interval**
 
@@ -432,7 +441,7 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         # None until the first event is received.
         self._last_integration_time: datetime | None = None
 
-        self._method = _IntegrationMethod.from_name(METHOD_TRAPEZOIDAL)
+        self._method = _IntegrationMethod.from_name(METHOD_LEFT)
 
         # Unit scaling: dividing the raw area (value × seconds) by
         # (prefix × time_unit_in_seconds) converts to the target unit.
@@ -538,11 +547,16 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
                 return
 
             elapsed = Decimal((now - self._last_integration_time).total_seconds())
-            if (value_dec := _decimal_state(self._last_integration_value)) is not None:
+            if elapsed > 0 and (
+                value_dec := _decimal_state(self._last_integration_value)
+            ) is not None:
                 area = self._method.calculate_area_with_one_state(elapsed, value_dec)
                 self._update_integral(area)
-
-            self._last_integration_time = now
+                # The breakdown must follow the total through steady periods
+                # too, or those slices escape a later correction.
+                if (components := self._last_integration_components) is not None:
+                    self._update_component_integrals(elapsed, components, components)
+                self._last_integration_time = now
             self.async_write_ha_state()
 
             # Reschedule for the next sub-interval.
@@ -600,6 +614,15 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         # Ensure the timer is cancelled cleanly when the entity is removed.
         self.async_on_remove(self._cancel_pending_max_sub_interval)
 
+        # Start the total now if the engine already holds every reading it
+        # needs (loaded at setup), rather than at the first source event — a
+        # sensor that only reports on change could keep that waiting for hours.
+        if self.integration_value is not None:
+            self._last_integration_value = self.integration_value
+            self._last_integration_components = self.integration_components
+            self._last_integration_time = dt_util.utcnow()
+            self._schedule_max_sub_interval()
+
         # --- Event listeners ---
         self.async_on_remove(
             async_track_power_insight_state_change_event(
@@ -653,61 +676,53 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
     # ------------------------------------------------------------------
 
     def _handle_integration_event(self, timestamp: datetime) -> None:
-        """Integrate one time slice and update HA state.
+        """Integrate the slice since the last step and update HA state.
 
         ``PowerInsight`` is updated by ``EventHandler`` before this callback
         fires, so ``self.integration_value`` already reflects the new source
         entity state.
 
-        On the first call the method initialises the left-endpoint anchor and
-        schedules the max_sub_interval timer; no area is accumulated yet
-        because there is no previous timestamp to measure from.
+        1. Integrate the rate that held since the last step (the left value)
+           up to ``timestamp`` — including when the new rate is unavailable,
+           since the old one held until the moment it went.
+        2. Hold the new rate from here on; if it is unavailable, the total
+           pauses until an event brings a known rate back.
+        3. Reset the max_sub_interval timer.
 
-        On subsequent calls:
-        1. Compute elapsed time from the previous event's timestamp.
-        2. Integrate using (left=previous rate, right=current rate).
-        3. Advance the left-endpoint anchor to the current values.
-        4. Reset the max_sub_interval timer.
+        Time never moves backwards: an event stamped before the last step
+        (the timer runs on the wall clock, events on the source's own
+        timestamps) adds nothing and does not rewind the anchor, so no slice
+        is counted twice.
         """
         right_value = self.integration_value
-
-        if self._last_integration_value is None:
-            # First event: record the initial anchor; nothing to integrate yet.
-            self._last_integration_components = self.integration_components
-            self._last_integration_value = right_value
-            self._last_integration_time = timestamp
-            self.async_write_ha_state()
-            self._schedule_max_sub_interval()
-            return
-
-        left_value = self._last_integration_value
-
-        # Use the actual event timestamps for accuracy.
-        elapsed_seconds = Decimal((timestamp - self._last_integration_time).total_seconds())
-
-        _LOGGER.debug(
-            "Integration step: left=%s right=%s elapsed=%.3fs",
-            left_value, right_value, float(elapsed_seconds),
-        )
-
         right_components = self.integration_components
+        left_value = self._last_integration_value
         left_components = self._last_integration_components
+        last_time = self._last_integration_time
 
-        if elapsed_seconds > 0 and left_value is not None and right_value is not None:
-            if states := self._method.validate_states(left_value, right_value):
+        if last_time is not None and left_value is not None:
+            elapsed_seconds = Decimal((timestamp - last_time).total_seconds())
+            _LOGGER.debug(
+                "Integration step: left=%s right=%s elapsed=%.3fs",
+                left_value, right_value, float(elapsed_seconds),
+            )
+            if elapsed_seconds > 0 and (
+                states := self._method.validate_states(left_value, right_value)
+            ):
                 area = self._method.calculate_area_with_two_states(elapsed_seconds, *states)
                 self._update_integral(area)
-                if left_components is not None and right_components is not None:
+                if left_components is not None:
                     self._update_component_integrals(
-                        elapsed_seconds, left_components, right_components,
+                        elapsed_seconds, left_components, right_components or {},
                     )
 
-        # Advance the left-endpoint anchor.
-        self._last_integration_time = timestamp
+        # Hold the new rate from here on, never rewinding the clock.
+        if last_time is None or timestamp > last_time:
+            self._last_integration_time = timestamp
         self._last_integration_value = right_value
         self._last_integration_components = right_components
 
-        # Cancel old timer and start a fresh one from this event's timestamp.
+        # Cancel old timer and start a fresh one from this step.
         self._cancel_and_reschedule_max_sub_interval()
 
         self.async_write_ha_state()
