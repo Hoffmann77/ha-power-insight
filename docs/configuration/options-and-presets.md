@@ -21,7 +21,7 @@ selection to all your devices at once:
 |---|---|
 | **Minimal** | Power split (%), where each consumer's power comes from, and financial return (with running totals). |
 | **Recommended** | Adds the power split in W, battery charging sources, and running totals for costs, savings and export compensation. |
-| **Extended** | Adds live cost, savings and export compensation rates (per hour) and each device's share of the home totals. |
+| **Extended** | Adds live cost, savings and export compensation rates (per hour), each device's share of the home totals, and each consumer's power and energy from every source. |
 | **Custom** | Choose sensors per device type on the following pages. |
 
 Each set builds on the previous one. **Recommended** suits most homes.
@@ -61,6 +61,9 @@ what its sensors support — see [the matrix below](#which-scope-offers-what).
   source. *(battery only)*
 - **Power sources (%)** — how much of a consumer's power comes from each
   source. *(consumer only)*
+- **Power from each source (W)** — the same, in watts. *(consumer only)*
+- **Energy from each source (kWh)** — a running total of the energy a consumer
+  has drawn from each source. *(consumer only)*
 
 See [Where a device's power goes](../entities.md) for how to read these names.
 
@@ -120,6 +123,8 @@ financial return** adds running totals.
 | Home base load | ✅ | — | — | — | — |
 | Charging sources (%) | — | — | — | ✅ | — |
 | Power sources (%) | — | — | — | — | ✅ |
+| Power from each source (W) | — | — | — | — | ✅ |
+| Energy from each source (kWh) | — | — | — | — | ✅ |
 | Export compensation rate | — | ✅ | ✅ | ✅ | — |
 | Total export compensation | — | ✅ | ✅ | ✅ | — |
 | Cost method — Standard | ✅ | ✅ | ✅ | ✅ | ✅ |

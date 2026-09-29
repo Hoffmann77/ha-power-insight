@@ -63,12 +63,19 @@ derived from the mix of sources currently supplying it (grid / solar / battery).
 | Sensor | Unit | Enabled by |
 |---|---|---|
 | Power source shares (one per source) | % | *Power sources (%)* |
+| Power from each source (one per source) | W | *Power from each source (W)* |
+| Energy from each source (one per source) | kWh | *Energy from each source (kWh)* |
 | Operating cost rate | currency/h | *Cost method = Standard* |
 | Levelized operating cost rate | currency/h | *Cost method = Levelized* |
 
 **Power source shares** show what fraction of this consumer's power currently
 comes from each source in your home — for example "the heat pump is currently
 running 55 % on solar power." Power Insight infers the source mix from the
-real-time state of all your adapters.
+real-time state of all your adapters. **Power from each source** gives the
+same split in watts, and **Energy from each source** adds it up over time — for
+example "the heat pump has used 312 kWh of solar and 540 kWh from the grid."
+Every source gets a sensor, even one outside the consumer's selected sources:
+when the meters show the consumer drawing from elsewhere, that energy is
+counted where it came from.
 
 See the [Entity reference](../entities.md#consumer) for details.

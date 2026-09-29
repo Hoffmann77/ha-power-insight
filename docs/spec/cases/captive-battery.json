@@ -126,6 +126,31 @@
           }
         },
         {
+          "property": "sink_adapters_source_power",
+          "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "pv1": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "bat1": {
+              "grid": "0",
+              "pv1": "400",
+              "bat1": "0"
+            },
+            "cons1": {
+              "grid": "200",
+              "pv1": "0",
+              "bat1": "0"
+            }
+          }
+        },
+        {
           "property": "home_base_load_source_shares",
           "value": {
             "grid": "1",
@@ -523,6 +548,31 @@
             },
             "cons1": {
               "grid": "1",
+              "pv1": "0",
+              "bat1": "0"
+            }
+          }
+        },
+        {
+          "property": "sink_adapters_source_power",
+          "value": {
+            "grid": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "pv1": {
+              "grid": "20",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "bat1": {
+              "grid": "400",
+              "pv1": "0",
+              "bat1": "0"
+            },
+            "cons1": {
+              "grid": "100",
               "pv1": "0",
               "bat1": "0"
             }

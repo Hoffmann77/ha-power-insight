@@ -227,6 +227,7 @@ Per consumer device. Consumer support is still under development. See
 |---|---|---|---|
 | Consumption share | % | This consumer's share of all self-consumption in the home. | Share of home totals |
 | Power share from &lt;source&gt; (one per source) | % | Share of this consumer's current power coming from that source (grid / solar / battery). Mirrors the battery's *Charging share from &lt;source&gt;*. | Power source shares |
+| Power from &lt;source&gt; (one per source) | W | The watts of this consumer's current power coming from that source. They add up to its draw — slightly less than its own meter while the meters overdraw (see *Metering imbalance*). | Power from each source |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
 
@@ -242,3 +243,8 @@ draws from outside its selected sources. See
 | Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
 | Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Total costs (levelized) |
 | Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |
+| Energy from &lt;source&gt; (one per source) | kWh | *Power from &lt;source&gt;* integrated over time — how much of this consumer's energy came from that source. | Energy from each source |
+
+The *Energy from &lt;source&gt;* sensors split the energy the consumer's own
+meter already counts. Don't add them to the Energy dashboard next to that
+meter: the same energy would be counted twice.

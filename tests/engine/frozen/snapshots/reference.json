@@ -34,6 +34,11 @@
       "grid": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 1.0
     },
@@ -163,6 +168,11 @@
       "grid": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 0.0
     },
@@ -288,6 +298,7 @@
     "metering_imbalance": null,
     "home_base_load_power": null,
     "sink_adapters_source_shares": null,
+    "sink_adapters_source_power": null,
     "home_base_load_source_shares": null,
     "gross_power_export_ratio": null,
     "gross_power_consumption_ratio": null,
@@ -388,6 +399,16 @@
     "metering_imbalance": 0.0,
     "home_base_load_power": 1400.0,
     "sink_adapters_source_shares": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
      "grid": {
       "grid": 0.0,
       "pv1": 0.0
@@ -584,6 +605,16 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 0.0,
      "pv1": 1.0
@@ -771,6 +802,16 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 20.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 1.0,
      "pv1": 0.0
@@ -949,6 +990,7 @@
     "metering_imbalance": null,
     "home_base_load_power": null,
     "sink_adapters_source_shares": null,
+    "sink_adapters_source_power": null,
     "home_base_load_source_shares": null,
     "gross_power_export_ratio": null,
     "gross_power_consumption_ratio": null,
@@ -1052,6 +1094,16 @@
      "grid": {
       "grid": 0.0,
       "pv1": 1.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 400.0
      },
      "pv1": {
       "grid": 0.0,
@@ -1245,6 +1297,16 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 900.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 0.0,
      "pv1": 0.0
@@ -1423,6 +1485,16 @@
     "metering_imbalance": 500.0,
     "home_base_load_power": 0.0,
     "sink_adapters_source_shares": {
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
      "grid": {
       "grid": 0.0,
       "pv1": 0.0
@@ -1634,6 +1706,20 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "cons1": {
+      "grid": 285.714285714,
+      "pv1": 214.285714286
+     },
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 0.571428571429,
      "pv1": 0.428571428571
@@ -1833,6 +1919,20 @@
      "cons1": {
       "grid": 0.333333333333,
       "pv1": 0.666666666667
+     },
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "cons1": {
+      "grid": 114.285714286,
+      "pv1": 228.571428571
      },
      "grid": {
       "grid": 0.0,
@@ -2054,6 +2154,20 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "cons1": {
+      "grid": 0.0,
+      "pv1": 500.0
+     },
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "grid": 0.888888888889,
      "pv1": 0.111111111111
@@ -2255,6 +2369,20 @@
      "cons1": {
       "grid": 0.4,
       "pv1": 0.6
+     },
+     "grid": {
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "cons1": {
+      "grid": 200.0,
+      "pv1": 300.0
      },
      "grid": {
       "grid": 0.0,
@@ -2486,6 +2614,28 @@
       "bat1": 0.0,
       "grid": 0.571428571429,
       "pv1": 0.428571428571
+     },
+     "grid": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 342.857142857,
+      "pv1": 257.142857143
+     },
+     "cons1": {
+      "bat1": 0.0,
+      "grid": 285.714285714,
+      "pv1": 214.285714286
      },
      "grid": {
       "bat1": 0.0,
@@ -2760,6 +2910,28 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "bat1": 333.333333333,
+      "grid": 166.666666667,
+      "pv1": 0.0
+     },
+     "grid": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "bat1": 0.666666666667,
      "grid": 0.333333333333,
@@ -3010,6 +3182,28 @@
       "bat1": 0.0,
       "grid": 0.6,
       "pv1": 0.4
+     },
+     "grid": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "bat1": 0.0,
+      "grid": 300.0,
+      "pv1": 200.0
      },
      "grid": {
       "bat1": 0.0,
@@ -3286,6 +3480,28 @@
       "pv1": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 400.0
+     },
+     "cons1": {
+      "bat1": 0.0,
+      "grid": 200.0,
+      "pv1": 0.0
+     },
+     "grid": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "bat1": 0.0,
      "grid": 1.0,
@@ -3547,6 +3763,28 @@
      "pv1": {
       "bat1": 0.0,
       "grid": 1.0,
+      "pv1": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "grid": 400.0,
+      "pv1": 0.0
+     },
+     "cons1": {
+      "bat1": 0.0,
+      "grid": 100.0,
+      "pv1": 0.0
+     },
+     "grid": {
+      "bat1": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "grid": 20.0,
       "pv1": 0.0
      }
     },
@@ -3850,6 +4088,56 @@
       "east": 0.5,
       "grid": 0.0,
       "west": 0.5
+     },
+     "bat_c": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "east": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "grid": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "west": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat_a": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 50.0,
+      "grid": 0.0,
+      "west": 50.0
+     },
+     "bat_b": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 50.0,
+      "grid": 0.0,
+      "west": 50.0
      },
      "bat_c": {
       "bat_a": 0.0,
@@ -4298,6 +4586,56 @@
       "west": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "bat_a": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 50.0,
+      "west": 50.0
+     },
+     "bat_b": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 50.0,
+      "west": 50.0
+     },
+     "bat_c": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 100.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "east": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "grid": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "west": {
+      "bat_a": 0.0,
+      "bat_b": 0.0,
+      "bat_c": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "bat_a": 0.0,
      "bat_b": 0.0,
@@ -4667,6 +5005,38 @@
       "west": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "carport": {
+      "carport": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "east": {
+      "carport": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     },
+     "grid": {
+      "carport": 200.0,
+      "east": 800.0,
+      "grid": 0.0,
+      "west": 800.0
+     },
+     "plug": {
+      "carport": 0.0,
+      "east": 200.0,
+      "grid": 0.0,
+      "west": 200.0
+     },
+     "west": {
+      "carport": 0.0,
+      "east": 0.0,
+      "grid": 0.0,
+      "west": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "carport": 0.0,
      "east": 0.0,
@@ -4994,6 +5364,50 @@
       "bat2": 0.0,
       "grid": 0.0,
       "pv1": 0.8,
+      "pv2": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv2": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat2": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "bat1": 53.3333333333,
+      "bat2": 133.333333333,
+      "grid": 0.0,
+      "pv1": 213.333333333,
+      "pv2": 0.0
+     },
+     "grid": {
+      "bat1": 120.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 480.0,
       "pv2": 0.0
      },
      "pv1": {
@@ -5384,6 +5798,50 @@
       "pv2": 0.0
      }
     },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat2": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "bat1": 53.3333333333,
+      "bat2": 133.333333333,
+      "grid": 0.0,
+      "pv1": 213.333333333,
+      "pv2": 0.0
+     },
+     "grid": {
+      "bat1": 120.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 480.0,
+      "pv2": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv2": {
+      "bat1": 6.66666666667,
+      "bat2": 16.6666666667,
+      "grid": 0.0,
+      "pv1": 26.6666666667,
+      "pv2": 0.0
+     }
+    },
     "home_base_load_source_shares": {
      "bat1": 0.133333333333,
      "bat2": 0.333333333333,
@@ -5752,6 +6210,50 @@
      "pv2": {
       "bat1": 0.2,
       "bat2": 0.8,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     }
+    },
+    "sink_adapters_source_power": {
+     "bat1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "bat2": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "cons1": {
+      "bat1": 80.0,
+      "bat2": 320.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "grid": {
+      "bat1": 300.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv1": {
+      "bat1": 0.0,
+      "bat2": 0.0,
+      "grid": 0.0,
+      "pv1": 0.0,
+      "pv2": 0.0
+     },
+     "pv2": {
+      "bat1": 10.0,
+      "bat2": 40.0,
       "grid": 0.0,
       "pv1": 0.0,
       "pv2": 0.0

@@ -147,6 +147,41 @@
           }
         },
         {
+          "property": "sink_adapters_source_power",
+          "value": {
+            "grid": {
+              "grid": "0",
+              "east": "800",
+              "west": "800",
+              "carport": "200"
+            },
+            "east": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
+            "west": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
+            "carport": {
+              "grid": "0",
+              "east": "0",
+              "west": "0",
+              "carport": "0"
+            },
+            "plug": {
+              "grid": "0",
+              "east": "200",
+              "west": "200",
+              "carport": "0"
+            }
+          }
+        },
+        {
           "property": "home_base_load_source_shares",
           "value": {
             "grid": "0",
