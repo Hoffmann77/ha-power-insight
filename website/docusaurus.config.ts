@@ -84,6 +84,14 @@ const config: Config = {
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
         {to: '/spec', label: 'Reference cases', position: 'left'},
+        // A plain link, not a `docSidebar` item: released versions predate the
+        // `dev` sidebar, and developer docs only track the in-development code.
+        {
+          to: '/next/dev/testing',
+          label: 'Developers',
+          position: 'left',
+          activeBaseRegex: '/next/dev/',
+        },
         {type: 'docsVersionDropdown', position: 'right'},
         {
           href: 'https://github.com/Hoffmann77/ha-power-insight',
@@ -109,6 +117,7 @@ const config: Config = {
             {label: 'Entity reference', to: '/entities'},
             {label: 'Reference cases', to: '/spec'},
             {label: 'Engine decisions', to: '/dev/engine-calculations'},
+            {label: 'Engine testing', to: '/next/dev/testing'},
           ],
         },
         {

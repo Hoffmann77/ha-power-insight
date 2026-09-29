@@ -42,19 +42,17 @@ const sidebars: SidebarsConfig = {
         'spec/mixed-export-house',
       ],
     },
-    {
-      type: 'category',
-      label: 'Development',
-      items: [
-        'dev/engine-calculations',
-        'dev/production-readiness',
-        'dev/source-share-allocation-problem',
-        'dev/entity-naming',
-        'dev/releasing',
-        'dev/options-flow-redesign',
-        'dev/case-diagram-handoff',
-      ],
-    },
+  ],
+  // The Developers tab: how the engine is built, tested and released.
+  dev: [
+    'dev/testing',
+    'dev/engine-calculations',
+    'dev/production-readiness',
+    'dev/source-share-allocation-problem',
+    'dev/entity-naming',
+    'dev/releasing',
+    'dev/options-flow-redesign',
+    'dev/case-diagram-handoff',
   ],
 };
 
