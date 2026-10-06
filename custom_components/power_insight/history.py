@@ -91,7 +91,7 @@ ERROR_EXPORT_COMPENSATION_NOT_SPLITTABLE = "history_export_compensation_not_spli
 MISSING_WAITING = "waiting"
 MISSING_ENERGY = "no_energy"
 MISSING_TARIFF = "no_tariff"
-MISSING_FEED_IN_TARIFF = "no_feed_in_tariff"
+MISSING_FEED_IN_TARIFF = "no_export_compensation"
 MISSING_PRICE = "no_price"
 
 # The running totals that carry history, by sensor description key.

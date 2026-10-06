@@ -601,18 +601,28 @@ def make_history_amount_selector(currency: str) -> selector.NumberSelector:
     )
 
 
-#: The fields of the "Already accumulated" section per device type, in form
-#: order. The grid's are the whole home's (``history_store.HOME_FIELDS``).
-HISTORY_SECTION_FIELDS: dict[str, tuple[str, ...]] = {
-    "grid": tuple(HOME_FIELDS),
-    "pv_system": (
-        "produced", "fed_in", "into_batteries", "average_tariff",
-        "feed_in_tariff", "savings", "export_compensation", "levelized_savings",
-    ),
-    "battery": (
-        "charged", "grid_charged", "discharged", "fed_in", "average_tariff",
-        "feed_in_tariff", "savings", "export_compensation", "levelized_savings",
-    ),
+#: The two routes of carrying history over, each its own section of a device
+#: form, with its fields in form order. Energy: the kWh an app shows, and the
+#: prices that turn them into money. Amounts: the money an app shows, taken
+#: as it is. Both are stored together, as one history.
+HISTORY_ENERGY = "history_energy"
+HISTORY_AMOUNTS = "history_amounts"
+HISTORY_SECTIONS: dict[str, dict[str, tuple[str, ...]]] = {
+    HISTORY_ENERGY: {
+        "grid": ("home_fed_in", "average_tariff"),
+        "pv_system": (
+            "produced", "fed_in", "into_batteries", "average_tariff", "feed_in_tariff",
+        ),
+        "battery": (
+            "charged", "grid_charged", "discharged", "fed_in", "average_tariff",
+            "feed_in_tariff",
+        ),
+    },
+    HISTORY_AMOUNTS: {
+        "grid": ("home_savings", "home_export_compensation"),
+        "pv_system": ("savings", "export_compensation", "levelized_savings"),
+        "battery": ("savings", "export_compensation", "levelized_savings"),
+    },
 }
 _HISTORY_KWH_FIELDS = frozenset({
     "home_fed_in", "produced", "charged", "grid_charged", "discharged",
@@ -624,50 +634,60 @@ _HISTORY_PRICE_FIELDS = frozenset({"average_tariff", "feed_in_tariff"})
 def history_section(
     adapter_type: str, currency: str, entered: dict, standalone: bool,
 ) -> dict:
-    """Return the "Already accumulated" section of a device form, or nothing.
+    """Return the two "Already accumulated" sections of a device form, or none.
 
     Every field is optional and seeded with a suggested value, not a default,
     so a cleared field stays cleared. A device that stands alone (added well
     after the grid) is also asked for the average tariff and, for a PV system,
-    what went into batteries: it cannot share the home's figures. The section
+    what went into batteries: it cannot share the home's figures. Each section
     starts collapsed until there is something in it.
     """
-    keys = HISTORY_SECTION_FIELDS.get(adapter_type)
-    if keys is None:
-        return {}
-
-    fields: dict = {}
-    for key in keys:
-        if adapter_type != "grid" and key in STANDALONE_FIELDS and not standalone:
+    sections: dict = {}
+    for name, by_type in HISTORY_SECTIONS.items():
+        keys = by_type.get(adapter_type)
+        if keys is None:
             continue
-        if key in _HISTORY_KWH_FIELDS:
-            field_selector = HISTORY_KWH_SELECTOR
-        elif key in _HISTORY_PRICE_FIELDS:
-            field_selector = make_history_price_selector(currency)
-        else:
-            field_selector = make_history_amount_selector(currency)
-        suggested = (
-            {"suggested_value": entered[key]} if entered.get(key) is not None else None
+        fields: dict = {}
+        for key in keys:
+            if adapter_type != "grid" and key in STANDALONE_FIELDS and not standalone:
+                continue
+            if key in _HISTORY_KWH_FIELDS:
+                field_selector = HISTORY_KWH_SELECTOR
+            elif key in _HISTORY_PRICE_FIELDS:
+                field_selector = make_history_price_selector(currency)
+            else:
+                field_selector = make_history_amount_selector(currency)
+            suggested = (
+                {"suggested_value": entered[key]}
+                if entered.get(key) is not None else None
+            )
+            fields[vol.Optional(key, description=suggested)] = field_selector
+        filled = any(entered.get(key) is not None for key in keys)
+        sections[vol.Optional(name)] = section(
+            vol.Schema(fields), {"collapsed": not filled}
         )
-        fields[vol.Optional(key, description=suggested)] = field_selector
-
-    return {
-        vol.Optional(CONF_HISTORY): section(
-            vol.Schema(fields), {"collapsed": not entered}
-        )
-    }
+    return sections
 
 
-def entered_history(user_input: dict) -> dict | None:
-    """Take the section's figures out of ``user_input``, the empty ones dropped.
+def entered_history(user_input: dict, stored: dict) -> dict | None:
+    """Take the sections' figures out of ``user_input``, the empty ones dropped.
 
-    ``None`` when the form carried no section at all, which leaves the
-    stored history as it is.
+    A section the form carried replaces that route's stored figures; one it
+    did not carry keeps them. ``None`` when it carried neither, which leaves
+    the stored history as it is.
     """
-    if CONF_HISTORY not in user_input:
+    if not any(name in user_input for name in HISTORY_SECTIONS):
         return None
-    entered = user_input.pop(CONF_HISTORY) or {}
-    return {k: v for k, v in entered.items() if v is not None}
+    entered = dict(stored)
+    for name, by_type in HISTORY_SECTIONS.items():
+        if name not in user_input:
+            continue
+        route = {key for keys in by_type.values() for key in keys}
+        entered = {k: v for k, v in entered.items() if k not in route}
+        entered.update(
+            {k: v for k, v in (user_input.pop(name) or {}).items() if v is not None}
+        )
+    return entered
 
 
 def history_errors(
@@ -2032,7 +2052,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
         history_device = ""
 
         if user_input is not None:
-            history = entered_history(user_input) or {}
+            history = entered_history(user_input, {}) or {}
             validation_errors = validate_fields(
                 self.hass, self._adapter_fields, user_input, options, "config"
             )
@@ -2159,7 +2179,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
         history_device = ""
 
         if user_input is not None:
-            submitted = entered_history(user_input)
+            submitted = entered_history(user_input, history)
             if submitted is not None:
                 history = submitted  # re-shown as typed if the form is refused
             validation_errors = validate_fields(

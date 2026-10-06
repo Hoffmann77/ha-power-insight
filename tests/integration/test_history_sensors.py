@@ -348,13 +348,13 @@ async def test_an_existing_install_can_add_change_and_clear_its_history(
         "power_entity": "sensor.grid_power",
         "power_entity_inverted": False,
         "grid_electricity_price_entity": "sensor.grid_price",
-        "history": {"home_fed_in": 4000.0, "average_tariff": 0.34},
+        "history_energy": {"home_fed_in": 4000.0, "average_tariff": 0.34},
     })
-    await reconfigure(PV_SUB_ID, {**pv_form, "history": {"produced": 10000.0}})
+    await reconfigure(PV_SUB_ID, {**pv_form, "history_energy": {"produced": 10000.0}})
     assert float(hass.states.get(entity_id).state) == pytest.approx(2090.0)
 
-    await reconfigure(PV_SUB_ID, {**pv_form, "history": {"produced": 9000.0}})
+    await reconfigure(PV_SUB_ID, {**pv_form, "history_energy": {"produced": 9000.0}})
     assert float(hass.states.get(entity_id).state) == pytest.approx(1750.0)
 
-    await reconfigure(PV_SUB_ID, {**pv_form, "history": {}})
+    await reconfigure(PV_SUB_ID, {**pv_form, "history_energy": {}, "history_amounts": {}})
     assert float(hass.states.get(entity_id).state) == pytest.approx(50.0)

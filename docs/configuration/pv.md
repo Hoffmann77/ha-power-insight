@@ -65,9 +65,11 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 
 ### Already accumulated
 
-> Optional: what this system did before Power Insight counted it, from its
-> app — *Produced*, and optionally its own feed-in and amounts. Your totals
-> then start where your system really is. See
+> Optional, in two sections, one per route. **Energy (kWh):** *Produced*,
+> and optionally its own export to the grid; Power Insight calculates the
+> money, with the average grid tariff entered on the grid. **Amounts:** the
+> savings and export compensation your app shows, taken as they are. Your
+> totals then start where your system really is. See
 > [Carried-over history](../history.md).
 
 ## Changing lifetime values later

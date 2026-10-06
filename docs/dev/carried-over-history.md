@@ -16,7 +16,7 @@ Four notes under *The monetary model*, each covered by integration tests:
 
 - history is added when a total is reported, never accumulated;
 - history is split by the engine's allocator, on period totals (no grid
-  import as a source, no battery charging another, own feed-in
+  import as a source, no battery charging another, own export
   pre-assigned), solved on save and then frozen;
 - entered amounts are the truth; only their cost of energy follows
   corrections, and a total missing a term carries nothing;
@@ -28,7 +28,7 @@ Four notes under *The monetary model*, each covered by integration tests:
 | --- | --- |
 | `history.py` | Pure Python. `solve` splits a period's kWh with `allocate` and deals out home-level amounts, or returns the refusals; `history_totals` prices one device's record at the current corrected LCOE / LCOS. |
 | `history_store.py` | The Home Assistant side. Re-solves at setup whenever the entered figures changed, stores the result in the config entry, prices it once per setup for the sensors, and checks a form's figures with everyone else's (`check_view`). |
-| `config_flow.py` | The *Already accumulated* section (`history_section`), and the check on save (`history_errors`). |
+| `config_flow.py` | The two *Already accumulated* sections, one per route, energy (kWh) and amounts (`HISTORY_SECTIONS`, `history_section`), merged into one stored history (`entered_history`), and the check on save (`history_errors`). |
 | `sensor.py` | `history_key` on a total's description; `native_value` adds the carried-over part, the attributes split it from the counted one. |
 | `__init__.py` | Migration 1.4 → 1.5 (`counting_since` from the entity registry), and `async_sync_history` at setup. |
 
@@ -45,7 +45,7 @@ refused (`SLACK_KWH`, `SLACK_SHARE` in `history.py`).
 
 Devices whose `counting_since` is within 24 hours of the grid's share one
 period and are split together; a device added later stands alone and
-supplies its own tariff and feed-in.
+supplies its own tariff and export.
 
 ### Tests
 

@@ -76,9 +76,10 @@ CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
 
 ### Already accumulated
 
-> Optional: what this battery did before Power Insight counted it, from its
-> app — *Charged*, *Discharged* and any grid charging, and optionally its own
-> feed-in and amounts. See [Carried-over history](../history.md).
+> Optional, in two sections, one per route. **Energy (kWh):** *Charged*,
+> *Discharged* and any grid charging, and optionally its own export to the
+> grid. **Amounts:** the savings and export compensation your app shows,
+> taken as they are. See [Carried-over history](../history.md).
 
 ## Sensors this device can create
 
