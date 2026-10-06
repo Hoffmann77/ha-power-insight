@@ -546,7 +546,7 @@
     },
     "history_tariff_missing": {
       "title": "Carried-over savings of {entry_title} need an average grid tariff",
-      "description": "**{devices}** have energy (kWh) carried over from their app, but no average grid tariff to value it, so their savings carry nothing yet. Their export compensation is not affected.\n\nOpen the **grid** of {entry_title}, choose **Reconfigure**, and enter the **Average grid tariff** under **Already accumulated: energy (kWh)**. It is used for every PV system and battery without a tariff of its own. Only if a device's period had a different average, enter it on that device instead.\n\nThis message goes away once every device has a tariff."
+      "description": "Energy (kWh) carried over from an app has no average grid tariff to value it: **{devices}**. Until there is one, the savings carried over stay empty; the export compensation is not affected.\n\nOpen the **grid** of {entry_title}, choose **Reconfigure**, and enter the **Average grid tariff** under **Already accumulated: energy (kWh)**. It is used for every PV system and battery without a tariff of its own. Only if a device's period had a different average, enter it on that device instead.\n\nThis message goes away once every device has a tariff."
     }
   },
   "selector": {
