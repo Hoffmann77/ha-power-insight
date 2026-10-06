@@ -40,11 +40,14 @@ from .const import (
 )
 from .history import (
     BATTERY,
+    MISSING_WAITING,
     PV_SYSTEM,
     DeviceInputs,
     HomeInputs,
     Record,
     Solution,
+    Totals,
+    history_totals,
     shares_period,
     solve,
 )
@@ -253,6 +256,104 @@ def price_lookup(
         return _price(adapter)
 
     return price
+
+
+# ---------------------------------------------------------------------------
+# What the sensors add
+# ---------------------------------------------------------------------------
+
+#: State attributes of a total that carries history.
+ATTR_CARRIED_OVER = "carried_over"
+ATTR_CARRIED_OVER_UNTIL = "carried_over_until"
+ATTR_CARRIED_OVER_MISSING = "carried_over_missing"
+ATTR_CARRIED_OVER_WAITING_FOR = "carried_over_waiting_for"
+ATTR_TRACKED = "tracked"
+
+
+@dataclass(frozen=True)
+class DeviceHistory:
+    """One device's record, priced: what its totals carry over."""
+
+    record: Record
+    totals: Totals
+
+
+def priced_history(
+    entry: ConfigEntry, power_insight: PowerInsight
+) -> dict[str, DeviceHistory]:
+    """Price every stored record, removed devices' included.
+
+    Done once per setup: the records only change at setup, and so do the
+    prices, because a lifetime cost edit is a reconfigure, which reloads.
+    """
+    price = price_lookup(entry, power_insight)
+    return {
+        uid: DeviceHistory(record, history_totals(record, price))
+        for uid, record in stored_records(entry).items()
+    }
+
+
+def device_carried_over(
+    entry: ConfigEntry, history: dict[str, DeviceHistory], uid: str, key: str
+) -> tuple[float | None, dict]:
+    """What device ``uid``'s total ``key`` carries over, and its attributes.
+
+    ``(None, {})`` when the device has no history for that total. A total
+    missing a term carries nothing, and its attributes say why.
+    """
+    found = history.get(uid)
+    if found is None or key not in found.totals.values:
+        return None, {}
+
+    value = found.totals.values[key]
+    attributes: dict = {}
+    if value is None:
+        reason = found.totals.missing[key]
+        attributes[ATTR_CARRIED_OVER_MISSING] = reason
+        if reason == MISSING_WAITING:
+            attributes[ATTR_CARRIED_OVER_WAITING_FOR] = [
+                _name(entry, waited) for waited in found.record.waiting_for
+            ]
+    else:
+        attributes[ATTR_CARRIED_OVER] = round(value, 2)
+    if (subentry := entry.subentries.get(uid)) is not None:
+        attributes[ATTR_CARRIED_OVER_UNTIL] = subentry.data.get(CONF_COUNTING_SINCE)
+    return value, attributes
+
+
+def summed_carried_over(
+    entry: ConfigEntry, history: dict[str, DeviceHistory], key: str
+) -> tuple[float | None, dict]:
+    """What a whole-home total carries over: every device's, removed included.
+
+    The sum of exactly what the per-device totals carry, so a combined total
+    stays the sum of its devices; a device whose total carries nothing is
+    left out and named. ``(None, {})`` when no device has history for ``key``.
+    """
+    relevant = {
+        uid: found for uid, found in history.items() if key in found.totals.values
+    }
+    if not relevant:
+        return None, {}
+
+    total = 0.0
+    missing: dict[str, str] = {}
+    for uid, found in relevant.items():
+        value = found.totals.values[key]
+        if value is None:
+            missing[_name(entry, uid)] = found.totals.missing[key]
+        else:
+            total += value
+    attributes: dict = {ATTR_CARRIED_OVER: round(total, 2)}
+    if missing:
+        attributes[ATTR_CARRIED_OVER_MISSING] = missing
+    return total, attributes
+
+
+def _name(entry: ConfigEntry, uid: str) -> str:
+    """A device's name; a removed device's id, its name being gone with it."""
+    subentry = entry.subentries.get(uid)
+    return subentry.title if subentry is not None else uid
 
 
 def _price(adapter) -> float | None:

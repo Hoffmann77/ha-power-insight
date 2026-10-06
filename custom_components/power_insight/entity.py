@@ -708,9 +708,14 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
 
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:
-        """Return the extra data to persist across HA restarts."""
+        """Return the extra data to persist across HA restarts.
+
+        The running total as counted, never as displayed: a subclass may add
+        something to its display (the history carried over from a device's
+        app), and restoring that into the total would add it again.
+        """
         return IntegrationSensorExtraStoredData(
-            self.native_value,
+            self._state,
             self.native_unit_of_measurement,
             self._last_valid_state,
             dict(self._component_totals) or None,

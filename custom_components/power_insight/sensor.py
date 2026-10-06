@@ -6,6 +6,7 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import cached_property
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -33,6 +34,12 @@ from .entity import (
     IntegrationSensorExtraStoredData,
 )
 from .utils import get_value
+from .history_store import (
+    ATTR_TRACKED,
+    DeviceHistory,
+    device_carried_over,
+    summed_carried_over,
+)
 from .power_insight import PowerInsight, AbstractBaseAdapter, UNIT_PREFIXES
 from . import MyConfigEntry
 from .const import (
@@ -114,6 +121,10 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     # SI prefix of the accumulated unit relative to the rate's: "k" turns a
     # rate in W into a total in kWh. None keeps EUR/h -> EUR.
     unit_prefix: str | None = None
+    # The total of history.py this sensor carries over from the devices' apps.
+    # A per-device sensor adds its own device's; a whole-home one (combined,
+    # or the grid's) adds every device's, removed devices included.
+    history_key: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +471,7 @@ POWER_INSIGHT_HOME_BASE_LOAD_SENSORS = (
 POWER_INSIGHT_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="combined_total_charging_cost",
+        history_key="total_operating_cost",
         translation_key="total_charging_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -484,6 +496,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_financial_return",
+        history_key="total_financial_return",
         translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -496,6 +509,7 @@ POWER_INSIGHT_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="combined_total_cost_savings",
+        history_key="total_cost_savings",
         translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -737,6 +751,7 @@ POWER_INSIGHT_GRID_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
+        history_key="total_export_compensation",
         translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -980,6 +995,7 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
 POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
+        history_key="total_export_compensation",
         translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1020,6 +1036,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
+        history_key="total_cost_savings",
         translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1032,6 +1049,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
+        history_key="total_levelized_cost_savings",
         translation_key="total_levelized_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1047,6 +1065,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_financial_return",
+        history_key="total_financial_return",
         translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1059,6 +1078,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
+        history_key="total_levelized_financial_return",
         translation_key="total_levelized_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1310,6 +1330,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
 POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     PowerInsightIntegrationSensorDescription(
         key="total_export_compensation",
+        history_key="total_export_compensation",
         translation_key="total_export_compensation",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1323,6 +1344,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_operating_cost",
+        history_key="total_operating_cost",
         translation_key="total_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1335,6 +1357,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_operating_cost",
+        history_key="total_levelized_operating_cost",
         translation_key="total_levelized_operating_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1350,6 +1373,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
+        history_key="total_cost_savings",
         translation_key="total_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1362,6 +1386,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_cost_savings",
+        history_key="total_levelized_cost_savings",
         translation_key="total_levelized_cost_savings",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1377,6 +1402,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_financial_return",
+        history_key="total_financial_return",
         translation_key="total_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1389,6 +1415,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_levelized_financial_return",
+        history_key="total_levelized_financial_return",
         translation_key="total_levelized_financial_return",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -2386,6 +2413,57 @@ class BasePowerInsightIntegrationSensor(BaseEventIntegrationSensorEntity):
             self.entity_description.native_unit_of_measurement, self.hass
         )
 
+    # ------------------------------------------------------------------
+    # History carried over from the devices' apps
+    # ------------------------------------------------------------------
+
+    @property
+    def _accumulated(self) -> Decimal | None:
+        """What this sensor counted itself: the running total, as displayed."""
+        return self._state
+
+    def _carried_over(self) -> tuple[float | None, dict]:
+        """What this total carries over, and its attributes; none by default."""
+        return None, {}
+
+    @cached_property
+    def _history(self) -> tuple[float | None, dict]:
+        """``_carried_over``, once: the history only changes with a reload."""
+        if self.entity_description.history_key is None:
+            return None, {}
+        return self._carried_over()
+
+    @property
+    def native_value(self) -> Decimal | None:
+        """The counted total plus what it carries over from the devices' apps.
+
+        Added here and nowhere else: the restored total, its breakdown and
+        the engine hold only what was counted. Until the sensor has counted
+        anything there is nothing to add it to.
+        """
+        accumulated = self._accumulated
+        carried, _ = self._history
+        if accumulated is None or carried is None:
+            return accumulated
+        return accumulated + Decimal(str(carried))
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        """The carried-over part next to the counted one, or why there is none."""
+        _, attributes = self._history
+        if not attributes:
+            return None
+        accumulated = self._accumulated
+        return {
+            **attributes,
+            ATTR_TRACKED: None if accumulated is None else round(float(accumulated), 2),
+        }
+
+
+def _runtime_history(entry: ConfigEntry) -> dict[str, DeviceHistory]:
+    """The entry's priced history, or none before it is set up."""
+    return getattr(getattr(entry, "runtime_data", None), "history", None) or {}
+
 
 class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
     """Hub-level integration sensor."""
@@ -2415,6 +2493,14 @@ class PowerInsightIntegrationSensor(BasePowerInsightIntegrationSensor):
         if value is not None:
             value = self.entity_description.transform_fn(value)
         return value
+
+    def _carried_over(self) -> tuple[float | None, dict]:
+        """Every device's history for this total, removed devices included."""
+        return summed_carried_over(
+            self.config_entry,
+            _runtime_history(self.config_entry),
+            self.entity_description.history_key,
+        )
 
 
 class PowerInsightDynamicAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
@@ -2513,6 +2599,20 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
 
         return get_value(self.device_adapter.uid, components_fn(self.power_insight))
 
+    def _carried_over(self) -> tuple[float | None, dict]:
+        """This device's history for this total.
+
+        The grid's totals are the whole home's (its export compensation is
+        everything exported), so they carry every device's.
+        """
+        history = _runtime_history(self.config_entry)
+        key = self.entity_description.history_key
+        if self.device_adapter is self.power_insight.grid_adapter:
+            return summed_carried_over(self.config_entry, history, key)
+        return device_carried_over(
+            self.config_entry, history, self.device_adapter.uid, key
+        )
+
     def _component_factors_now(self) -> dict[str, float]:
         """Return the factor that scales each accumulated component.
 
@@ -2529,7 +2629,7 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         }
 
     @property
-    def native_value(self) -> Decimal | None:
+    def _accumulated(self) -> Decimal | None:
         """Return the accumulated base total, corrected for display if requested.
 
         Each accumulated component is scaled by *its own* adapter's correction
@@ -2592,7 +2692,9 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         if uid in self.config_entry.subentries:
             return
 
-        value = self.native_value  # corrected (base * factor) total
+        # Corrected (base * factor), with the carried-over history: frozen as
+        # it was displayed, like everything else about a removed device.
+        value = self.native_value
         if value is None:
             return
 

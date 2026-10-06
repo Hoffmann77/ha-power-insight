@@ -1,7 +1,7 @@
 """Set up the PowerInsight integration."""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry as er
@@ -23,7 +23,7 @@ from .power_insight import PowerInsight
 from .event_handler import EventHandler
 from .imbalance import ImbalanceMonitor
 from .adapter_models import ADAPTER_MODELS
-from .history_store import async_sync_history
+from .history_store import DeviceHistory, async_sync_history, priced_history
 from .utils import parse_price_unit
 
 
@@ -39,6 +39,8 @@ class MyData:
 
     power_insight: PowerInsight
     event_handler: EventHandler
+    # The history carried over from the devices' apps, priced at setup.
+    history: dict[str, DeviceHistory] = field(default_factory=dict)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
@@ -77,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
             translation_placeholders={"entry_title": entry.title},
         )
         source_entities: list[str] = []
+        history = {}
     else:
         # Grid is present — dismiss any previously raised issue.
         ir.async_delete_issue(hass, DOMAIN, no_grid_issue)
@@ -88,13 +91,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         # Before the platforms read the history, and before the update
         # listener is registered, so storing it triggers no reload.
         async_sync_history(hass, entry, power_insight)
+        history = priced_history(entry, power_insight)
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)
     if power_insight.grid_adapter is not None:
         event_handler.on_update = ImbalanceMonitor(hass, entry, power_insight).update
     event_handler.track_entities(source_entities)
-    entry.runtime_data = MyData(power_insight, event_handler)
+    entry.runtime_data = MyData(power_insight, event_handler, history)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
 

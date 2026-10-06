@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; steps 1–4 of the [implementation order](#implementation-order) are done.
+Status: **settled**; steps 1–5 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -345,22 +345,32 @@ HA calls no hook when a subentry is removed.
 
 ## Sensors
 
-- **Per-device totals:** `native_value = accumulated + carried over`.
-  `PowerInsightIntegrationSensorDescription` gets a `history_key` naming its
-  row in the table above. The accumulated `_state` and its per-device breakdown
-  stay exactly what was measured. Nothing about the history is restored,
-  accumulated or stored in the engine.
-- **Combined totals that integrate a combined rate** (`combined_total_cost_savings`,
-  `combined_total_financial_return`, `combined_total_charging_cost`): add the
-  sum of every device's carried-over value, **removed devices included**
-  (their records stay in `data["history"]`).
+- **Per-device totals:** `native_value = counted + carried over`.
+  `PowerInsightIntegrationSensorDescription.history_key` names the row of the
+  table above a total carries. The counted total and its per-device breakdown
+  stay exactly what was measured, and the restore data persists the counted
+  total, never the displayed one, so a restart cannot add the history twice.
+  Nothing about the history is accumulated or stored in the engine.
+- **Priced once per setup:** the records only change at setup, and so do the
+  prices (a lifetime cost edit is a reconfigure, which reloads), so
+  `priced_history` prices every record at setup into the entry's runtime
+  data, and the sensors only look their amount up.
+- **Whole-home totals** add the sum of every device's carried-over value,
+  **removed devices included** (their records stay in `data["history"]`):
+  `combined_total_cost_savings`, `combined_total_financial_return`,
+  `combined_total_charging_cost` (a battery's grid charging), and the grid's
+  `total_export_compensation`, which is everything the home exported.
 - **Combined levelized totals** already sum the per-device states plus the
   retired ledger (`sensor.py`, `_ledger_total`). A removed device's frozen
   ledger value includes its history, so these add nothing themselves, which
   avoids counting it twice.
-- **Attributes:** `carried_over`, `carried_over_until` (the cutoff) and
-  `tracked`. When a total has no history, `carried_over_missing` gives the
-  reason, e.g. "no exported kWh", "waiting for history of Carport".
+- **Attributes:** `carried_over`, `carried_over_until` (the cutoff, per
+  device) and `tracked` (what the sensor counted itself). When a total has
+  no history, `carried_over_missing` gives the reason as a code (`waiting`,
+  `no_energy`, `no_tariff`, `no_feed_in_tariff`, `no_price`), with
+  `carried_over_waiting_for` naming the devices a split waits for. On a
+  whole-home total, `carried_over_missing` maps each device left out to its
+  reason.
 - **Statistics:** saving history is one step in the hour it was saved. The
   past is not rewritten, which is the same consequence corrections already
   accept.
@@ -405,7 +415,7 @@ Under *The monetary model*, each *Not pinned in the engine tier*:
 | --- | --- |
 | `tests/integration/test_history.py` | `history.py` on its own: every worked example above, the inclusion rule, the home-level splits, the blocked split, each validation error |
 | `tests/integration/test_history_flow.py` | the section in setup and reconfigure, hints and the `counting_since` placeholder, errors on the right field, a save re-solving the group |
-| `tests/integration/test_history_sensors.py` | totals = tracked + carried over; attributes; combined totals including a removed device; a correction restating the history; a removed PV's last price used by the battery |
+| `tests/integration/test_history_sensors.py` | totals = tracked + carried over; attributes; combined totals including a removed device; a reload adding nothing twice; a correction restating the history |
 | `tests/integration/test_migration.py` (or existing) | 1.4 → 1.5 sets `counting_since` from the registry |
 | engine tier | unchanged. The `allocate` rename moves no frozen output |
 
@@ -422,7 +432,7 @@ Each step is one commit and leaves the integration working.
    `test_history.py`. — **done**
 4. **Storage:** solve on save, `data["history"]`, `last_price` refresh at
    setup. — **done**
-5. **Sensors:** carried-over values, combined totals, attributes.
+5. **Sensors:** carried-over values, combined totals, attributes. — **done**
 6. **Flow:** sections, strings and translations, hints, validation.
 7. **Retire `set_value`.**
 8. **Docs:** user page `docs/history.md` (in the sidebar where *Services* was),
