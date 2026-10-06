@@ -1283,6 +1283,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
             obj.source_entities_price + obj.source_entities_power
         ),
         value_fn=lambda obj: obj.source_adapters_coo_rates,
+        attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
     PowerInsightSensorDescription(
         key="levelized_operating_cost_rate",
@@ -1296,6 +1297,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         ),
         exists_fn=lambda adapter: adapter.lcoe is not None,
         value_fn=lambda obj: obj.source_adapters_lcoo_rates_corrected,
+        attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
     PowerInsightSensorDescription(
         key="cost_savings_rate",
