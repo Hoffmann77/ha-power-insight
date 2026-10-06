@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**, not yet implemented.
+Status: **settled**; step 1 of the [implementation order](#implementation-order) is done.
 
 ## What the user can enter
 
@@ -392,7 +392,7 @@ Under *The monetary model*, each *Not pinned in the engine tier*:
 Each step is one commit and leaves the integration working.
 
 1. **`counting_since`:** write it on subentry creation, add the 1.5
-   migration, and show it in reconfigure. This is useful on its own.
+   migration, and show it in reconfigure. This is useful on its own. — **done**
 2. **`allocate`:** make the solver public. Engine tests pass, and nothing
    frozen moves.
 3. **`history.py`:** inputs, the solve (with the three differences),
@@ -409,8 +409,6 @@ Each step is one commit and leaves the integration working.
 
 ## To verify before starting
 
-- `RegistryEntry.created_at` exists in the pinned Home Assistant version
-  (the migration's source for `counting_since`).
 - A collapsed `section` in a **subentry** flow works in both the create and
   reconfigure steps, the way the options flow already uses it.
 - The sensors' currency: amounts are entered in the unit the totals publish,

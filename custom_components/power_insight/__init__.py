@@ -8,9 +8,11 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_COUNTING_SINCE,
     CONF_POWER_ENTITY,
     CONF_POWER_FROM_ADAPTERS,
     DOMAIN,
@@ -290,8 +292,44 @@ async def async_migrate_entry(
         _migrate_drop_battery_efficiency(hass, entry)
     if entry.minor_version < 4:
         await _migrate_share_unique_ids(hass, entry)
+    if entry.minor_version < 5:
+        _migrate_add_counting_since(hass, entry)
 
     return True
+
+
+def _migrate_add_counting_since(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Record when Power Insight started counting each existing device.
+
+    New subentries store the moment they are created. For existing ones the
+    best record left is the entity registry: a device's sensors were
+    registered when it was set up, so the earliest of their ``created_at`` is
+    when counting began. A device without a registered entity has no running
+    total that counted anything yet, so its counting starts now.
+    """
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_config_entry(registry, entry.entry_id)
+    now = dt_util.utcnow()
+
+    for subentry in entry.subentries.values():
+        if CONF_COUNTING_SINCE in subentry.data:
+            continue
+
+        sid = subentry.subentry_id
+        created = [
+            entity.created_at
+            for entity in entities
+            if entity.config_subentry_id == sid
+            or entity.unique_id.startswith((f"{sid}_", f"{entry.entry_id}_{sid}_"))
+        ]
+        since = min(created, default=now)
+        hass.config_entries.async_update_subentry(
+            entry,
+            subentry,
+            data={**subentry.data, CONF_COUNTING_SINCE: since.isoformat()},
+        )
+
+    hass.config_entries.async_update_entry(entry, minor_version=5)
 
 
 async def _migrate_share_unique_ids(hass: HomeAssistant, entry: MyConfigEntry) -> None:

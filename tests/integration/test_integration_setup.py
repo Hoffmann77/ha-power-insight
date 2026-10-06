@@ -49,7 +49,7 @@ async def test_migrate_flat_options_to_scopes(hass: HomeAssistant) -> None:
     await setup_integration(hass, entry)
 
     # Every migration step runs, so the entry lands on the current minor version.
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
     assert entry.options["schema"] == 2
     grid = set(entry.options["scopes"]["grid"])
     # Cost rate + its accumulation carried over to the grid scope.
@@ -226,7 +226,7 @@ async def test_migrate_drops_stored_battery_efficiency(hass: HomeAssistant) -> N
     # Everything else the battery was configured with survives untouched.
     assert config["default_lcos"] == 0.15
     assert config["charge_from_adapters"] == []
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
 
 
 async def test_migrate_rekeys_share_sensors_by_subentry_id(hass: HomeAssistant) -> None:
@@ -264,7 +264,66 @@ async def test_migrate_rekeys_share_sensors_by_subentry_id(hass: HomeAssistant) 
     assert migrated.unique_id == (
         f"{entry.entry_id}_{BAT_SUB_ID}_charging_share_from_{GRID_SUB_ID}"
     )
-    assert entry.minor_version == 4
+    assert entry.minor_version == 5
+
+
+async def test_migrate_records_when_counting_started(
+    hass: HomeAssistant, freezer
+) -> None:
+    """Every existing device gets a ``counting_since``, the cutoff for its
+    carried-over history.
+
+    A device's sensors were registered when it was set up, so the battery's
+    earliest registry entry dates it. The grid has no registered entity, so no
+    total of it has counted anything yet and its counting starts at the
+    migration. A PV system that already has one keeps it.
+    """
+    import copy
+
+    from homeassistant.helpers import entity_registry as er
+    from homeassistant.util import dt as dt_util
+
+    from .conftest import PV_SUB_ID, make_pv_subentry_data
+
+    pv = copy.deepcopy(make_pv_subentry_data())
+    pv["data"]["counting_since"] = "2026-01-01T00:00:00+00:00"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        version=1,
+        minor_version=4,
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), pv, make_battery_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+
+    registry = er.async_get(hass)
+    freezer.move_to("2026-03-01 08:00:00+00:00")
+    registry.async_get_or_create(
+        "sensor", DOMAIN, f"{BAT_SUB_ID}_total_cost_savings",
+        config_entry=entry, config_subentry_id=BAT_SUB_ID,
+    )
+    freezer.move_to("2026-05-01 08:00:00+00:00")
+    registry.async_get_or_create(
+        "sensor", DOMAIN, f"{BAT_SUB_ID}_cost_saving_rate",
+        config_entry=entry, config_subentry_id=BAT_SUB_ID,
+    )
+
+    freezer.move_to("2026-10-01 12:00:00+00:00")
+    for name in ("grid_power", "pv_power", "battery_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    def since(sub_id: str):
+        return dt_util.parse_datetime(entry.subentries[sub_id].data["counting_since"])
+
+    assert since(BAT_SUB_ID) == dt_util.parse_datetime("2026-03-01 08:00:00+00:00")
+    assert since(GRID_SUB_ID) == dt_util.parse_datetime("2026-10-01 12:00:00+00:00")
+    assert since(PV_SUB_ID) == dt_util.parse_datetime("2026-01-01 00:00:00+00:00")
+    # The rest of each subentry is untouched.
+    assert entry.subentries[BAT_SUB_ID].data["adapter"]["adapter_type"] == "battery"
+    assert entry.minor_version == 5
 
 
 async def test_migrate_refuses_newer_major_version(hass: HomeAssistant) -> None:

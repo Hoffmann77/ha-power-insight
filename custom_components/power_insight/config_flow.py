@@ -19,7 +19,7 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult, section
 from homeassistant.helpers import issue_registry as ir, selector
 from homeassistant.const import CONF_NAME
-from homeassistant.util import slugify
+from homeassistant.util import dt as dt_util, slugify
 
 from .utils import parse_price_unit
 from .const import (
@@ -37,6 +37,7 @@ from .const import (
     CONF_INITIAL_LCOS,
     CONF_CURRENT_LCOS,
     CONF_CORRECTION_FACTOR,
+    CONF_COUNTING_SINCE,
     CONF_INITIAL_CO2_INTENSITY,
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
@@ -1709,7 +1710,7 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     """
 
     VERSION = 1
-    MINOR_VERSION = 4
+    MINOR_VERSION = 5
 
     def __init__(self) -> None:
         self._title: str = ""
@@ -1775,6 +1776,18 @@ class PowerInsightConfigFlow(ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry) -> PowerInsightOptionsFlow:
         """Return the options flow handler."""
         return PowerInsightOptionsFlow()
+
+
+def format_counting_since(value: str | None) -> str:
+    """Return a stored ``counting_since`` as local time for a form, e.g. ``2026-08-14 10:32``.
+
+    Every subentry has one from minor version 5 on; ``"—"`` only guards a
+    value that is missing or unreadable, so the form still renders.
+    """
+    moment = dt_util.parse_datetime(value) if value else None
+    if moment is None:
+        return "—"
+    return dt_util.as_local(moment).strftime("%Y-%m-%d %H:%M")
 
 
 # ============================================================================
@@ -1901,6 +1914,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                         "config": adapter_config,
                     },
                     **top_level_data,
+                    # Counting starts with the reload that adding the subentry
+                    # triggers: history carried over must end here.
+                    CONF_COUNTING_SINCE: dt_util.utcnow().isoformat(),
                 }
 
                 result = self.async_create_entry(title=title, data=entry_data)
@@ -2073,6 +2089,9 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             description_placeholders={
                 "adapter_type": ADAPTER_TYPE_LABELS.get(
                     self._adapter_type, self._adapter_type
+                ),
+                "counting_since": format_counting_since(
+                    subentry.data.get(CONF_COUNTING_SINCE)
                 ),
             },
         )
