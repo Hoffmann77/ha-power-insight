@@ -366,7 +366,7 @@
           "sections": {
             "history_energy": {
               "name": "Already accumulated: energy (kWh)",
-              "description": "**Route 1 of 2 — energy.** Optional: the kWh this device produced, charged, discharged and exported before Power Insight counted it, from its app or web portal. Power Insight calculates the money from them. It starts counting when you finish this step, so enter the totals up to now; you can also add them later under **Reconfigure**. Savings need an **Average grid tariff**: enter it here, or once on the grid for every device.",
+              "description": "**Route 1 of 2 — energy.** Optional: the kWh this device produced, charged, discharged and exported before Power Insight counted it, from its app or web portal. Power Insight calculates the money from them. It starts counting when you finish this step, so enter the totals up to now; you can also add them later under **Reconfigure**. Savings need an **Average grid tariff**: usually once on the grid for every device, or here for this device only.",
               "data": {
                 "home_fed_in": "Exported to the grid (whole home)",
                 "average_tariff": "Average grid tariff",
@@ -380,7 +380,7 @@
               },
               "data_description": {
                 "home_fed_in": "Your grid meter's total export up to the moment above. It is split between the devices that export.",
-                "average_tariff": "What a kWh from the grid cost on average over that period; the savings are calculated with it. On the grid it is the whole home's. On a PV system or battery it is used for that device; leave it empty there to use the grid's.",
+                "average_tariff": "What a kWh from the grid cost on average over that period; savings are calculated with it. **On the grid:** the whole home's average, used for every PV system and battery that has no tariff of its own — usually the only place you need it. **On a PV system or battery:** only if this device's period had a different average, for example a device added later; it replaces the grid's for this device. Leave it empty to use the grid's.",
                 "produced": "Everything this system produced, including what went into a battery or the grid.",
                 "fed_in": "Optional: what this device exported itself, for example from the grid operator's statement for one installation. Leave empty to split the home's export.",
                 "into_batteries": "What this system charged batteries with. It earns this system nothing: the battery earns it when it discharges.",
@@ -442,7 +442,7 @@
           "sections": {
             "history_energy": {
               "name": "Already accumulated: energy (kWh)",
-              "description": "**Route 1 of 2 — energy.** The kWh this device produced, charged, discharged and exported before Power Insight counted it, from its app or web portal, up to the moment above. Power Insight calculates the money from them. Savings need an **Average grid tariff**: enter it here, or once on the grid for every device.",
+              "description": "**Route 1 of 2 — energy.** The kWh this device produced, charged, discharged and exported before Power Insight counted it, from its app or web portal, up to the moment above. Power Insight calculates the money from them. Savings need an **Average grid tariff**: usually once on the grid for every device, or here for this device only.",
               "data": {
                 "home_fed_in": "Exported to the grid (whole home)",
                 "average_tariff": "Average grid tariff",
@@ -456,7 +456,7 @@
               },
               "data_description": {
                 "home_fed_in": "Your grid meter's total export up to the moment above. It is split between the devices that export.",
-                "average_tariff": "What a kWh from the grid cost on average over that period; the savings are calculated with it. On the grid it is the whole home's. On a PV system or battery it is used for that device; leave it empty there to use the grid's.",
+                "average_tariff": "What a kWh from the grid cost on average over that period; savings are calculated with it. **On the grid:** the whole home's average, used for every PV system and battery that has no tariff of its own — usually the only place you need it. **On a PV system or battery:** only if this device's period had a different average, for example a device added later; it replaces the grid's for this device. Leave it empty to use the grid's.",
                 "produced": "Everything this system produced, including what went into a battery or the grid.",
                 "fed_in": "Optional: what this device exported itself, for example from the grid operator's statement for one installation. Leave empty to split the home's export.",
                 "into_batteries": "What this system charged batteries with. It earns this system nothing: the battery earns it when it discharges.",
@@ -543,6 +543,10 @@
     "metering_imbalance": {
       "title": "The meters of {entry_title} disagree",
       "description": "For the last 15 minutes the metered devices of **{entry_title}** drew {share} more than the grid, PV systems and batteries supplied. Meters sampled at different moments cause brief gaps, which Power Insight evens out; a gap this persistent usually means a misconfigured meter.\n\nCheck that every power sensor has the right sign (turn on **Invert** where it reports the opposite way), and that no metered device sits inside another metered circuit, so its power is not counted twice. The **Metering imbalance** diagnostic sensor shows the gap as it happens.\n\nThis message disappears once the meters agree again."
+    },
+    "history_tariff_missing": {
+      "title": "Carried-over savings of {entry_title} need an average grid tariff",
+      "description": "**{devices}** have energy (kWh) carried over from their app, but no average grid tariff to value it, so their savings carry nothing yet. Their export compensation is not affected.\n\nOpen the **grid** of {entry_title}, choose **Reconfigure**, and enter the **Average grid tariff** under **Already accumulated: energy (kWh)**. It is used for every PV system and battery without a tariff of its own. Only if a device's period had a different average, enter it on that device instead.\n\nThis message goes away once every device has a tariff."
     }
   },
   "selector": {

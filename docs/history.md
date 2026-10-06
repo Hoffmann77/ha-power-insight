@@ -43,11 +43,18 @@ amounts route 2 cannot, such as a battery's operating cost.
 :::tip[Your savings need an average grid tariff]
 
 A PV system's and a battery's savings are the energy they delivered into your
-home, valued at the **Average grid tariff**. Enter it in the device's own
-energy section, or once on the **grid** for every device; a device's own
-tariff wins, and the grid's is the fallback. Without either, the savings
-totals carry nothing and say `no_tariff`; the export compensation, which only
-needs the export compensation per kWh, still carries its part.
+home, valued at the **Average grid tariff**. You can enter it in two places:
+
+| Where | What it is | When to use it |
+| --- | --- | --- |
+| **On the grid** | the whole home's average, used for every PV system and battery without a tariff of its own | usually: enter it once, here |
+| **On a PV system or battery** | that device's average; it replaces the grid's for that device | only if the device's period had a different average, for example a device added later |
+
+Without either, a device's savings carry nothing and say `no_tariff`; its
+export compensation, which only needs the export compensation per kWh, still
+carries its part. Home Assistant then also shows a **repair** (Settings →
+System → Repairs) naming the devices and pointing to the grid; it goes away
+once every device has a tariff.
 
 :::
 
