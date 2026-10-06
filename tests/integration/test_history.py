@@ -554,3 +554,189 @@ def test_devices_set_up_together_share_a_period() -> None:
     grid = datetime(2026, 8, 14, 10, 0, tzinfo=timezone.utc)
     assert shares_period(grid, grid + timedelta(hours=3))
     assert not shares_period(grid, grid + timedelta(days=2))
+
+
+# ---------------------------------------------------------------------------
+# Tolerance: app figures are rounded and come from different meters
+# ---------------------------------------------------------------------------
+
+
+def test_rounded_figures_are_accepted() -> None:
+    """The roof's statement says 3,500.4 kWh fed in, the carport's 500, the
+    grid meter 4,000 for the whole home: 0.4 kWh apart, as rounded figures
+    from different meters always are. That is accepted; the roof keeps its
+    own figure and the home's feed-in has nothing left to split.
+    """
+    records = _solve(
+        _home(),
+        _pv("roof", produced=8000.0, fed_in=3500.4),
+        _pv("carport", produced=2000.0, fed_in=500.0),
+    )
+    assert records["roof"].flows.exported == pytest.approx(3500.4)
+    assert records["carport"].flows.exported == pytest.approx(500.0)
+
+
+def test_a_real_mismatch_is_still_refused() -> None:
+    """Own feed-ins of 4,100 kWh against a home total of 4,000 are 2.5 %
+    apart, beyond what rounding or meters explain (1 %, at least 1 kWh), so
+    they are refused.
+    """
+    problems = _problems(
+        _home(),
+        _pv("roof", produced=8000.0, fed_in=3600.0),
+        _pv("carport", produced=2000.0, fed_in=500.0),
+    )
+    assert Problem(ERROR_FED_IN_EXCEEDS_HOME, GRID, "fed_in") in problems
+
+
+def test_a_tolerated_shortfall_never_breaks_a_restriction() -> None:
+    """The grid meter reads 20 kWh more than the PV system's own feed-in,
+    and the only other device that may feed in discharged 5 kWh. That is
+    within the tolerance, but the battery that may not feed in still never
+    exports: the 15 kWh left over simply stay unattributed.
+    """
+    records = _solve(
+        _home(fed_in=3467.0),
+        _pv(produced=5134.0, fed_in=3447.0),
+        _battery("bat", exports=True, charged=5.0, discharged=5.0),
+        _battery("captive", charged=70.0, discharged=63.0),
+    )
+    assert records["captive"].flows.exported == 0.0
+    assert records["bat"].flows.exported == pytest.approx(5.0)
+
+
+# ---------------------------------------------------------------------------
+# Randomized: the books always balance
+# ---------------------------------------------------------------------------
+
+
+def _slack(*figures: float) -> float:
+    """The tolerance ``history.py`` allows, restated: 1 % or 1 kWh."""
+    return max(1.0, 0.01 * max(abs(f) for f in figures))
+
+
+def _real_home(rng) -> tuple[HomeInputs, list[DeviceInputs]]:
+    """Figures read off a real flow that respects every restriction,
+    rounded to whole kWh, with the grid meter up to 0.5 % off the devices'.
+    """
+    pvs = [f"pv{i}" for i in range(rng.randint(1, 3))]
+    bats = [f"bat{i}" for i in range(rng.randint(0, 2))]
+    exports = {uid: rng.random() < 0.8 for uid in pvs + bats}
+    produced = {p: 0.0 for p in pvs}
+    fed_in = {}
+    for p in pvs:
+        fed_in[p] = rng.uniform(0, 4000) if exports[p] else 0.0
+        produced[p] += rng.uniform(0, 5000) + fed_in[p]
+    devices, batteries = [], []
+    for b in bats:
+        charge_from = (
+            tuple(rng.sample(pvs, rng.randint(1, len(pvs)))) if rng.random() < 0.5 else ()
+        )
+        local = 0.0
+        for p in charge_from or pvs:
+            kwh = rng.uniform(0, 1500)
+            produced[p] += kwh
+            local += kwh
+        grid = rng.uniform(0, 500) if rng.random() < 0.3 else 0.0
+        discharged = (local + grid) * rng.uniform(0.7, 0.95)
+        fed_in[b] = discharged * rng.uniform(0, 0.3) if exports[b] else 0.0
+        batteries.append(DeviceInputs(
+            b, BATTERY, exports=exports[b], feed_in_tariff=FEED_IN,
+            charge_from=charge_from, charged=round(local + grid),
+            grid_charged=round(grid), discharged=round(discharged),
+            fed_in=round(fed_in[b]) if rng.random() < 0.3 else None,
+        ))
+    for p in pvs:
+        devices.append(DeviceInputs(
+            p, PV_SYSTEM, exports=exports[p], feed_in_tariff=FEED_IN,
+            produced=round(produced[p]),
+            fed_in=round(fed_in[p]) if rng.random() < 0.3 else None,
+        ))
+    home_fed_in = round(sum(fed_in.values()) * rng.uniform(0.995, 1.005))
+    return _home(fed_in=home_fed_in), devices + batteries
+
+
+def _assert_balanced(home: HomeInputs, devices: list[DeviceInputs], records) -> None:
+    """Every device's energy balances within the tolerance, every
+    restriction holds, and the money adds up.
+    """
+    by_uid = {d.uid: d for d in devices}
+    into_batteries = {d.uid: 0.0 for d in devices if d.kind == PV_SYSTEM}
+    for uid, record in records.items():
+        device, flows = by_uid[uid], record.flows
+        assert flows.to_home >= -1e-6 and flows.exported >= -1e-6
+        if not device.exports and device.fed_in is None:
+            assert flows.exported == 0.0, "a device that may not feed in exported"
+        if device.kind == BATTERY:
+            assert abs(flows.to_home + flows.exported - device.discharged) <= _slack(device.discharged)
+            assert abs(sum(flows.from_pv.values()) + flows.from_grid - device.charged) <= (
+                _slack(device.charged)
+            )
+            for pv, kwh in flows.from_pv.items():
+                assert pv in into_batteries, "a battery charged from a battery"
+                assert not device.charge_from or pv in device.charge_from or kwh == 0.0
+                into_batteries[pv] += kwh
+    for uid, charged in into_batteries.items():
+        device, flows = by_uid[uid], records[uid].flows
+        assert abs(flows.to_home + flows.exported + charged - device.produced) <= (
+            _slack(device.produced)
+        )
+    for record in records.values():
+        totals = history_totals(record, PRICES.get).values
+        assert totals["total_financial_return"] == pytest.approx(
+            totals["total_cost_savings"] + totals["total_export_compensation"]
+        )
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_figures_from_a_real_flow_are_always_accepted(seed: int) -> None:
+    """Figures that describe what really happened, rounded and off by a
+    little between meters as real app figures are, are never refused, and
+    what they solve to balances. 200 random homes per seed.
+    """
+    import random
+
+    rng = random.Random(seed)
+    for _ in range(200):
+        home, devices = _real_home(rng)
+        solution = solve(home, devices)
+        assert solution.problems == [], (home, devices)
+        assert not any(r.waiting_for for r in solution.records.values())
+        _assert_balanced(home, devices, solution.records)
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_whatever_is_accepted_balances(seed: int) -> None:
+    """Arbitrary figures are often impossible and refused; whatever is
+    accepted balances within the tolerance and keeps every restriction.
+    200 random homes per seed.
+    """
+    import random
+
+    rng = random.Random(100 + seed)
+    for _ in range(200):
+        pvs = [f"pv{i}" for i in range(rng.randint(1, 3))]
+        devices = [
+            DeviceInputs(
+                p, PV_SYSTEM, exports=rng.random() < 0.8, feed_in_tariff=FEED_IN,
+                produced=round(rng.uniform(0, 10000)),
+                fed_in=round(rng.uniform(0, 4000)) if rng.random() < 0.3 else None,
+            )
+            for p in pvs
+        ]
+        for i in range(rng.randint(0, 2)):
+            charged = round(rng.uniform(0, 3000))
+            devices.append(DeviceInputs(
+                f"bat{i}", BATTERY, exports=rng.random() < 0.2, feed_in_tariff=FEED_IN,
+                charge_from=(
+                    tuple(rng.sample(pvs, rng.randint(1, len(pvs))))
+                    if rng.random() < 0.5 else ()
+                ),
+                charged=charged,
+                grid_charged=round(rng.uniform(0, charged)) if rng.random() < 0.3 else None,
+                discharged=round(charged * rng.uniform(0.7, 1.0)),
+            ))
+        home = _home(fed_in=round(rng.uniform(0, 12000)))
+        solution = solve(home, devices)
+        if not solution.problems:
+            _assert_balanced(home, devices, solution.records)

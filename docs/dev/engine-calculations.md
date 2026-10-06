@@ -690,6 +690,16 @@ things differ, each because a total has lost the timing a snapshot has:
   (a grid operator's statement per installation) exports exactly that; only
   the rest of the home's feed-in is split, between the devices without one.
 
+Entered figures may disagree by the larger of 1 kWh and 1 % of the figures
+compared before they are refused. App figures are rounded and come from
+different meters (the inverter's, the grid meter), so exact balances would
+refuse correct figures. A disagreement within that is absorbed without
+breaking anything: an own feed-in is capped at the device's output, a
+slightly over-booked period is scaled to what was produced, and a small
+shortfall stays unattributed rather than relaxing a restriction (the
+allocator's live last resort), because a battery that may not feed in never
+did.
+
 The split is solved when the history is saved and then frozen: removing a
 device or editing a restriction later moves nobody's past. A removed device's
 inputs stay stored, because its kWh are still part of the home's totals when
@@ -698,8 +708,11 @@ the others are re-solved.
 Not pinned in the engine tier: it splits entered history, not readings.
 Covered by `tests/integration/test_history.py`
 (`test_grid_import_is_not_a_source`, `test_batteries_do_not_charge_each_other`,
-`test_interchangeable_pv_systems_split_in_proportion_to_output` and
-`test_own_feed_in_is_used_as_entered`) and
+`test_interchangeable_pv_systems_split_in_proportion_to_output`,
+`test_own_feed_in_is_used_as_entered`, `test_rounded_figures_are_accepted`,
+`test_a_tolerated_shortfall_never_breaks_a_restriction`, and the randomized
+`test_figures_from_a_real_flow_are_always_accepted` and
+`test_whatever_is_accepted_balances`) and
 `tests/integration/test_history_store.py`
 (`test_the_solved_history_is_frozen_until_figures_change` and
 `test_a_re_solve_still_counts_a_removed_device`).

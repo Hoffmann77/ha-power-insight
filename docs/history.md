@@ -138,8 +138,10 @@ you save it. Past statistics are not rewritten.
 ## When the form refuses the figures
 
 The figures are checked together with every other device's history before
-they are saved. If they cannot add up, the form says which device's figure is
-off, for example:
+they are saved. Small disagreements are fine: app figures are rounded and
+come from different meters, so figures may be up to 1 % (at least 1 kWh)
+apart. If they are further apart than that, the form says which device's
+figure is off, for example:
 
 - a device fed in more than it produced or discharged;
 - the devices' own feed-ins add up to more than the whole home fed in;

@@ -40,6 +40,9 @@ Four notes under *The monetary model*, each covered by integration tests:
 | Device subentry `history` | The figures as entered. The grid's are the whole home's (`home_fed_in`, `average_tariff`, `home_savings`, `home_export_compensation`). |
 | Entry `data["history"]` | `records` (one solved record per device), `last_price` (each device's levelized price at the last setup), and the last solve's `entered`, `home` and `inputs`. A removed device's stay. |
 
+Entered figures may disagree by the larger of 1 kWh and 1 % before they are
+refused (`SLACK_KWH`, `SLACK_SHARE` in `history.py`).
+
 Devices whose `counting_since` is within 24 hours of the grid's share one
 period and are split together; a device added later stands alone and
 supplies its own tariff and feed-in.
@@ -48,7 +51,7 @@ supplies its own tariff and feed-in.
 
 | File | Covers |
 | --- | --- |
-| `tests/integration/test_history.py` | The solve and the pricing, against hand-derived worked examples, and every refusal. |
+| `tests/integration/test_history.py` | The solve and the pricing, against hand-derived worked examples, and every refusal. Randomized: figures read off a real flow (rounded, meters 0.5 % apart) are always accepted, and whatever is accepted balances within the tolerance and keeps every restriction. |
 | `tests/integration/test_history_store.py` | Solving at setup, staying frozen, removed devices, standalone devices, live prices. |
 | `tests/integration/test_history_sensors.py` | Totals and attributes, whole-home totals, a reload adding nothing twice, corrections. |
 | `tests/integration/test_history_flow.py` | The section in the forms, saving, refusals, and that every field and refusal has text. |

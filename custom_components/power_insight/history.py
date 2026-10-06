@@ -37,6 +37,21 @@ SHARED_PERIOD = timedelta(hours=24)
 
 _EPS = 1e-6
 
+#: How far entered figures may disagree before they are refused: the larger
+#: of 1 kWh and 1 % of the figures compared. App figures are rounded, usually
+#: to whole kWh, and come from different meters (the inverter's, the grid
+#: meter), which differ by a fraction of a percent; refusing that would refuse
+#: correct figures. A mismatch within it is absorbed, one beyond it is a
+#: mistake worth pointing at.
+SLACK_KWH = 1.0
+SLACK_SHARE = 0.01
+
+
+def _slack(*figures: float | None) -> float:
+    """The disagreement tolerated between ``figures`` (kWh)."""
+    largest = max((abs(f) for f in figures if f is not None), default=0.0)
+    return max(SLACK_KWH, SLACK_SHARE * largest)
+
 # Node names for the solve. They cannot collide with a subentry id.
 _EXPORT = "\x00export"
 _HOME = "\x00home"
@@ -300,10 +315,11 @@ def solve(home: HomeInputs, devices: Iterable[DeviceInputs]) -> Solution:
     """
     devices = [d for d in devices if d.kind in (PV_SYSTEM, BATTERY)]
     problems = [p for d in devices for p in _check(d)]
+    devices = [_within(d) for d in devices]
     shared = [d for d in devices if not d.standalone]
 
     own_fed_in = sum(d.fed_in for d in shared if d.has_energy and d.fed_in is not None)
-    if home.fed_in is not None and own_fed_in > home.fed_in + _EPS:
+    if home.fed_in is not None and own_fed_in > home.fed_in + _slack(home.fed_in, own_fed_in):
         problems.append(Problem(ERROR_FED_IN_EXCEEDS_HOME, home.grid_uid, FIELD_FED_IN))
     if problems:
         return Solution({}, problems)
@@ -364,10 +380,10 @@ def _check(device: DeviceInputs) -> list[Problem]:
             return problems
         if not device.has_energy:
             return problems
-        if (device.grid_charged or 0.0) > device.charged + _EPS:
+        if (device.grid_charged or 0.0) > device.charged + _slack(device.charged):
             refuse(ERROR_GRID_CHARGED_EXCEEDS_CHARGED, FIELD_GRID_CHARGED)
 
-    if (device.fed_in or 0.0) > device.output + _EPS:
+    if (device.fed_in or 0.0) > device.output + _slack(device.output):
         refuse(ERROR_FED_IN_EXCEEDS_OUTPUT, FIELD_FED_IN)
     if device.standalone:
         if device.exports and device.fed_in is None:
@@ -376,6 +392,22 @@ def _check(device: DeviceInputs) -> list[Problem]:
             refuse(ERROR_TARIFF_REQUIRED, FIELD_TARIFF)
 
     return problems
+
+
+def _within(device: DeviceInputs) -> DeviceInputs:
+    """Absorb a disagreement :func:`_check` tolerated: no part can exceed its whole.
+
+    A battery's grid charging is at most what it charged, and a device's own
+    feed-in at most what it produced or discharged.
+    """
+    if not device.has_energy:
+        return device
+    changes = {}
+    if device.fed_in is not None and device.fed_in > device.output:
+        changes["fed_in"] = device.output
+    if device.kind == BATTERY and (device.grid_charged or 0.0) > device.charged:
+        changes["grid_charged"] = device.charged
+    return replace(device, **changes) if changes else device
 
 
 def _split_shared(
@@ -423,7 +455,7 @@ def _split_shared(
         return {}, tuple(waiting), []
 
     own_fed_in = sum(d.fed_in for d in energetic if d.fed_in is not None)
-    export = (home.fed_in - own_fed_in) if splitters else 0.0
+    export = max(home.fed_in - own_fed_in, 0.0) if splitters else 0.0
 
     supply = {d.uid: d.output - (d.fed_in or 0.0) for d in energetic}
     demand: dict[str, float] = {}
@@ -438,19 +470,42 @@ def _split_shared(
         demand[_charging(uid)] = battery.local_charged
         allowed[_charging(uid)] = tuple(sources)
 
-    residual = sum(supply.values()) - sum(demand.values())
-    if residual < -_EPS:
+    total_supply = sum(supply.values())
+    residual = total_supply - sum(demand.values())
+    if residual < -_slack(total_supply):
         return {}, (), [Problem(ERROR_DOES_NOT_BALANCE)]
+    if residual < 0:
+        # Over-booked by less than the tolerance: scale export and charging
+        # down together to what was produced, so every source still balances.
+        scale = total_supply / (total_supply - residual)
+        demand = {sink: kwh * scale for sink, kwh in demand.items()}
     demand[_HOME] = max(residual, 0.0)
     allowed[_HOME] = ()
 
     allocation, deficit = allocate(supply, demand, allowed, _NO_GRID)
+    # The allocator covers a shortfall by relaxing a restriction, its last
+    # resort. In the history that only happens for a shortfall within the
+    # tolerance, and a restriction is a fact here (a battery that may not feed
+    # in never did), so the relaxed part goes to the home instead: the
+    # shortfall stays unattributed and every source still balances.
+    for sink, sources in allowed.items():
+        if not sources:
+            continue
+        row = allocation.get(sink, {})
+        for source, kwh in row.items():
+            if kwh > 0 and source not in sources:
+                allocation[_HOME][source] = allocation[_HOME].get(source, 0.0) + kwh
+                row[source] = 0.0
+    # A shortfall is measured against the figure that was entered: the home's
+    # whole feed-in (not the remainder after own feed-ins), a battery's charging.
+    entered = {_EXPORT: home.fed_in}
+    entered.update({_charging(d.uid): d.charged for d in energetic if d.kind == BATTERY})
     problems = [
         Problem(ERROR_FED_IN_EXCEEDS_PRODUCTION, home.grid_uid, FIELD_FED_IN)
         if sink == _EXPORT
         else Problem(ERROR_CHARGING_NOT_COVERED, sink.split("\x00")[0], FIELD_CHARGED)
         for sink, short in deficit.items()
-        if short > _EPS
+        if short > _slack(entered.get(sink))
     ]
     if problems:
         return {}, (), problems
@@ -487,7 +542,7 @@ def _standalone_flows(
     exported = device.fed_in or 0.0
     if device.kind == PV_SYSTEM:
         to_home = device.output - exported - (device.into_batteries or 0.0)
-        if to_home < -_EPS:
+        if to_home < -_slack(device.output):
             return None, Problem(ERROR_DOES_NOT_BALANCE, device.uid, FIELD_INTO_BATTERIES)
         return Flows(to_home=_round(max(to_home, 0.0)), exported=exported), None
 
