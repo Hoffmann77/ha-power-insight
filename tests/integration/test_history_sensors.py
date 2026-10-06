@@ -279,3 +279,82 @@ async def test_a_correction_restates_the_carried_over_history(
         pytest.approx(-82.0)
     )
     assert _value(hass, entry, f"{PV_SUB_ID}_total_cost_savings") == pytest.approx(1190.0)
+
+
+async def test_an_existing_install_can_add_change_and_clear_its_history(
+    hass: HomeAssistant,
+) -> None:
+    """An install from before this feature (entry version 1.4) has counted
+    50.00 of savings for its PV system. After the update it migrates, and
+    the history is added through the reconfigure forms: the grid's home
+    figures (4,000 kWh fed in, tariff 0.34), then the PV's 10,000 kWh
+    produced. The total then reads 50 + 6,000 × 0.34 = 2,090. Changing the
+    figure to 9,000 kWh restates it (50 + 5,000 × 0.34 = 1,750) rather than
+    adding to it, and clearing it leaves what was counted: 50.
+    """
+    from homeassistant.core import State
+    from pytest_homeassistant_custom_component.common import (
+        mock_restore_cache_with_extra_data,
+    )
+
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = "sensor.grid_price"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        minor_version=4,
+        options=_OPTIONS,
+        subentries_data=[grid, make_pv_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    entity_id = "sensor.pv_total_cost_savings"
+    er.async_get(hass).async_get_or_create(
+        "sensor", DOMAIN, f"{entry.entry_id}_{PV_SUB_ID}_total_cost_savings",
+        config_entry=entry, config_subentry_id=PV_SUB_ID,
+        suggested_object_id="pv_total_cost_savings",
+    )
+    mock_restore_cache_with_extra_data(hass, [(
+        State(entity_id, "50.0"),
+        {
+            "native_value": {"__type": "<class 'decimal.Decimal'>", "decimal_str": "50.0"},
+            "native_unit_of_measurement": "EUR",
+            "last_valid_state": "50.0",
+        },
+    )])
+    _readings(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await _settle(hass)
+    assert entry.minor_version == 5
+    assert float(hass.states.get(entity_id).state) == pytest.approx(50.0)
+
+    async def reconfigure(sub_id: str, user_input: dict) -> None:
+        result = await hass.config_entries.subentries.async_init(
+            (entry.entry_id, "adapter"),
+            context={"source": "reconfigure", "subentry_id": sub_id},
+        )
+        result = await hass.config_entries.subentries.async_configure(
+            result["flow_id"], user_input=user_input
+        )
+        assert result["type"] == "abort", result.get("errors")
+        await _settle(hass)
+
+    pv_form = {
+        "power_entity": "sensor.pv_power",
+        "power_entity_inverted": False,
+        "exports_power": True,
+        "export_compensation": 0.08,
+    }
+    await reconfigure(GRID_SUB_ID, {
+        "power_entity": "sensor.grid_power",
+        "power_entity_inverted": False,
+        "grid_electricity_price_entity": "sensor.grid_price",
+        "history": {"home_fed_in": 4000.0, "average_tariff": 0.34},
+    })
+    await reconfigure(PV_SUB_ID, {**pv_form, "history": {"produced": 10000.0}})
+    assert float(hass.states.get(entity_id).state) == pytest.approx(2090.0)
+
+    await reconfigure(PV_SUB_ID, {**pv_form, "history": {"produced": 9000.0}})
+    assert float(hass.states.get(entity_id).state) == pytest.approx(1750.0)
+
+    await reconfigure(PV_SUB_ID, {**pv_form, "history": {}})
+    assert float(hass.states.get(entity_id).state) == pytest.approx(50.0)
