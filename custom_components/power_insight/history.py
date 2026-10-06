@@ -23,7 +23,7 @@ Pure Python: no Home Assistant imports.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta
 
 from .power_insight import allocate
@@ -125,6 +125,13 @@ class HomeInputs:
     savings: float | None = None
     export_compensation: float | None = None
 
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> HomeInputs:
+        return cls(**data)
+
 
 @dataclass(frozen=True)
 class DeviceInputs:
@@ -153,6 +160,13 @@ class DeviceInputs:
     savings: float | None = None
     export_compensation: float | None = None
     levelized_savings: float | None = None
+
+    def to_dict(self) -> dict:
+        return {**asdict(self), "charge_from": list(self.charge_from)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> DeviceInputs:
+        return cls(**{**data, "charge_from": tuple(data.get("charge_from", ()))})
 
     @property
     def has_energy(self) -> bool:

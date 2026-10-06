@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; steps 1–3 of the [implementation order](#implementation-order) are done.
+Status: **settled**; steps 1–4 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -317,11 +317,24 @@ refuses figures that cannot balance. The error names the figure:
 | --- | --- | --- |
 | Device subentry, `history` | the inputs as typed | edited in that device's flow |
 | Device subentry, `counting_since` | the cutoff | belongs to the device |
-| Main entry `data["history"]` | per uid: flows, cutoff, tariffs, resolved amounts, `last_price`, plus why a split is blocked | must outlive a removed device's subentry |
+| Main entry `data["history"]` | `records` (per uid: flows, tariffs, resolved amounts, what a split waits for), `last_price`, and the last solve's `entered` figures and `inputs` | must outlive a removed device's subentry |
 
-The sensors only read `data["history"]`. Saving any history section re-solves
-the group, writes `data["history"]` and reloads, which is the same path a
-correction takes.
+The sensors only read `data["history"]`. It is re-solved at setup whenever
+the entered figures differ from the `entered` the last solve used. Saving a
+history section updates the subentry, which reloads the entry, so that is
+"on save". Removing a device or editing its configuration changes no entered
+figure, so it moves nobody's past. The write happens before the update
+listener is registered, so it triggers no reload of its own
+(`history_store.py`, `async_sync_history`).
+
+**A removed device still takes part.** Its `inputs` stay stored, because its
+kWh are still part of the home's totals: when the others are re-solved later,
+the home's feed-in is still split with it, while its own record stays frozen.
+A removed device that never had history has no inputs and drops out.
+
+**Figures that do not balance** keep the history solved last and log a
+warning. The flows refuse them, so they only arrive when edited outside the
+flow.
 
 **`last_price`:** at every setup, each device's current corrected price is
 written to its history record. A removed device's last price therefore stays
@@ -408,7 +421,7 @@ Each step is one commit and leaves the integration working.
    pricing, the inclusion rule and home-level splits, with
    `test_history.py`. — **done**
 4. **Storage:** solve on save, `data["history"]`, `last_price` refresh at
-   setup.
+   setup. — **done**
 5. **Sensors:** carried-over values, combined totals, attributes.
 6. **Flow:** sections, strings and translations, hints, validation.
 7. **Retire `set_value`.**

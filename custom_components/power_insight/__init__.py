@@ -23,6 +23,7 @@ from .power_insight import PowerInsight
 from .event_handler import EventHandler
 from .imbalance import ImbalanceMonitor
 from .adapter_models import ADAPTER_MODELS
+from .history_store import async_sync_history
 from .utils import parse_price_unit
 
 
@@ -84,6 +85,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         source_entities = power_insight.source_entities
         _check_price_entity(hass, entry, power_insight)
         _check_shared_power_entities(hass, entry)
+        # Before the platforms read the history, and before the update
+        # listener is registered, so storing it triggers no reload.
+        async_sync_history(hass, entry, power_insight)
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)

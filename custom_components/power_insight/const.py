@@ -54,6 +54,11 @@ CONF_RETIRED_ADAPTERS = "retired_adapters"
 # top level). History carried over from the device's app must end here.
 CONF_COUNTING_SINCE = "counting_since"
 
+# History carried over from a device's app: the figures as entered (subentry
+# top level) and, under the same key in ConfigEntry.data, what they solved to.
+# See history_store.py.
+CONF_HISTORY = "history"
+
 # PV/Battery user settings (stored in adapter.config)
 CONF_EXPORTS_POWER = "exports_power"
 CONF_EXPORT_COMPENSATION = "export_compensation"
