@@ -207,7 +207,7 @@ Feasibility usually leaves freedom. Three rules spend it, in this order:
 2. **Scarce sources are split in proportion to draw.** Two sinks with the same
    restriction therefore come out with the same row whatever their draws. The
    split is proportional, never sink-by-sink, but a reserve held by only one of
-   them can still tilt it; `_allocate` then pools the group's watts and deals
+   them can still tilt it; `allocate` then pools the group's watts and deals
    them out again by draw, which keeps every source's total and every reserve.
 3. **Unrestricted sinks take what is left.** Including the home base load. They
    can always be served, so they are served last.

@@ -305,7 +305,7 @@ def _fill_block(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tup
     anywhere else; whatever is left over is split in proportion to the draw each
     claimant still has outstanding, rather than serving claimants one at a
     time. A reserve can still split two sinks with the same restriction
-    unevenly; ``_allocate`` evens their rows out afterwards.
+    unevenly; ``allocate`` evens their rows out afterwards.
 
     Returns ``(allocation, unused supply, deficit)``.
     """
@@ -453,7 +453,7 @@ def _interchangeable_sources(
     return list(groups.values())
 
 
-def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
+def allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple:
     """Attribute every sink's draw to sources. Returns ``(allocation, deficit)``.
 
     Restricted sinks are served first, because they are the ones feasibility can
@@ -466,12 +466,16 @@ def _allocate(supply: dict, demand: dict, allowed: dict, grid_uid: str) -> tuple
     are solved as one and their watts dealt back in proportion to output.
     Reserves are found per source, and splitting one system into halves the
     sinks can swap between would otherwise shrink them and move the answer.
+
+    Public because it is not tied to a snapshot: it takes plain totals, so
+    history carried over from a device's app (``history.py``) is split by the
+    same rules as the live readings. See docs/dev/carried-over-history.md.
     """
     twins = _interchangeable_sources(supply, demand, allowed, grid_uid)
     if any(len(group) > 1 for group in twins):
         merged = {group[0]: sum(supply[s] for s in group) for group in twins}
         into = {s: group[0] for group in twins for s in group}
-        allocation, deficit = _allocate(
+        allocation, deficit = allocate(
             merged,
             demand,
             {uid: {into.get(s, s) for s in sources} for uid, sources in allowed.items()},
@@ -1131,7 +1135,7 @@ class PowerInsight:
         # ``_HOME`` deliberately stays in the allocation: the monetary layer
         # needs the home base load's own mix, and ``sink_adapters_source_shares``
         # leaves it out so the public row set is adapters only.
-        return _allocate(supply, demand, allowed, self.grid_adapter.uid)
+        return allocate(supply, demand, allowed, self.grid_adapter.uid)
 
     @property
     def sink_adapters_source_shares(self) -> dict[str, dict[str, float]]:

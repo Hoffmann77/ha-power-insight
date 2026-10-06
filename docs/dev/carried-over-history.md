@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; step 1 of the [implementation order](#implementation-order) is done.
+Status: **settled**; steps 1 and 2 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -131,9 +131,8 @@ the engine's own solver, so the rules match the live ones: restrictions are
 honoured, restricted sinks are served first, a share is split over what is left,
 and interchangeable sources are drawn in proportion to their output.
 
-`_allocate` already is a pure, module-level function over explicit totals. It
-is made public as `allocate` (a rename, with no change in behaviour), and the new
-`history.py` calls it with:
+`allocate` (`power_insight.py`) is a pure, module-level function over explicit
+totals, public for this purpose, and the new `history.py` calls it with:
 
 | | Entries |
 | --- | --- |
@@ -394,7 +393,7 @@ Each step is one commit and leaves the integration working.
 1. **`counting_since`:** write it on subentry creation, add the 1.5
    migration, and show it in reconfigure. This is useful on its own. — **done**
 2. **`allocate`:** make the solver public. Engine tests pass, and nothing
-   frozen moves.
+   frozen moves. — **done**
 3. **`history.py`:** inputs, the solve (with the three differences),
    pricing, the inclusion rule and home-level splits, with
    `test_history.py`.
