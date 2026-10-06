@@ -512,6 +512,28 @@ Pinned by `TestConsumersGetAnAvoidedCost` in
 
 :::
 
+:::note[Decision: avoided cost has no levelized twin]
+
+An avoided cost prices the *alternative*, and the alternative is always the
+grid. Levelizing only changes what local energy costs — a PV system's LCOE,
+a battery's LCOS, their correction factors — and none of those enter the
+avoided cost. The grid's levelized price is its tariff (`GridAdapter.lcoe`
+returns its `coe`, and its correction factor is 1.0), so a levelized
+avoided cost would equal the plain one in every snapshot. It is not
+published, so no sensor ever shows the same number twice under two names.
+
+The levelized view of a consumer lives on the cost side, where it does
+differ: `sink_adapters_lcoo_rates` prices the same watts at their sources'
+lifetime costs. Should the grid price itself ever be levelized — a fixed
+connection fee spread over the imported kWh — the grid's `lcoe` would part
+from its `coe`, and this decision has to be revisited for every avoided-cost
+property at once, not for consumers alone.
+
+Pinned by `TestAvoidedCostIsPricedAtTheGrid` in
+`tests/engine/manual/test_savings.py`.
+
+:::
+
 ### Corrections apply to prices, not to results
 
 A device's correction factor is `current_lcoe / default_lcoe` — it restates
