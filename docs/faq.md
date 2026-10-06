@@ -64,6 +64,14 @@ entity or footprint — but **no CO₂ sensors are created in this release**.
 No. Disabled sensors are hidden and stop updating, but their history is kept and
 they return the moment you re-enable the option.
 
+## Why did my PV system's savings drop when I added my battery's history?
+
+Because the PV energy that went into the battery is now credited to the
+battery, when it discharges into your home. The combined savings drop a
+little too: a battery gives back less than it takes in (typically 85–92 %),
+and only energy that reaches your home saves the grid price. See
+[Adding a battery's history](history.md#adding-a-batterys-history-lowers-the-pv-systems-savings).
+
 ## How do I carry over historical totals?
 
 Enter the figures from your PV system's or battery's app in the device's

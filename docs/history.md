@@ -133,6 +133,35 @@ allowed to charge from.
 The split only decides which device earned what. Your combined savings are
 the same however it falls.
 
+### Adding a battery's history lowers the PV system's savings
+
+Once a battery has history, the PV energy that went into it is credited to
+the **battery**, when it discharges into your home, and no longer to the PV
+system. So the PV system's savings drop by the value of what it charged the
+battery with, and the battery's savings carry what it delivered.
+
+The combined savings drop a little too, and that is correct: a battery gives
+back less than it takes in, and only energy that reaches your home saves the
+grid price. Before the battery had history, its losses were counted as if
+they had saved money.
+
+**Example.** Before the battery had history, the PV system's savings read
+4,200. Afterwards the PV system reads 2,100 and the battery 1,800, so 3,900
+combined:
+
+| | Value |
+|---|---|
+| PV energy into the battery, at the grid price | 4,200 − 2,100 = 2,100 |
+| Battery energy into the home, at the grid price | 1,800 |
+| Lost in the battery | 300 |
+
+The battery gave back 1,800 ÷ 2,100 ≈ 86 % of what it took in, a typical
+round-trip efficiency (85–92 %). To check against your app, divide the
+battery's *Discharged* by its *Charged*: the result should be close, allowing
+for the app's rounding. If it is noticeably lower, the battery may also have
+exported energy (that earns export compensation, in **Total financial
+return**) or charged from the grid (that costs the battery the grid price).
+
 ## What your sensors show
 
 Each total reads what Power Insight counted plus what it carries over. Its
