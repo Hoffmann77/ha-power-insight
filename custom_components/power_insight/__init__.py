@@ -45,6 +45,7 @@ class MyData:
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     """Init the Mygrid instance from the config entry."""
+    _follow_preset(hass, entry)
     power_insight = PowerInsight()
 
     for subentry in entry.subentries.values():
@@ -103,6 +104,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
 
     return True
+
+
+def _follow_preset(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Keep an entry on a named preset in step with what the preset is now.
+
+    A preset is a promise ("the recommended sensors"), not a one-off copy:
+    picking it stores its options per scope, and a release that adds an
+    option to it would otherwise never reach the entries that picked it
+    before. A *Custom* selection is the user's own and is left alone. Runs
+    before the update listener is registered, so it triggers no reload.
+    """
+    # Imported here to avoid a circular import at module load.
+    from .config_flow import PRESET_SELECTIONS, preset_scopes
+    from .const import CONF_PRESET
+
+    options = entry.options or {}
+    preset = options.get(CONF_PRESET)
+    if preset not in PRESET_SELECTIONS or options.get("schema") != 2:
+        return
+
+    device_types = {
+        sub.data.get("adapter", {}).get("adapter_type")
+        for sub in entry.subentries.values()
+    } - {None}
+    stored = options.get("scopes", {})
+    scopes = preset_scopes(preset, stored, device_types)
+    if scopes != {scope: sorted(leaves) for scope, leaves in stored.items()}:
+        hass.config_entries.async_update_entry(
+            entry, options={**options, "scopes": scopes}
+        )
 
 
 #: The restriction field and repair issue of each device kind that has one.

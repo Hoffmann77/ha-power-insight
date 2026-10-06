@@ -752,6 +752,23 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
 }
 
 
+def preset_scopes(
+    preset: str, stored: dict[str, list[str]], device_types: set[str]
+) -> dict[str, list[str]]:
+    """Return the per-scope selection a named preset gives an entry.
+
+    The combined scope and every device type the entry has get the preset's
+    options their scope supports; a scope with no device keeps what it has
+    stored, so a device added later starts from the user's earlier choice.
+    """
+    return {
+        scope: sorted(PRESET_SELECTIONS[preset] & SCOPE_SUPPORTED_OPTIONS[scope])
+        if (scope == SCOPE_COMBINED or scope in device_types)
+        else sorted(stored.get(scope, []))
+        for scope in SCOPES
+    }
+
+
 def default_scopes(preset: str = PRESET_RECOMMENDED) -> dict[str, list[str]]:
     """Return the per-scope selection for *preset*, intersected with scope support."""
     selection = PRESET_SELECTIONS.get(preset, PRESET_SELECTIONS[PRESET_RECOMMENDED])
@@ -2364,14 +2381,11 @@ class PowerInsightOptionsFlow(OptionsFlow):
             self._debug = bool(user_input.get(CONF_ENABLE_DEBUG_ENTITIES, False))
 
             if preset != PRESET_CUSTOM:
-                stored = self.config_entry.options.get("scopes", {})
-                new_scopes = {
-                    scope: sorted(
-                        PRESET_SELECTIONS[preset] & SCOPE_SUPPORTED_OPTIONS[scope]
-                    ) if (scope == SCOPE_COMBINED or scope in self._device_types)
-                    else sorted(stored.get(scope, []))
-                    for scope in SCOPES
-                }
+                new_scopes = preset_scopes(
+                    preset,
+                    self.config_entry.options.get("scopes", {}),
+                    self._device_types,
+                )
                 return self.async_create_entry(
                     title="",
                     data={

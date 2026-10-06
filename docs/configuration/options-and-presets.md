@@ -25,6 +25,10 @@ selection to all your devices at once:
 | **Custom** | Choose sensors per device type on the following pages. |
 
 Each set builds on the previous one. **Recommended** suits most homes.
+
+A set stays what it says: when a release adds sensors to *Recommended* or
+*Extended*, an installation on that set gets them at its next start. Only a
+*Custom* selection is left exactly as you made it.
 Levelized sensors in a set only appear for devices that have lifetime values.
 
 ## Custom: one page per device type
