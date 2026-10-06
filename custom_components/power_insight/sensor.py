@@ -8,11 +8,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from functools import cached_property
 
-import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
@@ -2074,17 +2071,6 @@ async def async_setup_entry(
     # history), and re-enable any we previously disabled that are wanted again.
     _sync_entity_enabled_state(hass, entry, created_unique_ids)
 
-    # Register the ``set_value`` service as a platform entity service. HA
-    # calls ``async_set_value`` on every targeted entity regardless of whether
-    # it implements the method, so all sensor subclasses must define it.
-    # Integration sensors seed their running total; non-integration sensors
-    # raise ``ServiceValidationError`` with a clear message.
-    entity_platform.async_get_current_platform().async_register_entity_service(
-        "set_value",
-        {vol.Required("value"): vol.Coerce(float)},
-        "async_set_value",
-    )
-
 
 # ---------------------------------------------------------------------------
 # Sensor entity classes
@@ -2115,17 +2101,6 @@ class BasePowerInsightSensor(BaseEventSensorEntity):
         """Substitute the HA-configured currency for the EUR placeholder."""
         return _resolve_currency_unit(
             self.entity_description.native_unit_of_measurement, self.hass
-        )
-
-    async def async_set_value(self, value: float) -> None:
-        """Reject set_value calls on non-accumulation sensors."""
-        raise ServiceValidationError(
-            "set_value is only supported on accumulation (total) sensors. "
-            f"'{self.entity_id}' is an instantaneous measurement sensor "
-            "and does not hold a running total.",
-            translation_domain=DOMAIN,
-            translation_key="set_value_not_total",
-            translation_placeholders={"entity_id": self.entity_id},
         )
 
 
@@ -2635,10 +2610,10 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         Each accumulated component is scaled by *its own* adapter's correction
         factor, so editing one device's lifetime cost rescales exactly the
         share of history that came from it. Anything without a breakdown — a
-        total accumulated before the breakdown existed, or one seeded with
-        ``set_value`` — has no attribution left to correct by, so it is
-        carried through unscaled rather than guessed at. That holds whether or
-        not anything has been accumulated on top of it yet.
+        total accumulated before the breakdown existed — has no attribution
+        left to correct by, so it is carried through unscaled rather than
+        guessed at. That holds whether or not anything has been accumulated on
+        top of it yet.
         """
         base = self._state
         if base is None or not self.entity_description.apply_correction_factor:

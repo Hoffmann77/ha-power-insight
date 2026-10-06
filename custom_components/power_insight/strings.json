@@ -529,18 +529,6 @@
       "description": "For the last 15 minutes the metered devices of **{entry_title}** drew {share} more than the grid, PV systems and batteries supplied. Meters sampled at different moments cause brief gaps, which Power Insight evens out; a gap this persistent usually means a misconfigured meter.\n\nCheck that every power sensor has the right sign (turn on **Invert** where it reports the opposite way), and that no metered device sits inside another metered circuit, so its power is not counted twice. The **Metering imbalance** diagnostic sensor shows the gap as it happens.\n\nThis message disappears once the meters agree again."
     }
   },
-  "services": {
-    "set_value": {
-      "name": "Set value",
-      "description": "Sets a Power Insight total sensor to a value, e.g. to carry over totals from before you installed it.",
-      "fields": {
-        "value": {
-          "name": "Value",
-          "description": "The new total."
-        }
-      }
-    }
-  },
   "selector": {
     "preset": {
       "options": {
@@ -568,9 +556,6 @@
   "exceptions": {
     "migration_downgrade": {
       "message": "This configuration was saved by a newer version of Power Insight (config version {version}). Reinstall that version or newer, or remove and re-add the integration."
-    },
-    "set_value_not_total": {
-      "message": "{entity_id} is not a total sensor. Set value only works on sensors that add up over time."
     }
   },
   "entity": {

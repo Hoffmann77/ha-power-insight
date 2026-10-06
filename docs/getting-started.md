@@ -99,6 +99,7 @@ Power Insight can create.
 ## 4. (Optional) Seed accumulated totals
 
 Accumulated **total** sensors (e.g. *Total cost savings*) start counting from
-zero. If you are adopting Power Insight partway through the year and want to
-carry over a historical total, use the
-[`power_insight.set_value` service](services.md).
+zero. To carry over what your PV system or battery earned before, enter the
+figures from its app in the **Already accumulated** section when you add the
+device, or later under its **Reconfigure** page (see
+[Configuration](configuration/index.md)).

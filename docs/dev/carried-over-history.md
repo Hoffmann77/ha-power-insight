@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; steps 1–6 of the [implementation order](#implementation-order) are done.
+Status: **settled**; steps 1–7 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -396,9 +396,9 @@ This feature replaces it. Remove:
   `async_register_entity_service`), `async_set_value` on both sensor
   bases, the `set_value` and `set_value_not_total` strings and translations,
   and the comment in `__init__.py`
-- `docs/services.md` and its sidebar entry; replace the mentions in the
-  README, FAQ, getting-started and concepts pages with links to the new
-  user page
+- `docs/services.md` and its sidebar entry; the mentions in the README,
+  FAQ, getting-started and concepts pages now point at the device forms'
+  **Already accumulated** section (step 8 points them at the new user page)
 - `test_a_seeded_total_reads_exactly_what_was_set`, and the "seeded with
   `set_value`" sentences in `engine-calculations.md`
 
@@ -445,7 +445,7 @@ Each step is one commit and leaves the integration working.
    setup. — **done**
 5. **Sensors:** carried-over values, combined totals, attributes. — **done**
 6. **Flow:** sections, strings and translations, hints, validation. — **done**
-7. **Retire `set_value`.**
+7. **Retire `set_value`.** — **done**
 8. **Docs:** user page `docs/history.md` (in the sidebar where *Services* was),
    the four decision notes, the FAQ and getting-started updates, and this
    page reduced to what is still open.

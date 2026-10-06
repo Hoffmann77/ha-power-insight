@@ -102,9 +102,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
 
-    # The ``set_value`` service is registered as a platform entity service in
-    # sensor.py (async_setup_entry), so HA handles entity-target resolution.
-
     return True
 
 
