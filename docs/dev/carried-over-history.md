@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; steps 1 and 2 of the [implementation order](#implementation-order) are done.
+Status: **settled**; steps 1–3 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -159,12 +159,15 @@ The result is stored as **flows** per device:
 
 ```python
 {
-    "to_home": 3500.0,                       # kWh delivered into the home
-    "exported": 4000.0,                      # kWh fed in
-    "charged_from": {"<pv uid>": 2500.0,     # batteries only: where charging came from
-                     "<grid uid>": 0.0},
+    "to_home": 3500.0,                # kWh delivered into the home
+    "exported": 4000.0,               # kWh fed in
+    "from_grid": 0.0,                 # batteries only: the entered grid charging
+    "from_pv": {"<pv uid>": 2500.0},  # batteries only: the solved local charging
 }
 ```
+
+Grid charging is kept apart from the PV charging because it is priced at the
+tariff and never has an LCOE.
 
 The split is **solved when history is saved, then frozen.** Removing a device
 or editing a `charge_from` restriction later does not move anyone else's past.
@@ -180,13 +183,13 @@ period's average tariff and `F` the device's average feed-in tariff.
 
 | Total | Carried-over value |
 | --- | --- |
-| `total_cost_savings` | entered savings, else `to_home × T − charged_from[grid] × T` |
-| `total_levelized_cost_savings` | `savings − to_home × price(self) − Σ charged_from[pv] × price(pv)`; with no flows, the entered levelized savings |
+| `total_cost_savings` | entered savings, else `to_home × T − from_grid × T` |
+| `total_levelized_cost_savings` | `savings − to_home × price(self) − Σ from_pv × price(pv)`; with no flows, the entered levelized savings |
 | `total_export_compensation` | entered export compensation, else `exported × F` |
 | `total_financial_return` | `savings + export compensation` |
 | `total_levelized_financial_return` | `levelized savings + export compensation − exported × price(self)` |
-| `total_operating_cost` (battery) | `charged_from[grid] × T` |
-| `total_levelized_operating_cost` (battery) | `charged_from[grid] × T + Σ charged_from[pv] × price(pv)` |
+| `total_operating_cost` (battery) | `from_grid × T` |
+| `total_levelized_operating_cost` (battery) | `from_grid × T + Σ from_pv × price(pv)` |
 
 **Inclusion rule:** a total gets history only when every term in it is known.
 Otherwise it gets none, and the sensor's attribute says why. An amounts-only
@@ -224,7 +227,7 @@ These become the integration tests' expected values.
 
 | | PV | Battery |
 | --- | --- | --- |
-| Flows | to_home 3,500, exported 4,000 | to_home 2,200, charged_from PV 2,500 |
+| Flows | to_home 3,500, exported 4,000 | to_home 2,200, from_pv 2,500 |
 | Savings | 3,500 × 0.34 = **1,190.00** | 2,200 × 0.34 = **748.00** |
 | Levelized savings | 1,190 − 3,500 × 0.10 = **840.00** | 748 − 2,200 × 0.15 − 2,500 × 0.10 = **168.00** |
 | Export compensation | 4,000 × 0.08 = **320.00** | 0 |
@@ -284,9 +287,16 @@ which PV's LCOE prices the battery's levelized charging.
 
 **A missing device blocks the split.** If an exporting device in the shared
 split has no history yet, the grid's *fed in* cannot be split honestly, because
-part of it is that device's. The split then waits, and the totals that depend
-on it get no history, with an attribute naming the device. Entering 0 for it
-states that it has none.
+part of it is that device's. The same holds for a PV system without history
+that a battery with local charging may charge from: part of that charging may
+be its. The split then waits, and the totals that depend on it get no
+history, with an attribute naming the device. Entering 0 for it states that
+it has none. So does the grid's missing *fed in*, while an exporting device
+has no own feed-in to use instead.
+
+**Energy that is not there needs no price.** A term with 0 kWh is a known 0,
+whatever its price, as in the engine: a battery that never charged from the
+grid has an operating cost of 0 even without a tariff.
 
 ## Validation
 
@@ -396,7 +406,7 @@ Each step is one commit and leaves the integration working.
    frozen moves. — **done**
 3. **`history.py`:** inputs, the solve (with the three differences),
    pricing, the inclusion rule and home-level splits, with
-   `test_history.py`.
+   `test_history.py`. — **done**
 4. **Storage:** solve on save, `data["history"]`, `last_price` refresh at
    setup.
 5. **Sensors:** carried-over values, combined totals, attributes.
