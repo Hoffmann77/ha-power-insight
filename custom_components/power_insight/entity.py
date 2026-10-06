@@ -689,28 +689,16 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
         """Return the accumulated total."""
         return self._state
 
-    async def async_set_value(self, value: float) -> None:
-        """Seed the running total to *value* (backs the ``set_value`` service).
-
-        Lets the user set an accumulated sensor to a known starting figure —
-        e.g. to carry over historical totals when adopting the integration.
-        The new total persists across restarts via the existing restore path.
-
-        The seeded figure replaces the history, so its breakdown goes too: the
-        total then reads exactly *value*, which a later correction leaves at
-        face value, like any total with no attribution to correct it by.
-        """
-        self._state = Decimal(str(value))
-        self._last_valid_state = self._state
-        self._component_totals = {}
-        self._component_factors = {}
-        self.async_write_ha_state()
-
     @property
     def extra_restore_state_data(self) -> IntegrationSensorExtraStoredData:
-        """Return the extra data to persist across HA restarts."""
+        """Return the extra data to persist across HA restarts.
+
+        The running total as counted, never as displayed: a subclass may add
+        something to its display (the history carried over from a device's
+        app), and restoring that into the total would add it again.
+        """
         return IntegrationSensorExtraStoredData(
-            self.native_value,
+            self._state,
             self.native_unit_of_measurement,
             self._last_valid_state,
             dict(self._component_totals) or None,

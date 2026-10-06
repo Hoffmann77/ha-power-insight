@@ -278,7 +278,7 @@ allocations").
 
 ## Deferred: extract the solve into its own module
 
-The flow helpers (`_permits` through `_allocate`, ~340 lines) are pure functions
+The flow helpers (`_permits` through `allocate`, ~340 lines) are pure functions
 over plain dicts and have no dependency on the adapter objects, so they belong in
 `custom_components/power_insight/allocation.py`. `power_insight.py` would keep
 `_solve_source_allocation`, which is the adapter-to-dict translation and does

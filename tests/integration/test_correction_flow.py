@@ -488,39 +488,6 @@ async def test_a_total_restored_without_a_breakdown_stays_at_face_value(
     assert after_an_hour == pytest.approx(10.30, abs=1e-6)
 
 
-async def test_a_seeded_total_reads_exactly_what_was_set(
-    hass: HomeAssistant,
-) -> None:
-    """``set_value`` replaces the history, breakdown included.
-
-    After an hour the total holds a corrected breakdown. Seeding 5 EUR must
-    then read 5 EUR; a breakdown left behind would still be corrected on top
-    of the seed and read 4.90 EUR. The seed is then carried at face value.
-    """
-    entry = _corrected_pv_entry()
-    t0 = dt_util.utcnow()
-    with freeze_time(t0) as frozen:
-        _set_pv_home(hass)
-        await setup_integration(hass, entry)
-        frozen.move_to(t0 + timedelta(hours=1))
-        hass.states.async_set("sensor.pv_power", "2000", {"unit_of_measurement": "W"})
-        for _ in range(4):
-            await hass.async_block_till_done()
-
-        suffix = f"{PV_SUB_ID}_total_levelized_cost_savings"
-        state = _pv_state(hass, entry, suffix)
-        assert float(state.state) == pytest.approx(0.30, abs=1e-6)
-
-        await hass.services.async_call(
-            DOMAIN, "set_value", {"value": 5.0},
-            target={"entity_id": state.entity_id}, blocking=True,
-        )
-        for _ in range(4):
-            await hass.async_block_till_done()
-
-    assert float(_pv_state(hass, entry, suffix).state) == pytest.approx(5.0, abs=1e-6)
-
-
 # ---------------------------------------------------------------------------
 # C9 — an edit restates the device's whole history
 # ---------------------------------------------------------------------------

@@ -163,6 +163,86 @@ async def test_subentry_grid_creates_subentry(hass: HomeAssistant) -> None:
     assert adapter["config"]["power_entity"] == "sensor.grid_power"
 
 
+async def test_subentry_records_when_counting_starts(
+    hass: HomeAssistant, freezer
+) -> None:
+    """A new device stores the moment it was added as ``counting_since``.
+
+    Power Insight starts counting it with the reload that follows, so this is
+    the cutoff any history carried over from the device's app must end at.
+    """
+    from homeassistant.util import dt as dt_util
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options=BASE_OPTIONS,
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "100", {"unit_of_measurement": "W"})
+    freezer.move_to("2026-08-14 08:32:00+00:00")
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "grid"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={"power_entity": "sensor.grid_power", "power_entity_inverted": False},
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    (subentry,) = entry.subentries.values()
+    assert dt_util.parse_datetime(subentry.data["counting_since"]) == (
+        dt_util.parse_datetime("2026-08-14 08:32:00+00:00")
+    )
+
+
+async def test_reconfigure_shows_and_keeps_counting_since(
+    hass: HomeAssistant,
+) -> None:
+    """Reconfigure tells the user, in local time, since when the device is
+    counted (so they know where their app's totals must stop), and saving
+    the form leaves that moment unchanged.
+    """
+    import copy
+
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    battery = copy.deepcopy(make_battery_subentry_data())
+    battery["data"]["counting_since"] = "2026-08-14T08:32:00+00:00"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        minor_version=5,
+        options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data(), battery],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.battery_power", "0", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": BAT_SUB_ID},
+    )
+    # 08:32 UTC is 10:32 in Berlin summer time.
+    assert result["description_placeholders"]["counting_since"] == "2026-08-14 10:32"
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.battery_power",
+            "power_entity_inverted": False,
+            "source_mode": "mix",
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+    assert entry.subentries[BAT_SUB_ID].data["counting_since"] == (
+        "2026-08-14T08:32:00+00:00"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Subentry flow — consumer adapter
 # ---------------------------------------------------------------------------

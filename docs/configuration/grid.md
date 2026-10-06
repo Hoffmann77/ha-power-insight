@@ -54,6 +54,13 @@ effect. It is safe to leave empty.
 
 :::
 
+### Already accumulated
+
+> Optional: the whole home's figures from your app — what it fed into the
+> grid and the average grid tariff over that period, and optionally its total
+> savings and export compensation. They are split between your PV systems and
+> batteries. See [Carried-over history](../history.md).
+
 ## Sensors this device can create
 
 Import and export both physically happen at the single grid connection, so the

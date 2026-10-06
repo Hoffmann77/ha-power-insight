@@ -66,5 +66,7 @@ they return the moment you re-enable the option.
 
 ## How do I carry over historical totals?
 
-Use the [`power_insight.set_value` service](services.md) to seed an accumulated
-total sensor with a starting value.
+Enter the figures from your PV system's or battery's app in the device's
+**Already accumulated** section, when you add it or under **Reconfigure** (see
+[Carried-over history](history.md)). The totals then add them to what
+Power Insight counts.

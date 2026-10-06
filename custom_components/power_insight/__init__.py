@@ -1,16 +1,18 @@
 """Set up the PowerInsight integration."""
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
+    CONF_COUNTING_SINCE,
     CONF_POWER_ENTITY,
     CONF_POWER_FROM_ADAPTERS,
     DOMAIN,
@@ -21,6 +23,7 @@ from .power_insight import PowerInsight
 from .event_handler import EventHandler
 from .imbalance import ImbalanceMonitor
 from .adapter_models import ADAPTER_MODELS
+from .history_store import DeviceHistory, async_sync_history, priced_history
 from .utils import parse_price_unit
 
 
@@ -36,6 +39,8 @@ class MyData:
 
     power_insight: PowerInsight
     event_handler: EventHandler
+    # The history carried over from the devices' apps, priced at setup.
+    history: dict[str, DeviceHistory] = field(default_factory=dict)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
@@ -74,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
             translation_placeholders={"entry_title": entry.title},
         )
         source_entities: list[str] = []
+        history = {}
     else:
         # Grid is present — dismiss any previously raised issue.
         ir.async_delete_issue(hass, DOMAIN, no_grid_issue)
@@ -82,18 +88,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         source_entities = power_insight.source_entities
         _check_price_entity(hass, entry, power_insight)
         _check_shared_power_entities(hass, entry)
+        # Before the platforms read the history, and before the update
+        # listener is registered, so storing it triggers no reload.
+        async_sync_history(hass, entry, power_insight)
+        history = priced_history(entry, power_insight)
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)
     if power_insight.grid_adapter is not None:
         event_handler.on_update = ImbalanceMonitor(hass, entry, power_insight).update
     event_handler.track_entities(source_entities)
-    entry.runtime_data = MyData(power_insight, event_handler)
+    entry.runtime_data = MyData(power_insight, event_handler, history)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(async_update_listener))
-
-    # The ``set_value`` service is registered as a platform entity service in
-    # sensor.py (async_setup_entry), so HA handles entity-target resolution.
 
     return True
 
@@ -290,8 +297,44 @@ async def async_migrate_entry(
         _migrate_drop_battery_efficiency(hass, entry)
     if entry.minor_version < 4:
         await _migrate_share_unique_ids(hass, entry)
+    if entry.minor_version < 5:
+        _migrate_add_counting_since(hass, entry)
 
     return True
+
+
+def _migrate_add_counting_since(hass: HomeAssistant, entry: MyConfigEntry) -> None:
+    """Record when Power Insight started counting each existing device.
+
+    New subentries store the moment they are created. For existing ones the
+    best record left is the entity registry: a device's sensors were
+    registered when it was set up, so the earliest of their ``created_at`` is
+    when counting began. A device without a registered entity has no running
+    total that counted anything yet, so its counting starts now.
+    """
+    registry = er.async_get(hass)
+    entities = er.async_entries_for_config_entry(registry, entry.entry_id)
+    now = dt_util.utcnow()
+
+    for subentry in entry.subentries.values():
+        if CONF_COUNTING_SINCE in subentry.data:
+            continue
+
+        sid = subentry.subentry_id
+        created = [
+            entity.created_at
+            for entity in entities
+            if entity.config_subentry_id == sid
+            or entity.unique_id.startswith((f"{sid}_", f"{entry.entry_id}_{sid}_"))
+        ]
+        since = min(created, default=now)
+        hass.config_entries.async_update_subentry(
+            entry,
+            subentry,
+            data={**subentry.data, CONF_COUNTING_SINCE: since.isoformat()},
+        )
+
+    hass.config_entries.async_update_entry(entry, minor_version=5)
 
 
 async def _migrate_share_unique_ids(hass: HomeAssistant, entry: MyConfigEntry) -> None:

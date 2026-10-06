@@ -134,7 +134,8 @@ tests. Now:
   and every `*_components` row adds up before and after correction.
 - The sensor layer: a removed device's share of another device's total keeps
   its last factor ("a removed device's correction is final"); a total with no
-  breakdown, restored or seeded with `set_value`, reads at face value.
+  breakdown (restored from before it existed) reads at face value; the
+  `set_value` service that could also seed one was later retired.
 - CO₂ is deliberately uncorrected until something publishes it ("CO₂ is not
   corrected until something publishes it").
 - A correction restates the device's whole history, and replaced hardware is
