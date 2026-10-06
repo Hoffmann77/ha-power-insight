@@ -446,7 +446,9 @@ The accumulating `combined_total_levelized_device_operating_cost` belongs
 to the device view. It is deliberately *not* an integrated combined rate:
 it is derived from the per-device totals plus the retired-adapter ledger,
 which is what makes lifetime-cost corrections retroactive and stops a
-removed device dropping its history.
+removed device dropping its history. Only PV systems and batteries enter
+that ledger: a consumer's levelized operating cost shares the per-device
+key but is not a device cost, so removing a consumer freezes nothing.
 
 The pre-existing `combined_total_operating_cost` measured the CHG channel
 alone while being named as if it covered everything, which is why per-device

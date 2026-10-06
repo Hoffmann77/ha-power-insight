@@ -37,7 +37,12 @@ from .history_store import (
     device_carried_over,
     summed_carried_over,
 )
-from .power_insight import PowerInsight, AbstractBaseAdapter, UNIT_PREFIXES
+from .power_insight import (
+    PowerInsight,
+    AbstractBaseAdapter,
+    BaseProductionAdapter,
+    UNIT_PREFIXES,
+)
 from . import MyConfigEntry
 from .const import (
     DOMAIN,
@@ -2658,9 +2663,12 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
         await super().async_will_remove_from_hass()
 
         key = self.entity_description.key
+        # Only PV and battery totals belong to the device ledger: a consumer's
+        # levelized operating cost shares the key but is not a device cost.
         if (
             not self.entity_description.apply_correction_factor
             or key not in LEVELIZED_TOTAL_KEYS
+            or not isinstance(self.device_adapter, BaseProductionAdapter)
         ):
             return
 
