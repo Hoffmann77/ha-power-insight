@@ -21,18 +21,18 @@ Add it with **Add device → Battery**.
 
 > Turn on if your sensor uses the opposite sign.
 
-### Feeds into the grid
+### Exports to the grid
 
-> Turn on if this device can feed power into the grid.
+> Turn on if this device can export power to the grid.
 
 Default: **off** for batteries.
 
 ### Export compensation per kWh
 
-> What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors.
+> What you are paid per kWh exported to the grid. Required for savings, financial return and export compensation sensors.
 
-Asked for whenever the battery feeds into the grid; enter `0` if you are not
-paid for it. Both this and *Feeds into the grid* can be changed later under
+Asked for whenever the battery exports to the grid; enter `0` if you are not
+paid for it. Both this and *Exports to the grid* can be changed later under
 **Reconfigure**, and a new rate applies from then on.
 
 ### Power sources / Charges from
@@ -78,7 +78,7 @@ CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
 
 > Optional, in two sections, one per route. **Energy (kWh):** *Charged*,
 > *Discharged* and any grid charging, and optionally its own export to the
-> grid. **Amounts:** the savings and export compensation your app shows,
+> grid and its own average grid tariff (else the grid's). **Amounts:** the savings and export compensation your app shows,
 > taken as they are. See [Carried-over history](../history.md).
 
 ## Sensors this device can create

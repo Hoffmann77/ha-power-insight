@@ -119,15 +119,15 @@ def _sections(result) -> dict[str, tuple[dict, dict]]:
 async def test_adding_a_device_offers_two_routes_collapsed(hass: HomeAssistant) -> None:
     """The form for a new PV system ends in two collapsed, optional sections,
     one per route: the kWh from the app, which Power Insight turns into
-    money, and the amounts the app shows, taken as they are. A device set up
-    with the grid shares the home's tariff, so it is not asked for one, nor
-    for what went into batteries.
+    money, and the amounts the app shows, taken as they are. The energy
+    route offers its own average grid tariff (the grid's is the fallback); a
+    device set up with the grid is not asked what went into batteries.
     """
     sections = _sections(await _add_pv(hass, _entry()))
 
     energy, energy_options = sections[HISTORY_ENERGY]
     amounts, amounts_options = sections[HISTORY_AMOUNTS]
-    assert set(energy) == {"produced", "fed_in", "feed_in_tariff"}
+    assert set(energy) == {"produced", "fed_in", "average_tariff", "feed_in_tariff"}
     assert set(amounts) == {"savings", "export_compensation", "levelized_savings"}
     assert energy_options["collapsed"] is True
     assert amounts_options["collapsed"] is True
@@ -138,7 +138,7 @@ async def test_a_device_added_later_is_asked_for_its_own_tariff(
 ) -> None:
     """Added two weeks after the grid, the PV system stands alone: the
     home's figures describe a period it was not part of, so the energy route
-    also asks for its average tariff and what it charged batteries with.
+    also asks what it charged batteries with.
     """
     two_weeks_ago = (dt_util.utcnow() - timedelta(days=14)).isoformat()
     energy, _ = _sections(await _add_pv(hass, _entry(grid_since=two_weeks_ago)))[HISTORY_ENERGY]

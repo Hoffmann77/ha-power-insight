@@ -9,7 +9,7 @@ Power Insight separates three financial concepts:
   ```
   cost_savings = avoided_import_cost − operating_costs
   ```
-- **Export compensation** — feed-in revenue for power exported to the grid
+- **Export compensation** — revenue for power exported to the grid
   (its own dedicated sensors).
 - **Financial return** — the combined picture:
   ```

@@ -358,3 +358,50 @@ async def test_an_existing_install_can_add_change_and_clear_its_history(
 
     await reconfigure(PV_SUB_ID, {**pv_form, "history_energy": {}, "history_amounts": {}})
     assert float(hass.states.get(entity_id).state) == pytest.approx(50.0)
+
+
+async def test_savings_carry_with_the_tariff_on_the_pv_system(
+    hass: HomeAssistant,
+) -> None:
+    """Nothing entered on the grid: the PV system's energy route alone
+    carries its savings once it has its own average grid tariff. 10,000 kWh
+    produced and 4,000 exported (its own export, so nothing waits for the
+    home's) leave 6,000 into the home: 6,000 × 0.34 = 2,040 saved, and
+    4,000 × 0.08 = 320 export compensation.
+    """
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = "sensor.grid_price"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        minor_version=5,
+        options=_OPTIONS,
+        subentries_data=[_with(grid, None), _with(make_pv_subentry_data(), None)],
+    )
+    await _counting(hass, entry)
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"),
+        context={"source": "reconfigure", "subentry_id": PV_SUB_ID},
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.pv_power",
+            "power_entity_inverted": False,
+            "exports_power": True,
+            "export_compensation": 0.08,
+            "history_energy": {
+                "produced": 10000.0, "fed_in": 4000.0, "average_tariff": 0.34,
+            },
+        },
+    )
+    assert result["type"] == "abort", result.get("errors")
+    await _settle(hass)
+
+    savings = _state(hass, entry, f"{PV_SUB_ID}_total_cost_savings")
+    assert float(savings.state) == pytest.approx(2040.0)
+    assert "carried_over_missing" not in savings.attributes
+    assert _value(hass, entry, f"{PV_SUB_ID}_total_export_compensation") == (
+        pytest.approx(320.0)
+    )

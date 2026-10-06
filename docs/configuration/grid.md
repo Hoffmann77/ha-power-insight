@@ -58,7 +58,8 @@ effect. It is safe to leave empty.
 
 > Optional, in two sections. **Energy (kWh):** what the whole home exported
 > to the grid and the average grid tariff over that period — your PV
-> systems' and batteries' savings are calculated with this tariff.
+> systems' and batteries' savings are calculated with this tariff, unless a
+> device has its own.
 > **Amounts:** the whole home's total savings and export compensation from
 > your app. Both are split between your PV systems and batteries. See
 > [Carried-over history](../history.md).

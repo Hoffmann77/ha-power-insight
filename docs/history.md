@@ -40,13 +40,14 @@ amounts route 2 cannot, such as a battery's operating cost.
 | **PV system** | *Produced* — everything it produced, including what went into a battery or the grid. |
 | **Battery** | *Charged*, *Discharged*, and *Of which from the grid* (leave empty unless your battery charges from the grid). |
 
-:::tip[Your savings need the grid's average tariff]
+:::tip[Your savings need an average grid tariff]
 
 A PV system's and a battery's savings are the energy they delivered into your
-home, valued at the **Average grid tariff**. That tariff is the whole home's,
-so you enter it once, on the **grid**, not on each device. Without it the
-savings totals carry nothing and say `no_tariff`; the export compensation,
-which only needs the export compensation per kWh, still carries its part.
+home, valued at the **Average grid tariff**. Enter it in the device's own
+energy section, or once on the **grid** for every device; a device's own
+tariff wins, and the grid's is the fallback. Without either, the savings
+totals carry nothing and say `no_tariff`; the export compensation, which only
+needs the export compensation per kWh, still carries its part.
 
 :::
 
@@ -118,9 +119,9 @@ allowed to charge from.
   none, the home's export cannot be split honestly, so the history waits.
   Enter 0 for a device that really has none.
 - **A device you add later** stands on its own: the home's figures cover a
-  period it was not part of. Its form also asks for its own average tariff
-  (and, for a PV system, what it charged batteries with), and needs its own
-  export if it exports to the grid.
+  period it was not part of. It needs its own average grid tariff and, if it
+  exports to the grid, its own export; a PV system's form also asks what it
+  charged batteries with.
 
 The split only decides which device earned what. Your combined savings are
 the same however it falls.
@@ -147,7 +148,7 @@ carries nothing, and `carried_over_missing` says why:
 | --- | --- |
 | `waiting` | another device's history; `carried_over_waiting_for` names it |
 | `no_energy` | the kWh to calculate it from (for example an amounts-only history) |
-| `no_tariff` | the average grid tariff |
+| `no_tariff` | an average grid tariff, on the device or on the grid |
 | `no_export_compensation` | the export compensation per kWh |
 | `no_price` | a device's lifetime cost, for a levelized total |
 

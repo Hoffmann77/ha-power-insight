@@ -22,23 +22,23 @@ Add it with **Add device → PV system**.
 
 > Turn on if your sensor uses the opposite sign.
 
-### Feeds into the grid
+### Exports to the grid
 
-> Turn on if this device can feed power into the grid.
+> Turn on if this device can export power to the grid.
 
 Default: **on** for PV systems. When off, the *Production to grid* (+ ratio),
 *Share of grid export* and export-compensation sensors are not created.
 
 ### Export compensation per kWh
 
-> What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors.
+> What you are paid per kWh exported to the grid. Required for savings, financial return and export compensation sensors.
 
-This is your feed-in tariff, in your currency per kWh. There is no default —
-a rate that fits one country is wrong in the next — so it is asked for whenever
-the device feeds into the grid; enter `0` if you are not paid for it.
+It is a rate in your currency per kWh. There is no default — a rate that
+fits one country is wrong in the next — so it is asked for whenever the device
+exports to the grid; enter `0` if you are not paid for it.
 
-Both this and *Feeds into the grid* can be changed later under **Reconfigure**.
-A new rate applies from then on: a feed-in tariff is a price that changes over
+Both this and *Exports to the grid* can be changed later under **Reconfigure**.
+A new rate applies from then on: an export rate is a price that changes over
 time, so the totals already accumulated keep the rate that held when they were
 earned.
 
@@ -67,7 +67,7 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 
 > Optional, in two sections, one per route. **Energy (kWh):** *Produced*,
 > and optionally its own export to the grid; Power Insight calculates the
-> money, with the average grid tariff entered on the grid. **Amounts:** the
+> money, with its own average grid tariff or the grid's. **Amounts:** the
 > savings and export compensation your app shows, taken as they are. Your
 > totals then start where your system really is. See
 > [Carried-over history](../history.md).

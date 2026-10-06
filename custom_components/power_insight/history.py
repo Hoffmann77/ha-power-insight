@@ -569,7 +569,9 @@ def _record(
         uid=device.uid,
         kind=device.kind,
         exports=device.exports,
-        tariff=device.tariff if device.standalone else home.tariff,
+        # A device's own average tariff wins; one sharing the home's period
+        # falls back to the grid's. A standalone device must have its own.
+        tariff=device.tariff if device.tariff is not None or device.standalone else home.tariff,
         feed_in_tariff=device.feed_in_tariff,
         flows=flows,
         savings=device.savings,

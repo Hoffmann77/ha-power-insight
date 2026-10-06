@@ -86,7 +86,9 @@ DEVICE_FIELDS = {
     "levelized_savings": "levelized_savings",
 }
 #: Only asked of a device added later, which cannot share the home's figures.
-STANDALONE_FIELDS = ("average_tariff", "into_batteries")
+#: (Every PV system and battery may give its own average tariff; one added
+#: later must, one sharing the home's period falls back to the grid's.)
+STANDALONE_FIELDS = ("into_batteries",)
 
 
 @dataclass(frozen=True)

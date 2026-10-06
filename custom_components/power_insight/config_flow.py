@@ -637,10 +637,10 @@ def history_section(
     """Return the two "Already accumulated" sections of a device form, or none.
 
     Every field is optional and seeded with a suggested value, not a default,
-    so a cleared field stays cleared. A device that stands alone (added well
-    after the grid) is also asked for the average tariff and, for a PV system,
-    what went into batteries: it cannot share the home's figures. Each section
-    starts collapsed until there is something in it.
+    so a cleared field stays cleared. A PV system that stands alone (added
+    well after the grid) is also asked what went into batteries: it cannot
+    share the home's figures. Each section starts collapsed until there is
+    something in it.
     """
     sections: dict = {}
     for name, by_type in HISTORY_SECTIONS.items():
