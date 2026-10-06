@@ -107,6 +107,7 @@ Full documentation is hosted at
 | [Sensors, presets & options](https://hoffmann77.github.io/ha-power-insight/configuration/options-and-presets/) | Choose exactly which sensors exist |
 | [Entity reference](https://hoffmann77.github.io/ha-power-insight/entities/) | Every sensor Power Insight can create |
 | [Core concepts](https://hoffmann77.github.io/ha-power-insight/concepts/) | LCOE/LCOS, sign conventions, how savings work |
+| [Carried-over history](https://hoffmann77.github.io/ha-power-insight/history/) | Start your totals from what your app already shows |
 | [FAQ](https://hoffmann77.github.io/ha-power-insight/faq/) | Common questions |
 
 ## ⚠️ Limitations

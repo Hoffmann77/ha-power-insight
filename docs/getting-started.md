@@ -102,4 +102,4 @@ Accumulated **total** sensors (e.g. *Total cost savings*) start counting from
 zero. To carry over what your PV system or battery earned before, enter the
 figures from its app in the **Already accumulated** section when you add the
 device, or later under its **Reconfigure** page (see
-[Configuration](configuration/index.md)).
+[Carried-over history](history.md)).

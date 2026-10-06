@@ -63,6 +63,13 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 
 :::
 
+### Already accumulated
+
+> Optional: what this system did before Power Insight counted it, from its
+> app — *Produced*, and optionally its own feed-in and amounts. Your totals
+> then start where your system really is. See
+> [Carried-over history](../history.md).
+
 ## Changing lifetime values later
 
 If you reconfigure the lifetime cost or production, Power Insight applies a

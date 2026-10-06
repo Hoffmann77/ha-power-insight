@@ -27,7 +27,9 @@ configuration is split into:
 - `adapter.config` — the device's own settings (power entity, price entity,
   export compensation, charge sources, and the derived LCOE/LCOS).
 - top-level `data` — the raw **lifetime** inputs (`lifetime_production`,
-  `lifetime_cost`, `co2_footprint`) used to derive levelized costs.
+  `lifetime_cost`, `co2_footprint`) used to derive levelized costs, the
+  moment Power Insight started counting the device (`counting_since`), and
+  its [carried-over history](../history.md) as entered (`history`).
 
 You do not edit these directly — the config flow does it for you — but it
 explains why some fields (lifetime values) behave differently from the rest.

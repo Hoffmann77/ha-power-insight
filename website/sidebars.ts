@@ -20,6 +20,7 @@ const sidebars: SidebarsConfig = {
     },
     'entities',
     'concepts',
+    'history',
     'faq',
     {
       type: 'category',

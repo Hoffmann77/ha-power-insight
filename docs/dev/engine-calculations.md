@@ -639,6 +639,110 @@ is published.
 
 :::
 
+### History carried over from a device's app
+
+Users adopt Power Insight years after their PV system or battery went in, and
+the device's app knows what happened since. They can enter it in the device's
+*Already accumulated* section, as kWh, as amounts, or both; the running totals
+then read what they counted plus what they carry over. The user's side is
+[Carried-over history](../history.md); the design is in
+[carried-over-history](carried-over-history.md).
+
+:::note[Decision: history is added when a total is reported, never accumulated]
+
+A total reads `counted + carried over`. The carried-over part is priced from
+the stored history when the entry is set up and added only when the sensor
+reports its value: the engine never sees it, the counted total and its
+per-device breakdown hold only what was measured, and the restore data
+persists the counted total, never the displayed one. Seeding the counted
+total instead (the retired `set_value` service did) loses the breakdown, so a
+lifetime-cost edit could no longer restate the past; and restoring the
+displayed value would add the history again on every restart.
+
+Whole-home totals add every device's carried-over value, removed devices
+included; the combined levelized totals already sum the per-device ones and
+add nothing themselves, so nothing is counted twice.
+
+Not pinned in the engine tier: the engine is never involved. Covered by
+`tests/integration/test_history_sensors.py`
+(`test_device_totals_carry_their_history`,
+`test_whole_home_totals_carry_every_devices_history` and
+`test_a_reload_does_not_add_the_history_twice`).
+
+:::
+
+:::note[Decision: history is split by the engine's allocator, on period totals]
+
+A period's totals are the same allocation problem as a snapshot, so the
+history is split with `allocate`, and the past follows the live rules:
+restrictions honoured, restricted sinks first, a share split over what is
+left, interchangeable sources drawn in proportion to their output. Three
+things differ, each because a total has lost the timing a snapshot has:
+
+* **Grid import is not a source.** On a year's totals "the grid goes first"
+  would hand a battery allowed the grid all of its charging, since the home
+  imports far more than the battery ever charges. Grid charging is the
+  entered *of which from the grid*, never solved.
+* **Batteries do not charge each other.** Over a period a battery is both a
+  source and a sink; battery-to-battery transfer is rare, and on totals it
+  would only absorb energy that really came from PV.
+* **An own feed-in is pre-assigned.** A device whose own feed-in is known
+  (a grid operator's statement per installation) exports exactly that; only
+  the rest of the home's feed-in is split, between the devices without one.
+
+The split is solved when the history is saved and then frozen: removing a
+device or editing a restriction later moves nobody's past. A removed device's
+inputs stay stored, because its kWh are still part of the home's totals when
+the others are re-solved.
+
+Not pinned in the engine tier: it splits entered history, not readings.
+Covered by `tests/integration/test_history.py`
+(`test_grid_import_is_not_a_source`, `test_batteries_do_not_charge_each_other`,
+`test_interchangeable_pv_systems_split_in_proportion_to_output` and
+`test_own_feed_in_is_used_as_entered`) and
+`tests/integration/test_history_store.py`
+(`test_the_solved_history_is_frozen_until_figures_change` and
+`test_a_re_solve_still_counts_a_removed_device`).
+
+:::
+
+:::note[Decision: entered amounts are the truth; only their cost of energy follows corrections]
+
+An amount the user enters is taken as it is. A levelized total is always the
+standard one minus the cost of the energy behind it, so with kWh entered too
+the levelized history is `entered amount − kWh × current LCOE / LCOS`, and a
+lifetime-cost edit still restates it; only an amounts-only history is at face
+value throughout. A total missing any term (no tariff, no exported kWh, no
+LCOE) carries no history at all rather than a part of one, and says why in an
+attribute. Energy that is not there needs no price: a term with 0 kWh is a
+known 0.
+
+Not pinned in the engine tier: it prices entered history, not readings.
+Covered by `tests/integration/test_history.py`
+(`test_an_entered_amount_wins_and_levelized_still_follows_the_kwh`,
+`test_amounts_only_is_taken_at_face_value`,
+`test_a_total_missing_a_term_carries_nothing` and
+`test_a_correction_restates_both_devices_history`).
+
+:::
+
+:::note[Decision: a removed device keeps its history, at its last price]
+
+A removed device's solved record stays stored, so its share of the
+whole-home totals survives it; its own levelized totals freeze into the
+retired ledger as displayed, history included. Each device's levelized price
+is stored at every setup, so a battery whose charging came from a PV system
+since removed keeps pricing it at that system's last LCOE: like its
+correction factor, it can never be edited again, so it cannot go stale.
+
+Not pinned in the engine tier: the records and prices are kept in the config
+entry. Covered by `tests/integration/test_history_store.py`
+(`test_a_removed_device_keeps_its_history`) and
+`tests/integration/test_history_sensors.py`
+(`test_a_removed_device_stays_in_the_whole_home_totals`).
+
+:::
+
 ### The home base load is a device
 
 Everything consumed without a sensor on it already takes part in the provenance

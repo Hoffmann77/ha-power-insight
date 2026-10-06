@@ -318,4 +318,4 @@ pauses, and it resumes when the meter reports again; the time in between is
 not counted. There is no staleness timeout: a sensor that is still available
 is trusted, even if it has not reported for a while. What a device earned before
 Power Insight counted it can be carried over from its app, in the device's
-**Already accumulated** section (see [Configuration](configuration/index.md)).
+**Already accumulated** section (see [Carried-over history](history.md)).

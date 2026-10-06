@@ -68,5 +68,5 @@ they return the moment you re-enable the option.
 
 Enter the figures from your PV system's or battery's app in the device's
 **Already accumulated** section, when you add it or under **Reconfigure** (see
-[Configuration](configuration/index.md)). The totals then add them to what
+[Carried-over history](history.md)). The totals then add them to what
 Power Insight counts.
