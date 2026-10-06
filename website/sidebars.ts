@@ -48,6 +48,7 @@ const sidebars: SidebarsConfig = {
     'dev/testing',
     'dev/engine-calculations',
     'dev/production-readiness',
+    'dev/carried-over-history',
     'dev/source-share-allocation-problem',
     'dev/entity-naming',
     'dev/releasing',
