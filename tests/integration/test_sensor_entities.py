@@ -856,3 +856,39 @@ def test_dynamic_per_adapter_sensor_idle_and_unavailable() -> None:
     assert _dynamic_native_value(None, "cons1", "grid", None) is None
     # This device's own reading unavailable -> unavailable.
     assert _dynamic_native_value(nested, "cons1", "grid", None) is None
+
+
+async def test_a_pv_only_battery_shows_its_draw_from_the_grid(hass: HomeAssistant) -> None:
+    """A battery set to charge from its PV system only charges 400 W at
+    night, with the PV system at 0 W. The watts are real and came from the
+    grid, so its operating cost rate is 0.4 kW × 0.30 = 0.12 EUR/h, and its
+    restriction_deficit attribute says all 400 W were drawn from outside its
+    selected sources — the documented way to see why such a battery costs
+    anything at all.
+    """
+    from .conftest import BAT_SUB_ID, PV_SUB_ID, make_pv_subentry_data
+
+    grid = copy.deepcopy(make_grid_subentry_data())
+    grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = "sensor.grid_price"
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={"schema": 2, "scopes": {"battery": ["calculate_cost_rates"]}},
+        subentries_data=[
+            grid,
+            make_pv_subentry_data(),
+            make_battery_subentry_data(charge_from_adapters=[PV_SUB_ID]),
+        ],
+    )
+    hass.states.async_set("sensor.grid_power", "400", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.pv_power", "0", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.battery_power", "-400", {"unit_of_measurement": "W"})
+    hass.states.async_set("sensor.grid_price", "0.30", {"unit_of_measurement": "EUR/kWh"})
+    await setup_integration(hass, entry)
+
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_{BAT_SUB_ID}_operating_cost_rate"
+    )
+    state = hass.states.get(entity_id)
+    assert float(state.state) == pytest.approx(0.12)
+    assert state.attributes["restriction_deficit"] == pytest.approx(400.0)

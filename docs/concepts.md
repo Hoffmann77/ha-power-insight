@@ -169,8 +169,8 @@ This is why the reconfigure page warns:
 
 ## Export compensation
 
-**Export compensation** is what you are paid per kWh exported to the grid (your
-feed-in tariff). It drives:
+**Export compensation** is what you are paid per kWh exported to the grid. It
+drives:
 
 - **Export compensation rate** (currency/h) = current export power × the rate.
 - **Total export compensation** = that rate integrated over time.
@@ -191,10 +191,10 @@ cost_savings = avoided_import_cost − operating_costs
 For PV the main operating cost is standby consumption at night. For batteries it
 is the cost of the energy used to charge them, adjusted for round-trip losses.
 
-**Export compensation** — the feed-in revenue you earn from power sold back to
-the grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
+**Export compensation** — the revenue you earn from power exported to the
+grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
 
-**Financial return** — the combined picture: savings plus feed-in revenue.
+**Financial return** — the combined picture: savings plus export compensation.
 
 ```
 financial_return = cost_savings + export_compensation

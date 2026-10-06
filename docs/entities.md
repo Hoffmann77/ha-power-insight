@@ -156,7 +156,7 @@ physically happen). See [Grid connection configuration](configuration/grid.md).
 
 ## PV system
 
-Per PV device. Export sensors require **Feeds into the grid** to be on;
+Per PV device. Export sensors require **Exports to the grid** to be on;
 levelized sensors require lifetime values (an LCOE). See
 [PV system configuration](configuration/pv.md).
 

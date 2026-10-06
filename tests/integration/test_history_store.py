@@ -252,3 +252,65 @@ async def test_a_correction_is_priced_live(hass: HomeAssistant) -> None:
     price = price_lookup(entry, entry.runtime_data.power_insight)
     assert price(PV_SUB_ID) == pytest.approx(0.20)
     assert entry.data["history"]["last_price"][PV_SUB_ID] == pytest.approx(0.20)
+
+
+def _tariff_issue(hass: HomeAssistant, entry: MockConfigEntry):
+    from homeassistant.helpers import issue_registry as ir
+
+    return ir.async_get(hass).async_get_issue(
+        DOMAIN, f"history_tariff_missing_{entry.entry_id}"
+    )
+
+
+async def test_a_missing_tariff_raises_a_repair_issue_until_added(
+    hass: HomeAssistant,
+) -> None:
+    """The PV system has kWh history, but neither it nor the grid has an
+    average grid tariff, so its savings carry nothing. A repair issue names
+    it and says where to add the tariff; once the grid has one, the issue
+    goes away at the setup that follows.
+    """
+    entry = _entry(
+        _with(make_grid_subentry_data(), {"home_fed_in": 4000.0}),
+        _with(make_pv_subentry_data(), {"produced": 10000.0}),
+    )
+    _states(hass)
+    await setup_integration(hass, entry)
+
+    issue = _tariff_issue(hass, entry)
+    assert issue is not None
+    assert issue.translation_placeholders["devices"] == "Solar PV"
+
+    grid = entry.subentries[GRID_SUB_ID]
+    hass.config_entries.async_update_subentry(
+        entry, grid,
+        data={**grid.data, "history": {"home_fed_in": 4000.0, "average_tariff": 0.34}},
+    )
+    await hass.async_block_till_done()
+    assert _tariff_issue(hass, entry) is None
+
+
+@pytest.mark.parametrize(
+    ("grid_history", "pv_history"),
+    [
+        pytest.param(
+            {"home_fed_in": 4000.0},
+            {"produced": 10000.0, "average_tariff": 0.30},
+            id="device-has-its-own-tariff",
+        ),
+        pytest.param(None, None, id="no-history"),
+    ],
+)
+async def test_no_repair_issue_when_nothing_waits_for_a_tariff(
+    hass: HomeAssistant, grid_history: dict | None, pv_history: dict | None
+) -> None:
+    """A device with its own tariff values its own kWh, and an installation
+    without history has nothing to value: neither raises the issue.
+    """
+    entry = _entry(
+        _with(make_grid_subentry_data(), grid_history),
+        _with(make_pv_subentry_data(), pv_history),
+    )
+    _states(hass)
+    await setup_integration(hass, entry)
+    assert _tariff_issue(hass, entry) is None

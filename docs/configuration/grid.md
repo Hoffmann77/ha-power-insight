@@ -56,10 +56,13 @@ effect. It is safe to leave empty.
 
 ### Already accumulated
 
-> Optional: the whole home's figures from your app — what it fed into the
-> grid and the average grid tariff over that period, and optionally its total
-> savings and export compensation. They are split between your PV systems and
-> batteries. See [Carried-over history](../history.md).
+> Optional, in two sections. **Energy (kWh):** what the whole home exported
+> to the grid and the average grid tariff over that period — your PV
+> systems' and batteries' savings are calculated with this tariff, unless a
+> device has its own.
+> **Amounts:** the whole home's total savings and export compensation from
+> your app. Both are split between your PV systems and batteries. See
+> [Carried-over history](../history.md).
 
 ## Sensors this device can create
 

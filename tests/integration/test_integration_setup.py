@@ -482,3 +482,53 @@ async def test_a_consumer_restricted_to_a_removed_device_raises_an_issue(
     hass.config_entries.async_remove_subentry(entry, CONS_SUB_ID)
     await hass.async_block_till_done()
     assert ir.async_get(hass).async_get_issue(DOMAIN, issue_id) is None
+
+
+@pytest.mark.parametrize(
+    ("preset", "followed"),
+    [
+        pytest.param("extended", True, id="named-preset-follows"),
+        pytest.param("custom", False, id="custom-is-left-alone"),
+    ],
+)
+async def test_a_named_preset_follows_its_definition(
+    hass: HomeAssistant, preset: str, followed: bool
+) -> None:
+    """An entry saved on Extended before the per-source consumer sensors
+    joined it gets them at the next setup: a preset is "the extended
+    sensors", not a copy of the list as it was. The same selection saved as
+    Custom is the user's own and stays as it is.
+    """
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.power_insight.config_flow import PRESET_SELECTIONS
+    from custom_components.power_insight.const import SCOPE_SUPPORTED_OPTIONS, SCOPES
+
+    from .conftest import make_consumer_subentry_data, make_pv_subentry_data
+
+    added_later = {"enable_power_source_power", "accumulate_power_source_energy"}
+    before = PRESET_SELECTIONS["extended"] - added_later
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        minor_version=5,
+        options={
+            "schema": 2,
+            "scopes": {s: sorted(before & SCOPE_SUPPORTED_OPTIONS[s]) for s in SCOPES},
+            "preset": preset,
+        },
+        subentries_data=[
+            make_grid_subentry_data(), make_pv_subentry_data(), make_consumer_subentry_data(),
+        ],
+    )
+    for name in ("grid_power", "pv_power", "consumer_power"):
+        hass.states.async_set(f"sensor.{name}", "0", {"unit_of_measurement": "W"})
+    await setup_integration(hass, entry)
+
+    consumer = set(entry.options["scopes"]["consumer"])
+    per_source = [
+        e.unique_id for e in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
+        if "_power_from_" in e.unique_id or "_energy_from_" in e.unique_id
+    ]
+    assert (added_later <= consumer) is followed
+    assert bool(per_source) is followed

@@ -29,6 +29,7 @@ from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -37,10 +38,13 @@ from .const import (
     CONF_EXPORT_COMPENSATION,
     CONF_EXPORTS_POWER,
     CONF_HISTORY,
+    DOMAIN,
 )
 from .history import (
     BATTERY,
+    MISSING_TARIFF,
     MISSING_WAITING,
+    TOTAL_COST_SAVINGS,
     PV_SYSTEM,
     DeviceInputs,
     HomeInputs,
@@ -86,7 +90,9 @@ DEVICE_FIELDS = {
     "levelized_savings": "levelized_savings",
 }
 #: Only asked of a device added later, which cannot share the home's figures.
-STANDALONE_FIELDS = ("average_tariff", "into_batteries")
+#: (Every PV system and battery may give its own average tariff; one added
+#: later must, one sharing the home's period falls back to the grid's.)
+STANDALONE_FIELDS = ("into_batteries",)
 
 
 @dataclass(frozen=True)
@@ -377,6 +383,41 @@ def summed_carried_over(
     if missing:
         attributes[ATTR_CARRIED_OVER_MISSING] = missing
     return total, attributes
+
+
+def async_check_tariff(
+    hass: HomeAssistant, entry: ConfigEntry, history: dict[str, DeviceHistory]
+) -> None:
+    """Raise a repair issue while a device's savings wait for a tariff.
+
+    A device's kWh history is valued at the average grid tariff: its own, or
+    the grid's for every device without one. With neither, its savings carry
+    nothing, which is easy to miss because the tariff usually lives on another
+    device's form. The issue names the devices and says where to add it, and
+    is dismissed at the setup that follows once every device has one.
+    """
+    issue_id = f"history_tariff_missing_{entry.entry_id}"
+    devices = sorted(
+        _name(entry, uid)
+        for uid, found in history.items()
+        if uid in entry.subentries
+        and found.totals.missing.get(TOTAL_COST_SAVINGS) == MISSING_TARIFF
+    )
+    if not devices:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="history_tariff_missing",
+        translation_placeholders={
+            "entry_title": entry.title,
+            "devices": ", ".join(devices),
+        },
+    )
 
 
 def _name(entry: ConfigEntry, uid: str) -> str:

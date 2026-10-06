@@ -2,14 +2,14 @@
 
 Power Insight starts counting when you add a device, but your PV system or
 battery has probably been running for years. Its app or web portal knows what
-happened since: how much was produced, fed in, charged and discharged, and
+happened since: how much was produced, exported, charged and discharged, and
 often how much you saved. Enter those figures and your running totals start
 where your system really is, not at zero.
 
 ## Where to enter it
 
-Every grid, PV system and battery form ends in an optional **Already
-accumulated** section:
+Every grid, PV system and battery form ends in two optional **Already
+accumulated** sections, one for each route:
 
 - **When you add a device.** Power Insight starts counting when you finish
   the form, so enter your app's totals up to now.
@@ -18,17 +18,45 @@ accumulated** section:
   2026-08-14 10:32."* Enter your app's totals up to that moment, so nothing
   is counted twice.
 
-Every field is optional. Leave the section empty and nothing changes.
+Every field is optional. Leave both sections empty and nothing changes.
 
-## What to enter
+## Two routes
 
-Enter what your app shows, in kWh. Power Insight works out the money from it.
+| Route | Section | You enter | Power Insight |
+| --- | --- | --- | --- |
+| **1. Energy** | *Already accumulated: energy (kWh)* | the kWh your app shows, and the average prices | calculates the money, the same way it does for everything it counts |
+| **2. Amounts** | *Already accumulated: amounts* | the money your app shows | takes it as it is |
+
+Use either route, or both: an amount from route 2 replaces the one route 1
+would calculate. Route 1 is the better one where you can: its levelized
+figures follow a later change of a device's lifetime cost, and it gives
+amounts route 2 cannot, such as a battery's operating cost.
+
+### Route 1: energy (kWh)
 
 | Device | Figures |
 | --- | --- |
-| **Grid** (the whole home) | *Fed into the grid* — your grid meter's total feed-in. *Average grid tariff* — what a kWh from the grid cost on average over that period. |
+| **Grid** (the whole home) | *Exported to the grid* — your grid meter's total export. *Average grid tariff* — what a kWh from the grid cost on average over that period. |
 | **PV system** | *Produced* — everything it produced, including what went into a battery or the grid. |
 | **Battery** | *Charged*, *Discharged*, and *Of which from the grid* (leave empty unless your battery charges from the grid). |
+
+:::tip[Your savings need an average grid tariff]
+
+A PV system's and a battery's savings are the energy they delivered into your
+home, valued at the **Average grid tariff**. You can enter it in two places:
+
+| Where | What it is | When to use it |
+| --- | --- | --- |
+| **On the grid** | the whole home's average, used for every PV system and battery without a tariff of its own | usually: enter it once, here |
+| **On a PV system or battery** | that device's average; it replaces the grid's for that device | only if the device's period had a different average, for example a device added later |
+
+Without either, a device's savings carry nothing and say `no_tariff`; its
+export compensation, which only needs the export compensation per kWh, still
+carries its part. Home Assistant then also shows a **repair** (Settings →
+System → Repairs) naming the devices and pointing to the grid; it goes away
+once every device has a tariff.
+
+:::
 
 :::tip[Why "Produced" and not "self-consumption"?]
 
@@ -36,26 +64,29 @@ Apps disagree on what self-consumption means: some include the energy that
 went into a battery, some the energy that came back out of it. Power Insight
 credits PV energy that charges a battery to the **battery**, when it
 discharges into your home. Counting it for the PV system as well would count
-it twice. *Produced* and *fed in* mean the same in every app, so Power
+it twice. *Produced* and *exported* mean the same in every app, so Power
 Insight works out the rest itself.
 
 :::
 
-### Optional figures
+Optional in route 1:
 
-- **Own feed-in** (PV system, battery) — this device's own feed-in, if you
-  know it, for example from the grid operator's annual statement for one
-  installation. It is used as entered, and only the rest of the home's
-  feed-in is split between the other devices.
-- **Average feed-in tariff** — leave it empty to use the device's configured
-  export compensation.
-- **Savings**, **Export compensation** — amounts from your app. They are
-  taken as they are, instead of being calculated from the kWh.
+- **Own export to the grid** (PV system, battery) — what this device exported
+  itself, if you know it, for example from the grid operator's annual
+  statement for one installation. It is used as entered, and only the rest of
+  the home's export is split between the other devices.
+- **Average export compensation per kWh** — leave it empty to use the
+  device's configured export compensation.
+
+### Route 2: amounts
+
+- **Savings**, **Export compensation** (PV system, battery) — the amounts your
+  app shows, taken as they are.
 - **Levelized savings** — only needed when you enter amounts and no kWh.
 - **Total savings**, **Total export compensation** (grid) — your app's
   figures for the whole home. They are split between the devices: savings in
   proportion to each device's calculated savings, export compensation in
-  proportion to what each fed in.
+  proportion to what each exported.
 
 ## How the kWh become money
 
@@ -64,14 +95,14 @@ The history follows the same rules as everything Power Insight counts:
 | Energy | Credited to | Saves |
 | --- | --- | --- |
 | PV → home | the PV system | the grid tariff |
-| PV → grid | the PV system | the feed-in tariff (export compensation) |
+| PV → grid | the PV system | the export compensation |
 | PV → battery | the battery, when it discharges | — |
 | Battery → home | the battery | the grid tariff |
 | Grid → battery | the battery | costs the grid tariff |
 
-**Example.** Your PV system produced 10,000 kWh; 4,000 kWh were fed in; your
+**Example.** Your PV system produced 10,000 kWh; 4,000 kWh were exported; your
 battery charged 2,500 kWh from the PV system and discharged 2,200 kWh; a kWh
-from the grid cost 0.34 on average and feed-in paid 0.08.
+from the grid cost 0.34 on average and export paid 0.08.
 
 | | PV system | Battery |
 | --- | --- | --- |
@@ -85,22 +116,51 @@ cost, its carried-over history is restated along with everything else.
 
 ## Several PV systems or batteries
 
-Your grid meter only knows what the **whole home** fed in, so Power Insight
-splits it between the devices that feed in. It uses the same rules it uses for
+Your grid meter only knows what the **whole home** exported, so Power Insight
+splits it between the devices that export. It uses the same rules it uses for
 live readings: two PV systems that are interchangeable split in proportion to
 what they produced, and a battery charges only from the PV systems it is
 allowed to charge from.
 
-- **Enter history for every device that feeds in.** While one of them has
-  none, the home's feed-in cannot be split honestly, so the history waits.
+- **Enter history for every device that exports.** While one of them has
+  none, the home's export cannot be split honestly, so the history waits.
   Enter 0 for a device that really has none.
 - **A device you add later** stands on its own: the home's figures cover a
-  period it was not part of. Its form also asks for its own average tariff
-  (and, for a PV system, what it charged batteries with), and needs its own
-  feed-in if it feeds into the grid.
+  period it was not part of. It needs its own average grid tariff and, if it
+  exports to the grid, its own export; a PV system's form also asks what it
+  charged batteries with.
 
 The split only decides which device earned what. Your combined savings are
 the same however it falls.
+
+### Adding a battery's history lowers the PV system's savings
+
+Once a battery has history, the PV energy that went into it is credited to
+the **battery**, when it discharges into your home, and no longer to the PV
+system. So the PV system's savings drop by the value of what it charged the
+battery with, and the battery's savings carry what it delivered.
+
+The combined savings drop a little too, and that is correct: a battery gives
+back less than it takes in, and only energy that reaches your home saves the
+grid price. Before the battery had history, its losses were counted as if
+they had saved money.
+
+**Example.** Before the battery had history, the PV system's savings read
+4,200. Afterwards the PV system reads 2,100 and the battery 1,800, so 3,900
+combined:
+
+| | Value |
+|---|---|
+| PV energy into the battery, at the grid price | 4,200 − 2,100 = 2,100 |
+| Battery energy into the home, at the grid price | 1,800 |
+| Lost in the battery | 300 |
+
+The battery gave back 1,800 ÷ 2,100 ≈ 86 % of what it took in, a typical
+round-trip efficiency (85–92 %). To check against your app, divide the
+battery's *Discharged* by its *Charged*: the result should be close, allowing
+for the app's rounding. If it is noticeably lower, the battery may also have
+exported energy (that earns export compensation, in **Total financial
+return**) or charged from the grid (that costs the battery the grid price).
 
 ## What your sensors show
 
@@ -115,7 +175,7 @@ attributes show both parts:
 | `carried_over_missing` | why a total carries nothing (see below) |
 
 The combined totals carry the sum of every device's history, and the grid's
-*Total export compensation* carries everything the home fed in.
+*Total export compensation* carries everything the home exported.
 
 A total carries its history only when every part of it is known. Otherwise it
 carries nothing, and `carried_over_missing` says why:
@@ -124,8 +184,8 @@ carries nothing, and `carried_over_missing` says why:
 | --- | --- |
 | `waiting` | another device's history; `carried_over_waiting_for` names it |
 | `no_energy` | the kWh to calculate it from (for example an amounts-only history) |
-| `no_tariff` | the average grid tariff |
-| `no_feed_in_tariff` | the feed-in tariff |
+| `no_tariff` | an average grid tariff, on the device or on the grid |
+| `no_export_compensation` | the export compensation per kWh |
 | `no_price` | a device's lifetime cost, for a levelized total |
 
 :::note
@@ -143,8 +203,8 @@ come from different meters, so figures may be up to 1 % (at least 1 kWh)
 apart. If they are further apart than that, the form says which device's
 figure is off, for example:
 
-- a device fed in more than it produced or discharged;
-- the devices' own feed-ins add up to more than the whole home fed in;
+- a device exported more than it produced or discharged;
+- the devices' own exports add up to more than the whole home exported;
 - a battery charged more from local generation than the PV systems it may
   charge from could supply — enter its grid charging, or check what it
   charges from;

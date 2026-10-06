@@ -334,6 +334,35 @@ def test_a_home_amount_without_kwh_goes_to_a_single_device() -> None:
 
 
 # ---------------------------------------------------------------------------
+# The average grid tariff
+# ---------------------------------------------------------------------------
+
+
+def test_a_devices_own_tariff_carries_its_savings() -> None:
+    """The grid has no average tariff, but the PV system was given its own
+    (0.30): its 6,000 kWh into the home save 1,800. Without either, the
+    savings carry nothing while the export compensation still does.
+    """
+    records = _solve(_home(tariff=None, fed_in=0.0), _pv(produced=6000.0, tariff=0.30))
+    assert _totals(records["pv"])["total_cost_savings"] == pytest.approx(1800.0)
+
+    records = _solve(_home(tariff=None), _pv(produced=10000.0))
+    totals = history_totals(records["pv"], PRICES.get)
+    assert totals.missing["total_cost_savings"] == MISSING_TARIFF
+    assert totals.values["total_export_compensation"] == pytest.approx(320.0)
+
+
+def test_a_devices_own_tariff_wins_and_the_grids_is_the_fallback() -> None:
+    """The grid's 0.34 is the home's average; the battery was given its own
+    0.30 and uses it, the PV system was not and falls back to the grid's.
+    """
+    records = _solve(_home(), _pv(produced=10000.0), _battery(tariff=0.30))
+    assert records["pv"].tariff == 0.34
+    assert records["bat"].tariff == 0.30
+    assert _totals(records["bat"])["total_cost_savings"] == pytest.approx(2200 * 0.30)
+
+
+# ---------------------------------------------------------------------------
 # The inclusion rule
 # ---------------------------------------------------------------------------
 

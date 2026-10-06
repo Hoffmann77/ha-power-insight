@@ -91,7 +91,7 @@ ERROR_EXPORT_COMPENSATION_NOT_SPLITTABLE = "history_export_compensation_not_spli
 MISSING_WAITING = "waiting"
 MISSING_ENERGY = "no_energy"
 MISSING_TARIFF = "no_tariff"
-MISSING_FEED_IN_TARIFF = "no_feed_in_tariff"
+MISSING_FEED_IN_TARIFF = "no_export_compensation"
 MISSING_PRICE = "no_price"
 
 # The running totals that carry history, by sensor description key.
@@ -569,7 +569,9 @@ def _record(
         uid=device.uid,
         kind=device.kind,
         exports=device.exports,
-        tariff=device.tariff if device.standalone else home.tariff,
+        # A device's own average tariff wins; one sharing the home's period
+        # falls back to the grid's. A standalone device must have its own.
+        tariff=device.tariff if device.tariff is not None or device.standalone else home.tariff,
         feed_in_tariff=device.feed_in_tariff,
         flows=flows,
         savings=device.savings,
