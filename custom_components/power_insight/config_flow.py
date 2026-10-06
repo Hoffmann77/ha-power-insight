@@ -22,6 +22,13 @@ from homeassistant.const import CONF_NAME
 from homeassistant.util import dt as dt_util, slugify
 
 from .utils import parse_price_unit
+from .history_store import (
+    HOME_FIELDS,
+    STANDALONE_FIELDS,
+    DeviceView,
+    check_view,
+    is_standalone,
+)
 from .const import (
     DOMAIN,
     CONF_KEY,
@@ -38,6 +45,7 @@ from .const import (
     CONF_CURRENT_LCOS,
     CONF_CORRECTION_FACTOR,
     CONF_COUNTING_SINCE,
+    CONF_HISTORY,
     CONF_INITIAL_CO2_INTENSITY,
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
@@ -561,6 +569,134 @@ def make_compensation_selector(currency: str) -> selector.NumberSelector:
             unit_of_measurement=f"{currency}/kWh", mode="box",
         )
     )
+
+# ============================================================================
+# HISTORY CARRIED OVER FROM A DEVICE'S APP
+# ============================================================================
+
+HISTORY_KWH_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0, max=10**9, step="any", unit_of_measurement="kWh", mode="box"
+    )
+)
+
+
+def make_history_price_selector(currency: str) -> selector.NumberSelector:
+    """An average price over the history period, in ``<currency>/kWh``."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0, max=100, step="any",
+            unit_of_measurement=f"{currency}/kWh", mode="box",
+        )
+    )
+
+
+def make_history_amount_selector(currency: str) -> selector.NumberSelector:
+    """An amount of money; negative too, a grid-charging battery can lose."""
+    return selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=-(10**9), max=10**9, step="any",
+            unit_of_measurement=currency, mode="box",
+        )
+    )
+
+
+#: The fields of the "Already accumulated" section per device type, in form
+#: order. The grid's are the whole home's (``history_store.HOME_FIELDS``).
+HISTORY_SECTION_FIELDS: dict[str, tuple[str, ...]] = {
+    "grid": tuple(HOME_FIELDS),
+    "pv_system": (
+        "produced", "fed_in", "into_batteries", "average_tariff",
+        "feed_in_tariff", "savings", "export_compensation", "levelized_savings",
+    ),
+    "battery": (
+        "charged", "grid_charged", "discharged", "fed_in", "average_tariff",
+        "feed_in_tariff", "savings", "export_compensation", "levelized_savings",
+    ),
+}
+_HISTORY_KWH_FIELDS = frozenset({
+    "home_fed_in", "produced", "charged", "grid_charged", "discharged",
+    "fed_in", "into_batteries",
+})
+_HISTORY_PRICE_FIELDS = frozenset({"average_tariff", "feed_in_tariff"})
+
+
+def history_section(
+    adapter_type: str, currency: str, entered: dict, standalone: bool,
+) -> dict:
+    """Return the "Already accumulated" section of a device form, or nothing.
+
+    Every field is optional and seeded with a suggested value, not a default,
+    so a cleared field stays cleared. A device that stands alone (added well
+    after the grid) is also asked for the average tariff and, for a PV system,
+    what went into batteries: it cannot share the home's figures. The section
+    starts collapsed until there is something in it.
+    """
+    keys = HISTORY_SECTION_FIELDS.get(adapter_type)
+    if keys is None:
+        return {}
+
+    fields: dict = {}
+    for key in keys:
+        if adapter_type != "grid" and key in STANDALONE_FIELDS and not standalone:
+            continue
+        if key in _HISTORY_KWH_FIELDS:
+            field_selector = HISTORY_KWH_SELECTOR
+        elif key in _HISTORY_PRICE_FIELDS:
+            field_selector = make_history_price_selector(currency)
+        else:
+            field_selector = make_history_amount_selector(currency)
+        suggested = (
+            {"suggested_value": entered[key]} if entered.get(key) is not None else None
+        )
+        fields[vol.Optional(key, description=suggested)] = field_selector
+
+    return {
+        vol.Optional(CONF_HISTORY): section(
+            vol.Schema(fields), {"collapsed": not entered}
+        )
+    }
+
+
+def entered_history(user_input: dict) -> dict | None:
+    """Take the section's figures out of ``user_input``, the empty ones dropped.
+
+    ``None`` when the form carried no section at all, which leaves the
+    stored history as it is.
+    """
+    if CONF_HISTORY not in user_input:
+        return None
+    entered = user_input.pop(CONF_HISTORY) or {}
+    return {k: v for k, v in entered.items() if v is not None}
+
+
+def history_errors(
+    entry: ConfigEntry, view: DeviceView, name: str
+) -> tuple[dict[str, str], str]:
+    """Check a form's history together with everyone else's.
+
+    Returns ``(errors, device)``: the first refusal as the form's base error,
+    and the name of the device whose figure is off, for its message.
+    """
+    solution = check_view(entry, view)
+    if solution is None or not solution.problems:
+        return {}, ""
+
+    problem = solution.problems[0]
+    if problem.uid == view.uid:
+        device = name
+    elif problem.uid is not None and problem.uid in entry.subentries:
+        device = entry.subentries[problem.uid].title
+    else:  # the home as a whole
+        device = next(
+            (
+                sub.title for sub in entry.subentries.values()
+                if sub.data.get("adapter", {}).get("adapter_type") == "grid"
+            ),
+            name,
+        )
+    return {"base": problem.code}, device
+
 
 # ============================================================================
 # PRESET DEFINITIONS
@@ -1794,6 +1930,10 @@ def format_counting_since(value: str | None) -> str:
 # SUBENTRY FLOW  (grid / PV system / battery / consumer)
 # ============================================================================
 
+#: Stands in for the id of a device whose subentry does not exist yet.
+_NEW_DEVICE = "\x00new"
+
+
 class AdapterSubentryFlow(ConfigSubentryFlow):
     """Subentry flow for adding and reconfiguring adapters."""
 
@@ -1868,8 +2008,14 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
         errors: dict[str, str] = {}
         options = self._current_options()
         parent_entry = self._get_entry()
+        # Counting starts with the reload that adding the subentry triggers:
+        # history carried over must end here.
+        counting_since = dt_util.utcnow().isoformat()
+        history: dict = {}
+        history_device = ""
 
         if user_input is not None:
+            history = entered_history(user_input) or {}
             validation_errors = validate_fields(
                 self.hass, self._adapter_fields, user_input, options, "config"
             )
@@ -1914,11 +2060,20 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                         "config": adapter_config,
                     },
                     **top_level_data,
-                    # Counting starts with the reload that adding the subentry
-                    # triggers: history carried over must end here.
-                    CONF_COUNTING_SINCE: dt_util.utcnow().isoformat(),
+                    CONF_COUNTING_SINCE: counting_since,
                 }
+                if history:
+                    entry_data[CONF_HISTORY] = history
+                    errors, history_device = history_errors(
+                        parent_entry,
+                        DeviceView(
+                            _NEW_DEVICE, self._adapter_type, adapter_config,
+                            history, counting_since,
+                        ),
+                        title,
+                    )
 
+            if not errors:
                 result = self.async_create_entry(title=title, data=entry_data)
 
                 # When a charge source (grid or pv_system) is added, prompt
@@ -1943,9 +2098,15 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
 
                 return result
 
+        currency = self.hass.config.currency or "EUR"
         schema = build_schema(
             self._adapter_fields, "config", user_input, options, entry=parent_entry,
-            currency=self.hass.config.currency or "EUR",
+            currency=currency,
+        ).extend(
+            history_section(
+                self._adapter_type, currency, history,
+                is_standalone(parent_entry, counting_since),
+            )
         )
 
         return self.async_show_form(
@@ -1956,6 +2117,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 "adapter_type": ADAPTER_TYPE_LABELS.get(
                     self._adapter_type, self._adapter_type
                 ),
+                "history_device": history_device,
             },
         )
 
@@ -1975,8 +2137,14 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
         adapter = subentry.data.get("adapter", {})
         self._adapter_type = adapter.get("adapter_type")
         self._adapter_fields = ADAPTER_TYPE_FIELDS[self._adapter_type]
+        counting_since = subentry.data.get(CONF_COUNTING_SINCE)
+        history = subentry.data.get(CONF_HISTORY) or {}
+        history_device = ""
 
         if user_input is not None:
+            submitted = entered_history(user_input)
+            if submitted is not None:
+                history = submitted  # re-shown as typed if the form is refused
             validation_errors = validate_fields(
                 self.hass, self._adapter_fields, user_input, options, "reconfigure"
             )
@@ -2019,6 +2187,21 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                     "key": adapter.get("key"),
                     "config": adapter_config,
                 }
+                # A form without the section leaves the history as it was.
+                if submitted is not None:
+                    updated.pop(CONF_HISTORY, None)
+                    if history:
+                        updated[CONF_HISTORY] = history
+                        errors, history_device = history_errors(
+                            parent_entry,
+                            DeviceView(
+                                subentry.subentry_id, self._adapter_type,
+                                adapter_config, history, counting_since,
+                            ),
+                            subentry.title,
+                        )
+
+            if not errors:
                 # Dismiss the per-battery reconfigure issue (raised when a
                 # charge-source adapter was added or removed) now that the
                 # user has reconfigured this battery.
@@ -2072,6 +2255,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 SOURCE_MODE_DEVICES if seed.get(device_field) else SOURCE_MODE_MIX
             )
 
+        currency = self.hass.config.currency or "EUR"
         schema = build_schema(
             self._adapter_fields,
             "reconfigure",
@@ -2079,7 +2263,12 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
             options,
             entry=parent_entry,
             exclude_subentry_id=subentry.subentry_id,
-            currency=self.hass.config.currency or "EUR",
+            currency=currency,
+        ).extend(
+            history_section(
+                self._adapter_type, currency, history,
+                is_standalone(parent_entry, counting_since),
+            )
         )
 
         return self.async_show_form(
@@ -2090,9 +2279,8 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 "adapter_type": ADAPTER_TYPE_LABELS.get(
                     self._adapter_type, self._adapter_type
                 ),
-                "counting_since": format_counting_since(
-                    subentry.data.get(CONF_COUNTING_SINCE)
-                ),
+                "counting_since": format_counting_since(counting_since),
+                "history_device": history_device,
             },
         )
 

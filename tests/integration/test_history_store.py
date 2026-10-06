@@ -56,7 +56,7 @@ def _entry(*subentries: dict) -> MockConfigEntry:
 
 
 def _home(history: dict | None = None) -> dict:
-    return _with(make_grid_subentry_data(), {"fed_in": 4000.0, "tariff": 0.34, **(history or {})})
+    return _with(make_grid_subentry_data(), {"home_fed_in": 4000.0, "average_tariff": 0.34, **(history or {})})
 
 
 def _carport(history: dict | None = None, since: str = SINCE) -> dict:
@@ -182,7 +182,7 @@ async def test_a_re_solve_still_counts_a_removed_device(hass: HomeAssistant) -> 
     await hass.async_block_till_done()
     grid = entry.subentries[GRID_SUB_ID]
     hass.config_entries.async_update_subentry(
-        entry, grid, data={**grid.data, "history": {"fed_in": 4000.0, "tariff": 0.30}}
+        entry, grid, data={**grid.data, "history": {"home_fed_in": 4000.0, "average_tariff": 0.30}}
     )
     await hass.async_block_till_done()
 
@@ -217,7 +217,7 @@ async def test_a_device_added_later_stands_alone(hass: HomeAssistant) -> None:
     entry = _entry(
         _home(),
         _carport(
-            {"produced": 3000.0, "fed_in": 1000.0, "tariff": 0.30},
+            {"produced": 3000.0, "fed_in": 1000.0, "average_tariff": 0.30},
             since="2026-08-16T09:00:00+00:00",
         ),
     )

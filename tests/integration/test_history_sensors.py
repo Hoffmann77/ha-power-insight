@@ -69,7 +69,7 @@ def _with(subentry: dict, history: dict | None) -> dict:
 def _entry(grid_history: dict | None = None) -> MockConfigEntry:
     grid = _with(
         make_grid_subentry_data(),
-        {"fed_in": 4000.0, "tariff": 0.34} if grid_history is None else grid_history,
+        {"home_fed_in": 4000.0, "average_tariff": 0.34} if grid_history is None else grid_history,
     )
     grid["data"]["adapter"]["config"]["grid_electricity_price_entity"] = "sensor.grid_price"
     return MockConfigEntry(
@@ -217,7 +217,7 @@ async def test_a_total_missing_a_term_says_why(hass: HomeAssistant) -> None:
     compensation needs only the feed-in tariff and still carries its 320.
     The combined savings name the devices left out.
     """
-    entry = _entry(grid_history={"fed_in": 4000.0})
+    entry = _entry(grid_history={"home_fed_in": 4000.0})
     await _counting(hass, entry)
 
     savings = _state(hass, entry, f"{PV_SUB_ID}_total_cost_savings")

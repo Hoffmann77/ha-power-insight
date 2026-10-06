@@ -362,6 +362,44 @@
             "lifetime_production": "Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors.",
             "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors.",
             "co2_footprint": "CO₂ emitted to make and install this device, in kg. Optional; reserved for CO₂ sensors."
+          },
+          "sections": {
+            "history": {
+              "name": "Already accumulated",
+              "description": "Optional: what this device earned before Power Insight counted it, from its app or web portal. Power Insight starts counting when you finish this step, so enter the totals up to now. You can add or change this later under **Reconfigure**.",
+              "data": {
+                "home_fed_in": "Fed into the grid (whole home)",
+                "average_tariff": "Average grid tariff",
+                "home_savings": "Total savings (whole home)",
+                "home_export_compensation": "Total export compensation (whole home)",
+                "produced": "Produced",
+                "fed_in": "Own feed-in",
+                "into_batteries": "Of which into batteries",
+                "charged": "Charged",
+                "grid_charged": "Of which from the grid",
+                "discharged": "Discharged",
+                "feed_in_tariff": "Average feed-in tariff",
+                "savings": "Savings",
+                "export_compensation": "Export compensation",
+                "levelized_savings": "Levelized savings"
+              },
+              "data_description": {
+                "home_fed_in": "Your grid meter's total feed-in up to the moment above. It is split between the devices that feed in.",
+                "average_tariff": "What a kWh from the grid cost on average over that period.",
+                "home_savings": "Optional: your app's savings for the whole home. Split between the devices by their calculated savings.",
+                "home_export_compensation": "Optional: your app's feed-in revenue for the whole home. Split between the devices that feed in.",
+                "produced": "Everything this system produced, including what went into a battery or the grid.",
+                "fed_in": "Optional: this device's own feed-in, for example from the grid operator's statement for one installation. Leave empty to split the home's feed-in.",
+                "into_batteries": "What this system charged batteries with. It earns this system nothing: the battery earns it when it discharges.",
+                "charged": "Everything this battery charged, from any source.",
+                "grid_charged": "Leave empty unless your battery is set to charge from the grid.",
+                "discharged": "Everything this battery discharged.",
+                "feed_in_tariff": "Leave empty to use this device's export compensation.",
+                "savings": "Optional: taken as entered. Leave empty to calculate them from the kWh.",
+                "export_compensation": "Optional: taken as entered. Leave empty to calculate it from the kWh.",
+                "levelized_savings": "Only used when there are no kWh to calculate them from."
+              }
+            }
           }
         },
         "reconfigure": {
@@ -392,6 +430,44 @@
             "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
             "exports_power": "Turn on if this device can feed power into the grid.",
             "export_compensation": "What you are paid per kWh fed into the grid. Required for savings, financial return and export compensation sensors."
+          },
+          "sections": {
+            "history": {
+              "name": "Already accumulated",
+              "description": "What this device earned before Power Insight counted it, from its app or web portal. Enter the totals up to the moment above, so nothing is counted twice.",
+              "data": {
+                "home_fed_in": "Fed into the grid (whole home)",
+                "average_tariff": "Average grid tariff",
+                "home_savings": "Total savings (whole home)",
+                "home_export_compensation": "Total export compensation (whole home)",
+                "produced": "Produced",
+                "fed_in": "Own feed-in",
+                "into_batteries": "Of which into batteries",
+                "charged": "Charged",
+                "grid_charged": "Of which from the grid",
+                "discharged": "Discharged",
+                "feed_in_tariff": "Average feed-in tariff",
+                "savings": "Savings",
+                "export_compensation": "Export compensation",
+                "levelized_savings": "Levelized savings"
+              },
+              "data_description": {
+                "home_fed_in": "Your grid meter's total feed-in up to the moment above. It is split between the devices that feed in.",
+                "average_tariff": "What a kWh from the grid cost on average over that period.",
+                "home_savings": "Optional: your app's savings for the whole home. Split between the devices by their calculated savings.",
+                "home_export_compensation": "Optional: your app's feed-in revenue for the whole home. Split between the devices that feed in.",
+                "produced": "Everything this system produced, including what went into a battery or the grid.",
+                "fed_in": "Optional: this device's own feed-in, for example from the grid operator's statement for one installation. Leave empty to split the home's feed-in.",
+                "into_batteries": "What this system charged batteries with. It earns this system nothing: the battery earns it when it discharges.",
+                "charged": "Everything this battery charged, from any source.",
+                "grid_charged": "Leave empty unless your battery is set to charge from the grid.",
+                "discharged": "Everything this battery discharged.",
+                "feed_in_tariff": "Leave empty to use this device's export compensation.",
+                "savings": "Optional: taken as entered. Leave empty to calculate them from the kWh.",
+                "export_compensation": "Optional: taken as entered. Leave empty to calculate it from the kWh.",
+                "levelized_savings": "Only used when there are no kWh to calculate them from."
+              }
+            }
           }
         }
       },
@@ -404,7 +480,18 @@
         "invalid_co2_entity": "This entity does not exist or is unavailable.",
         "invalid_input": "Invalid value.",
         "required": "Required by the sensors you enabled.",
-        "source_devices_required": "Select at least one source, or choose **Whole mix**."
+        "source_devices_required": "Select at least one source, or choose **Whole mix**.",
+        "history_partial_energy": "Already accumulated: {history_device} has some of its kWh but not all. A PV system needs **Produced**; a battery needs **Charged** and **Discharged**.",
+        "history_grid_charged_exceeds_charged": "Already accumulated: {history_device} charged more from the grid than it charged in total.",
+        "history_fed_in_exceeds_output": "Already accumulated: {history_device} fed in more than it produced or discharged.",
+        "history_fed_in_exceeds_home": "Already accumulated: the devices' own feed-ins add up to more than the whole home fed in ({history_device}).",
+        "history_fed_in_exceeds_production": "Already accumulated: the whole home fed in more ({history_device}) than the devices that feed in produced.",
+        "history_charging_not_covered": "Already accumulated: {history_device} charged more from local generation than the PV systems it may charge from could supply. Enter its grid charging, or check what it charges from.",
+        "history_does_not_balance": "Already accumulated: the figures do not add up for {history_device}: more energy went out (fed in, into batteries) than came in (produced, discharged).",
+        "history_fed_in_required": "Already accumulated: {history_device} was added after the grid, so the home's feed-in cannot be split for it. Enter its own feed-in.",
+        "history_tariff_required": "Already accumulated: {history_device} was added after the grid, so it needs its own average grid tariff.",
+        "history_savings_not_splittable": "Already accumulated: the whole home's savings cannot be split between the devices. Enter each device's kWh (a battery charging from the grid cannot share them), or its own savings.",
+        "history_export_compensation_not_splittable": "Already accumulated: the whole home's export compensation cannot be split between the devices. Enter each device's kWh, or its own export compensation."
       },
       "abort": {
         "grid_already_configured": "A grid connection is already set up. Only one is supported.",

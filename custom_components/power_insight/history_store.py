@@ -63,21 +63,30 @@ _HOME = "home"
 _RECORDS = "records"
 _LAST_PRICE = "last_price"
 
-#: The history fields of each form, as stored in the subentry.
-HOME_FIELDS = ("fed_in", "tariff", "savings", "export_compensation")
-DEVICE_FIELDS = (
-    "produced",
-    "charged",
-    "grid_charged",
-    "discharged",
-    "fed_in",
-    "into_batteries",
-    "tariff",
-    "feed_in_tariff",
-    "savings",
-    "export_compensation",
-    "levelized_savings",
-)
+#: The history fields of each form, as stored in the subentry, and the solver
+#: input each one is. The grid's are the whole home's, named apart from a
+#: device's own because every device type shares one form and its labels.
+HOME_FIELDS = {
+    "home_fed_in": "fed_in",
+    "average_tariff": "tariff",
+    "home_savings": "savings",
+    "home_export_compensation": "export_compensation",
+}
+DEVICE_FIELDS = {
+    "produced": "produced",
+    "charged": "charged",
+    "grid_charged": "grid_charged",
+    "discharged": "discharged",
+    "fed_in": "fed_in",
+    "into_batteries": "into_batteries",
+    "average_tariff": "tariff",
+    "feed_in_tariff": "feed_in_tariff",
+    "savings": "savings",
+    "export_compensation": "export_compensation",
+    "levelized_savings": "levelized_savings",
+}
+#: Only asked of a device added later, which cannot share the home's figures.
+STANDALONE_FIELDS = ("average_tariff", "into_batteries")
 
 
 @dataclass(frozen=True)
@@ -121,14 +130,16 @@ def build_inputs(
     if grid is None:
         return None
 
-    home = HomeInputs(grid.uid, **{k: grid.entered.get(k) for k in HOME_FIELDS})
+    home = HomeInputs(
+        grid.uid, **{field: grid.entered.get(key) for key, field in HOME_FIELDS.items()}
+    )
     grid_since = _parse(grid.counting_since)
     devices = []
     for view in views:
         if view.adapter_type not in (PV_SYSTEM, BATTERY):
             continue
         since = _parse(view.counting_since)
-        fields = {k: view.entered.get(k) for k in DEVICE_FIELDS}
+        fields = {field: view.entered.get(key) for key, field in DEVICE_FIELDS.items()}
         if fields["feed_in_tariff"] is None:
             fields["feed_in_tariff"] = view.config.get(CONF_EXPORT_COMPENSATION)
         devices.append(
@@ -137,15 +148,33 @@ def build_inputs(
                 view.adapter_type,
                 exports=bool(view.config.get(CONF_EXPORTS_POWER)),
                 charge_from=tuple(view.config.get(CONF_CHARGE_FROM_ADAPTERS) or ()),
-                standalone=(
-                    grid_since is not None
-                    and since is not None
-                    and not shares_period(grid_since, since)
-                ),
+                standalone=_standalone(grid_since, since),
                 **fields,
             )
         )
     return home, devices
+
+
+def is_standalone(entry: ConfigEntry, counting_since: str | None) -> bool:
+    """Whether a device counted from ``counting_since`` stands alone.
+
+    For a form: a device being added now, long after the grid, is asked for
+    its own tariff instead of sharing the home's figures.
+    """
+    grid = next((v for v in device_views(entry) if v.adapter_type == GRID), None)
+    if grid is None:
+        return False
+    return _standalone(_parse(grid.counting_since), _parse(counting_since))
+
+
+def check_view(entry: ConfigEntry, view: DeviceView) -> Solution | None:
+    """Solve the history as it would be with ``view`` saved.
+
+    ``view`` replaces the subentry of the same uid, or joins as a new device,
+    so a form's figures are checked together with every other device's.
+    """
+    views = [v for v in device_views(entry) if v.uid != view.uid]
+    return solve_views(entry, [*views, view])
 
 
 def solve_views(entry: ConfigEntry, views: list[DeviceView]) -> Solution | None:
@@ -370,6 +399,12 @@ def _stored(entry: ConfigEntry) -> dict:
 def _present(entered: dict) -> dict:
     """Drop the fields left empty, so an untouched form reads as no history."""
     return {k: v for k, v in entered.items() if v is not None}
+
+
+def _standalone(grid_since: datetime | None, since: datetime | None) -> bool:
+    return grid_since is not None and since is not None and not shares_period(
+        grid_since, since
+    )
 
 
 def _parse(value: str | None) -> datetime | None:

@@ -11,7 +11,7 @@ This page is the plan. Each decision here graduates into
 (as a note marked *Not pinned in the engine tier*, with the integration tests
 that cover it), and this page then records only what is still open.
 
-Status: **settled**; steps 1–5 of the [implementation order](#implementation-order) are done.
+Status: **settled**; steps 1–6 of the [implementation order](#implementation-order) are done.
 
 ## What the user can enter
 
@@ -33,7 +33,13 @@ the PV (see [below](#how-the-kwh-become-money)).
 ### Fields
 
 All optional, in a collapsed **Already accumulated** section of the device's
-subentry flow — both the first setup step and reconfigure.
+subentry flow — both the first setup step and reconfigure. Every device type
+shares one form and its labels, so the grid's home-level fields have keys of
+their own (`home_fed_in`, `average_tariff`, `home_savings`,
+`home_export_compensation`). Stored values are suggested rather than
+defaulted, so a cleared field stays cleared; a form that carries no section
+leaves the stored history as it is. Amounts and prices are in Home Assistant's
+currency, the same one the totals publish.
 
 **Grid** (the home-level figures):
 
@@ -300,8 +306,13 @@ grid has an operating cost of 0 even without a tariff.
 
 ## Validation
 
-When a history section is saved, the whole group is solved, and the form
-refuses figures that cannot balance. The error names the figure:
+When a history section is saved, the whole group is solved with the form's
+figures in place of the stored ones (`history_store.check_view`), and the
+form refuses figures that cannot balance. The refusal is the form's general
+error and names the device whose figure is off, because it is often another
+device's (the grid's home figures, say) and a field inside a section cannot
+reliably carry an error of its own. The figures stay in the form as typed.
+Refused:
 
 - more fed in than produced plus discharged
 - own feed-ins adding up to more than the home's *fed in*
@@ -433,15 +444,8 @@ Each step is one commit and leaves the integration working.
 4. **Storage:** solve on save, `data["history"]`, `last_price` refresh at
    setup. — **done**
 5. **Sensors:** carried-over values, combined totals, attributes. — **done**
-6. **Flow:** sections, strings and translations, hints, validation.
+6. **Flow:** sections, strings and translations, hints, validation. — **done**
 7. **Retire `set_value`.**
 8. **Docs:** user page `docs/history.md` (in the sidebar where *Services* was),
    the four decision notes, the FAQ and getting-started updates, and this
    page reduced to what is still open.
-
-## To verify before starting
-
-- A collapsed `section` in a **subentry** flow works in both the create and
-  reconfigure steps, the way the options flow already uses it.
-- The sensors' currency: amounts are entered in the unit the totals publish,
-  whatever `test_currency.py` establishes it to be.
