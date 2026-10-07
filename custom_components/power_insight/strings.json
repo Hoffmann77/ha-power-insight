@@ -183,7 +183,7 @@
               "accumulate_savings": "Total savings"
             },
             "data_description": {
-              "savings_method": "Money you did not pay the grid because this PV system supplied the power.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this PV system's own LCOE. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
+              "savings_method": "Money you did not pay the grid because this PV system supplied the power. With **Standard** you also get an *Avoided cost*: the same money before the device's own costs are taken off.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this PV system's own LCOE. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
               "accumulate_savings": "Adds running totals that keep counting across restarts."
             }
           },
@@ -248,7 +248,7 @@
               "accumulate_savings": "Total savings"
             },
             "data_description": {
-              "savings_method": "Money you did not pay the grid because the battery supplied the power.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this battery's own LCOS. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
+              "savings_method": "Money you did not pay the grid because the battery supplied the power. With **Standard** you also get an *Avoided cost*: the same money before the device's own costs are taken off.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this battery's own LCOS. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
               "accumulate_savings": "Adds running totals that keep counting across restarts."
             }
           },

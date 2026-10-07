@@ -179,6 +179,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |
+| Avoided cost rate | EUR/h | What this system's power kept off the grid bill per hour: the power it put into your home, at the grid price. Its cost savings rate is this minus its own operating costs. | Savings — Standard |
 | Cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
 | Levelized cost savings rate | EUR/h | Cost savings rate computed with this system's LCOE. | Savings — Levelized · has lifetime values |
 | Financial return rate | EUR/h | Cost savings plus export compensation for this system. | Financial return — Standard · exports |
@@ -191,6 +192,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Total export compensation | EUR | Export compensation integrated over time. | Total export compensation · exports |
 | Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
 | Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Total costs (levelized) · has lifetime values |
+| Total avoided cost | EUR | Avoided cost rate integrated over time. | Total savings |
 | Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Total savings |
 | Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Total savings (levelized) · has lifetime values |
 | Total financial return | EUR | Financial return rate integrated over time. | Total financial return · exports |
@@ -201,7 +203,7 @@ levelized sensors require lifetime values (an LCOE). See
 ## Battery
 
 Per battery device. The battery has the **same sensor set as a PV system**
-(above) — including cost savings, financial return, and their levelized variants
+(above) — including avoided cost, cost savings, financial return, and their levelized variants
 — reading the battery's own values, with **Discharge** in place of
 **Production** (*Discharge to home consumption*, *Discharge to grid*, …), **plus**
 dynamic charging-source sensors. (Its *Discharge to batteries* sensors only

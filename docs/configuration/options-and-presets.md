@@ -110,8 +110,10 @@ Grid power has no levelized cost, so the **Grid** page only offers
 
 Savings are the money you did not pay the grid because your own devices
 supplied the power. The **Savings method** works like the cost method, and
-**Total savings** adds running totals. On a consumer, the same money appears as
-its *Avoided cost* — don't add it to the producing devices' savings. See
+**Total savings** adds running totals. A PV system and a battery also get an
+*Avoided cost*: their savings before their own costs are taken off. On a
+consumer, the same money appears as its *Avoided cost* — don't add a
+consumer's avoided cost to the producing devices' savings or avoided cost. See
 [How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
 
 ### Financial return

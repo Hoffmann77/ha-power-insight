@@ -976,6 +976,21 @@ POWER_INSIGHT_PV_ADAPTER_SENSORS = (
         value_fn=lambda obj: obj.source_adapters_lcoo_rates_corrected,
     ),
     PowerInsightSensorDescription(
+        # The gross figure behind the saving: what this device kept off the
+        # grid bill, before its own draw is taken off. The consumers' avoided
+        # costs are the same euros from the other end — never add the two.
+        key="avoided_cost_rate",
+        translation_key="avoided_cost_rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.source_adapters_avoided_cost_rates,
+    ),
+    PowerInsightSensorDescription(
         key="cost_savings_rate",
         translation_key="cost_savings_rate",
         icon="mdi:currency-eur",
@@ -1043,6 +1058,18 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         integration_components_fn=lambda obj: obj.source_adapters_lcoo_rate_components,
         apply_correction_factor=True,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_avoided_cost",
+        translation_key="total_avoided_cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.source_adapters_avoided_cost_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
@@ -1313,6 +1340,21 @@ POWER_INSIGHT_STORAGE_ADAPTER_SENSORS = (
         attributes_fn=lambda obj: obj.sink_adapters_restriction_deficit,
     ),
     PowerInsightSensorDescription(
+        # The gross figure behind the saving: what this device kept off the
+        # grid bill, before its own draw is taken off. The consumers' avoided
+        # costs are the same euros from the other end — never add the two.
+        key="avoided_cost_rate",
+        translation_key="avoided_cost_rate",
+        icon="mdi:currency-eur",
+        native_unit_of_measurement="EUR/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        value_fn=lambda obj: obj.source_adapters_avoided_cost_rates,
+    ),
+    PowerInsightSensorDescription(
         key="cost_savings_rate",
         translation_key="cost_savings_rate",
         icon="mdi:currency-eur",
@@ -1382,6 +1424,18 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
         integration_value_fn=lambda obj: obj.source_adapters_lcoo_rates,
         integration_components_fn=lambda obj: obj.source_adapters_lcoo_rate_components,
         apply_correction_factor=True,
+    ),
+    PowerInsightIntegrationSensorDescription(
+        key="total_avoided_cost",
+        translation_key="total_avoided_cost",
+        native_unit_of_measurement="EUR",
+        state_class=SensorStateClass.TOTAL,
+        device_class=SensorDeviceClass.MONETARY,
+        suggested_display_precision=2,
+        entities_fn=lambda obj: (
+            obj.source_entities_price + obj.source_entities_power
+        ),
+        integration_value_fn=lambda obj: obj.source_adapters_avoided_cost_rates,
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_cost_savings",
@@ -1693,7 +1747,7 @@ _SENSOR_OPTION_GATE: dict[str, str] = {
     "total_levelized_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     "combined_total_levelized_device_operating_cost": CONF_ACCUMULATE_LEVELIZED_COST_RATES,
     # --- Accumulated cost savings ---
-    "total_avoided_cost": CONF_ACCUMULATE_COST_SAVING_RATES,        # consumer
+    "total_avoided_cost": CONF_ACCUMULATE_COST_SAVING_RATES,        # pv / storage / consumer
     "total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "combined_total_cost_savings": CONF_ACCUMULATE_COST_SAVING_RATES,
     "total_levelized_cost_savings": CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
