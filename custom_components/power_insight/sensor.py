@@ -21,6 +21,7 @@ from homeassistant.const import (
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
+    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -31,6 +32,7 @@ from .entity import (
     IntegrationSensorExtraStoredData,
 )
 from .utils import get_value
+from .retired_sources import record_retired_source, retired_source_totals
 from .history_store import (
     ATTR_TRACKED,
     DeviceHistory,
@@ -127,6 +129,10 @@ class PowerInsightIntegrationSensorDescription(SensorEntityDescription):
     # A per-device sensor adds its own device's; a whole-home one (combined,
     # or the grid's) adds every device's, removed devices included.
     history_key: str | None = None
+    # A consumer's per-source total that outlives its source: when the source
+    # is removed, the total is frozen into the source ledger under this key
+    # (see retired_sources.py) rather than vanishing with its sensor.
+    retired_source_key: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1537,6 +1543,23 @@ POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
 )
 
 
+# The key a consumer's "Energy from {source}" is frozen under in the source
+# ledger when its source is removed.
+RETIRED_ENERGY_FROM = "energy_from"
+
+# What a consumer drew from sources that have since been removed. No state
+# class: the value steps up once at each removal, and that step is energy
+# already recorded in the old per-source sensor's history — long-term
+# statistics would count it a second time, as if consumed in that hour.
+ENERGY_FROM_REMOVED_DEVICES = SensorEntityDescription(
+    key="energy_from_removed_devices",
+    translation_key="energy_from_removed_devices",
+    native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+    device_class=SensorDeviceClass.ENERGY,
+    suggested_display_precision=2,
+)
+
+
 # ---------------------------------------------------------------------------
 # Options wrapper
 # ---------------------------------------------------------------------------
@@ -2062,6 +2085,7 @@ async def async_setup_entry(
                     entities_fn=lambda obj: obj.source_entities_power,
                     integration_value_fn=lambda obj: obj.sink_adapters_source_power,
                     unit_prefix="k",
+                    retired_source_key=RETIRED_ENERGY_FROM,
                 )
                 entities.append(PowerInsightDynamicAdapterIntegrationSensor(
                     description=energy_description,
@@ -2070,6 +2094,19 @@ async def async_setup_entry(
                     power_insight=power_insight,
                     device_adapter=adapter,
                     dynamic_adapter=source_adapter,
+                ))
+
+        # The energy from sources that have since been removed, frozen when
+        # they were: so the per-source totals still add up to everything this
+        # consumer drew. Only once there is something to show.
+        if options_wrapped.check(CONF_ACCUMULATE_POWER_SOURCE_ENERGY, "consumer"):
+            removed = retired_source_totals(entry, adapter.uid, RETIRED_ENERGY_FROM)
+            if removed:
+                entities.append(PowerInsightRemovedSourcesSensor(
+                    description=ENERGY_FROM_REMOVED_DEVICES,
+                    config_entry=entry,
+                    device_adapter=adapter,
+                    removed=removed,
                 ))
 
         _add(entities, config_subentry_id=adapter.uid)
@@ -2533,6 +2570,78 @@ class PowerInsightDynamicAdapterIntegrationSensor(BasePowerInsightIntegrationSen
         if value is None:
             return None
         return self.entity_description.transform_fn(value)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Freeze this total into the source ledger when its source is removed.
+
+        The consumer's sensor outlives the source it names in the config entry
+        but not on the next setup, which no longer creates it. As for the
+        retired-device ledger, its own teardown is the only reliable moment to
+        read its final value: a removed source's subentry is gone by then,
+        while an ordinary reload leaves it in place. A consumer removed along
+        with it keeps nothing — its sensors are gone too.
+        """
+        await super().async_will_remove_from_hass()
+
+        key = self.entity_description.retired_source_key
+        subentries = self.config_entry.subentries
+        if (
+            key is None
+            or self.dynamic_adapter.uid in subentries
+            or self.device_adapter.uid not in subentries
+        ):
+            return
+
+        value = self.native_value
+        if value is None:
+            return
+
+        record_retired_source(
+            self.hass,
+            self.config_entry,
+            source_uid=self.dynamic_adapter.uid,
+            title=self.dynamic_adapter.verbose_name,
+            consumer_uid=self.device_adapter.uid,
+            key=key,
+            value=float(value),
+        )
+
+
+class PowerInsightRemovedSourcesSensor(SensorEntity):
+    """A consumer's frozen total from sources that have been removed.
+
+    The sum of the source ledger's entries for this consumer, with one
+    attribute per removed device. It never changes during a setup: the ledger
+    only grows by a removal, and a removal reloads the entry.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(
+            self,
+            description: SensorEntityDescription,
+            config_entry: ConfigEntry,
+            device_adapter: AbstractBaseAdapter,
+            removed: dict[str, tuple[str, float]],
+    ) -> None:
+        """Initialize the removed-sources sensor."""
+        self.entity_description = description
+        self.config_entry = config_entry
+        self.device_adapter = device_adapter
+
+        uid = f"{config_entry.entry_id}_{device_adapter.uid}"
+        self._attr_unique_id = f"{uid}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, device_adapter.uid)},
+            name=f"{config_entry.title} {device_adapter.verbose_name}",
+        )
+        self._attr_native_value = round(sum(v for _, v in removed.values()), 6)
+        self._attr_extra_state_attributes = {
+            title or source_uid: round(value, 6)
+            for source_uid, (title, value) in removed.items()
+        }
 
 
 class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):

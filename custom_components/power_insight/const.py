@@ -50,6 +50,11 @@ CONF_CORRECTION_FACTOR = "correction_factor"
 # Ledger of retired (removed end-of-life) adapters, stored in ConfigEntry.data
 CONF_RETIRED_ADAPTERS = "retired_adapters"
 
+# Ledger of removed *sources* of a consumer's per-source totals ("Energy from
+# Roof PV" as it stood when Roof PV was removed), stored in ConfigEntry.data.
+# See retired_sources.py.
+CONF_RETIRED_SOURCES = "retired_sources"
+
 # When Power Insight started counting a device (UTC ISO timestamp, subentry
 # top level). History carried over from the device's app must end here.
 CONF_COUNTING_SINCE = "counting_since"

@@ -640,6 +640,9 @@
       "energy_from": {
         "name": "Energy from {source}"
       },
+      "energy_from_removed_devices": {
+        "name": "Energy from removed devices"
+      },
       "export_compensation_rate": {
         "name": "Export compensation rate"
       },

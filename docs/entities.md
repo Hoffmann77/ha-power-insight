@@ -244,7 +244,18 @@ draws from outside its selected sources. See
 | Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Total costs (levelized) |
 | Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |
 | Energy from &lt;source&gt; (one per source) | kWh | *Power from &lt;source&gt;* integrated over time — how much of this consumer's energy came from that source. | Energy from each source |
+| Energy from removed devices | kWh | What this consumer drew from devices that have since been removed, as it stood when each was removed. One attribute per removed device. Only appears once a source has been removed. | Energy from each source |
 
 The *Energy from &lt;source&gt;* sensors split the energy the consumer's own
 meter already counts. Don't add them to the Energy dashboard next to that
 meter: the same energy would be counted twice.
+
+**When you remove a source.** The consumer's *Energy from &lt;source&gt;* for it
+is disabled, keeping its history; delete it yourself if you no longer want
+it. Its final value moves into *Energy from removed devices*, so the energy
+it counted is not lost from the consumer's totals. That sensor has no state
+class: it steps up once at each removal, and that step is energy already in
+the old sensor's history, so long-term statistics would count it twice. A
+total that was not counting when its source was removed — *Energy from each
+source* switched off, or the entity disabled — has nothing to keep, and the
+energy it would have shown is missing from *Energy from removed devices*.

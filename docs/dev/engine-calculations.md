@@ -642,6 +642,33 @@ Covered by `tests/integration/test_correction_flow.py`
 
 :::
 
+:::note[Decision: a removed source's per-source totals are frozen per consumer]
+
+A consumer's *Energy from Roof PV* belongs to the consumer, so removing Roof
+PV does not delete it; the next setup simply no longer creates it, and it is
+disabled with its history. The energy it counted was still consumed, so its
+final value is frozen into a second ledger, `retired_sources` on the entry,
+per source and per consumer, and each consumer shows the sum as *Energy from
+removed devices*. Every per-source total of a consumer that outlives its
+source goes into the same ledger under its own key.
+
+Only the value is kept, not the entity: a frozen sensor nobody asked for
+would be one more entity the user cannot get rid of, and the old entity's
+history already holds the curve. The removed-devices sensor has no state
+class, because it steps up once at each removal by energy that is already in
+the old sensor's history — long-term statistics would count it a second time.
+
+The value is captured in the sensor's own teardown, like the retired-device
+ledger, since Home Assistant has no hook for a subentry's removal. A total
+that is not running at that moment — its option off, or the entity disabled
+— has nothing to capture, and its energy is missing from the ledger for good.
+A removed consumer's frozen totals are dropped at the next setup.
+
+Not pinned in the engine tier: it freezes sensor totals, not readings.
+Covered by `tests/integration/test_retired_sources.py`.
+
+:::
+
 :::note[Decision: CO₂ is not corrected until something publishes it]
 
 Editing a device's lifetime production restates its LCOE / LCOS through the

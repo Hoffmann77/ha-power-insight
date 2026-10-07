@@ -29,6 +29,7 @@ from .history_store import (
     async_sync_history,
     priced_history,
 )
+from .retired_sources import prune_retired_sources
 from .utils import parse_price_unit
 
 
@@ -98,6 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         # listener is registered, so storing it triggers no reload.
         async_sync_history(hass, entry, power_insight)
         history = priced_history(entry, power_insight)
+        prune_retired_sources(hass, entry)
 
     async_check_tariff(hass, entry, history)
 
