@@ -2239,6 +2239,48 @@ class PowerInsight:
             for a in self.consumer_adapters.adapters
         }
 
+    @property
+    def sink_adapters_source_avoided_cost_rates(self) -> dict:
+        """Avoided-cost rate per consumer, by source (EUR/h).
+
+        ``sink_adapters_avoided_cost_rates`` split by where the avoided import
+        came from: each local source's watts in the consumer's provenance row,
+        at the grid tariff. The grid reads zero — it is the alternative — so a
+        row sums to the consumer's avoided cost. Summed over the consumers and
+        the home base load, a source's column is its own avoided cost; never
+        add the two sides.
+
+        Keyed and blanked like ``sink_adapters_source_power``: every consumer,
+        each row by every adapter that can supply power; a consumer that is
+        not drawing reads a row of zeros, one whose own meter is unavailable
+        reads ``None``, and the whole map is ``None`` when gross power is.
+        """
+        if self.gross_power is None:
+            return None
+
+        allocation, _ = self._source_allocation
+        grid_price = self.grid_adapter.coe
+
+        def avoided(row: dict[str, float]) -> dict[str, float | None]:
+            out: dict[str, float | None] = {}
+            for source in self._source_family:
+                watts = row.get(source.uid, 0.0)
+                if source is self.grid_adapter or watts == 0.0:
+                    out[source.uid] = 0.0  # nothing avoided, whatever the tariff
+                elif grid_price is None:
+                    out[source.uid] = None
+                else:
+                    out[source.uid] = self._to_kilo(watts) * grid_price
+            return out
+
+        return {
+            a.uid: (
+                None if a.flow_role is FlowRole.UNKNOWN
+                else avoided(allocation.get(a.uid, {}))
+            )
+            for a in self.consumer_adapters.adapters
+        }
+
     # -------------------------------------------------------------->
     # HOME BASE LOAD
     # -------------------------------------------------------------->

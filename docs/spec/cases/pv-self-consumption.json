@@ -311,6 +311,10 @@
           }
         },
         {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {}
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "9/50"
         },
@@ -684,6 +688,10 @@
             "grid": "0",
             "pv1": "9/50"
           }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {}
         },
         {
           "property": "home_base_load_avoided_cost_rate",
@@ -1061,6 +1069,10 @@
           }
         },
         {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {}
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "0"
         },
@@ -1349,6 +1361,10 @@
         },
         {
           "property": "source_adapters_avoided_cost_rates",
+          "value": null
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
           "value": null
         },
         {

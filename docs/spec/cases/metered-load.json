@@ -332,6 +332,15 @@
           }
         },
         {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "9/140"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "81/700"
         },
@@ -719,6 +728,15 @@
           "value": {
             "grid": "0",
             "pv1": "12/175"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "12/175"
+            }
           }
         },
         {

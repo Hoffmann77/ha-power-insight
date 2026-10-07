@@ -506,6 +506,11 @@ contribute `0.0`.
 the CON channel come to the same number:
 `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
 **Never add the two sides together** — that double counts every saved euro.
+Both sides are also published split by device:
+`source_adapters_avoided_cost_rates` per PV system and battery, and
+`sink_adapters_source_avoided_cost_rates` per consumer and source, whose rows
+add up to the consumer's avoided cost and whose columns, with the home base
+load's share, to each source's.
 
 Pinned by `TestConsumersGetAnAvoidedCost` in
 `tests/engine/manual/test_savings.py`.

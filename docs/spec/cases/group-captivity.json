@@ -541,6 +541,10 @@
           }
         },
         {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {}
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "0"
         },
@@ -1114,6 +1118,10 @@
             "bat_b": "0",
             "bat_c": "0"
           }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {}
         },
         {
           "property": "home_base_load_avoided_cost_rate",
