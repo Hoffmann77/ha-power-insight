@@ -1061,6 +1061,7 @@ POWER_INSIGHT_PV_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_avoided_cost",
+        history_key="total_avoided_cost",
         translation_key="total_avoided_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,
@@ -1427,6 +1428,7 @@ POWER_INSIGHT_STORAGE_ADAPTER_INTEGRATION_SENSORS = (
     ),
     PowerInsightIntegrationSensorDescription(
         key="total_avoided_cost",
+        history_key="total_avoided_cost",
         translation_key="total_avoided_cost",
         native_unit_of_measurement="EUR",
         state_class=SensorStateClass.TOTAL,

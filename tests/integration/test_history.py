@@ -118,6 +118,7 @@ def test_single_pv_and_battery_carry_the_worked_example() -> None:
 
     assert _totals(records["pv"]) == pytest.approx({
         "total_cost_savings": 1190.0,
+        "total_avoided_cost": 1190.0,
         "total_levelized_cost_savings": 840.0,
         "total_export_compensation": 320.0,
         "total_financial_return": 1510.0,
@@ -125,6 +126,7 @@ def test_single_pv_and_battery_carry_the_worked_example() -> None:
     })
     assert _totals(records["bat"]) == pytest.approx({
         "total_cost_savings": 748.0,
+        "total_avoided_cost": 748.0,
         "total_levelized_cost_savings": 168.0,
         "total_export_compensation": 0.0,
         "total_financial_return": 748.0,
@@ -178,6 +180,42 @@ def test_grid_charging_is_the_entered_figure() -> None:
     bat = _totals(records["bat"])
     assert bat["total_cost_savings"] == pytest.approx(578.0)
     assert bat["total_operating_cost"] == pytest.approx(170.0)
+
+
+def test_avoided_cost_is_the_savings_before_the_operating_cost() -> None:
+    """The battery's 2,200 kWh into the home avoided 2,200 × 0.34 = 748,
+    whatever it charged from. Its savings (578) are that less the 170 its
+    grid charging cost, so avoided cost − operating cost = savings, as for
+    the counted part. The PV's avoided cost is its savings: 4,000 kWh into
+    the home × 0.34 = 1,360, with nothing of its own to take off.
+    """
+    records = _solve(
+        _home(), _pv(produced=10000.0), _battery(grid_charged=500.0)
+    )
+    pv, bat = _totals(records["pv"]), _totals(records["bat"])
+    assert bat["total_avoided_cost"] == pytest.approx(748.0)
+    assert bat["total_avoided_cost"] - bat["total_operating_cost"] == pytest.approx(
+        bat["total_cost_savings"]
+    )
+    assert pv["total_avoided_cost"] == pytest.approx(1360.0)
+    assert pv["total_avoided_cost"] == pytest.approx(pv["total_cost_savings"])
+
+
+def test_an_amounts_only_battery_carries_no_avoided_cost() -> None:
+    """A battery's entered savings are net of its grid charging, which an
+    amounts-only history does not know, so its avoided cost carries nothing
+    and says why. A PV system's entered savings are its avoided cost: it
+    has no charging to take off.
+    """
+    home = HomeInputs(GRID)
+    pv = _pv(savings=1500.0)
+    bat = DeviceInputs("bat", BATTERY, savings=600.0)
+
+    records = _solve(home, pv, bat)
+    assert _totals(records["pv"])["total_avoided_cost"] == pytest.approx(1500.0)
+    totals = history_totals(records["bat"], PRICES.get)
+    assert totals.values["total_avoided_cost"] is None
+    assert totals.missing["total_avoided_cost"] == MISSING_ENERGY
 
 
 def test_batteries_do_not_charge_each_other() -> None:
@@ -297,6 +335,9 @@ def test_a_home_amount_is_split_by_the_calculated_savings() -> None:
     assert bat["total_cost_savings"] == pytest.approx(2000.0 * 748 / 1938, abs=0.01)
     assert pv["total_levelized_cost_savings"] == pytest.approx(878.07, abs=0.01)
     assert bat["total_levelized_cost_savings"] == pytest.approx(191.93, abs=0.01)
+    # A dealt-out amount is the truth for avoided cost too.
+    assert pv["total_avoided_cost"] == pytest.approx(pv["total_cost_savings"])
+    assert bat["total_avoided_cost"] == pytest.approx(bat["total_cost_savings"])
 
 
 def test_a_home_amount_skips_what_devices_entered_themselves() -> None:

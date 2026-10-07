@@ -192,7 +192,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Total export compensation | EUR | Export compensation integrated over time. | Total export compensation · exports |
 | Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
 | Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Total costs (levelized) · has lifetime values |
-| Total avoided cost | EUR | Avoided cost rate integrated over time. | Total savings |
+| Total avoided cost | EUR | Avoided cost rate integrated over time. Carries the history from the device's app. | Total savings |
 | Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Total savings |
 | Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Total savings (levelized) · has lifetime values |
 | Total financial return | EUR | Financial return rate integrated over time. | Total financial return · exports |
