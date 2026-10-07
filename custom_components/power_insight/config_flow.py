@@ -67,6 +67,7 @@ from .const import (
     CONF_ENABLE_POWER_SOURCE_POWER,
     CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
     CONF_ENABLE_ENERGY_SOURCE_SHARES,
+    CONF_ENABLE_SOURCE_AVOIDED_COST,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
     SCOPES,
@@ -121,6 +122,7 @@ _COST_OPTIONS = {
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
     CONF_ACCUMULATE_FINANCIAL_RETURN,
     CONF_ACCUMULATE_LEVELIZED_FINANCIAL_RETURN,
+    CONF_ENABLE_SOURCE_AVOIDED_COST,
 }
 _CO2_OPTIONS = {
     CONF_CALCULATE_CO2_INTENSITY_RATES,
@@ -980,6 +982,11 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
             sav_fields[vol.Required(
                 "accumulate_savings", default=defaults.get("accumulate_savings", False)
             )] = BOOLEAN_SELECTOR
+        if CONF_ENABLE_SOURCE_AVOIDED_COST in supported:
+            sav_fields[vol.Required(
+                "avoided_cost_by_source",
+                default=defaults.get("avoided_cost_by_source", False),
+            )] = BOOLEAN_SELECTOR
         fields[vol.Required("savings")] = section(
             vol.Schema(sav_fields), {"collapsed": False}
         )
@@ -1066,6 +1073,9 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
             enabled.add(CONF_ACCUMULATE_COST_SAVING_RATES)
         if savings_method in ("levelized", "both"):
             enabled.add(CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES)
+    # Split of the standard avoided cost, so only with the standard method.
+    if user_input.get("avoided_cost_by_source") and savings_method in ("standard", "both"):
+        enabled.add(CONF_ENABLE_SOURCE_AVOIDED_COST)
 
     financial_return_method = user_input.get("financial_return_method", "none")
     if financial_return_method in ("standard", "both"):
@@ -1094,6 +1104,7 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
         "power_source_power": CONF_ENABLE_POWER_SOURCE_POWER in leaves,
         "power_source_energy": CONF_ACCUMULATE_POWER_SOURCE_ENERGY in leaves,
         "energy_source_shares": CONF_ENABLE_ENERGY_SOURCE_SHARES in leaves,
+        "avoided_cost_by_source": CONF_ENABLE_SOURCE_AVOIDED_COST in leaves,
         "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,
         "export_compensation_total": CONF_ACCUMULATE_EXPORT_COMPENSATION in leaves,
     }

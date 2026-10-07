@@ -60,6 +60,7 @@ from .const import (
     CONF_ENABLE_POWER_SOURCE_POWER,
     CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
     CONF_ENABLE_ENERGY_SOURCE_SHARES,
+    CONF_ENABLE_SOURCE_AVOIDED_COST,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
     CONF_CALCULATE_COST_RATES,
@@ -1601,9 +1602,10 @@ POWER_INSIGHT_CONS_ADAPTER_INTEGRATION_SENSORS = (
 )
 
 
-# The key a consumer's "Energy from {source}" is frozen under in the source
-# ledger when its source is removed.
+# The keys a consumer's per-source totals are frozen under in the source
+# ledger when their source is removed.
 RETIRED_ENERGY_FROM = "energy_from"
+RETIRED_AVOIDED_COST_FROM = "total_avoided_cost_from"
 
 # What a consumer drew from sources that have since been removed. No state
 # class: the value steps up once at each removal, and that step is energy
@@ -1614,6 +1616,16 @@ ENERGY_FROM_REMOVED_DEVICES = SensorEntityDescription(
     translation_key="energy_from_removed_devices",
     native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
     device_class=SensorDeviceClass.ENERGY,
+    suggested_display_precision=2,
+)
+
+# The same for a consumer's per-source avoided cost totals, for the same
+# reason: no state class, so the step at a removal is not counted again.
+TOTAL_AVOIDED_COST_FROM_REMOVED_DEVICES = SensorEntityDescription(
+    key="total_avoided_cost_from_removed_devices",
+    translation_key="total_avoided_cost_from_removed_devices",
+    native_unit_of_measurement="EUR",
+    device_class=SensorDeviceClass.MONETARY,
     suggested_display_precision=2,
 )
 
@@ -2187,6 +2199,74 @@ async def async_setup_entry(
                 removed=removed,
             ))
 
+        # The consumer's avoided cost split by the local source that served
+        # it: "Avoided cost from {Source}" and its running total. The grid is
+        # left out — it is the alternative, so it never avoids anything. Like
+        # the energy totals, a total outlives its source in the ledger.
+        split_avoided = options_wrapped.check(CONF_ENABLE_SOURCE_AVOIDED_COST, "consumer")
+        accumulate = split_avoided and options_wrapped.check(
+            CONF_ACCUMULATE_COST_SAVING_RATES, "consumer"
+        )
+        if split_avoided:
+            for source_adapter in power_insight.gross_power_adapters:
+                if source_adapter is power_insight.grid_adapter:
+                    continue
+                rate_description = PowerInsightSensorDescription(
+                    key=f"avoided_cost_from_{source_adapter.uid}",
+                    translation_key="avoided_cost_from",
+                    icon="mdi:currency-eur",
+                    native_unit_of_measurement="EUR/h",
+                    state_class=SensorStateClass.MEASUREMENT,
+                    suggested_display_precision=2,
+                    entities_fn=lambda obj: (
+                        obj.source_entities_price + obj.source_entities_power
+                    ),
+                    value_fn=lambda obj: obj.sink_adapters_source_avoided_cost_rates,
+                )
+                entities.append(PowerInsightDynamicAdapterSensor(
+                    description=rate_description,
+                    config_entry=entry,
+                    source_entities=rate_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
+                if not accumulate:
+                    continue
+                total_description = PowerInsightIntegrationSensorDescription(
+                    key=f"total_avoided_cost_from_{source_adapter.uid}",
+                    translation_key="total_avoided_cost_from",
+                    native_unit_of_measurement="EUR",
+                    state_class=SensorStateClass.TOTAL,
+                    device_class=SensorDeviceClass.MONETARY,
+                    suggested_display_precision=2,
+                    entities_fn=lambda obj: (
+                        obj.source_entities_price + obj.source_entities_power
+                    ),
+                    integration_value_fn=lambda obj: obj.sink_adapters_source_avoided_cost_rates,
+                    retired_source_key=RETIRED_AVOIDED_COST_FROM,
+                )
+                entities.append(PowerInsightDynamicAdapterIntegrationSensor(
+                    description=total_description,
+                    config_entry=entry,
+                    source_entities=total_description.entities_fn(power_insight),
+                    power_insight=power_insight,
+                    device_adapter=adapter,
+                    dynamic_adapter=source_adapter,
+                ))
+
+        removed_avoided = retired_source_totals(
+            entry, adapter.uid, RETIRED_AVOIDED_COST_FROM
+        )
+        # Even with no local source left: what the removed ones avoided stays.
+        if accumulate and removed_avoided:
+            entities.append(PowerInsightRemovedSourcesSensor(
+                description=TOTAL_AVOIDED_COST_FROM_REMOVED_DEVICES,
+                config_entry=entry,
+                device_adapter=adapter,
+                removed=removed_avoided,
+            ))
+
         # Lifetime shares of those totals: "Energy share from {Source}", plus
         # one for the removed devices so that together they make 100 %. Added
         # after the totals they read, so those exist by the time they listen.
@@ -2746,6 +2826,13 @@ class PowerInsightRemovedSourcesSensor(SensorEntity):
             title or source_uid: round(value, 6)
             for source_uid, (title, value) in removed.items()
         }
+
+    @property
+    def native_unit_of_measurement(self) -> str | None:
+        """Substitute the HA-configured currency for the EUR placeholder."""
+        return _resolve_currency_unit(
+            self.entity_description.native_unit_of_measurement, self.hass
+        )
 
 
 class PowerInsightEnergyShareSensor(SensorEntity):

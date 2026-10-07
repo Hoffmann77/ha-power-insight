@@ -113,7 +113,9 @@ supplied the power. The **Savings method** works like the cost method, and
 **Total savings** adds running totals. A PV system and a battery also get an
 *Avoided cost*: their savings before their own costs are taken off. On a
 consumer, the same money appears as its *Avoided cost* — don't add a
-consumer's avoided cost to the producing devices' savings or avoided cost. See
+consumer's avoided cost to the producing devices' savings or avoided cost. On a
+consumer, **Avoided cost by source** splits its avoided cost by the PV system or
+battery that served it. See
 [How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
 
 ### Financial return
@@ -143,6 +145,7 @@ financial return** adds running totals.
 | Savings method — Standard | ✅ | — | ✅ | ✅ | ✅ |
 | Savings method — Levelized | ✅ | — | ✅ | ✅ | — |
 | Total savings | ✅ | — | ✅ | ✅ | ✅ |
+| Avoided cost by source | — | — | — | — | ✅ |
 | Financial return method — Standard | ✅ | — | ✅ | ✅ | — |
 | Financial return method — Levelized | ✅ | — | ✅ | ✅ | — |
 | Total financial return | ✅ | — | ✅ | ✅ | — |

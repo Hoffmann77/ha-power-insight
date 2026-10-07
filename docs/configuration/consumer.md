@@ -66,6 +66,7 @@ derived from the mix of sources currently supplying it (grid / solar / battery).
 | Power from each source (one per source) | W | *Power from each source (W)* |
 | Energy from each source (one per source) | kWh | *Energy from each source (kWh)* |
 | Energy share from each source (one per source) | % | *Energy sources (%)* |
+| Avoided cost from each PV system and battery | currency/h | *Avoided cost by source* (needs *Savings method = Standard*) |
 | Operating cost rate | currency/h | *Cost method = Standard* |
 | Levelized operating cost rate | currency/h | *Cost method = Levelized* |
 

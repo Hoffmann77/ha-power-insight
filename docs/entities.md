@@ -232,6 +232,7 @@ Per consumer device. Consumer support is still under development. See
 | Power from &lt;source&gt; (one per source) | W | The watts of this consumer's current power coming from that source. They add up to its draw — slightly less than its own meter while the meters overdraw (see *Metering imbalance*). | Power from each source |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
+| Avoided cost from &lt;source&gt; (one per PV system and battery) | EUR/h | The part of this consumer's avoided cost that source's power accounts for. They add up to its *Avoided cost rate*; the grid has none, since it is what was avoided. | Avoided cost by source |
 
 On a battery or consumer set to **Specific devices**, both operating-cost rate
 sensors carry a `restriction_deficit` attribute: the watts the device currently
@@ -246,6 +247,8 @@ draws from outside its selected sources. See
 | Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Total costs (levelized) |
 | Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |
 | Energy from &lt;source&gt; (one per source) | kWh | *Power from &lt;source&gt;* integrated over time — how much of this consumer's energy came from that source. | Energy from each source |
+| Total avoided cost from &lt;source&gt; (one per PV system and battery) | EUR | *Avoided cost from &lt;source&gt;* integrated over time. They add up to its *Total avoided cost*. | Avoided cost by source · Total savings |
+| Total avoided cost from removed devices | EUR | What sources that have since been removed avoided for this consumer, as it stood when each was removed — like *Energy from removed devices*, and with no state class for the same reason. | Avoided cost by source · Total savings |
 | Energy from removed devices | kWh | What this consumer drew from devices that have since been removed, as it stood when each was removed. One attribute per removed device. Only appears once a source has been removed. | Energy from each source |
 | Energy share from &lt;source&gt; (one per source) | % | That source's share of everything this consumer has drawn so far: its *Energy from &lt;source&gt;* over the sum of all of them, removed devices included. The shares add up to 100 %. Unavailable while one of the energy totals is disabled. | Energy sources |
 | Energy share from removed devices | % | The share of *Energy from removed devices* in the same sum. Only appears once a source has been removed. | Energy sources |
