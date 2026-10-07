@@ -489,6 +489,28 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "2/25",
+            "pv2": "0",
+            "bat1": "1/50",
+            "bat2": "1/20"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "4/75",
+              "pv2": "0",
+              "bat1": "1/75",
+              "bat2": "1/30"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "1/20"
         },
@@ -1019,6 +1041,28 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "11/150",
+            "pv2": "0",
+            "bat1": "11/600",
+            "bat2": "11/240"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "4/75",
+              "pv2": "0",
+              "bat1": "1/75",
+              "bat2": "1/30"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "3/80"
         },
@@ -1546,6 +1590,28 @@
           "property": "sink_adapters_avoided_cost_rates",
           "value": {
             "cons1": "1/10"
+          }
+        },
+        {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "0",
+            "pv2": "0",
+            "bat1": "9/400",
+            "bat2": "9/100"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "0",
+              "pv2": "0",
+              "bat1": "1/50",
+              "bat2": "2/25"
+            }
           }
         },
         {

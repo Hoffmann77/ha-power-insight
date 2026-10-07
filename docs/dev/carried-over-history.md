@@ -64,8 +64,11 @@ supplies its own tariff and export.
 - **A standalone battery with several PV systems** splits its local charging
   evenly between them: there are no shared totals to weigh by. It only
   decides which PV's LCOE prices its levelized charging.
-- **Not carried over:** consumer totals (*avoided cost*, *consumption cost*)
-  and PV standby cost. No app reports them per device.
+- **Not carried over:** consumer totals (*avoided cost*, *consumption cost*,
+  and every per-source total) and PV standby cost. No app reports them per
+  device. A PV system's or battery's *avoided cost* is carried over: it is
+  its savings plus its operating cost, so an amounts-only battery, whose
+  operating cost is unknown, carries none.
 - **Attribute values are codes** (`carried_over_missing: no_tariff`), not
   translated text, so they stay stable for automations.
 - **Release notes:** a total seeded with the retired `set_value` service

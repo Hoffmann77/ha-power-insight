@@ -639,6 +639,40 @@
       "note": "Only the consumption channel qualifies: a charging battery has not saved anything yet, and exported watts are paid for rather than avoided. Never add the source side to the sink side."
     },
 
+    "source_adapters_avoided_cost_rates": {
+      "title": "Avoided cost rate per source",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "What each PV system or battery kept off the grid bill per hour: the power it put into self-consumption, at the grid tariff. The gross figure behind its saving, which also takes off what its own draw cost.",
+      "formula": "rate[s] = (source_adapters_consumption_power[s] / 1000) × grid price; 0 for the grid",
+      "depends_on": ["source_adapters_consumption_power"],
+      "answer_shape": "map_fixed_keys",
+      "keys": "sources",
+      "derivation_steps": [
+        "Take the watts each local source put into the self-consumption channel.",
+        "Price them at the grid tariff — that is the import they displaced.",
+        "The grid reads 0: it is the alternative being priced against."
+      ],
+      "note": "The source-side view of the same euro as the per-sink avoided costs plus the home base load's. Never add the two sides together."
+    },
+
+    "sink_adapters_source_avoided_cost_rates": {
+      "title": "Avoided cost rate per consumer, by source",
+      "unit": "EUR/h",
+      "layer": 4,
+      "definition": "Each metered load's avoided cost, split by the source that served it: what that source's power kept off this load's grid bill.",
+      "formula": "rate[k][s] = (sink_adapters_source_power[k][s] / 1000) × grid price; 0 for the grid",
+      "depends_on": ["sink_adapters_source_power"],
+      "answer_shape": "nested_map_fixed_keys",
+      "keys": ["consumers", "sources"],
+      "derivation_steps": [
+        "Take the watts each local source supplied to the load.",
+        "Price them at the grid tariff; the grid's own watts avoided nothing.",
+        "A load that is not drawing reads a row of zeros."
+      ],
+      "note": "A row sums to the load's avoided cost. Summed over every load and the home base load, a source's column is that source's avoided cost — the same euros from the other end, so never add the two sides."
+    },
+
     "home_base_load_avoided_cost_rate": {
       "title": "Home base load avoided cost rate",
       "unit": "EUR/h",

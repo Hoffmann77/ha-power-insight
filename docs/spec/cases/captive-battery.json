@@ -378,6 +378,24 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "0"
         },
@@ -803,6 +821,24 @@
           "property": "sink_adapters_avoided_cost_rates",
           "value": {
             "cons1": "0"
+          }
+        },
+        {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "0"
+            }
           }
         },
         {

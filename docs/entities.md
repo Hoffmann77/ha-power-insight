@@ -179,6 +179,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Export compensation rate | EUR/h | Money earned per hour exporting this system's power. | Export compensation rate · exports |
 | Operating cost rate | EUR/h | Running operating cost per hour of this system. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | Operating cost rate using this system's LCOE. | Cost — Levelized · has lifetime values |
+| Avoided cost rate | EUR/h | What this system's power kept off the grid bill per hour: the power it put into your home, at the grid price. Its cost savings rate is this minus its own operating costs. | Savings — Standard |
 | Cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
 | Levelized cost savings rate | EUR/h | Cost savings rate computed with this system's LCOE. | Savings — Levelized · has lifetime values |
 | Financial return rate | EUR/h | Cost savings plus export compensation for this system. | Financial return — Standard · exports |
@@ -191,6 +192,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Total export compensation | EUR | Export compensation integrated over time. | Total export compensation · exports |
 | Total operating cost | EUR | Operating cost rate integrated over time. | Total costs |
 | Total levelized operating cost | EUR | Levelized operating cost integrated (retro-corrected). | Total costs (levelized) · has lifetime values |
+| Total avoided cost | EUR | Avoided cost rate integrated over time. Carries the history from the device's app. | Total savings |
 | Total cost savings | EUR | Avoided import cost integrated over time (does not include export revenue). | Total savings |
 | Total levelized cost savings | EUR | Levelized cost savings integrated (retro-corrected). | Total savings (levelized) · has lifetime values |
 | Total financial return | EUR | Financial return rate integrated over time. | Total financial return · exports |
@@ -201,7 +203,7 @@ levelized sensors require lifetime values (an LCOE). See
 ## Battery
 
 Per battery device. The battery has the **same sensor set as a PV system**
-(above) — including cost savings, financial return, and their levelized variants
+(above) — including avoided cost, cost savings, financial return, and their levelized variants
 — reading the battery's own values, with **Discharge** in place of
 **Production** (*Discharge to home consumption*, *Discharge to grid*, …), **plus**
 dynamic charging-source sensors. (Its *Discharge to batteries* sensors only
@@ -230,6 +232,7 @@ Per consumer device. Consumer support is still under development. See
 | Power from &lt;source&gt; (one per source) | W | The watts of this consumer's current power coming from that source. They add up to its draw — slightly less than its own meter while the meters overdraw (see *Metering imbalance*). | Power from each source |
 | Operating cost rate | EUR/h | Current cost per hour to run this consumer, using the live grid price weighted by its source mix. | Cost — Standard |
 | Levelized operating cost rate | EUR/h | As above, using each source's levelized cost per kWh. | Cost — Levelized |
+| Avoided cost from &lt;source&gt; (one per PV system and battery) | EUR/h | The part of this consumer's avoided cost that source's power accounts for. They add up to its *Avoided cost rate*; the grid has none, since it is what was avoided. | Avoided cost by source |
 
 On a battery or consumer set to **Specific devices**, both operating-cost rate
 sensors carry a `restriction_deficit` attribute: the watts the device currently
@@ -244,7 +247,22 @@ draws from outside its selected sources. See
 | Total levelized operating cost | EUR | Levelized operating cost integrated over time. Retro-corrected per **supplying** device, since a consumer has no lifetime cost of its own. | Total costs (levelized) |
 | Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |
 | Energy from &lt;source&gt; (one per source) | kWh | *Power from &lt;source&gt;* integrated over time — how much of this consumer's energy came from that source. | Energy from each source |
+| Total avoided cost from &lt;source&gt; (one per PV system and battery) | EUR | *Avoided cost from &lt;source&gt;* integrated over time. They add up to its *Total avoided cost*. | Avoided cost by source · Total savings |
+| Total avoided cost from removed devices | EUR | What sources that have since been removed avoided for this consumer, as it stood when each was removed — like *Energy from removed devices*, and with no state class for the same reason. | Avoided cost by source · Total savings |
+| Energy from removed devices | kWh | What this consumer drew from devices that have since been removed, as it stood when each was removed. One attribute per removed device. Only appears once a source has been removed. | Energy from each source |
+| Energy share from &lt;source&gt; (one per source) | % | That source's share of everything this consumer has drawn so far: its *Energy from &lt;source&gt;* over the sum of all of them, removed devices included. The shares add up to 100 %. Unavailable while one of the energy totals is disabled. | Energy sources |
+| Energy share from removed devices | % | The share of *Energy from removed devices* in the same sum. Only appears once a source has been removed. | Energy sources |
 
 The *Energy from &lt;source&gt;* sensors split the energy the consumer's own
 meter already counts. Don't add them to the Energy dashboard next to that
 meter: the same energy would be counted twice.
+
+**When you remove a source.** The consumer's *Energy from &lt;source&gt;* for it
+is disabled, keeping its history; delete it yourself if you no longer want
+it. Its final value moves into *Energy from removed devices*, so the energy
+it counted is not lost from the consumer's totals. That sensor has no state
+class: it steps up once at each removal, and that step is energy already in
+the old sensor's history, so long-term statistics would count it twice. A
+total that was not counting when its source was removed — *Energy from each
+source* switched off, or the entity disabled — has nothing to keep, and the
+energy it would have shown is missing from *Energy from removed devices*.

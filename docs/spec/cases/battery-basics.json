@@ -377,6 +377,24 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "18/175",
+            "bat1": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "9/140",
+              "bat1": "0"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "27/700"
         },
@@ -805,6 +823,24 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "0",
+            "bat1": "3/25"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "0",
+              "bat1": "1/10"
+            }
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "1/50"
         },
@@ -1230,6 +1266,24 @@
           "property": "sink_adapters_avoided_cost_rates",
           "value": {
             "cons1": "3/50"
+          }
+        },
+        {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "pv1": "9/50",
+            "bat1": "0"
+          }
+        },
+        {
+          "property": "sink_adapters_source_avoided_cost_rates",
+          "value": {
+            "cons1": {
+              "grid": "0",
+              "pv1": "3/50",
+              "bat1": "0"
+            }
           }
         },
         {

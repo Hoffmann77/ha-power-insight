@@ -510,6 +510,29 @@ def _(s):
     }
 
 
+@identity("source_adapters_avoided_cost_rates")
+def _(s):
+    """Each local source's CON watts at the tariff; the grid is the alternative."""
+    served = s.e.source_adapters_consumption_power
+    return {
+        src: 0.0 if src == "grid" else kw(served[src]) * s.price
+        for src in s.source_family
+    }
+
+
+@identity("sink_adapters_source_avoided_cost_rates")
+def _(s):
+    """A consumer's watts from each local source at the tariff; the grid avoids nothing."""
+    watts = s.e.sink_adapters_source_power
+    return {
+        k: {
+            src: 0.0 if src == "grid" else kw(watts[k][src]) * s.price
+            for src in s.source_family
+        }
+        for k in s.of("consumer")
+    }
+
+
 @identity("home_base_load_avoided_cost_rate")
 def _(s):
     return kw(_local(s.home_watts())) * s.price

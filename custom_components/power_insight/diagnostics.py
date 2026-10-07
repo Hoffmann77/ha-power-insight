@@ -13,7 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntry
 
-from .const import CONF_RETIRED_ADAPTERS, DOMAIN
+from .const import CONF_RETIRED_ADAPTERS, CONF_RETIRED_SOURCES, DOMAIN
 from .power_insight import (
     BaseConsumerAdapter,
     BatteryAdapter,
@@ -36,6 +36,7 @@ async def async_get_config_entry_diagnostics(
         "options": entry.options,
         "data": {
             "retired_adapters": entry.data.get(CONF_RETIRED_ADAPTERS, []),
+            "retired_sources": entry.data.get(CONF_RETIRED_SOURCES, []),
         },
         "adapters": _dump_all_adapters(power_insight),
         "hub_calculations": _dump_hub_calculations(power_insight),
@@ -58,7 +59,10 @@ async def async_get_device_diagnostics(
     if identifier == entry.entry_id:
         return {
             "options": entry.options,
-            "data": {"retired_adapters": entry.data.get(CONF_RETIRED_ADAPTERS, [])},
+            "data": {
+                "retired_adapters": entry.data.get(CONF_RETIRED_ADAPTERS, []),
+                "retired_sources": entry.data.get(CONF_RETIRED_SOURCES, []),
+            },
             "hub_calculations": _dump_hub_calculations(power_insight),
         }
 

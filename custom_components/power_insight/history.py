@@ -102,9 +102,11 @@ TOTAL_FINANCIAL_RETURN = "total_financial_return"
 TOTAL_LEVELIZED_FINANCIAL_RETURN = "total_levelized_financial_return"
 TOTAL_OPERATING_COST = "total_operating_cost"
 TOTAL_LEVELIZED_OPERATING_COST = "total_levelized_operating_cost"
+TOTAL_AVOIDED_COST = "total_avoided_cost"
 
 PV_TOTALS = (
     TOTAL_COST_SAVINGS,
+    TOTAL_AVOIDED_COST,
     TOTAL_LEVELIZED_COST_SAVINGS,
     TOTAL_EXPORT_COMPENSATION,
     TOTAL_FINANCIAL_RETURN,
@@ -772,8 +774,23 @@ def history_totals(
             for source, kwh in flows.from_pv.items()
         )
 
+    def avoided_cost() -> float:
+        """The tariff on what the device delivered into the home.
+
+        Built from the savings rather than from the kWh, so an entered or
+        dealt-out savings amount carries through, and avoided cost less
+        operating cost is the savings, as it is for the counted part. A PV
+        system's history has no standby, so its avoided cost *is* its
+        savings; a battery's adds back what its grid charging cost — which
+        an amounts-only history does not know.
+        """
+        if record.kind == BATTERY:
+            return savings() + operating_cost()
+        return savings()
+
     formulas: dict[str, Callable[[], float]] = {
         TOTAL_COST_SAVINGS: savings,
+        TOTAL_AVOIDED_COST: avoided_cost,
         TOTAL_LEVELIZED_COST_SAVINGS: levelized_savings,
         TOTAL_EXPORT_COMPENSATION: export_compensation,
         TOTAL_FINANCIAL_RETURN: lambda: savings() + export_compensation(),

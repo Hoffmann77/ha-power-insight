@@ -141,18 +141,21 @@ async def test_device_totals_carry_their_history(hass: HomeAssistant) -> None:
     """Each device's totals read what it counted (nothing) plus the plan's
     first example: the PV 1,190 saved, 840 levelized, 320 export
     compensation, 1,510 and 760 financial return; the battery 748 and 168
-    saved, 250 levelized operating cost from the PV energy it charged.
+    saved, 250 levelized operating cost from the PV energy it charged. Each
+    avoided cost is its savings, since neither paid for grid power.
     """
     entry = _entry()
     await _counting(hass, entry)
 
     expected = {
         f"{PV_SUB_ID}_total_cost_savings": 1190.0,
+        f"{PV_SUB_ID}_total_avoided_cost": 1190.0,
         f"{PV_SUB_ID}_total_levelized_cost_savings": 840.0,
         f"{PV_SUB_ID}_total_export_compensation": 320.0,
         f"{PV_SUB_ID}_total_financial_return": 1510.0,
         f"{PV_SUB_ID}_total_levelized_financial_return": 760.0,
         f"{BAT_SUB_ID}_total_cost_savings": 748.0,
+        f"{BAT_SUB_ID}_total_avoided_cost": 748.0,
         f"{BAT_SUB_ID}_total_levelized_cost_savings": 168.0,
         f"{BAT_SUB_ID}_total_operating_cost": 0.0,
         f"{BAT_SUB_ID}_total_levelized_operating_cost": 250.0,

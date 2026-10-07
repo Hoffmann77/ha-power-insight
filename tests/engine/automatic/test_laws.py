@@ -426,6 +426,7 @@ def test_the_books_balance() -> None:
       marginal and at levelized prices alike.
     * The avoided cost measured at the sources equals the avoided cost
       measured at the loads, base load included.
+    * A consumer's avoided cost by source adds up to its avoided cost.
     * Self-consumption and the base load are never negative.
     """
     channels = ("consumption", "export", "charging", "standby")
@@ -486,6 +487,14 @@ def test_the_books_balance() -> None:
             problems.append(
                 f"avoided cost {show(at_sources)} at the sources ≠ {show(at_loads)} at the loads"
             )
+        # A consumer's avoided cost by source splits its avoided cost.
+        for uid, row in e.sink_adapters_source_avoided_cost_rates.items():
+            whole = e.sink_adapters_avoided_cost_rates[uid]
+            if not matches(whole, sum(row.values()), abs_tol=ABS_TOL):
+                problems.append(
+                    f"{uid}'s avoided cost by source adds up to "
+                    f"{show(sum(row.values()))}, not its avoided cost {show(whole)}"
+                )
         return problems
 
     check("The books must balance.", HOMES, compare)

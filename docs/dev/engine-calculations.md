@@ -506,8 +506,35 @@ contribute `0.0`.
 the CON channel come to the same number:
 `Σ source_adapters_avoided_cost_rates == Σ sink_adapters_avoided_cost_rates + home_base_load_avoided_cost_rate`.
 **Never add the two sides together** — that double counts every saved euro.
+Both sides are also published split by device:
+`source_adapters_avoided_cost_rates` per PV system and battery, and
+`sink_adapters_source_avoided_cost_rates` per consumer and source, whose rows
+add up to the consumer's avoided cost and whose columns, with the home base
+load's share, to each source's.
 
 Pinned by `TestConsumersGetAnAvoidedCost` in
+`tests/engine/manual/test_savings.py`.
+
+:::
+
+:::note[Decision: avoided cost has no levelized twin]
+
+An avoided cost prices the *alternative*, and the alternative is always the
+grid. Levelizing only changes what local energy costs — a PV system's LCOE,
+a battery's LCOS, their correction factors — and none of those enter the
+avoided cost. The grid's levelized price is its tariff (`GridAdapter.lcoe`
+returns its `coe`, and its correction factor is 1.0), so a levelized
+avoided cost would equal the plain one in every snapshot. It is not
+published, so no sensor ever shows the same number twice under two names.
+
+The levelized view of a consumer lives on the cost side, where it does
+differ: `sink_adapters_lcoo_rates` prices the same watts at their sources'
+lifetime costs. Should the grid price itself ever be levelized — a fixed
+connection fee spread over the imported kWh — the grid's `lcoe` would part
+from its `coe`, and this decision has to be revisited for every avoided-cost
+property at once, not for consumers alone.
+
+Pinned by `TestAvoidedCostIsPricedAtTheGrid` in
 `tests/engine/manual/test_savings.py`.
 
 :::
@@ -617,6 +644,33 @@ removed device had an enabled levelized total with a value.
 Not pinned in the engine tier: the factors are stored in the sensor layer.
 Covered by `tests/integration/test_correction_flow.py`
 (`test_removing_a_source_keeps_its_share_corrected`).
+
+:::
+
+:::note[Decision: a removed source's per-source totals are frozen per consumer]
+
+A consumer's *Energy from Roof PV* belongs to the consumer, so removing Roof
+PV does not delete it; the next setup simply no longer creates it, and it is
+disabled with its history. The energy it counted was still consumed, so its
+final value is frozen into a second ledger, `retired_sources` on the entry,
+per source and per consumer, and each consumer shows the sum as *Energy from
+removed devices*. Every per-source total of a consumer that outlives its
+source goes into the same ledger under its own key.
+
+Only the value is kept, not the entity: a frozen sensor nobody asked for
+would be one more entity the user cannot get rid of, and the old entity's
+history already holds the curve. The removed-devices sensor has no state
+class, because it steps up once at each removal by energy that is already in
+the old sensor's history — long-term statistics would count it a second time.
+
+The value is captured in the sensor's own teardown, like the retired-device
+ledger, since Home Assistant has no hook for a subentry's removal. A total
+that is not running at that moment — its option off, or the entity disabled
+— has nothing to capture, and its energy is missing from the ledger for good.
+A removed consumer's frozen totals are dropped at the next setup.
+
+Not pinned in the engine tier: it freezes sensor totals, not readings.
+Covered by `tests/integration/test_retired_sources.py`.
 
 :::
 

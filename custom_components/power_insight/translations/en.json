@@ -183,7 +183,7 @@
               "accumulate_savings": "Total savings"
             },
             "data_description": {
-              "savings_method": "Money you did not pay the grid because this PV system supplied the power.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this PV system's own LCOE. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
+              "savings_method": "Money you did not pay the grid because this PV system supplied the power. With **Standard** you also get an *Avoided cost*: the same money before the device's own costs are taken off.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this PV system's own LCOE. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
               "accumulate_savings": "Adds running totals that keep counting across restarts."
             }
           },
@@ -248,7 +248,7 @@
               "accumulate_savings": "Total savings"
             },
             "data_description": {
-              "savings_method": "Money you did not pay the grid because the battery supplied the power.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this battery's own LCOS. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
+              "savings_method": "Money you did not pay the grid because the battery supplied the power. With **Standard** you also get an *Avoided cost*: the same money before the device's own costs are taken off.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.\n**Levelized** — net of this battery's own LCOS. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
               "accumulate_savings": "Adds running totals that keep counting across restarts."
             }
           },
@@ -275,12 +275,14 @@
               "power_source_shares": "Power sources (%)",
               "power_source_power": "Power from each source (W)",
               "power_source_energy": "Energy from each source (kWh)",
+              "energy_source_shares": "Energy sources (%)",
               "distribution_shares": "Consumption share (%)"
             },
             "data_description": {
               "power_source_shares": "One sensor per source, e.g. *Power share from PV System*: how much of the consumer's power comes from that source.",
               "power_source_power": "One sensor per source, e.g. *Power from PV System*: how many watts of the consumer's power come from that source right now.",
               "power_source_energy": "One sensor per source, e.g. *Energy from PV System*: a running total of the energy the consumer has drawn from that source. Keeps counting across restarts. Don't add these to the Energy dashboard next to the consumer's own meter — they split the same energy, so it would be counted twice.",
+              "energy_source_shares": "One sensor per source, e.g. *Energy share from PV System*: how much of all the energy the consumer has drawn so far came from that source, over its whole lifetime. Turns on *Energy from each source* too: the shares are worked out from those totals.",
               "distribution_shares": "The consumer's share of the home's total consumption."
             }
           },
@@ -299,9 +301,11 @@
             "name": "Savings",
             "data": {
               "savings_method": "Savings method",
-              "accumulate_savings": "Total savings"
+              "accumulate_savings": "Total savings",
+              "avoided_cost_by_source": "Avoided cost by source"
             },
             "data_description": {
+              "avoided_cost_by_source": "One sensor per PV system and battery, e.g. *Avoided cost from PV System*: how much of the consumer's avoided cost that device's power accounts for. Together they add up to the consumer's *Avoided cost*. With **Total savings**, each also gets a running total. Needs the **Standard** method.",
               "savings_method": "*Avoided cost*: what the consumer did not pay the grid because your own devices supplied it. The producing devices report the same money as their savings — don't add the two.\n\n**None** — no savings sensors.\n**Standard** — valued at the live grid price. Needs an electricity price sensor on your grid connection.",
               "accumulate_savings": "Adds running totals that keep counting across restarts."
             }
@@ -583,6 +587,9 @@
       "available_power": {
         "name": "Available power"
       },
+      "avoided_cost_from": {
+        "name": "Avoided cost from {source}"
+      },
       "avoided_cost_rate": {
         "name": "Avoided cost rate"
       },
@@ -639,6 +646,15 @@
       },
       "energy_from": {
         "name": "Energy from {source}"
+      },
+      "energy_from_removed_devices": {
+        "name": "Energy from removed devices"
+      },
+      "energy_share_from": {
+        "name": "Energy share from {source}"
+      },
+      "energy_share_from_removed_devices": {
+        "name": "Energy share from removed devices"
       },
       "export_compensation_rate": {
         "name": "Export compensation rate"
@@ -774,6 +790,12 @@
       },
       "total_avoided_cost": {
         "name": "Total avoided cost"
+      },
+      "total_avoided_cost_from": {
+        "name": "Total avoided cost from {source}"
+      },
+      "total_avoided_cost_from_removed_devices": {
+        "name": "Total avoided cost from removed devices"
       },
       "total_charging_cost": {
         "name": "Total charging cost"

@@ -71,6 +71,38 @@ class TestConsumersGetAnAvoidedCost(Home):
         return F(9, 100)
 
 
+class TestAvoidedCostIsPricedAtTheGrid(Home):
+    """Decision: avoided cost has no levelized twin.
+
+    The same house as ``TestConsumersGetAnAvoidedCost``, but pv1's LCOE is
+    raised from 1/10 to 1/4. The plug's levelized cost moves with it; its
+    avoided cost does not, because it prices only the grid. See "avoided cost
+    has no levelized twin" in engine-calculations.md.
+    """
+
+    grid = Grid(200, price=PRICE)
+    pv1 = Pv(600, lcoe=0.25)
+    plug = Consumer(-400)
+
+    @expect("sink_adapters_avoided_cost_rates")
+    def test_avoided_cost(self):
+        """The plug's avoided cost ignores pv1's LCOE.
+
+        300 W of its 400 W came from pv1: 0.3 kW × 3/10 = 9/100 EUR/h, the
+        same as at the default LCOE of 1/10.
+        """
+        return {"plug": F(9, 100)}
+
+    @expect("sink_adapters_lcoo_rates")
+    def test_levelized_operating_cost(self):
+        """The plug's levelized cost is where pv1's LCOE shows.
+
+        100 W from the grid at 3/10 plus 300 W from pv1 at 1/4:
+        0.1 × 3/10 + 0.3 × 1/4 = 3/100 + 3/40 = 21/200 EUR/h.
+        """
+        return {"plug": F(21, 200)}
+
+
 class TestBaseLoadHasItsOwnProperties(Home):
     """Decision: the base load has its own ``home_base_load_*`` properties.
 

@@ -108,7 +108,15 @@ from the grid cost 0.34 on average and export paid 0.08.
 | --- | --- | --- |
 | Energy into the home | 10,000 − 4,000 − 2,500 = 3,500 kWh | 2,200 kWh |
 | Total cost savings | 3,500 × 0.34 = **1,190.00** | 2,200 × 0.34 = **748.00** |
+| Total avoided cost | **1,190.00** | **748.00** |
 | Total export compensation | 4,000 × 0.08 = **320.00** | — |
+
+*Total avoided cost* is the savings before a device's own costs: the same as
+its savings here, since neither device paid for grid power. Had the battery
+charged 500 kWh from the grid, its savings would be 748 − 500 × 0.34 =
+578.00 and its avoided cost still 748.00. A battery entered as amounts only
+carries no avoided cost (`no_energy`): its savings already have its grid
+charging taken off, and without the kWh there is no telling how much.
 
 The levelized totals also subtract what the energy cost to produce, at the
 device's *current* LCOE or LCOS. So if you later change a device's lifetime

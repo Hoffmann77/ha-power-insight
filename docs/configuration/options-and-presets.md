@@ -21,7 +21,7 @@ selection to all your devices at once:
 |---|---|
 | **Minimal** | Power split (%), where each consumer's power comes from, and financial return (with running totals). |
 | **Recommended** | Adds the power split in W, battery charging sources, and running totals for costs, savings and export compensation. |
-| **Extended** | Adds live cost, savings and export compensation rates (per hour), each device's share of the home totals, and each consumer's power and energy from every source. |
+| **Extended** | Adds live cost, savings and export compensation rates (per hour), each device's share of the home totals, and each consumer's power and energy from every source, and its lifetime energy mix. |
 | **Custom** | Choose sensors per device type on the following pages. |
 
 Each set builds on the previous one. **Recommended** suits most homes.
@@ -68,6 +68,9 @@ what its sensors support — see [the matrix below](#which-scope-offers-what).
 - **Power from each source (W)** — the same, in watts. *(consumer only)*
 - **Energy from each source (kWh)** — a running total of the energy a consumer
   has drawn from each source. *(consumer only)*
+- **Energy sources (%)** — each source's share of everything a consumer has
+  drawn so far, over its whole lifetime. Turns on *Energy from each source*
+  too, since the shares are worked out from those totals. *(consumer only)*
 
 See [Where a device's power goes](../entities.md) for how to read these names.
 
@@ -107,8 +110,12 @@ Grid power has no levelized cost, so the **Grid** page only offers
 
 Savings are the money you did not pay the grid because your own devices
 supplied the power. The **Savings method** works like the cost method, and
-**Total savings** adds running totals. On a consumer, the same money appears as
-its *Avoided cost* — don't add it to the producing devices' savings. See
+**Total savings** adds running totals. A PV system and a battery also get an
+*Avoided cost*: their savings before their own costs are taken off. On a
+consumer, the same money appears as its *Avoided cost* — don't add a
+consumer's avoided cost to the producing devices' savings or avoided cost. On a
+consumer, **Avoided cost by source** splits its avoided cost by the PV system or
+battery that served it. See
 [How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
 
 ### Financial return
@@ -129,6 +136,7 @@ financial return** adds running totals.
 | Power sources (%) | — | — | — | — | ✅ |
 | Power from each source (W) | — | — | — | — | ✅ |
 | Energy from each source (kWh) | — | — | — | — | ✅ |
+| Energy sources (%) | — | — | — | — | ✅ |
 | Export compensation rate | — | ✅ | ✅ | ✅ | — |
 | Total export compensation | — | ✅ | ✅ | ✅ | — |
 | Cost method — Standard | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -137,6 +145,7 @@ financial return** adds running totals.
 | Savings method — Standard | ✅ | — | ✅ | ✅ | ✅ |
 | Savings method — Levelized | ✅ | — | ✅ | ✅ | — |
 | Total savings | ✅ | — | ✅ | ✅ | ✅ |
+| Avoided cost by source | — | — | — | — | ✅ |
 | Financial return method — Standard | ✅ | — | ✅ | ✅ | — |
 | Financial return method — Levelized | ✅ | — | ✅ | ✅ | — |
 | Total financial return | ✅ | — | ✅ | ✅ | — |
