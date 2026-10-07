@@ -246,6 +246,11 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1386
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.084,
+     "bat1": 0.2016,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.147,
     "combined_coe": 0.0,
     "combined_lcoe": 0.127272727273,
@@ -706,6 +711,13 @@
      "cons1": 0.2604,
      "cons2": 0.1848
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.819,
+     "grid": 0.0,
+     "pv0": 0.756,
+     "pv1": 1.512,
+     "pv2": 1.071
+    },
     "home_base_load_avoided_cost_rate": 1.7556,
     "combined_coe": 0.0,
     "combined_lcoe": 0.151515151515,
@@ -1010,6 +1022,11 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.1494
     },
     "home_base_load_avoided_cost_rate": 0.1494,
     "combined_coe": 0.0921951219512,
@@ -1448,6 +1465,13 @@
      "cons0": 0.378,
      "cons1": 0.861
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.521609226594,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.47592482462,
+     "pv1": 0.556465948786
+    },
     "home_base_load_avoided_cost_rate": 0.315,
     "combined_coe": 0.0,
     "combined_lcoe": 0.189830508475,
@@ -1719,6 +1743,11 @@
      "pv1": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.9875,
+     "pv1": 0.1625
+    },
     "home_base_load_avoided_cost_rate": 1.15,
     "combined_coe": 0.093537414966,
     "combined_lcoe": 0.165102040816,
@@ -1949,6 +1978,10 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.25,
     "combined_lcoe": 0.25,
@@ -2147,6 +2180,10 @@
      "pv0": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.006
+    },
     "home_base_load_avoided_cost_rate": 0.006,
     "combined_coe": 0.0,
     "combined_lcoe": 0.2,
@@ -2512,6 +2549,13 @@
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.112213740458,
+     "grid": 0.0,
+     "pv0": 0.312595419847,
+     "pv1": 0.0,
+     "pv2": 0.056106870229
+    },
     "home_base_load_avoided_cost_rate": 0.480916030534,
     "combined_coe": 0.0251908396947,
     "combined_lcoe": 0.187022900763,
@@ -2781,6 +2825,11 @@
      "pv1": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.915,
+     "pv1": 0.855
+    },
     "home_base_load_avoided_cost_rate": 1.77,
     "combined_coe": 0.0917647058824,
     "combined_lcoe": 0.136529411765,
@@ -3248,6 +3297,13 @@
      "cons1": 0.156,
      "cons2": 0.021
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.116071428571,
+     "grid": 0.0,
+     "pv0": 0.647178571429,
+     "pv1": 0.56875
+    },
     "home_base_load_avoided_cost_rate": 0.603,
     "combined_coe": 0.0137614678899,
     "combined_lcoe": 0.145871559633,
@@ -3663,6 +3719,12 @@
      "cons1": 0.0498452012384,
      "cons2": 0.229643962848
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.380959752322
+    },
     "home_base_load_avoided_cost_rate": 0.0801083591331,
     "combined_coe": 0.0902777777778,
     "combined_lcoe": 0.218055555556,
@@ -4010,6 +4072,11 @@
      "cons0": 0.0,
      "cons1": 0.0395833333333,
      "cons2": 0.310416666667
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.3625,
+     "bat1": 0.475,
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.4875,
     "combined_coe": 0.0432098765432,
@@ -4445,6 +4512,13 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1575,
      "cons1": 0.7325
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.45815565032,
+     "pv1": 0.0,
+     "pv2": 0.49684434968
     },
     "home_base_load_avoided_cost_rate": 0.065,
     "combined_coe": 0.0,
@@ -4927,6 +5001,13 @@
      "cons1": 0.1988,
      "cons2": 0.0837892857143
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.49855,
+     "pv1": 0.0388392857143
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0163636363636,
     "combined_lcoe": 0.0865454545455,
@@ -5253,6 +5334,11 @@
      "cons0": 0.174,
      "cons1": 0.0116828193833
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.210845814978,
+     "pv1": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0251629955947,
     "combined_coe": 0.221052631579,
     "combined_lcoe": 0.234210526316,
@@ -5511,6 +5597,10 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.3438,
      "cons1": 0.0972
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.441
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
@@ -5841,6 +5931,11 @@
      "cons0": 0.0171863799283,
      "cons1": 0.0178136200717,
      "cons2": 0.165
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.1125,
+     "pv1": 0.0875
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.192028985507,
@@ -6184,6 +6279,12 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1566
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.4212
     },
     "home_base_load_avoided_cost_rate": 0.2646,
     "combined_coe": 0.0,
@@ -6561,6 +6662,12 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.228,
      "cons1": 0.495
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.885,
+     "pv1": 0.0537754749568,
+     "pv2": 0.0302245250432
     },
     "home_base_load_avoided_cost_rate": 0.246,
     "combined_coe": 0.0,
@@ -6969,6 +7076,12 @@
      "cons1": 0.0,
      "cons2": 0.0259694656489
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.042,
+     "pv1": 0.68386259542,
+     "pv2": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.174461538462,
     "combined_lcoe": 0.205846153846,
@@ -7199,6 +7312,9 @@
      "cons0": 0.0,
      "cons1": 0.0,
      "cons2": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.3,
@@ -7619,6 +7735,14 @@
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.00938547486034,
     "combined_lcoe": 0.0756983240223,
@@ -8078,6 +8202,14 @@
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
     "combined_lcoe": 0.126593406593,
@@ -8409,6 +8541,12 @@
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.0984375,
+     "pv1": 0.0,
+     "pv2": 0.0590625
+    },
     "home_base_load_avoided_cost_rate": 0.1575,
     "combined_coe": 0.0,
     "combined_lcoe": 0.08,
@@ -8594,6 +8732,9 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.18,
@@ -8920,6 +9061,12 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.3402
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.126,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.3024
+    },
     "home_base_load_avoided_cost_rate": 0.0882,
     "combined_coe": 0.0,
     "combined_lcoe": 0.1208,
@@ -9148,6 +9295,9 @@
      "cons0": 0.0,
      "cons1": 0.0,
      "cons2": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.18,
@@ -9442,6 +9592,12 @@
      "pv2": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.0,
+     "pv2": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
     "combined_lcoe": 0.074,
@@ -9792,6 +9948,12 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 1.4028
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.42,
+     "pv1": 1.1928
+    },
     "home_base_load_avoided_cost_rate": 0.21,
     "combined_coe": 0.076,
     "combined_lcoe": 0.166666666667,
@@ -10078,6 +10240,10 @@
      "cons0": 0.0,
      "cons1": 0.0624324324324,
      "cons2": 0.0356756756757
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.12,
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0218918918919,
     "combined_coe": 0.231428571429,
@@ -10420,6 +10586,12 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0537251908397
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.018,
+     "grid": 0.0,
+     "pv0": 0.288
     },
     "home_base_load_avoided_cost_rate": 0.25227480916,
     "combined_coe": 0.105365853659,
@@ -10893,6 +11065,13 @@
      "cons1": 0.126,
      "cons2": 0.3546
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0610875,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.447975,
+     "pv1": 0.4683375
+    },
     "home_base_load_avoided_cost_rate": 0.207,
     "combined_coe": 0.0,
     "combined_lcoe": 0.0625,
@@ -11168,6 +11347,11 @@
      "pv0": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
     "combined_lcoe": 0.0793103448276,
@@ -11484,6 +11668,11 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0294,
      "cons1": 0.0252
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0546,
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
@@ -11917,6 +12106,13 @@
      "cons0": 0.325375,
      "cons1": 0.325375
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.53235,
+     "grid": 0.0,
+     "pv0": 0.8736,
+     "pv1": 0.0,
+     "pv2": 0.4641
+    },
     "home_base_load_avoided_cost_rate": 1.2193,
     "combined_coe": 0.0775,
     "combined_lcoe": 0.217380952381,
@@ -12138,6 +12334,10 @@
      "grid": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0125,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0125,
     "combined_coe": 0.2421875,
     "combined_lcoe": 0.25,
@@ -12438,6 +12638,11 @@
      "cons0": 1.5288,
      "cons1": 0.2436
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.3444,
+     "pv1": 1.428
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
     "combined_lcoe": 0.16967032967,
@@ -12639,6 +12844,9 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0,
      "cons1": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.42,
@@ -12930,6 +13138,11 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.2988,
      "cons1": 0.5508
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.2286,
+     "pv1": 0.621
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
@@ -13304,6 +13517,12 @@
      "cons0": 0.0738,
      "cons1": 0.0
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.423,
+     "pv1": 0.504,
+     "pv2": 0.027
+    },
     "home_base_load_avoided_cost_rate": 0.8802,
     "combined_coe": 0.0297637795276,
     "combined_lcoe": 0.117007874016,
@@ -13621,6 +13840,11 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.2646,
      "cons1": 0.027
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.36,
+     "pv1": 0.054
     },
     "home_base_load_avoided_cost_rate": 0.1224,
     "combined_coe": 0.0,
@@ -13996,6 +14220,12 @@
      "cons0": 0.0252,
      "cons1": 0.036
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.2844
+    },
     "home_base_load_avoided_cost_rate": 0.2232,
     "combined_coe": 0.0,
     "combined_lcoe": 0.12,
@@ -14234,6 +14464,10 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.18,
@@ -14481,6 +14715,10 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0,
      "cons1": 0.0
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.18,
@@ -14873,6 +15111,12 @@
      "cons1": 0.0032,
      "cons2": 0.0114
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0344,
+     "pv1": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0144,
     "combined_coe": 0.4,
     "combined_lcoe": 0.405714285714,
@@ -15197,6 +15441,11 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1386,
      "cons1": 0.0882
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.2898
     },
     "home_base_load_avoided_cost_rate": 0.063,
     "combined_coe": 0.0,
@@ -15532,6 +15781,11 @@
      "cons1": 0.00237391304348,
      "cons2": 0.189913043478
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.105,
+     "pv1": 0.168
+    },
     "home_base_load_avoided_cost_rate": 0.0451043478261,
     "combined_coe": 0.182608695652,
     "combined_lcoe": 0.269565217391,
@@ -15742,6 +15996,10 @@
      "grid": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.42,
     "combined_lcoe": 0.42,
@@ -16020,6 +16278,11 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.609
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.609
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
@@ -16338,6 +16601,11 @@
      "cons0": 0.003,
      "cons1": 0.009
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.057,
+     "bat1": 0.0,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.045,
     "combined_coe": 0.0,
     "combined_lcoe": 0.25,
@@ -16624,6 +16892,11 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1225
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0469696969697,
+     "grid": 0.0,
+     "pv0": 0.23053030303
     },
     "home_base_load_avoided_cost_rate": 0.155,
     "combined_coe": 0.0,
@@ -16967,6 +17240,12 @@
     },
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.1176
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.325625899281,
+     "pv1": 0.270554756195,
+     "pv2": 0.0338193445244
     },
     "home_base_load_avoided_cost_rate": 0.5124,
     "combined_coe": 0.0,
@@ -17350,6 +17629,12 @@
      "cons0": 0.3654,
      "cons1": 0.147
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.164181818182,
+     "grid": 0.0,
+     "pv0": 0.612818181818
+    },
     "home_base_load_avoided_cost_rate": 0.2646,
     "combined_coe": 0.0397894736842,
     "combined_lcoe": 0.108210526316,
@@ -17692,6 +17977,11 @@
      "cons0": 0.374393063584,
      "cons1": 0.0176878612717,
      "cons2": 0.123815028902
+    },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.238216763006,
+     "pv1": 0.277679190751
     },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0,
@@ -18133,6 +18423,13 @@
      "cons0": 0.0,
      "cons1": 0.0531630170316
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.293795620438,
+     "bat1": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0251824817518,
+     "pv1": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.265815085158,
     "combined_coe": 0.147849462366,
     "combined_lcoe": 0.205913978495,
@@ -18547,6 +18844,12 @@
      "cons1": 0.0,
      "cons2": 0.1854
     },
+    "source_adapters_avoided_cost_rates": {
+     "grid": 0.0,
+     "pv0": 0.0,
+     "pv1": 0.381858153242,
+     "pv2": 0.101015717092
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.0643636363636,
     "combined_lcoe": 0.166484848485,
@@ -18924,6 +19227,12 @@
     "sink_adapters_avoided_cost_rates": {
      "cons0": 0.0650602409639,
      "cons1": 0.195180722892
+    },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.286144578313,
+     "grid": 0.0,
+     "pv0": 0.400602409639
     },
     "home_base_load_avoided_cost_rate": 0.426506024096,
     "combined_coe": 0.0692771084337,
@@ -19308,6 +19617,12 @@
      "cons0": 0.0108387096774,
      "cons1": 0.0216774193548
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.107303225806,
+     "grid": 0.0,
+     "pv0": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0747870967742,
     "combined_coe": 0.311612903226,
     "combined_lcoe": 0.350322580645,
@@ -19658,6 +19973,11 @@
      "cons1": 0.0,
      "cons2": 0.0
     },
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "bat1": 0.0,
+     "grid": 0.0
+    },
     "home_base_load_avoided_cost_rate": 0.0,
     "combined_coe": 0.42,
     "combined_lcoe": 0.42,
@@ -19917,6 +20237,11 @@
      "pv0": 0.0
     },
     "sink_adapters_avoided_cost_rates": {},
+    "source_adapters_avoided_cost_rates": {
+     "bat0": 0.0,
+     "grid": 0.0,
+     "pv0": 0.0283870967742
+    },
     "home_base_load_avoided_cost_rate": 0.0283870967742,
     "combined_coe": 0.217741935484,
     "combined_lcoe": 0.228064516129,

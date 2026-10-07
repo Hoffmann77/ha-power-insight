@@ -431,6 +431,15 @@
           }
         },
         {
+          "property": "source_adapters_avoided_cost_rates",
+          "value": {
+            "grid": "0",
+            "east": "3/50",
+            "west": "3/50",
+            "carport": "0"
+          }
+        },
+        {
           "property": "home_base_load_avoided_cost_rate",
           "value": "0"
         },
