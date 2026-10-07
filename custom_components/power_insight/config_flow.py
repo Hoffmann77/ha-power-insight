@@ -66,6 +66,7 @@ from .const import (
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_POWER,
     CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
+    CONF_ENABLE_ENERGY_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
     SCOPES,
@@ -754,6 +755,7 @@ PRESET_SELECTIONS: dict[str, frozenset[str]] = {
         CONF_ENABLE_POWER_SOURCE_SHARES,
         CONF_ENABLE_POWER_SOURCE_POWER,
         CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
+        CONF_ENABLE_ENERGY_SOURCE_SHARES,
         CONF_ENABLE_EXPORT_COMPENSATION_RATE,
         CONF_ACCUMULATE_EXPORT_COMPENSATION,
         CONF_CALCULATE_COST_RATES,
@@ -905,6 +907,10 @@ def build_scope_form(scope: str, defaults: dict) -> vol.Schema:
         power_fields[vol.Required(
             "power_source_energy", default=defaults.get("power_source_energy", False)
         )] = BOOLEAN_SELECTOR
+    if CONF_ENABLE_ENERGY_SOURCE_SHARES in supported:
+        power_fields[vol.Required(
+            "energy_source_shares", default=defaults.get("energy_source_shares", False)
+        )] = BOOLEAN_SELECTOR
     if power_fields:
         fields[vol.Required("power_sensors")] = section(
             vol.Schema(power_fields), {"collapsed": False}
@@ -1030,6 +1036,10 @@ def scope_ui_to_leaves(scope: str, user_input: dict) -> list[str]:
         enabled.add(CONF_ENABLE_POWER_SOURCE_POWER)
     if user_input.get("power_source_energy"):
         enabled.add(CONF_ACCUMULATE_POWER_SOURCE_ENERGY)
+    if user_input.get("energy_source_shares"):
+        # The shares are worked out from the energy totals, so they need them.
+        enabled.add(CONF_ENABLE_ENERGY_SOURCE_SHARES)
+        enabled.add(CONF_ACCUMULATE_POWER_SOURCE_ENERGY)
     if user_input.get("export_compensation_rate"):
         enabled.add(CONF_ENABLE_EXPORT_COMPENSATION_RATE)
     if user_input.get("export_compensation_total"):
@@ -1083,6 +1093,7 @@ def scope_leaves_to_ui_defaults(scope: str, leaves: set[str]) -> dict:
         "power_source_shares": CONF_ENABLE_POWER_SOURCE_SHARES in leaves,
         "power_source_power": CONF_ENABLE_POWER_SOURCE_POWER in leaves,
         "power_source_energy": CONF_ACCUMULATE_POWER_SOURCE_ENERGY in leaves,
+        "energy_source_shares": CONF_ENABLE_ENERGY_SOURCE_SHARES in leaves,
         "export_compensation_rate": CONF_ENABLE_EXPORT_COMPENSATION_RATE in leaves,
         "export_compensation_total": CONF_ACCUMULATE_EXPORT_COMPENSATION in leaves,
     }

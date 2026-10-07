@@ -245,6 +245,8 @@ draws from outside its selected sources. See
 | Total avoided cost | EUR | Avoided cost rate integrated over time — what this consumer did not pay the grid because local generation served it. | Total savings |
 | Energy from &lt;source&gt; (one per source) | kWh | *Power from &lt;source&gt;* integrated over time — how much of this consumer's energy came from that source. | Energy from each source |
 | Energy from removed devices | kWh | What this consumer drew from devices that have since been removed, as it stood when each was removed. One attribute per removed device. Only appears once a source has been removed. | Energy from each source |
+| Energy share from &lt;source&gt; (one per source) | % | That source's share of everything this consumer has drawn so far: its *Energy from &lt;source&gt;* over the sum of all of them, removed devices included. The shares add up to 100 %. Unavailable while one of the energy totals is disabled. | Energy sources |
+| Energy share from removed devices | % | The share of *Energy from removed devices* in the same sum. Only appears once a source has been removed. | Energy sources |
 
 The *Energy from &lt;source&gt;* sensors split the energy the consumer's own
 meter already counts. Don't add them to the Energy dashboard next to that

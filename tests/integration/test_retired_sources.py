@@ -192,3 +192,122 @@ async def test_removing_the_consumer_prunes_its_frozen_totals(
     await _settle(hass)
 
     assert _ledger(entry) == []
+
+
+# ---------------------------------------------------------------------------
+# Energy shares
+# ---------------------------------------------------------------------------
+
+SHARES = ["accumulate_power_source_energy", "enable_energy_source_shares"]
+
+
+def _share(hass: HomeAssistant, entry: MockConfigEntry, key: str) -> float:
+    state = _state(hass, entry, key)
+    assert state is not None, f"{key} was not created"
+    assert state.state not in ("unknown", "unavailable"), f"{key} is {state.state}"
+    return float(state.state)
+
+
+async def _draw_two_hours(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    """An hour on PV alone, then an hour on the grid alone, 400 W each.
+
+    The unrestricted consumer draws 0.4 kWh from each: a lifetime mix of
+    50 % PV and 50 % grid, whatever the mix is right now.
+    """
+    t0 = dt_util.utcnow()
+    with freeze_time(t0) as frozen:
+        _set(hass, "grid_power", 0)
+        _set(hass, "pv_power", 400)
+        _set(hass, "consumer_power", -400)
+        await setup_integration(hass, entry)
+
+        _set(hass, "pv_power", 400)
+        await _settle(hass)
+        frozen.move_to(t0 + timedelta(hours=1))
+        _set(hass, "grid_power", 400)
+        _set(hass, "pv_power", 0)
+        await _settle(hass)
+        frozen.move_to(t0 + timedelta(hours=2))
+        _set(hass, "grid_power", 400)
+        await _settle(hass)
+
+
+def _unrestricted(options: list[str]) -> MockConfigEntry:
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="My PowerInsight",
+        options={"schema": 2, "scopes": {"consumer": options}},
+        subentries_data=[
+            make_grid_subentry_data(),
+            make_pv_subentry_data(),
+            make_consumer_subentry_data(),
+        ],
+    )
+
+
+async def test_energy_shares_are_the_lifetime_mix(hass: HomeAssistant) -> None:
+    """Half the energy came from each source, so each share reads 50 %.
+
+    The power share right now is 100 % grid; the energy share remembers the
+    hour on PV. The shares add up to 100 %.
+    """
+    from .conftest import GRID_SUB_ID
+
+    entry = _unrestricted(SHARES)
+    await _draw_two_hours(hass, entry)
+
+    pv = _share(hass, entry, f"energy_share_from_{PV_SUB_ID}")
+    grid = _share(hass, entry, f"energy_share_from_{GRID_SUB_ID}")
+    assert pv == pytest.approx(50.0, abs=0.5)
+    assert grid == pytest.approx(50.0, abs=0.5)
+    assert pv + grid == pytest.approx(100.0)
+
+    state = _state(hass, entry, f"energy_share_from_{PV_SUB_ID}")
+    assert state.attributes["unit_of_measurement"] == "%"
+    assert state.attributes["state_class"] == "measurement"
+    assert _state(hass, entry, "energy_share_from_removed_devices") is None
+
+
+async def test_energy_shares_keep_a_removed_source(hass: HomeAssistant) -> None:
+    """After removing the PV system its half stays in the mix.
+
+    The grid's share does not jump to 100 %: the PV's 0.4 kWh are frozen and
+    shown as the removed devices' share, 50 %.
+    """
+    from .conftest import GRID_SUB_ID
+
+    entry = _unrestricted(SHARES)
+    await _draw_two_hours(hass, entry)
+
+    hass.config_entries.async_remove_subentry(entry, PV_SUB_ID)
+    await _settle(hass)
+    _set(hass, "grid_power", 400)
+    await _settle(hass)
+
+    grid = _share(hass, entry, f"energy_share_from_{GRID_SUB_ID}")
+    removed = _share(hass, entry, "energy_share_from_removed_devices")
+    assert grid == pytest.approx(50.0, abs=0.5)
+    assert removed == pytest.approx(50.0, abs=0.5)
+    assert grid + removed == pytest.approx(100.0)
+
+
+async def test_energy_shares_are_unknown_before_anything_was_drawn(
+    hass: HomeAssistant,
+) -> None:
+    """A share of nothing is undefined, not 0 %."""
+    entry = _unrestricted(SHARES)
+    _set(hass, "grid_power", 0)
+    _set(hass, "pv_power", 0)
+    _set(hass, "consumer_power", 0)
+    await setup_integration(hass, entry)
+    await _settle(hass)
+
+    assert _state(hass, entry, f"energy_share_from_{PV_SUB_ID}").state == "unknown"
+
+
+def test_choosing_energy_shares_turns_on_the_energy_totals() -> None:
+    """The shares are worked out from the totals, so selecting them adds both."""
+    from custom_components.power_insight.config_flow import scope_ui_to_leaves
+
+    leaves = scope_ui_to_leaves("consumer", {"energy_source_shares": True})
+    assert leaves == sorted(SHARES)

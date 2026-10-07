@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.const import (
     PERCENTAGE,
     EntityCategory,
@@ -58,6 +59,7 @@ from .const import (
     CONF_ENABLE_POWER_SOURCE_SHARES,
     CONF_ENABLE_POWER_SOURCE_POWER,
     CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
+    CONF_ENABLE_ENERGY_SOURCE_SHARES,
     CONF_ENABLE_EXPORT_COMPENSATION_RATE,
     CONF_ACCUMULATE_EXPORT_COMPENSATION,
     CONF_CALCULATE_COST_RATES,
@@ -1559,6 +1561,24 @@ ENERGY_FROM_REMOVED_DEVICES = SensorEntityDescription(
     suggested_display_precision=2,
 )
 
+# A consumer's lifetime energy mix, from its per-source energy totals.
+ENERGY_SHARE_FROM = SensorEntityDescription(
+    key="energy_share_from",
+    translation_key="energy_share_from",
+    icon="mdi:percent",
+    native_unit_of_measurement=PERCENTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
+)
+ENERGY_SHARE_FROM_REMOVED_DEVICES = SensorEntityDescription(
+    key="energy_share_from_removed_devices",
+    translation_key="energy_share_from_removed_devices",
+    icon="mdi:percent",
+    native_unit_of_measurement=PERCENTAGE,
+    state_class=SensorStateClass.MEASUREMENT,
+    suggested_display_precision=0,
+)
+
 
 # ---------------------------------------------------------------------------
 # Options wrapper
@@ -2054,6 +2074,7 @@ async def async_setup_entry(
         # restriction the meters contradict is relaxed, so a "PV only"
         # consumer can really draw from the grid. Keyed by the source's
         # subentry id, never its name, so a rename keeps the history.
+        energy_sensors: dict[str, PowerInsightDynamicAdapterIntegrationSensor] = {}
         for source_adapter in power_insight.gross_power_adapters:
             if options_wrapped.check(CONF_ENABLE_POWER_SOURCE_POWER, "consumer"):
                 power_description = PowerInsightSensorDescription(
@@ -2087,26 +2108,53 @@ async def async_setup_entry(
                     unit_prefix="k",
                     retired_source_key=RETIRED_ENERGY_FROM,
                 )
-                entities.append(PowerInsightDynamicAdapterIntegrationSensor(
+                energy_sensor = PowerInsightDynamicAdapterIntegrationSensor(
                     description=energy_description,
                     config_entry=entry,
                     source_entities=energy_description.entities_fn(power_insight),
                     power_insight=power_insight,
                     device_adapter=adapter,
                     dynamic_adapter=source_adapter,
-                ))
+                )
+                energy_sensors[source_adapter.uid] = energy_sensor
+                entities.append(energy_sensor)
 
         # The energy from sources that have since been removed, frozen when
         # they were: so the per-source totals still add up to everything this
         # consumer drew. Only once there is something to show.
-        if options_wrapped.check(CONF_ACCUMULATE_POWER_SOURCE_ENERGY, "consumer"):
-            removed = retired_source_totals(entry, adapter.uid, RETIRED_ENERGY_FROM)
-            if removed:
-                entities.append(PowerInsightRemovedSourcesSensor(
-                    description=ENERGY_FROM_REMOVED_DEVICES,
+        removed = retired_source_totals(entry, adapter.uid, RETIRED_ENERGY_FROM)
+        if energy_sensors and removed:
+            entities.append(PowerInsightRemovedSourcesSensor(
+                description=ENERGY_FROM_REMOVED_DEVICES,
+                config_entry=entry,
+                device_adapter=adapter,
+                removed=removed,
+            ))
+
+        # Lifetime shares of those totals: "Energy share from {Source}", plus
+        # one for the removed devices so that together they make 100 %. Added
+        # after the totals they read, so those exist by the time they listen.
+        if energy_sensors and options_wrapped.check(
+            CONF_ENABLE_ENERGY_SOURCE_SHARES, "consumer"
+        ):
+            frozen = sum(value for _, value in removed.values())
+            for source_uid in energy_sensors:
+                entities.append(PowerInsightEnergyShareSensor(
+                    description=ENERGY_SHARE_FROM,
                     config_entry=entry,
                     device_adapter=adapter,
-                    removed=removed,
+                    totals=energy_sensors,
+                    removed_total=frozen,
+                    share_of=source_uid,
+                ))
+            if removed:
+                entities.append(PowerInsightEnergyShareSensor(
+                    description=ENERGY_SHARE_FROM_REMOVED_DEVICES,
+                    config_entry=entry,
+                    device_adapter=adapter,
+                    totals=energy_sensors,
+                    removed_total=frozen,
+                    share_of=None,
                 ))
 
         _add(entities, config_subentry_id=adapter.uid)
@@ -2642,6 +2690,100 @@ class PowerInsightRemovedSourcesSensor(SensorEntity):
             title or source_uid: round(value, 6)
             for source_uid, (title, value) in removed.items()
         }
+
+
+class PowerInsightEnergyShareSensor(SensorEntity):
+    """A consumer's lifetime share of its energy from one source.
+
+    ``Σ energy_from_*`` is the denominator, never a separate total of the
+    consumer's energy: it is the same counting, paused and restored together,
+    so the shares always add up to 100 %. Energy from removed sources stays in
+    the denominator, frozen, and has a share of its own (``share_of=None``).
+
+    Recomputed whenever one of the totals writes a new state. Unavailable
+    while a total is disabled: a share of a partial sum would be a wrong
+    number, not an approximate one. A total that has counted nothing yet is
+    0 kWh — restored values are in place before the shares are added — and
+    until anything has been drawn at all the share is unknown: a share of
+    nothing is undefined.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(
+            self,
+            description: SensorEntityDescription,
+            config_entry: ConfigEntry,
+            device_adapter: AbstractBaseAdapter,
+            totals: dict[str, PowerInsightDynamicAdapterIntegrationSensor],
+            removed_total: float,
+            share_of: str | None,
+    ) -> None:
+        """Initialize the energy share sensor."""
+        self.entity_description = description
+        self.config_entry = config_entry
+        self.device_adapter = device_adapter
+        self._totals = totals
+        self._removed_total = Decimal(str(removed_total))
+        self._share_of = share_of
+
+        key = description.key
+        if share_of is not None:
+            # Keyed by the source's subentry id, never its name.
+            key = f"{key}_{share_of}"
+            self._attr_translation_placeholders = {
+                "source": totals[share_of].dynamic_adapter.verbose_name
+            }
+        uid = f"{config_entry.entry_id}_{device_adapter.uid}"
+        self._attr_unique_id = f"{uid}_{key}"
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, device_adapter.uid)},
+            name=f"{config_entry.title} {device_adapter.verbose_name}",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Follow every total this share is worked out from."""
+        await super().async_added_to_hass()
+        entity_ids = [
+            total.entity_id for total in self._totals.values()
+            if total.hass is not None and total.entity_id
+        ]
+
+        @callback
+        def _total_changed(_event) -> None:
+            self.async_write_ha_state()
+
+        self.async_on_remove(
+            async_track_state_change_event(self.hass, entity_ids, _total_changed)
+        )
+
+    def _parts(self) -> dict[str | None, Decimal] | None:
+        """Return each total by source uid (``None`` = removed), or ``None``."""
+        parts: dict[str | None, Decimal] = {None: self._removed_total}
+        for source_uid, total in self._totals.items():
+            if total.hass is None:
+                return None  # disabled: not counting
+            value = total.native_value
+            parts[source_uid] = Decimal(0) if value is None else Decimal(str(value))
+        return parts
+
+    @property
+    def available(self) -> bool:
+        """Unavailable while a total it is worked out from is disabled."""
+        return self._parts() is not None
+
+    @property
+    def native_value(self) -> float | None:
+        """Return this source's share of everything drawn so far, in %."""
+        parts = self._parts()
+        if parts is None:
+            return None
+        whole = sum(parts.values())
+        if whole <= 0:
+            return None
+        return float(parts[self._share_of] / whole * 100)
 
 
 class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):

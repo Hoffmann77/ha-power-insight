@@ -119,6 +119,8 @@ CONF_ENABLE_HOME_BASE_LOAD = "enable_home_base_load"
 CONF_ENABLE_POWER_SOURCE_SHARES = "enable_power_source_shares"        # consumer
 CONF_ENABLE_POWER_SOURCE_POWER = "enable_power_source_power"          # consumer
 CONF_ACCUMULATE_POWER_SOURCE_ENERGY = "accumulate_power_source_energy"  # consumer
+# Lifetime shares of those energy totals; needs the totals, so implies them.
+CONF_ENABLE_ENERGY_SOURCE_SHARES = "enable_energy_source_shares"      # consumer
 
 # Export compensation (split out of the cost-rate / accumulate-cost keys)
 CONF_ENABLE_EXPORT_COMPENSATION_RATE = "enable_export_compensation_rate"
@@ -256,6 +258,7 @@ SCOPE_SUPPORTED_OPTIONS: dict[str, set[str]] = {
         # The watts behind those shares, and the energy they add up to.
         CONF_ENABLE_POWER_SOURCE_POWER,
         CONF_ACCUMULATE_POWER_SOURCE_ENERGY,
+        CONF_ENABLE_ENERGY_SOURCE_SHARES,
     },
 }
 

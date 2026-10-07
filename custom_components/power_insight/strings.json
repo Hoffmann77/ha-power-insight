@@ -275,12 +275,14 @@
               "power_source_shares": "Power sources (%)",
               "power_source_power": "Power from each source (W)",
               "power_source_energy": "Energy from each source (kWh)",
+              "energy_source_shares": "Energy sources (%)",
               "distribution_shares": "Consumption share (%)"
             },
             "data_description": {
               "power_source_shares": "One sensor per source, e.g. *Power share from PV System*: how much of the consumer's power comes from that source.",
               "power_source_power": "One sensor per source, e.g. *Power from PV System*: how many watts of the consumer's power come from that source right now.",
               "power_source_energy": "One sensor per source, e.g. *Energy from PV System*: a running total of the energy the consumer has drawn from that source. Keeps counting across restarts. Don't add these to the Energy dashboard next to the consumer's own meter — they split the same energy, so it would be counted twice.",
+              "energy_source_shares": "One sensor per source, e.g. *Energy share from PV System*: how much of all the energy the consumer has drawn so far came from that source, over its whole lifetime. Turns on *Energy from each source* too: the shares are worked out from those totals.",
               "distribution_shares": "The consumer's share of the home's total consumption."
             }
           },
@@ -642,6 +644,12 @@
       },
       "energy_from_removed_devices": {
         "name": "Energy from removed devices"
+      },
+      "energy_share_from": {
+        "name": "Energy share from {source}"
+      },
+      "energy_share_from_removed_devices": {
+        "name": "Energy share from removed devices"
       },
       "export_compensation_rate": {
         "name": "Export compensation rate"

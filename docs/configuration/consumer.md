@@ -65,6 +65,7 @@ derived from the mix of sources currently supplying it (grid / solar / battery).
 | Power source shares (one per source) | % | *Power sources (%)* |
 | Power from each source (one per source) | W | *Power from each source (W)* |
 | Energy from each source (one per source) | kWh | *Energy from each source (kWh)* |
+| Energy share from each source (one per source) | % | *Energy sources (%)* |
 | Operating cost rate | currency/h | *Cost method = Standard* |
 | Levelized operating cost rate | currency/h | *Cost method = Levelized* |
 
@@ -74,6 +75,10 @@ running 55 % on solar power." Power Insight infers the source mix from the
 real-time state of all your adapters. **Power from each source** gives the
 same split in watts, and **Energy from each source** adds it up over time — for
 example "the heat pump has used 312 kWh of solar and 540 kWh from the grid."
+**Energy sources** turns those totals into a lifetime mix: 37 % solar and 63 %
+grid in that example. For a daily or monthly mix, put the *Energy from each
+source* sensors behind a [utility meter](https://www.home-assistant.io/integrations/utility_meter/)
+and divide them in a template.
 Every source gets a sensor, even one outside the consumer's selected sources:
 when the meters show the consumer drawing from elsewhere, that energy is
 counted where it came from.
