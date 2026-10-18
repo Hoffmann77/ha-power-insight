@@ -46,7 +46,6 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
-          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --group engine
@@ -71,7 +70,6 @@ jobs:
         uses: astral-sh/setup-uv@v10.3.0
         with:
           enable-cache: true
-          python-version: "3.14"
 
       - name: Install dependencies
         run: uv sync --group dev
