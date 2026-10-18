@@ -92,9 +92,6 @@ class PowerInsightSensorDescription(SensorEntityDescription):
     # Optional uid-keyed dict of extra state attributes for a per-adapter
     # sensor, published alongside the value.
     attributes_fn: Callable[[PowerInsight], dict[str, float]] | None = None
-    # When True, a per-adapter sensor scales its displayed value by the
-    # adapter's correction factor (levelized quantities only).
-    apply_correction_factor: bool = False
     # When True, the sensor is only created when its provider device is a
     # configured charge source for at least one battery (charging channel).
     # exists_fn cannot express this — it has no reference to the battery set —
@@ -2511,10 +2508,7 @@ class PowerInsightAdapterSensor(BasePowerInsightSensor):
         value = mapping.get(self.device_adapter.uid, 0.0)
         if value is None:
             return None
-        value = self.entity_description.transform_fn(value)
-        if self.entity_description.apply_correction_factor:
-            value = value * self.device_adapter.correction_factor
-        return value
+        return self.entity_description.transform_fn(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, float] | None:
