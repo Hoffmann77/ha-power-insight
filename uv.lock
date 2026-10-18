@@ -1022,7 +1022,7 @@ wheels = [
 
 [[package]]
 name = "ha-power-insight"
-version = "2026.10.0rc2"
+version = "2026.11.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
