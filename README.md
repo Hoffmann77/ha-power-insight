@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="custom_component/power_insight/brand/logo.png" alt="Power Insight" width="360">
+<img src="custom_components/power_insight/brand/logo.png" alt="Power Insight" width="360">
 
 # Power Insight for Home Assistant
 
