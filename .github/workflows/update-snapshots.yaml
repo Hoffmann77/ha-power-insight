@@ -37,6 +37,9 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    # A normal run takes about a minute. A dependency that has no wheel for the
+    # chosen Python compiles from source for over 20 minutes, so stop it early.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:

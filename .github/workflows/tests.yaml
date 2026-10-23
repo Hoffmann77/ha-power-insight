@@ -3,12 +3,34 @@ name: Tests
 # Pull requests are tested through `pull_request`; testing their pushes too would
 # run every job twice. `main` is tested after each merge, and any other branch
 # can be tested from Actions -> Tests -> Run workflow.
+#
+# A change that only touches the docs site is not tested. The paths below keep
+# what the tests read: the property catalog and published cases under
+# docs/spec/, and the decision log that manual/test_decisions.py checks.
 on:
   push:
     branches:
       - main
+    paths:
+      - '**'
+      - '!website/**'
+      - '!docs/**'
+      - 'docs/spec/**'
+      - 'docs/dev/engine-calculations.md'
   pull_request:
+    paths:
+      - '**'
+      - '!website/**'
+      - '!docs/**'
+      - 'docs/spec/**'
+      - 'docs/dev/engine-calculations.md'
   workflow_dispatch:
+
+# A new push to a pull request makes its running tests obsolete, so cancel
+# them. Runs on main are never cancelled: each merge keeps its own result.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Engine tier: pure-Python calculation engine, no Home Assistant harness.
@@ -19,6 +41,10 @@ jobs:
   engine-tests:
     name: engine-tests (${{ matrix.suite }})
     runs-on: ubuntu-latest
+    # A normal run takes under a minute. A dependency that has no wheel for the
+    # chosen Python compiles from source for over 20 minutes in every job, so
+    # stop it early.
+    timeout-minutes: 10
     strategy:
       # Let every suite finish: one failing must not hide the others' results.
       fail-fast: false
@@ -63,6 +89,8 @@ jobs:
   # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.
   integration-tests:
     runs-on: ubuntu-latest
+    # See engine-tests.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
