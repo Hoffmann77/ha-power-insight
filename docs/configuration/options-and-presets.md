@@ -120,7 +120,10 @@ battery that served it. See
 
 ### Financial return
 
-Savings plus export compensation (for a battery, minus what charging cost).
+Savings plus what your exports earn. In the levelized version the exported
+energy also costs its device's LCOE/LCOS, so the levelized financial return
+is *lower* than the levelized savings whenever you export for less than that
+cost — exporting below cost loses money.
 The **Financial return method** works like the cost method, and **Total
 financial return** adds running totals.
 

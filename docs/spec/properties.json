@@ -688,7 +688,7 @@
     },
 
     "combined_coe": {
-      "title": "Price of electricity",
+      "title": "Blended price of electricity",
       "unit": "EUR/kWh",
       "layer": 4,
       "definition": "The blended marginal price of everything entering the house: the cost rate spread across gross power. Falls as local generation displaces import, because local fuel is free.",
@@ -700,10 +700,10 @@
     },
 
     "combined_lcoe": {
-      "title": "Levelized price of electricity",
+      "title": "Levelized blended price of electricity",
       "unit": "EUR/kWh",
       "layer": 4,
-      "definition": "As the price of electricity, but each local source carries its own levelized cost, so self-generating is no longer free — the honest per-kWh figure for the whole mix.",
+      "definition": "As the blended price of electricity, but each local source carries its own levelized cost, so self-generating is no longer free — the honest per-kWh figure for the whole mix.",
       "formula": "combined_lcoe = combined_lcoe_rate / (gross_power / 1000)",
       "depends_on": ["combined_lcoe_rate", "gross_power"],
       "answer_shape": "scalar",

@@ -267,7 +267,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_price_of_electricity",
-        translation_key="price_of_electricity",
+        translation_key="blended_price_of_electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,
@@ -279,7 +279,7 @@ POWER_INSIGHT_SENSORS = (
     ),
     PowerInsightSensorDescription(
         key="combined_levelized_price_of_electricity",
-        translation_key="levelized_price_of_electricity",
+        translation_key="levelized_blended_price_of_electricity",
         icon="mdi:currency-eur",
         native_unit_of_measurement="EUR/kWh",
         state_class=SensorStateClass.MEASUREMENT,

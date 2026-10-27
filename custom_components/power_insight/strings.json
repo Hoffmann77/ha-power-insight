@@ -90,7 +90,7 @@
               "accumulate_financial_return": "Total financial return"
             },
             "data_description": {
-              "financial_return_method": "Savings plus export compensation, across all devices.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of each device's lifetime cost per kWh. Needs the lifetime cost and production of each device.\n**Both** — one sensor for each method.",
+              "financial_return_method": "Savings plus what your exports earn, across all devices.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of each device's lifetime cost per kWh, exported energy included. Lower than the levelized savings when you export for less than that cost. Needs the lifetime cost and production of each device.\n**Both** — one sensor for each method.",
               "accumulate_financial_return": "Adds running totals that keep counting across restarts."
             }
           }
@@ -194,7 +194,7 @@
               "accumulate_financial_return": "Total financial return"
             },
             "data_description": {
-              "financial_return_method": "Savings plus export compensation for this PV system.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of this PV system's own LCOE, so it shows profit. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
+              "financial_return_method": "Savings plus what this PV system's exports earn.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of this PV system's own LCOE, exported energy included, so it shows profit. Lower than the levelized savings when you export for less than the LCOE. Needs the system's lifetime cost and production.\n**Both** — one sensor for each method.",
               "accumulate_financial_return": "Adds running totals that keep counting across restarts."
             }
           }
@@ -259,7 +259,7 @@
               "accumulate_financial_return": "Total financial return"
             },
             "data_description": {
-              "financial_return_method": "Savings plus export compensation, minus what charging cost.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of this battery's own LCOS, so it shows profit. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
+              "financial_return_method": "Savings plus what this battery's exports earn.\n\n**None** — no financial return sensors.\n**Standard** — valued at the live grid price.\n**Levelized** — net of this battery's own LCOS, exported energy included, so it shows profit. Lower than the levelized savings when you export for less than the LCOS. Needs the battery's lifetime cost and discharged energy.\n**Both** — one sensor for each method.",
               "accumulate_financial_return": "Adds running totals that keep counting across restarts."
             }
           }
@@ -599,6 +599,9 @@
       "battery_charging_ratio": {
         "name": "Battery charging ratio"
       },
+      "blended_price_of_electricity": {
+        "name": "Blended price of electricity"
+      },
       "charging_cost_rate": {
         "name": "Charging cost rate"
       },
@@ -698,6 +701,9 @@
       "import_to_system_standby_ratio": {
         "name": "Import to system standby ratio"
       },
+      "levelized_blended_price_of_electricity": {
+        "name": "Levelized blended price of electricity"
+      },
       "levelized_charging_cost_rate": {
         "name": "Levelized charging cost rate"
       },
@@ -722,9 +728,6 @@
       "levelized_operating_cost_rate": {
         "name": "Levelized operating cost rate"
       },
-      "levelized_price_of_electricity": {
-        "name": "Levelized price of electricity"
-      },
       "levelized_system_standby_cost_rate": {
         "name": "Levelized system standby cost rate"
       },
@@ -742,9 +745,6 @@
       },
       "power_share_from": {
         "name": "Power share from {source}"
-      },
-      "price_of_electricity": {
-        "name": "Price of electricity"
       },
       "production_to_batteries": {
         "name": "Production to batteries"
