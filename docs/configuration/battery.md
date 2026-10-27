@@ -113,7 +113,7 @@ grid energy when it discharges, and its totals split those two sides up:
 | **Total operating cost** | What charging cost: grid energy at the grid price; energy from your PV systems counts as free | charging from the grid |
 | **Total levelized operating cost** | The same, with PV energy priced at that PV system's LCOE, its lifetime cost per kWh | charging from anything |
 | **Total cost savings** | Grid electricity it replaced (discharge into the home × grid price), minus the operating cost | discharging; it goes **down** while charging from the grid |
-| **Total financial return** | Savings plus export compensation, if the battery may export to the grid | discharging, and exporting |
+| **Total financial return** | Savings plus what exports earn, if the battery may export to the grid | discharging, and exporting |
 
 - **The operating cost is already inside the savings.** Do not subtract it
   again: the savings are the battery's net result, what discharging saved

@@ -204,6 +204,34 @@ Use **cost savings** when you want to know how much you avoided spending. Use
 **financial return** when you want one number that includes everything your
 devices are earning for you.
 
+### Why is my levelized financial return lower than my levelized savings?
+
+In the levelized version, every kWh a device produces carries its lifetime
+cost (LCOE for PV, LCOS for a battery) — the kWh it exports included. So the
+levelized financial return also subtracts what the exported energy cost to
+produce:
+
+```
+levelized_financial_return = levelized_cost_savings
+                           + exported_kWh × (export_compensation − LCOE)
+```
+
+When your feed-in tariff is below the device's LCOE/LCOS, each exported kWh
+loses money and the financial return ends up **below** the savings. That is
+not an error: it tells you self-consumption pays for the device while
+exporting does not. If you never export, the two are equal.
+
+**Example.** A PV system with an LCOE of 0.10 sends 1 kWh into the home and
+exports 1 kWh; the grid price is 0.30 and the feed-in tariff 0.08.
+
+| Total | Calculation | Value |
+|---|---|---|
+| Levelized cost savings | 1 × (0.30 − 0.10) | **0.20** |
+| Levelized financial return | 0.20 + 1 × (0.08 − 0.10) | **0.18** |
+
+The standard (non-levelized) values treat your own generation as free, so
+there the financial return is never below the savings.
+
 ### Why does my battery have negative cost savings?
 
 Any device can show negative cost savings if it doesn't earn enough to cover its

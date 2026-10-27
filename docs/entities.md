@@ -83,9 +83,9 @@ repeat it.
 | Home consumption ratio | % | Share of gross power currently going to home consumption. | Power split (%) |
 | Battery charging ratio | % | Share of gross power currently going to battery charging. | Power split (%) |
 | System standby ratio | % | Share of gross power currently lost to system standby. | Power split (%) |
-| Price of electricity | EUR/kWh | Current blended price of one kWh across your whole mix (grid + your devices). | Cost — Standard |
-| Levelized price of electricity | EUR/kWh | As above, but each device's cost is its levelized lifetime cost. | Cost — Levelized |
-| Cost rate | EUR/h | What all the power entering your home costs per hour right now (gross power × price of electricity). | Cost — Standard |
+| Blended price of electricity | EUR/kWh | Current average price of one kWh across your whole mix: grid import at the grid price, your own generation at 0. Not your grid tariff — it falls as your own devices cover more of the load. | Cost — Standard |
+| Levelized blended price of electricity | EUR/kWh | As above, but your own generation is priced at each device's levelized lifetime cost (LCOE/LCOS). | Cost — Levelized |
+| Cost rate | EUR/h | What all the power entering your home costs per hour right now (gross power × blended price of electricity). | Cost — Standard |
 | Levelized cost rate | EUR/h | Cost rate computed with levelized device costs. | Cost — Levelized |
 | Consumption cost rate | EUR/h | The part of the cost rate that goes to **home consumption**. | Cost — Standard |
 | Levelized consumption cost rate | EUR/h | Consumption cost rate computed with levelized device costs. | Cost — Levelized |
@@ -98,7 +98,7 @@ repeat it.
 | Cost savings rate | EUR/h | Money saved per hour by self-consuming your own generation — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
 | Levelized cost savings rate | EUR/h | Cost savings rate computed with levelized device costs. | Savings — Levelized |
 | Financial return rate | EUR/h | Total financial benefit per hour — cost savings plus export compensation. | Financial return — Standard |
-| Levelized financial return rate | EUR/h | Financial return computed with levelized device costs. | Financial return — Levelized |
+| Levelized financial return rate | EUR/h | Financial return computed with levelized device costs: the exported energy's own cost is subtracted too, so it is lower than the levelized cost savings rate while you export for less than that cost. | Financial return — Levelized |
 
 ### Accumulated totals
 
@@ -183,7 +183,7 @@ levelized sensors require lifetime values (an LCOE). See
 | Cost savings rate | EUR/h | Money saved per hour by self-consuming this system's power — avoided grid import minus operating costs. Does not include export revenue. | Savings — Standard |
 | Levelized cost savings rate | EUR/h | Cost savings rate computed with this system's LCOE. | Savings — Levelized · has lifetime values |
 | Financial return rate | EUR/h | Cost savings plus export compensation for this system. | Financial return — Standard · exports |
-| Levelized financial return rate | EUR/h | Financial return computed with this system's LCOE. | Financial return — Levelized · has lifetime values · exports |
+| Levelized financial return rate | EUR/h | Financial return computed with this system's LCOE, on exported energy too — lower than the levelized cost savings rate while you export for less than the LCOE. | Financial return — Levelized · has lifetime values · exports |
 
 ### Accumulated totals
 
