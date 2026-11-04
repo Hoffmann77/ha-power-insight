@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
 import homeassistant.util.dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
@@ -25,8 +25,6 @@ from .conftest import (
     make_pv_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 def _pv_state(hass: HomeAssistant, entry: MockConfigEntry, suffix: str):
@@ -447,7 +445,7 @@ async def test_a_total_restored_without_a_breakdown_stays_at_face_value(
     component accumulates: after an hour at the corrected 0.30 EUR/h it reads
     10.30 EUR.
     """
-    from pytest_homeassistant_custom_component.common import (
+    from pytest_homeassistant.common import (
         mock_restore_cache_with_extra_data,
     )
     from homeassistant.core import State

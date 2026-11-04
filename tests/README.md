@@ -9,7 +9,7 @@ file, or a new engine directory, needs no CI change.
 | Tier          | Directory        | Home Assistant | Network | How it loads the code                          |
 | ------------- | ---------------- | -------------- | ------- | ---------------------------------------------- |
 | Engine        | `engine/`        | No             | No      | imports `power_insight.py` via `importlib`     |
-| Integration   | `integration/`   | Yes            | No      | loads the component through `pytest-homeassistant-custom-component` |
+| Integration   | `integration/`   | Yes            | No      | loads the component through `pytest-homeassistant` |
 
 Both tiers are deterministic and PR-gating. This integration talks to no
 external service, so — unlike a data-source integration — there is no live
@@ -254,5 +254,5 @@ uv run pytest tests           # both tiers
 ```
 
 The top-level `conftest.py` drops the integration tier from collection when
-`pytest-homeassistant-custom-component` is not installed, so the engine tier
+`pytest-homeassistant` is not installed, so the engine tier
 stays runnable in a minimal environment.

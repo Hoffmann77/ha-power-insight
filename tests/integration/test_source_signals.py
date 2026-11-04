@@ -16,7 +16,7 @@ from homeassistant.const import MATCH_ALL
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import DATA_DISPATCHER, async_dispatcher_send
 import homeassistant.util.dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight.event_handler import (
     async_track_source_updates,
@@ -29,8 +29,6 @@ from .conftest import (
     make_grid_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 def _entry() -> MockConfigEntry:

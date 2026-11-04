@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
@@ -19,8 +19,6 @@ from .conftest import (
     make_grid_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 def _grid_with_price() -> dict:

@@ -27,7 +27,7 @@ uv run pytest -k "import"
 
 There is no build step — this is a Home Assistant custom component deployed by copying `custom_components/power_insight/` into a HA instance.
 
-Tests are split into two tiers by dependency group: `tests/engine/` (pure Python, imports `power_insight.py` via `importlib`, no HA) and `tests/integration/` (needs `pytest-homeassistant-custom-component`). See `tests/README.md`.
+Tests are split into two tiers by dependency group: `tests/engine/` (pure Python, imports `power_insight.py` via `importlib`, no HA) and `tests/integration/` (needs `pytest-homeassistant`). See `tests/README.md`.
 
 ## Architecture
 

@@ -2,5 +2,14 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "schedule:daily"],
   "timezone": "Europe/Berlin",
-  "labels": ["dependencies"]
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "pytest-homeassistant pins the exact Home Assistant release it ships with, so bump both in one pull request.",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["homeassistant", "pytest-homeassistant"],
+      "groupName": "Home Assistant",
+      "groupSlug": "home-assistant"
+    }
+  ]
 }

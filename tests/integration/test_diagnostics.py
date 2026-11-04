@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight.diagnostics import (
     async_get_config_entry_diagnostics,
@@ -31,8 +31,6 @@ from .conftest import (
     make_pv_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 @pytest.fixture

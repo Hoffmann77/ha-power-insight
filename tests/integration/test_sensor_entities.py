@@ -8,7 +8,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
@@ -24,8 +24,6 @@ from .conftest import (
     make_consumer_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +117,7 @@ async def test_battery_charging_share_sensors_only_for_selected_sources(
     Here the battery may charge from the grid but NOT from the PV system, so
     only the grid charging-share sensor should exist.
     """
-    from pytest_homeassistant_custom_component.common import MockConfigEntry
+    from pytest_homeassistant.common import MockConfigEntry
 
     entry = MockConfigEntry(
         domain=DOMAIN,

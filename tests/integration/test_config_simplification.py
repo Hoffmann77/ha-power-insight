@@ -29,8 +29,6 @@ from custom_components.power_insight.const import (
     CONF_ACCUMULATE_LEVELIZED_COST_SAVING_RATES,
 )
 
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
-
 
 # --- Preset selections only expose supported leaves, never CO2 ---
 

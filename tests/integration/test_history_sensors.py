@@ -17,7 +17,7 @@ from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import (
     BAT_SUB_ID,
@@ -28,8 +28,6 @@ from .conftest import (
     make_grid_subentry_data,
     make_pv_subentry_data,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 SINCE = "2026-08-14T08:00:00+00:00"
 
@@ -296,7 +294,7 @@ async def test_an_existing_install_can_add_change_and_clear_its_history(
     adding to it, and clearing it leaves what was counted: 50.
     """
     from homeassistant.core import State
-    from pytest_homeassistant_custom_component.common import (
+    from pytest_homeassistant.common import (
         mock_restore_cache_with_extra_data,
     )
 

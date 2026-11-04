@@ -20,8 +20,6 @@ from custom_components.power_insight.adapter_models import (
     BatteryAdapterModel,
 )
 
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
-
 
 def _subentry(adapter_type: str, config: dict, **top_level):
     """Build a minimal fake config subentry for from_subentry."""

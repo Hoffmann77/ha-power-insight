@@ -2,23 +2,9 @@
 
 from __future__ import annotations
 
-import pathlib
-import sys
-import types
-
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-# Patch sys.modules so HA's custom component discovery finds our package,
-# not the testing_config version that gets cached at pytest startup.
-_project_root = pathlib.Path(__file__).parent.parent.parent
-_cc_path = str(_project_root / "custom_components")
-_cc_mod = types.ModuleType("custom_components")
-_cc_mod.__path__ = [_cc_path]
-_cc_mod.__package__ = "custom_components"
-_cc_mod.__spec__ = None
-sys.modules["custom_components"] = _cc_mod
+from pytest_homeassistant.common import MockConfigEntry
 
 DOMAIN = "power_insight"
 
