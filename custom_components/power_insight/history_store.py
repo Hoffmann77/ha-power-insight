@@ -394,7 +394,8 @@ def async_check_tariff(
     the grid's for every device without one. With neither, its savings carry
     nothing, which is easy to miss because the tariff usually lives on another
     device's form. The issue names the devices and says where to add it, and
-    is dismissed at the setup that follows once every device has one.
+    is dismissed at the setup that follows once every device has one: called
+    inside the setup refresh, which deletes it when it is not raised again.
     """
     issue_id = f"history_tariff_missing_{entry.entry_id}"
     devices = sorted(
@@ -404,12 +405,12 @@ def async_check_tariff(
         and found.totals.missing.get(TOTAL_COST_SAVINGS) == MISSING_TARIFF
     )
     if not devices:
-        ir.async_delete_issue(hass, DOMAIN, issue_id)
         return
     ir.async_create_issue(
         hass,
         DOMAIN,
         issue_id,
+        config_entry_id=entry.entry_id,
         is_fixable=False,
         severity=ir.IssueSeverity.WARNING,
         translation_key="history_tariff_missing",

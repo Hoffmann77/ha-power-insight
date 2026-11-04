@@ -69,39 +69,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     
     # The pre-1.0 issue id was shared by every entry; it is per entry now.
     ir.async_delete_issue(hass, DOMAIN, "no_grid_configured")
-    no_grid_issue = f"no_grid_configured_{entry.entry_id}"
     _delete_issues_of_removed_devices(hass)
 
-    if power_insight.grid_adapter is None:
-        # Without a grid connection nothing can be calculated; raise a repair
-        # issue and set up with no tracked entities. The shared tail below still
-        # runs so the platform (and its empty sensor set) loads cleanly.
-        ir.async_create_issue(
+    # Every repair issue setup checks belongs to this entry, so Home Assistant
+    # deletes it with the entry. The refreshes delete the ones that no longer
+    # apply, and leave those still raised alone: an issue the user ignored
+    # stays ignored across restarts and reloads.
+    with (
+        ir.async_refresh_issues(
             hass,
             DOMAIN,
-            no_grid_issue,
-            is_fixable=False,
-            severity=ir.IssueSeverity.WARNING,
-            translation_key="no_grid_configured",
-            translation_placeholders={"entry_title": entry.title},
-        )
-        source_entities: list[str] = []
-        history = {}
-    else:
-        # Grid is present — dismiss any previously raised issue.
-        ir.async_delete_issue(hass, DOMAIN, no_grid_issue)
-        _check_source_restrictions(hass, entry)
+            issue_id_pattern=_SETUP_ISSUES,
+            config_entry_id=entry.entry_id,
+        ),
+        ir.async_refresh_issues(hass, DOMAIN, issue_ids=_unlinked_issues(hass, entry)),
+    ):
+        # Raised when a device was set up, or when a source was added
+        # (config_flow.py); dismissed when the device is reconfigured. Setup
+        # cannot tell a stale one, so it keeps those of every device still
+        # there and lets those of removed devices lapse.
+        for subentry_id in entry.subentries:
+            for _, prefix, _ in _RESTRICTIONS.values():
+                ir.async_keep_issue(hass, DOMAIN, f"{prefix}{subentry_id}")
 
-        source_entities = power_insight.source_entities
-        _check_price_entity(hass, entry, power_insight)
-        _check_shared_power_entities(hass, entry)
-        # Before the platforms read the history, and before the update
-        # listener is registered, so storing it triggers no reload.
-        async_sync_history(hass, entry, power_insight)
-        history = priced_history(entry, power_insight)
-        prune_retired_sources(hass, entry)
+        if power_insight.grid_adapter is None:
+            # Without a grid connection nothing can be calculated; raise a
+            # repair issue and set up with no tracked entities. The shared tail
+            # below still runs so the platform (and its empty sensor set) loads
+            # cleanly. The checks that need the grid are not run, so their
+            # issues are kept as they are.
+            ir.async_create_issue(
+                hass,
+                DOMAIN,
+                f"no_grid_configured_{entry.entry_id}",
+                config_entry_id=entry.entry_id,
+                is_fixable=False,
+                severity=ir.IssueSeverity.WARNING,
+                translation_key="no_grid_configured",
+                translation_placeholders={"entry_title": entry.title},
+            )
+            for kind in _GRID_CHECKS:
+                ir.async_keep_issue(hass, DOMAIN, f"{kind}_{entry.entry_id}")
+            source_entities: list[str] = []
+            history = {}
+        else:
+            _check_source_restrictions(hass, entry)
 
-    async_check_tariff(hass, entry, history)
+            source_entities = power_insight.source_entities
+            _check_price_entity(hass, entry, power_insight)
+            _check_shared_power_entities(hass, entry)
+            # Before the platforms read the history, and before the update
+            # listener is registered, so storing it triggers no reload.
+            async_sync_history(hass, entry, power_insight)
+            history = priced_history(entry, power_insight)
+            prune_retired_sources(hass, entry)
+
+        async_check_tariff(hass, entry, history)
 
     # --- Shared setup tail (runs for both the grid and no-grid paths) ---
     event_handler = EventHandler(hass, entry.entry_id, power_insight)
@@ -151,6 +174,41 @@ _RESTRICTIONS = {
     "consumer": (CONF_POWER_FROM_ADAPTERS, "reconfigure_consumer_", "reconfigure_consumer_sources"),
 }
 
+#: The per-entry repair issues (``<kind>_<entry id>``) that only the checks
+#: needing a grid decide on.
+_GRID_CHECKS = ("shared_power_entity", "price_unit", "price_currency")
+
+#: Every per-entry repair issue setup decides on.
+_ENTRY_ISSUES = ("no_grid_configured", *_GRID_CHECKS, "history_tariff_missing")
+
+#: The repair issues setup decides on: the per-entry ones and the per-device
+#: restriction ones (``reconfigure_<kind>_<subentry id>``).
+_SETUP_ISSUES = (
+    "(" + "|".join([*_ENTRY_ISSUES, "reconfigure_battery", "reconfigure_consumer"]) + ")_"
+)
+
+
+def _unlinked_issues(hass: HomeAssistant, entry: MyConfigEntry) -> list[str]:
+    """Return this entry's repair issues raised before they had an entry.
+
+    Issues raised before Home Assistant 2026.11 belong to no config entry, so
+    the refresh of the entry's own issues does not see them. Setup decides on
+    them once more: raised again, they belong to the entry from then on.
+    """
+    ids = {f"{kind}_{entry.entry_id}" for kind in _ENTRY_ISSUES}
+    ids.update(
+        f"{prefix}{subentry_id}"
+        for subentry_id in entry.subentries
+        for _, prefix, _ in _RESTRICTIONS.values()
+    )
+    registry = ir.async_get(hass)
+    return [
+        issue_id
+        for issue_id in sorted(ids)
+        if (issue := registry.async_get_issue(DOMAIN, issue_id)) is not None
+        and issue.config_entry_id is None
+    ]
+
 
 def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> None:
     """Raise a repair issue for a device restricted to a device that is gone.
@@ -182,6 +240,7 @@ def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> Non
                 hass,
                 DOMAIN,
                 f"{prefix}{subentry.subentry_id}",
+                config_entry_id=entry.entry_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key=translation_key,
@@ -193,7 +252,12 @@ def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> Non
 
 
 def _delete_issues_of_removed_devices(hass: HomeAssistant) -> None:
-    """Dismiss every per-device repair issue whose device no longer exists."""
+    """Dismiss every per-device repair issue whose device no longer exists.
+
+    Only needed for issues raised before Home Assistant 2026.11, which belong
+    to no config entry: the setup refresh lets the issues of an entry's
+    removed devices lapse, but does not see these.
+    """
     existing = {
         subentry_id
         for config_entry in hass.config_entries.async_entries(DOMAIN)
@@ -225,12 +289,12 @@ def _check_shared_power_entities(hass: HomeAssistant, entry: MyConfigEntry) -> N
 
     shared = {e: names for e, names in devices_by_entity.items() if len(names) > 1}
     if not shared:
-        ir.async_delete_issue(hass, DOMAIN, issue_id)
-        return
+        return  # the setup refresh deletes the issue
 
     entity_id, names = next(iter(shared.items()))
     ir.async_create_issue(
         hass, DOMAIN, issue_id,
+        config_entry_id=entry.entry_id,
         is_fixable=False,
         severity=ir.IssueSeverity.ERROR,
         translation_key="shared_power_entity",
@@ -250,19 +314,23 @@ def _check_price_entity(
     A price in a unit that is not a price per energy is ignored (every cost
     that needs it reads unknown), and one in another currency than Home
     Assistant's is used but not converted — both need the user. Nothing is
-    decided while the price entity has no state yet.
+    decided while the price entity has no state yet: the issues stay as they
+    are. An issue not raised again is deleted by the setup refresh.
     """
     unit_issue = f"price_unit_{entry.entry_id}"
     currency_issue = f"price_currency_{entry.entry_id}"
     for entity_id in power_insight.source_entities_price:
         state = hass.states.get(entity_id)
         if state is None or state.state in ("unavailable", "unknown"):
+            ir.async_keep_issue(hass, DOMAIN, unit_issue)
+            ir.async_keep_issue(hass, DOMAIN, currency_issue)
             return
         unit = state.attributes.get("unit_of_measurement")
         parsed = parse_price_unit(unit)
         if parsed is None:
             ir.async_create_issue(
                 hass, DOMAIN, unit_issue,
+                config_entry_id=entry.entry_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.ERROR,
                 translation_key="price_unit",
@@ -272,13 +340,12 @@ def _check_price_entity(
                     "unit": unit or "—",
                 },
             )
-        else:
-            ir.async_delete_issue(hass, DOMAIN, unit_issue)
 
         currency = parsed[1] if parsed else None
         if currency is not None and currency != hass.config.currency:
             ir.async_create_issue(
                 hass, DOMAIN, currency_issue,
+                config_entry_id=entry.entry_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="price_currency",
@@ -289,8 +356,6 @@ def _check_price_entity(
                     "configured": hass.config.currency,
                 },
             )
-        else:
-            ir.async_delete_issue(hass, DOMAIN, currency_issue)
 
 
 async def async_update_listener(
