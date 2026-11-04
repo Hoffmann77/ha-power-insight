@@ -11,6 +11,11 @@ renders that into:
 ``index.json``
     The ladder, in order.
 
+``sensors.json``
+    Which Home Assistant sensor reads which engine property (see
+    :mod:`tools.sensor_map`), so the flow chart can name the sensor behind each
+    value it draws.
+
 It has no command of its own: ``tools/snapshot.py`` writes these together with
 the frozen engine outputs, and ``tests/engine/reference/test_corpus.py`` fails
 when they are stale.
@@ -26,6 +31,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from tests.engine.reference import REFERENCE_CASES  # noqa: E402
+from tools import sensor_map  # noqa: E402
 
 OUT = ROOT / "docs" / "spec" / "cases"
 
@@ -49,4 +55,5 @@ def render() -> dict[str, str]:
     built = [case.publish() for case in REFERENCE_CASES]
     files: dict[str, object] = {f"{case['id']}.json": case for case in built}
     files["index.json"] = index_json(built)
+    files["sensors.json"] = sensor_map.build()
     return {name: json.dumps(data, indent=2) + "\n" for name, data in files.items()}

@@ -30,7 +30,7 @@ def test_case_is_wellformed(case):
     for state in published["states"]:
         assert state["note"], (
             f"{case.case_id}/{state['id']} has no note — a Snapshot's docstring "
-            f"is the caption under its snapshot card"
+            f"is the caption on its snapshot's chart"
         )
 
 
@@ -56,3 +56,31 @@ def test_published_cases_are_current():
         f"docs/spec/cases is out of date with the engine: {stale}\n"
         f"Run: uv run --group engine python tools/snapshot.py"
     )
+
+
+def test_sensor_map_names_published_properties():
+    """Every sensor the docs name reads a property the docs publish.
+
+    ``sensors.json`` is read out of ``sensor.py`` by source, so a sensor whose
+    ``value_fn`` reads a property the catalog does not carry would send the
+    flow chart looking for a value no case file holds. The three levelized
+    ledger totals read no property at all — they sum other sensors — and are
+    the only ones allowed none.
+    """
+    import json
+
+    catalog = json.loads((OUT.parent / "properties.json").read_text())["properties"]
+    sensors = json.loads(render()["sensors.json"])["sensors"]
+    assert sensors, "the sensor map found no sensors in sensor.py"
+    unknown = sorted(
+        {s["property"] for s in sensors if s["property"] and s["property"] not in catalog}
+    )
+    assert not unknown, f"sensors read properties the catalog does not document: {unknown}"
+    unmapped = sorted(s["key"] for s in sensors if s["property"] is None)
+    assert unmapped == sorted(
+        [
+            "combined_total_levelized_cost_savings",
+            "combined_total_levelized_device_operating_cost",
+            "combined_total_levelized_financial_return",
+        ]
+    ), f"sensors with no engine property: {unmapped}"

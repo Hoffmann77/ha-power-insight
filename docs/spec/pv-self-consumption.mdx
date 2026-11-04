@@ -3,7 +3,7 @@ title: PV self-consumption
 description: "One PV system added to the grid, and nothing restricted. Two sources are enough for the raw proportional mix, for the divergence between what power costs now and what it costs levelized, and for a PV system that is drawing rather than producing."
 ---
 
-import {referenceCase, PROPERTIES} from './cases/all';
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
 
 export const CASE = referenceCase('pv-self-consumption');
 
@@ -19,30 +19,24 @@ export const CASE = referenceCase('pv-self-consumption');
   ))}
 </ul>
 
-<CaseDiagram case={CASE} properties={PROPERTIES} />
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](./index.mdx#how-to-read-a-chart).
 
-## The snapshots
+## Sunny, partial {#sunny_partial}
 
-Each card above is one snapshot of this wiring. The tabs under them re-label the
-same picture with a different layer of the engine — the readings, where each
-sink's power came from, how the gross power split between channels, and what it
-all cost — and every value the engine computed for that snapshot is listed
-underneath. They are recomputed from the readings whenever the engine changes,
-and frozen with each docs version, so this page shows what this version of the
-engine does.
+<FlowSankey case={CASE} state="sunny_partial" properties={PROPERTIES} sensors={SENSORS} />
 
-{CASE.states.map((s) => (
-  <div key={s.id} style={{marginBottom: '1.25rem'}}>
-    <p style={{marginBottom: '0.4rem'}}>
-      <code>{s.id}</code> — {s.note}
-    </p>
-    {s.open_question && (
-      <blockquote>
-        <strong>Open question.</strong> {s.open_question}
-      </blockquote>
-    )}
-  </div>
-))}
+## PV covers all {#pv_covers_all}
+
+<FlowSankey case={CASE} state="pv_covers_all" properties={PROPERTIES} sensors={SENSORS} />
+
+## PV standby {#pv_standby}
+
+<FlowSankey case={CASE} state="pv_standby" properties={PROPERTIES} sensors={SENSORS} />
+
+## PV unavailable {#pv_unavailable}
+
+<FlowSankey case={CASE} state="pv_unavailable" properties={PROPERTIES} sensors={SENSORS} />
 
 ## Why this case exists
 

@@ -3,7 +3,7 @@ title: Mixed export house
 description: "Every device class at once, with the export permissions deliberately unequal: one battery may feed the grid and the other may not. Nothing here appears for the first time \u2014 this is the case that shows the rules of the lower rungs still hold when they all apply together."
 ---
 
-import {referenceCase, PROPERTIES} from './cases/all';
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
 
 export const CASE = referenceCase('mixed-export-house');
 
@@ -19,30 +19,20 @@ export const CASE = referenceCase('mixed-export-house');
   ))}
 </ul>
 
-<CaseDiagram case={CASE} properties={PROPERTIES} />
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](./index.mdx#how-to-read-a-chart).
 
-## The snapshots
+## Export, non-exporting battery {#export_non_exporting_battery}
 
-Each card above is one snapshot of this wiring. The tabs under them re-label the
-same picture with a different layer of the engine — the readings, where each
-sink's power came from, how the gross power split between channels, and what it
-all cost — and every value the engine computed for that snapshot is listed
-underneath. They are recomputed from the readings whenever the engine changes,
-and frozen with each docs version, so this page shows what this version of the
-engine does.
+<FlowSankey case={CASE} state="export_non_exporting_battery" properties={PROPERTIES} sensors={SENSORS} />
 
-{CASE.states.map((s) => (
-  <div key={s.id} style={{marginBottom: '1.25rem'}}>
-    <p style={{marginBottom: '0.4rem'}}>
-      <code>{s.id}</code> — {s.note}
-    </p>
-    {s.open_question && (
-      <blockquote>
-        <strong>Open question.</strong> {s.open_question}
-      </blockquote>
-    )}
-  </div>
-))}
+## Export with standby {#export_with_standby}
+
+<FlowSankey case={CASE} state="export_with_standby" properties={PROPERTIES} sensors={SENSORS} />
+
+## Discharge, dynamic prices {#discharge_dynamic_prices}
+
+<FlowSankey case={CASE} state="discharge_dynamic_prices" properties={PROPERTIES} sensors={SENSORS} />
 
 ## Why this case exists
 
