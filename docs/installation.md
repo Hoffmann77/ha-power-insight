@@ -42,11 +42,11 @@ your HACS installation, including Power Insight and its update entity.
 
 ## Manual installation
 
-1. Download the latest release from
-   [GitHub](https://github.com/Hoffmann77/ha-power-insight/releases).
-2. Copy the `custom_components/power_insight/` folder into the
-   `custom_components/` directory of your Home Assistant configuration —
-   typically `/config/custom_components/power_insight/`.
+1. Download `power_insight.zip` from the latest
+   [release](https://github.com/Hoffmann77/ha-power-insight/releases).
+2. Extract it into a new `power_insight/` folder in the `custom_components/`
+   directory of your Home Assistant configuration — typically
+   `/config/custom_components/power_insight/`.
 3. **Restart Home Assistant.**
 
 A manual install gets no update notifications: repeat these steps for each new
