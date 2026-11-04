@@ -6,7 +6,8 @@
 
 **Real-time insight into the cost, savings, and distribution of the electrical power in your home.**
 
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=flat-square)](https://hacs.xyz/)
+[![Marketplace](https://img.shields.io/badge/Marketplace-custom%20repository-41BDF5.svg?style=flat-square)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=Hoffmann77&repository=ha-power-insight&category=integration)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.11%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
 [![Release](https://img.shields.io/github/v/release/Hoffmann77/ha-power-insight?include_prereleases&style=flat-square)](https://github.com/Hoffmann77/ha-power-insight/releases)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Hoffmann77/ha-power-insight/tests.yaml?branch=main&label=tests&style=flat-square)](https://github.com/Hoffmann77/ha-power-insight/actions/workflows/tests.yaml)
 [![License](https://img.shields.io/github/license/Hoffmann77/ha-power-insight?style=flat-square)](LICENSE)
@@ -60,8 +61,9 @@ always reflect the price you are paying right now.
 
 ## 🚀 Quick start
 
-1. **Install** via HACS (custom repository) or manually, then restart Home
-   Assistant — [installation guide](https://hoffmann77.github.io/ha-power-insight/installation/).
+1. **Install** from the Marketplace (Settings → Marketplace, Home Assistant
+   2026.11 or newer) or manually —
+   [installation guide](https://hoffmann77.github.io/ha-power-insight/installation/).
 2. **Add the integration** (Settings → Devices & services → Add integration →
    Power Insight), give it a name, and pick a **sensor preset**.
 3. **Add your devices** with the *Add device* button — start with your **grid
@@ -71,18 +73,24 @@ always reflect the price you are paying right now.
 
 ## 📦 Installation
 
-### HACS (recommended)
+Power Insight needs **Home Assistant 2026.11** or newer.
 
-If you don't have HACS yet, see the [HACS docs](https://hacs.xyz). Power Insight
-is not in the default store yet, so add it as a **custom repository**:
+### Marketplace (recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Hoffmann77&repository=ha-power-insight&category=Integration)
+Power Insight is installed through the Marketplace built into Home Assistant
+(**Settings → Marketplace**). It is not in the catalog yet: this link opens it
+in your Marketplace and offers to add it as a custom repository (needs a GitHub
+connection):
 
-Then restart Home Assistant and add the integration:
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=Hoffmann77&repository=ha-power-insight&category=integration)
+
+Install it, then add the integration — no restart needed on a first install:
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=power_insight)
 
-Full steps (including manual installation) are in the
+Updates show up under **Settings → Updates**. Installed through HACS before?
+The Marketplace takes it over on its own. Full steps (including manual
+installation) are in the
 [installation guide](https://hoffmann77.github.io/ha-power-insight/installation/).
 
 ## 🖼️ Screenshots
@@ -101,7 +109,7 @@ Full documentation is hosted at
 
 | Section | What's inside |
 |---|---|
-| [Installation](https://hoffmann77.github.io/ha-power-insight/installation/) | HACS + manual install, requirements |
+| [Installation](https://hoffmann77.github.io/ha-power-insight/installation/) | Marketplace + manual install, updates, requirements |
 | [Getting started](https://hoffmann77.github.io/ha-power-insight/getting-started/) | Create the hub, add devices, pick sensors |
 | [Configuration](https://hoffmann77.github.io/ha-power-insight/configuration/) | Every setting for grid, PV, battery, consumer |
 | [Sensors, presets & options](https://hoffmann77.github.io/ha-power-insight/configuration/options-and-presets/) | Choose exactly which sensors exist |
