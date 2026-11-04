@@ -129,7 +129,7 @@ export default function FlowSankey({
   return (
     <div className={styles.root}>
       <div className={styles.head}>
-        <div>
+        <div className={styles.headText}>
           <div className={styles.kicker}>
             {s.caseTitle} · snapshot {String(s.index + 1).padStart(2, '0')}
           </div>

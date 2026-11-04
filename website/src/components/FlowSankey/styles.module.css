@@ -107,13 +107,19 @@
 
 /* ---- header ---- */
 
+/* Caption on the left, switches pinned top right: the caption wraps in its own
+ * column instead of pushing the switches onto a line of their own. */
 .head {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 16px;
   padding: 16px 22px 4px;
+}
+
+.headText {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .kicker {
@@ -147,10 +153,11 @@
 }
 
 .switches {
+  flex: none;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
 }
 
 .switch,
@@ -250,7 +257,12 @@
   }
 
   .head {
+    flex-direction: column;
     padding: 14px 14px 4px;
+  }
+
+  .switches {
+    align-items: flex-start;
   }
 
   .seg {
