@@ -86,7 +86,7 @@ jobs:
         if: failure() && (matrix.suite == 'frozen' || matrix.suite == 'docs')
         run: uv run --group engine python tools/snapshot.py --check >> "$GITHUB_STEP_SUMMARY" || true
 
-  # Integration tier: Home Assistant layer via pytest-homeassistant-custom-component.
+  # Integration tier: Home Assistant layer via pytest-homeassistant.
   integration-tests:
     runs-on: ubuntu-latest
     # See engine-tests.

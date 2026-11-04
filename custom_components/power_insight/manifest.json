@@ -1,6 +1,7 @@
 {
   "domain": "power_insight",
   "name": "Power Insight",
+  "categories": ["energy", "helpers.calculate_value"],
   "codeowners": ["@Hoffmann77"],
   "config_flow": true,
   "dependencies": [],

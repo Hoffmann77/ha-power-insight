@@ -16,7 +16,7 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight import sensor as sensor_mod
 from custom_components.power_insight.const import (
@@ -39,8 +39,6 @@ from .conftest import (
     make_pv_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 #: Which description tuples make up each option scope's sensor set.
 SCOPE_GROUPS: dict[str, tuple[str, ...]] = {

@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from .conftest import (
     DOMAIN,
@@ -19,8 +19,6 @@ from .conftest import (
     make_battery_subentry_data,
     make_consumer_subentry_data,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 # ---------------------------------------------------------------------------

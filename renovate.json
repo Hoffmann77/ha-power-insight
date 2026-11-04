@@ -2,5 +2,16 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "schedule:daily"],
   "timezone": "Europe/Berlin",
-  "labels": ["dependencies"]
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Test against every Home Assistant release, betas included. pytest-homeassistant pins the exact homeassistant it ships with, so bumping it updates homeassistant in uv.lock in the same pull request.",
+      "matchManagers": ["pep621"],
+      "matchPackageNames": ["pytest-homeassistant", "homeassistant"],
+      "groupName": "Home Assistant",
+      "groupSlug": "home-assistant",
+      "ignoreUnstable": false,
+      "respectLatest": false
+    }
+  ]
 }

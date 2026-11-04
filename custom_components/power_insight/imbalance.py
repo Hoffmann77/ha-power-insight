@@ -68,6 +68,7 @@ class ImbalanceMonitor:
                 self.hass,
                 DOMAIN,
                 self.issue_id,
+                config_entry_id=self.entry.entry_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
                 translation_key="metering_imbalance",

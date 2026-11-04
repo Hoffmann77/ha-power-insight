@@ -15,13 +15,11 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 import homeassistant.util.dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight.imbalance import ImbalanceMonitor
 
 from .conftest import DOMAIN
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 
 @dataclass
