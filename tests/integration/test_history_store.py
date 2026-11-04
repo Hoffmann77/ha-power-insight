@@ -11,7 +11,7 @@ import copy
 
 import pytest
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight.history_store import (
     price_lookup,
@@ -29,8 +29,6 @@ from .conftest import (
     make_pv_subentry_data,
     setup_integration,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 SINCE = "2026-08-14T08:00:00+00:00"
 CARPORT_SUB_ID = "01PV0000000000000000000002"

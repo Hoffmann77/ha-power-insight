@@ -2722,6 +2722,9 @@ class PowerInsightDynamicAdapterIntegrationSensor(BasePowerInsightIntegrationSen
         super().__init__(description, config_entry, source_entities, power_insight)
         self.device_adapter = device_adapter
         self.dynamic_adapter = dynamic_adapter
+        # Called after this total's entity ID changed: the energy shares follow
+        # its state by entity ID, so they have to follow the new one.
+        self._entity_id_listeners: list[Callable[[], None]] = []
         # The name names the other device: "Energy from Roof PV".
         self._attr_translation_placeholders = {"source": dynamic_adapter.verbose_name}
 
@@ -2748,6 +2751,31 @@ class PowerInsightDynamicAdapterIntegrationSensor(BasePowerInsightIntegrationSen
         if value is None:
             return None
         return self.entity_description.transform_fn(value)
+
+    @callback
+    def async_listen_entity_id_changed(
+        self, listener: Callable[[], None]
+    ) -> Callable[[], None]:
+        """Call ``listener`` after this total's entity ID changed; return an unsubscribe."""
+        self._entity_id_listeners.append(listener)
+
+        @callback
+        def _remove() -> None:
+            if listener in self._entity_id_listeners:
+                self._entity_id_listeners.remove(listener)
+
+        return _remove
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Tell the energy shares that follow this total about its new ID.
+
+        The ledger in ``async_will_remove_from_hass`` is keyed on subentry
+        ids, not entity IDs, so a rename does not touch it.
+        """
+        super().async_entity_id_changed(old_entity_id)
+        for listener in list(self._entity_id_listeners):
+            listener()
 
     async def async_will_remove_from_hass(self) -> None:
         """Freeze this total into the source ledger when its source is removed.
@@ -2883,6 +2911,19 @@ class PowerInsightEnergyShareSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """Follow every total this share is worked out from."""
         await super().async_added_to_hass()
+        self._unsub_totals: Callable[[], None] | None = None
+        self._track_totals()
+        # A lambda, so removal calls the subscription that is current then,
+        # not the first one: a renamed total replaces it.
+        self.async_on_remove(lambda: self._untrack_totals())
+        for total in self._totals.values():
+            self.async_on_remove(
+                total.async_listen_entity_id_changed(self._on_total_renamed)
+            )
+
+    @callback
+    def _track_totals(self) -> None:
+        """Follow the state of every enabled total, by its current entity ID."""
         entity_ids = [
             total.entity_id for total in self._totals.values()
             if total.hass is not None and total.entity_id
@@ -2892,9 +2933,29 @@ class PowerInsightEnergyShareSensor(SensorEntity):
         def _total_changed(_event) -> None:
             self.async_write_ha_state()
 
-        self.async_on_remove(
-            async_track_state_change_event(self.hass, entity_ids, _total_changed)
+        self._unsub_totals = async_track_state_change_event(
+            self.hass, entity_ids, _total_changed
         )
+
+    @callback
+    def _untrack_totals(self) -> None:
+        if self._unsub_totals is not None:
+            self._unsub_totals()
+            self._unsub_totals = None
+
+    @callback
+    def _on_total_renamed(self) -> None:
+        """Follow a total under the entity ID the user gave it."""
+        if self.hass is None or self._unsub_totals is None:
+            return  # not added, or already removed
+        self._untrack_totals()
+        self._track_totals()
+        self.async_write_ha_state()
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place renames: nothing here is keyed on this entity's ID."""
+        super().async_entity_id_changed(old_entity_id)
 
     def _parts(self) -> dict[str | None, Decimal] | None:
         """Return each total by source uid (``None`` = removed), or ``None``."""
@@ -3037,6 +3098,11 @@ class PowerInsightAdapterIntegrationSensor(BasePowerInsightIntegrationSensor):
             dict(self._component_totals) or None,
             self._component_factors_now() or None,
         )
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Opt in to in-place renames: the ledger is keyed on subentry ids."""
+        super().async_entity_id_changed(old_entity_id)
 
     async def async_will_remove_from_hass(self) -> None:
         """Freeze this levelized total into the ledger on device removal.

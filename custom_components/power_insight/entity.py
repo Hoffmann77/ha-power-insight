@@ -112,6 +112,16 @@ class BaseEventSensorEntity(SensorEntity):
             )
         )
 
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Keep running when the user changes this entity's ID.
+
+        Nothing here is keyed on the entity's own ID: the source signals are
+        keyed on the config entry and the *source* entities. So HA can rename
+        the entity in place instead of removing and adding it again.
+        """
+        super().async_entity_id_changed(old_entity_id)
+
     def _schedule_write(self) -> None:
         """Schedule a single state write for the current event-loop tick.
 
@@ -619,6 +629,16 @@ class BaseEventIntegrationSensorEntity(RestoreSensor, ABC):
                 self._handle_integration_event,
             )
         )
+
+    @callback
+    def async_entity_id_changed(self, old_entity_id: str) -> None:
+        """Keep the running total when the user changes this entity's ID.
+
+        Nothing here is keyed on the entity's own ID, and HA moves the stored
+        state with the entity. Renaming in place keeps the slice in progress,
+        which removing and adding the entity again would restart.
+        """
+        super().async_entity_id_changed(old_entity_id)
 
     # ------------------------------------------------------------------
     # Core integration logic

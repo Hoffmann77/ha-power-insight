@@ -16,7 +16,7 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.util import dt as dt_util
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.power_insight import history
 from custom_components.power_insight.config_flow import (
@@ -33,8 +33,6 @@ from .conftest import (
     make_grid_subentry_data,
     make_pv_subentry_data,
 )
-
-pytestmark = pytest.mark.usefixtures("enable_custom_integrations")
 
 TRANSLATION_FILES = (
     "custom_components/power_insight/strings.json",

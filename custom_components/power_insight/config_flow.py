@@ -2145,6 +2145,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                                 self.hass,
                                 DOMAIN,
                                 f"reconfigure_battery_{sub.subentry_id}",
+                                config_entry_id=parent_entry.entry_id,
                                 is_fixable=False,
                                 severity=ir.IssueSeverity.WARNING,
                                 translation_key="reconfigure_battery_adapters",
