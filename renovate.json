@@ -5,11 +5,13 @@
   "labels": ["dependencies"],
   "packageRules": [
     {
-      "description": "pytest-homeassistant pins the exact Home Assistant release it ships with, so bump both in one pull request.",
+      "description": "Test against every Home Assistant release, betas included. pytest-homeassistant pins the exact homeassistant it ships with, so bumping it updates homeassistant in uv.lock in the same pull request.",
       "matchManagers": ["pep621"],
-      "matchPackageNames": ["homeassistant", "pytest-homeassistant"],
+      "matchPackageNames": ["pytest-homeassistant", "homeassistant"],
       "groupName": "Home Assistant",
-      "groupSlug": "home-assistant"
+      "groupSlug": "home-assistant",
+      "ignoreUnstable": false,
+      "respectLatest": false
     }
   ]
 }

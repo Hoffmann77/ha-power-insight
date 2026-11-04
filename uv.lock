@@ -867,7 +867,6 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "homeassistant" },
     { name = "pytest" },
     { name = "pytest-homeassistant" },
 ]
@@ -879,7 +878,6 @@ engine = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "homeassistant", specifier = "==2026.11.0b6" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-homeassistant", specifier = "==2026.11.0b6" },
 ]
