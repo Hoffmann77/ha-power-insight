@@ -3,7 +3,7 @@ title: Captive battery
 description: "bat1 may only charge from pv1. That single restriction changes the answer in two opposite ways depending on whether pv1 is producing: when it is, the captive sink depletes it before anyone else may share it; when it is not, the sink has nowhere legal to draw from."
 ---
 
-import {referenceCase, PROPERTIES} from './cases/all';
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
 
 export const CASE = referenceCase('captive-battery');
 
@@ -19,30 +19,16 @@ export const CASE = referenceCase('captive-battery');
   ))}
 </ul>
 
-<CaseDiagram case={CASE} properties={PROPERTIES} />
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](./index.mdx#how-to-read-a-chart).
 
-## The snapshots
+## Captive depletes first {#captive_depletes_first}
 
-Each card above is one snapshot of this wiring. The tabs under them re-label the
-same picture with a different layer of the engine — the readings, where each
-sink's power came from, how the gross power split between channels, and what it
-all cost — and every value the engine computed for that snapshot is listed
-underneath. They are recomputed from the readings whenever the engine changes,
-and frozen with each docs version, so this page shows what this version of the
-engine does.
+<FlowSankey case={CASE} state="captive_depletes_first" properties={PROPERTIES} sensors={SENSORS} />
 
-{CASE.states.map((s) => (
-  <div key={s.id} style={{marginBottom: '1.25rem'}}>
-    <p style={{marginBottom: '0.4rem'}}>
-      <code>{s.id}</code> — {s.note}
-    </p>
-    {s.open_question && (
-      <blockquote>
-        <strong>Open question.</strong> {s.open_question}
-      </blockquote>
-    )}
-  </div>
-))}
+## Source in standby {#source_in_standby}
+
+<FlowSankey case={CASE} state="source_in_standby" properties={PROPERTIES} sensors={SENSORS} />
 
 ## Why this case exists
 

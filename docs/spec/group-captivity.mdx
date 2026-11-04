@@ -3,7 +3,7 @@ title: Group captivity
 description: "Two batteries are each allowed both PV systems, and neither is individually stuck \u2014 but together they need every watt the two PV systems make. Deciding feasibility one sink at a time cannot see that; this is the case the max-flow solver exists for."
 ---
 
-import {referenceCase, PROPERTIES} from './cases/all';
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
 
 export const CASE = referenceCase('group-captivity');
 
@@ -19,30 +19,16 @@ export const CASE = referenceCase('group-captivity');
   ))}
 </ul>
 
-<CaseDiagram case={CASE} properties={PROPERTIES} />
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](./index.mdx#how-to-read-a-chart).
 
-## The snapshots
+## Hall tight pair {#hall_tight_pair}
 
-Each card above is one snapshot of this wiring. The tabs under them re-label the
-same picture with a different layer of the engine — the readings, where each
-sink's power came from, how the gross power split between channels, and what it
-all cost — and every value the engine computed for that snapshot is listed
-underneath. They are recomputed from the readings whenever the engine changes,
-and frozen with each docs version, so this page shows what this version of the
-engine does.
+<FlowSankey case={CASE} state="hall_tight_pair" properties={PROPERTIES} sensors={SENSORS} />
 
-{CASE.states.map((s) => (
-  <div key={s.id} style={{marginBottom: '1.25rem'}}>
-    <p style={{marginBottom: '0.4rem'}}>
-      <code>{s.id}</code> — {s.note}
-    </p>
-    {s.open_question && (
-      <blockquote>
-        <strong>Open question.</strong> {s.open_question}
-      </blockquote>
-    )}
-  </div>
-))}
+## Unsatisfiable overlap {#unsatisfiable_overlap}
+
+<FlowSankey case={CASE} state="unsatisfiable_overlap" properties={PROPERTIES} sensors={SENSORS} />
 
 ## Why this case exists
 

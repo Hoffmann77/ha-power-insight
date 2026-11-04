@@ -51,6 +51,36 @@ carries a slot for underneath — because the graph can only ever re-label its
 nodes, and most of what the integration computes has nowhere to live on the
 picture.
 
+**v3 — the Sankey (current)**
+
+The two-column graph and its layer tabs were replaced by a three-column Sankey
+(design 14a of the redesign handoff), in `website/src/components/FlowSankey/`:
+
+- **Sources → channels → sinks.** A source's link into a channel is its
+  per-source channel sensor (`source_adapters_<channel>_power`, *Production to
+  grid* …); a channel's ribbons into the sinks are `sink_adapters_source_power`
+  (*Power from {source}*), coloured by source so a sink's bundle is its
+  provenance. Only the home base load's ribbons are computed in the browser
+  (stored share × stored size).
+- **One chart per snapshot.** Every snapshot gets its own `##` section on the
+  case page, anchored by its id (`#grid_unavailable`), instead of a snapshot
+  bar — so a section, not a query string, is what an issue links to.
+- **A normalization switch** (W / % of source / % of sink / €/h, with Market /
+  Levelized) relabels the ribbons; geometry is watts in every view, and every
+  €/h figure is an engine value.
+- **Hover, focus or tap** names the Home Assistant sensor behind a value, from
+  `docs/spec/cases/sensors.json` — read out of `sensor.py` by
+  `tools/sensor_map.py` and kept current by `test_corpus.py`.
+- **Diagnostics:** a hatched part of a bar is a reading the other meters do not
+  explain (the metering imbalance; the gaps add up to it); *▲ restriction
+  relaxed* marks a sink drawing from a source its configuration rules out;
+  an unavailable reading draws no flows and says so.
+- A tabbed table underneath: readings and totals, source × sink, per-source
+  channels, and every engine value.
+- Layout: d3-sankey for the graph and the ribbon stacking order, with the
+  design's fixed geometry applied on top. A container query swaps in a
+  top-to-bottom chart below 640 px.
+
 ## The one thing that will bite you
 
 **A device's role changes between states.** The engine classifies every adapter
@@ -151,7 +181,8 @@ grows.
 
 The site moved from MkDocs Material to **Docusaurus 3** while this component was
 being designed, so the constraints below are the ones that actually applied. The
-implementation lives in `website/src/components/CaseDiagram/`.
+implementation lives in `website/src/components/FlowSankey/` (it was
+`CaseDiagram/` before v3; the constraints below carried over unchanged).
 
 - **Build-time JSON imports, never `fetch`.** A page imports its case data and
   passes it in as a prop. That removes the base-path problem entirely (the site
@@ -173,10 +204,9 @@ implementation lives in `website/src/components/CaseDiagram/`.
   so the Docusaurus toggle just works and there is nothing to hydrate.
 - **Inline SVG**, one `viewBox`, `width: 100%` — crisp at any zoom, themeable
   through the same variables, and focusable per node in a way canvas is not.
-- **Deep links.** The selected snapshot is mirrored into the query string
-  (`?state=hall_tight_pair`), so an issue report can point at exactly the
-  snapshot it means. The case is not in the query: each case has its own page,
-  so the path already names it.
+- **Deep links.** Each snapshot is its own section, anchored by its id
+  (`grid-only#grid_unavailable`), so an issue report can point at exactly the
+  snapshot it means. (Before v3 the snapshot was a `?state=` query parameter.)
 - These docs get read on phones: the state cards wrap, the detail panel collapses
   to one column, and the SVG scales with its container.
 

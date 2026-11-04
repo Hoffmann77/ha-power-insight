@@ -1,0 +1,738 @@
+/* Power-flow Sankey (design 14a). Every colour is a custom property, redefined
+ * for the dark theme below, so the site's theme toggle restyles the chart with
+ * no JavaScript and nothing to hydrate. The narrow, top-to-bottom chart is
+ * picked by a container query on the card, not by script. */
+
+.root {
+  --fs-bg: #ffffff;
+  --fs-ink: #1f2a37;
+  --fs-muted: #5b6b7c;
+  --fs-subtle: #8796a6;
+  --fs-kicker: #98a3ae;
+  --fs-rule: #e4e8ec;
+  --fs-row: #eef1f4;
+  --fs-track: #f1f4f7;
+  --fs-hl: #fbf5ea;
+  --fs-zero: #b4bec8;
+  --fs-ok-bg: #e8f3ee;
+  --fs-ok: #2e6b4f;
+  --fs-warn-bg: #fbefdc;
+  --fs-warn: #9a5b0c;
+  --fs-channel: #1f2a37;
+  --fs-bar: #2c4a6e;
+  --fs-shadow: 0 1px 2px rgba(20, 30, 45, 0.12), 0 0 0 1px rgba(20, 30, 45, 0.06);
+  --fs-tip-shadow: 0 8px 24px rgba(20, 30, 45, 0.16);
+  --fs-hatch: #9aa8b6;
+
+  /* Device palette: PV is the only warm hue; everything else slate and blue. */
+  --fs-pv-0: #d18f2a;
+  --fs-pv-1: #e2ad5e;
+  --fs-pv-2: #a9701c;
+  --fs-grid: #2c4a6e;
+  --fs-bat-0: #4f6d8f;
+  --fs-bat-1: #8aa0b8;
+  --fs-bat-2: #36506d;
+  --fs-con-0: #5b8aa6;
+  --fs-con-1: #86adc3;
+  --fs-con-2: #3f6c86;
+  --fs-home: #9aa8b6;
+
+  container-type: inline-size;
+  position: relative;
+  margin: 0 0 var(--ifm-leading, 1.25rem);
+  font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fs-ink);
+  background: var(--fs-bg);
+  border: 1px solid var(--fs-rule);
+  border-radius: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+:global([data-theme='dark']) .root {
+  --fs-bg: #1d2128;
+  --fs-ink: #e4e8ee;
+  --fs-muted: #a2acb9;
+  --fs-subtle: #8792a1;
+  --fs-kicker: #7f8a98;
+  --fs-rule: #343b46;
+  --fs-row: #2a3039;
+  --fs-track: #272d35;
+  --fs-hl: #3a3223;
+  --fs-zero: #5d6775;
+  --fs-ok-bg: #1d3a2d;
+  --fs-ok: #82d0a6;
+  --fs-warn-bg: #3d2f17;
+  --fs-warn: #ebb45f;
+  --fs-channel: #c9d1dc;
+  --fs-bar: #8fb0d6;
+  --fs-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --fs-tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --fs-hatch: #6d7887;
+
+  --fs-pv-0: #e3a447;
+  --fs-pv-1: #f0c27a;
+  --fs-pv-2: #c4862b;
+  --fs-grid: #7fa3cf;
+  --fs-bat-0: #8fa9c7;
+  --fs-bat-1: #b9c8da;
+  --fs-bat-2: #6c88a8;
+  --fs-con-0: #86b3cc;
+  --fs-con-1: #a9cbe0;
+  --fs-con-2: #6797b2;
+  --fs-home: #a7b3c0;
+}
+
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+
+.root button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  margin: 0;
+  cursor: pointer;
+}
+
+.root button:focus-visible,
+.root [tabindex]:focus-visible {
+  outline: 2px solid var(--fs-bar);
+  outline-offset: 2px;
+}
+
+/* ---- header ---- */
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 16px 22px 4px;
+}
+
+.kicker {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fs-kicker);
+}
+
+.title {
+  margin-top: 3px;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--fs-ink);
+}
+
+.lede {
+  max-width: 46em;
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--fs-ink);
+}
+
+.question {
+  margin: 10px 22px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--fs-warn);
+  border-radius: 0 6px 6px 0;
+  background: var(--fs-warn-bg);
+  font-size: 12.5px;
+}
+
+.switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.switch,
+.tabs,
+.basis {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--fs-track);
+}
+
+.seg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 5px 10px 4px !important;
+  border-radius: 6px;
+}
+
+.segSymbol {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--fs-muted);
+}
+
+.segCaption {
+  font-size: 9.5px;
+  color: var(--fs-subtle);
+}
+
+.seg.on,
+.tab.on,
+.basisSeg.on {
+  background: var(--fs-bg);
+  box-shadow: var(--fs-shadow);
+}
+
+.seg.on .segSymbol {
+  color: var(--fs-ink);
+}
+
+.seg.on .segCaption {
+  color: var(--fs-muted);
+}
+
+.basisSeg {
+  padding: 5px 11px !important;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--fs-muted) !important;
+}
+
+.basisSeg.on {
+  color: var(--fs-ink) !important;
+  font-weight: 600;
+}
+
+.notice {
+  margin: 10px 22px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px dashed var(--fs-zero);
+  color: var(--fs-muted);
+  font-size: 12px;
+}
+
+/* ---- chart ---- */
+
+.area {
+  position: relative;
+  padding: 0 10px;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.svgNarrow {
+  display: none;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+@container (max-width: 640px) {
+  .svgWide {
+    display: none;
+  }
+
+  .svgNarrow {
+    display: block;
+  }
+
+  .head {
+    padding: 14px 14px 4px;
+  }
+
+  .seg {
+    min-width: 0;
+    padding: 5px 8px 4px !important;
+  }
+
+  .tables,
+  .foot {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+}
+
+.emptyChart {
+  margin: 18px 12px 14px;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--fs-muted);
+  border: 1px dashed var(--fs-rule);
+  border-radius: 6px;
+}
+
+.colhead {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  fill: var(--fs-kicker);
+}
+
+.ribbon {
+  stroke: var(--fs-bg);
+  stroke-width: 1.5px;
+  cursor: pointer;
+  outline: none;
+  transition: opacity 120ms;
+}
+
+.ribbonLeft {
+  fill-opacity: 0.38;
+}
+
+.ribbon.dim {
+  opacity: 0.22;
+}
+
+.ribbon:focus-visible {
+  stroke: var(--fs-ink);
+}
+
+.rlabel {
+  font-size: 10px;
+  font-weight: 500;
+  fill: var(--fs-muted);
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--fs-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.node {
+  cursor: pointer;
+  outline: none;
+}
+
+.node:focus-visible .bar,
+.node.pinned .bar {
+  stroke: var(--fs-ink);
+  stroke-width: 1.5px;
+}
+
+.dimNode {
+  opacity: 0.4;
+}
+
+.bar {
+  fill: var(--fs-bar);
+}
+
+.barChannel {
+  fill: var(--fs-channel);
+  fill-opacity: 0.75;
+}
+
+.barHome {
+  fill-opacity: 0.4;
+  stroke-width: 1.2px;
+  stroke-dasharray: 4 3;
+}
+
+.barMuted {
+  fill: var(--fs-zero);
+}
+
+.hatch {
+  pointer-events: none;
+}
+
+.hatchBg {
+  fill: var(--fs-bg);
+}
+
+.hatchLine {
+  stroke: var(--fs-hatch);
+  stroke-width: 2.4;
+}
+
+.nvalue,
+.nvalueSm,
+.chTitle,
+.chTitleSm,
+.chSub,
+.ncap,
+.ncapMuted,
+.nwarn {
+  paint-order: stroke;
+  stroke: var(--fs-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.nvalue {
+  font-size: 19px;
+  font-weight: 600;
+  fill: var(--fs-ink);
+}
+
+.nvalueSm {
+  font-size: 15px;
+  font-weight: 600;
+  fill: var(--fs-ink);
+}
+
+.ncap {
+  font-size: 10.5px;
+  fill: var(--fs-muted);
+}
+
+.ncapMuted {
+  font-size: 10px;
+  fill: var(--fs-subtle);
+}
+
+.nwarn {
+  font-size: 10px;
+  font-weight: 600;
+  fill: var(--fs-warn);
+}
+
+.chTitle {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--fs-ink);
+}
+
+.chTitleSm {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--fs-ink);
+}
+
+.chSub {
+  font-size: 10px;
+  fill: var(--fs-muted);
+}
+
+.dimText {
+  opacity: 0.35;
+}
+
+/* ---- tooltip ---- */
+
+.tip {
+  position: absolute;
+  z-index: 5;
+  width: 250px;
+  padding: 10px 12px;
+  font-size: 11.5px;
+  background: var(--fs-bg);
+  border: 1px solid var(--fs-rule);
+  border-radius: 6px;
+  box-shadow: var(--fs-tip-shadow);
+  pointer-events: none;
+}
+
+.tipTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.tipOn {
+  font-weight: 400;
+  color: var(--fs-muted);
+}
+
+.tipPath {
+  margin: 1px 0 7px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--fs-muted);
+  word-break: break-all;
+}
+
+.tipGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+}
+
+.tipGrid > span:nth-child(even) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tipSensor {
+  display: block;
+  font-size: 10px;
+  color: var(--fs-subtle);
+}
+
+.tipDerived {
+  font-style: italic;
+  color: var(--fs-muted);
+}
+
+.tipNote {
+  margin-top: 7px;
+  font-size: 10.5px;
+  color: var(--fs-muted);
+}
+
+.frac {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fs-muted);
+}
+
+/* ---- tables ---- */
+
+.tables {
+  border-top: 1px solid var(--fs-rule);
+  padding: 12px 22px 14px;
+}
+
+.tabs {
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.tab {
+  padding: 6px 12px !important;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--fs-muted) !important;
+}
+
+.tab.on {
+  font-weight: 600;
+  color: var(--fs-ink) !important;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+/* Docusaurus styles every markdown table; these are not markdown tables. */
+.table {
+  display: table;
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.table tr,
+.table tr:nth-child(2n),
+.table th,
+.table td {
+  border: none;
+  background: none;
+}
+
+.table th {
+  padding: 7px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--fs-subtle);
+  border-bottom: 1px solid var(--fs-rule);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--fs-row);
+  vertical-align: top;
+}
+
+.table tfoot td {
+  border-bottom: none;
+}
+
+.table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--fs-muted);
+}
+
+.muted {
+  color: var(--fs-muted);
+}
+
+.zero td:first-child {
+  color: var(--fs-subtle);
+}
+
+.zero .strong,
+.zeroVal {
+  font-weight: 400;
+  color: var(--fs-zero);
+}
+
+.barCol {
+  width: 24%;
+  min-width: 90px;
+}
+
+.track,
+.cellTrack {
+  display: block;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--fs-row);
+  overflow: hidden;
+}
+
+.fill,
+.cellTrack > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--fs-bar);
+}
+
+.cellTrack {
+  height: 3px;
+  margin-top: 4px;
+}
+
+.pill {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 0 7px;
+  border-radius: 99px;
+  font-size: 10px;
+  line-height: 17px;
+}
+
+.pillOk {
+  background: var(--fs-ok-bg);
+  color: var(--fs-ok);
+}
+
+.pillWarn {
+  background: var(--fs-warn-bg);
+  color: var(--fs-warn);
+}
+
+.matrix {
+  table-layout: fixed;
+  min-width: 480px;
+}
+
+.firstCol {
+  width: 20%;
+}
+
+.totalCol {
+  width: 14%;
+}
+
+.swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: 0;
+}
+
+.cellSub {
+  font-size: 10.5px;
+  color: var(--fs-muted);
+}
+
+.zero .cellSub,
+td.zero {
+  color: var(--fs-zero);
+}
+
+.hl {
+  background: var(--fs-hl) !important;
+}
+
+.warnCell .strong {
+  color: var(--fs-warn);
+}
+
+.empty {
+  margin: 8px 0;
+  color: var(--fs-muted);
+}
+
+.everything th {
+  padding-top: 14px;
+}
+
+.propName {
+  display: block;
+  font-size: 10px;
+}
+
+.tree {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.treeRow {
+  white-space: nowrap;
+}
+
+.tree .tree {
+  margin-bottom: 3px;
+}
+
+/* ---- footer ---- */
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 9px 22px 12px;
+  border-top: 1px solid var(--fs-rule);
+  font-size: 11px;
+  color: var(--fs-muted);
+}
+
+.hatchKey {
+  display: inline-block;
+  width: 14px;
+  height: 9px;
+  vertical-align: -1px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--fs-hatch) 0 1.5px,
+    transparent 1.5px 4px
+  );
+  border-radius: 2px;
+}
+
+.warnText {
+  color: var(--fs-warn);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ribbon,
+  .node rect {
+    transition: none;
+  }
+}

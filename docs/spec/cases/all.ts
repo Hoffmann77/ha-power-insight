@@ -12,7 +12,8 @@
  * version keeps showing what its own engine computed. The component that
  * renders it lives in `website/src/` and is shared across versions, so pages
  * pass the data in rather than letting the component reach for it. The
- * property catalog travels the same way and for the same reason.
+ * property catalog and the sensor map travel the same way and for the same
+ * reason.
  */
 import GRID_ONLY from './grid-only.json';
 import PV_SELF_CONSUMPTION from './pv-self-consumption.json';
@@ -25,11 +26,13 @@ import GROUP_CAPTIVITY from './group-captivity.json';
 import TWO_PV_SYSTEMS from './two-pv-systems.json';
 import MIXED_EXPORT_HOUSE from './mixed-export-house.json';
 import CATALOG from '../properties.json';
+import SENSOR_MAP from './sensors.json';
 
 import type {
   PropertyCatalog,
   ReferenceCase,
-} from '@site/src/components/CaseDiagram/types';
+  SensorMap,
+} from '@site/src/components/FlowSankey/types';
 
 export const REFERENCE_CASES = [
   GRID_ONLY,
@@ -46,6 +49,9 @@ export const REFERENCE_CASES = [
 
 /** What each published property means, its unit, and the layer it belongs to. */
 export const PROPERTIES = CATALOG as unknown as PropertyCatalog;
+
+/** Which Home Assistant sensor shows which property — read out of sensor.py. */
+export const SENSORS = SENSOR_MAP as unknown as SensorMap;
 
 export function referenceCase(id: string): ReferenceCase {
   const found = REFERENCE_CASES.find((c) => c.id === id);

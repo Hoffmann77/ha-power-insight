@@ -11,8 +11,9 @@ It rewrites two things, both committed:
     whenever the engine no longer produces them.
 
 ``docs/spec/cases/*.json``
-    The reference cases as the docs site shows them. ``test_corpus.py`` fails
-    whenever they are stale.
+    The reference cases as the docs site shows them, and the map from engine
+    property to Home Assistant sensor the flow chart names. ``test_corpus.py``
+    fails whenever they are stale.
 
 Commit both with the change: the PR diff then shows exactly which engine
 outputs the change moved.

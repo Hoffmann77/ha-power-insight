@@ -39,7 +39,7 @@ That is the whole source. A snapshot names a reading for exactly the case's
 devices (``None`` for an unavailable sensor) plus the grid ``price``, and its
 published id is its class name in snake_case (``import_only``). The prose lives
 in docstrings — the case's is the page summary (everything above its
-``Shows:`` list), a snapshot's is the caption under its card, and a paragraph
+``Shows:`` list), a snapshot's is the caption on its chart, and a paragraph
 opening ``Open question:`` becomes a callout.
 """
 
@@ -80,7 +80,7 @@ PROPERTIES: tuple[str, ...] = tuple(CATALOG["properties"])
 
 class Snapshot:
     """One set of readings for a reference case: ``uid = watts`` attributes
-    plus the grid ``price``. Its docstring is the caption under its card."""
+    plus the grid ``price``. Its docstring is the caption on its chart."""
 
     price: ClassVar[float | None] = None
 
@@ -282,7 +282,7 @@ def _prose(doc: str | None) -> tuple[str, tuple[str, ...]]:
 def _state_prose(snapshot: type[Snapshot]) -> tuple[str, str | None]:
     """A snapshot's docstring split into ``(note, open_question)``.
 
-    The note is the caption under the snapshot card. A paragraph opening
+    The note is the caption on the snapshot's chart. A paragraph opening
     ``Open question:`` marks a snapshot where which answer is *right* has not
     been settled — rendered as a callout, and collected onto the section index.
     """
