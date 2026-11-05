@@ -1,0 +1,121 @@
+name: Cut docs version
+
+# When a release is published, snapshot `docs/` as that release's docs version
+# and open a pull request with it. Merging the pull request makes the new
+# version what the site root serves (the Docs workflow deploys on main).
+#
+# Docs are versioned by YEAR.MONTH, so a patch release (2026.11.1) whose
+# version already exists cuts nothing. Pre-releases cut nothing either: their
+# docs stay under /next until the final release.
+#
+# A pull request instead of a push: it keeps main's protection intact and
+# gives a last look before the new docs become the default.
+#
+# Needs Settings -> Actions -> General -> "Allow GitHub Actions to create and
+# approve pull requests". A pull request opened with GITHUB_TOKEN does not
+# start other workflows, so the Docs build check does not run on it by itself:
+# close and reopen it, or push to its branch, to get the check.
+#
+# Run it by hand with a tag to cut the docs for an earlier release.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to cut the docs for, e.g. 2026.11.0"
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: docs-version
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Work out the docs version
+        id: version
+        run: |
+          set -euo pipefail
+          # 2026.11.0 -> 2026.11; refuse anything that is not YEAR.MONTH[.PATCH].
+          if [[ ! "$TAG" =~ ^v?([0-9]{4})\.([0-9]{1,2})(\.[0-9]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not YEAR.MONTH[.PATCH]; no docs version cut."
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "branch=docs/version-$version" >> "$GITHUB_OUTPUT"
+          echo "Docs version: $version"
+
+      # Cut from the release commit, so the snapshot is exactly the docs that
+      # shipped with it — and, CI being green there, exactly the reference-case
+      # results its engine computes.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+
+      - name: Skip if this version already exists
+        id: exists
+        run: |
+          set -euo pipefail
+          if jq -e --arg v "${{ steps.version.outputs.version }}" 'index($v)' website/versions.json > /dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Docs version ${{ steps.version.outputs.version }} already exists; nothing to cut." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v7
+        if: steps.exists.outputs.exists == 'false'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Cut the version
+        if: steps.exists.outputs.exists == 'false'
+        working-directory: website
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run docusaurus docs:version "${{ steps.version.outputs.version }}"
+          # The new version must build before anyone is asked to merge it.
+          npm run build
+
+      - name: Open the pull request
+        if: steps.exists.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add website/versioned_docs website/versioned_sidebars website/versions.json
+          git commit -m "docs: cut docs version $VERSION"
+          # A plain push: if the branch exists, a person has been working on
+          # it, and failing loudly beats overwriting that.
+          git push origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "docs: cut docs version $VERSION" \
+            --body "Snapshots \`docs/\` at release \`$TAG\` as docs version **$VERSION**. Once merged, the site root serves it; \`docs/\` keeps going under \`/next\`.
+
+          Before merging, check the [versioning notes](https://github.com/${{ github.repository }}/blob/main/docs/dev/releasing.md#versioning) for anything this release needs by hand, such as links into renamed pages.
+
+          Opened by the *Cut docs version* workflow. It does not start the Docs check by itself; close and reopen this pull request to run it."
