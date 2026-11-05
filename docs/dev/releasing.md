@@ -104,14 +104,45 @@ a visitor sees until the next version is cut.
 
 ### Cutting a version at release time
 
+The [`docs-version.yaml`](https://github.com/Hoffmann77/ha-power-insight/blob/main/.github/workflows/docs-version.yaml)
+workflow does it. When a release is published it reduces the tag to
+`YEAR.MONTH` (`2026.11.0` → `2026.11`), snapshots `docs/` at the release
+commit, checks that the site still builds, and opens a pull request
+*docs: cut docs version 2026.11*. **Merge that pull request** and the site root
+serves the new version.
+
+| Release | What happens |
+|---|---|
+| First release of a month (`2026.11.0`) | A docs version is cut and a pull request opened. |
+| Patch release (`2026.11.1`) | Nothing: `2026.11` already exists. |
+| Pre-release | Nothing: its docs stay under `/next` until the final release. |
+
+Before merging, check whether the release needs anything by hand, such as
+links into pages that were renamed since the last version (the navbar and
+footer in `website/docusaurus.config.ts`, and `README.md`).
+
+:::info[Two one-time settings]
+
+- **Settings → Actions → General → Workflow permissions → Allow GitHub Actions
+  to create and approve pull requests**, or the workflow cannot open its pull
+  request.
+- A pull request opened by a workflow does not start other workflows, so the
+  *Docs* check does not run on it by itself. Close and reopen the pull request
+  to run it.
+
+:::
+
+To cut by hand (for a release published before the workflow existed, run it
+from **Actions → Cut docs version → Run workflow** with the tag), or locally:
+
 ```bash
 cd website
-npm run docusaurus docs:version 2026.8   # MAJOR.MINOR of the release
+npm run docusaurus docs:version 2026.8   # YEAR.MONTH of the release
 ```
 
-That is the whole ritual. It writes `versioned_docs/version-2026.8/`, a matching
-sidebar, and a new entry in `versions.json`; the newest entry becomes what the
-root serves. Commit all three.
+That writes `versioned_docs/version-2026.8/`, a matching sidebar, and a new
+entry in `versions.json`; the newest entry becomes what the root serves.
+Commit all three.
 
 The reference cases need no step of their own. Their results under
 `docs/spec/cases/` are the engine's, and CI fails any commit whose engine no
