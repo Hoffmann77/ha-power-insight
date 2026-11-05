@@ -1,0 +1,105 @@
+---
+title: Sensor reference
+description: How Power Insight's sensors are organised and how to read their names.
+---
+
+# Sensor reference
+
+Power Insight creates sensors on **one Home Assistant device per thing you
+set up**: one for the grid connection, one per PV system, battery and
+consumer, plus a **Combined** device for the whole home. The full list for
+each lives on its device page:
+
+<CardGrid>
+  <Card title="Whole home" icon="🏠" to="devices/home">
+    Totals for the whole home, and the base load without its own sensor.
+  </Card>
+  <Card title="Grid connection" icon="⚡" accent="grid" to="devices/grid#sensors">
+    Import, export, import cost and export earnings.
+  </Card>
+  <Card title="PV system" icon="☀️" accent="solar" to="devices/pv#sensors">
+    Where your solar power goes, and what it saves and earns.
+  </Card>
+  <Card title="Battery" icon="🔋" accent="battery" to="devices/battery#sensors">
+    Where the discharge goes, what charges it, and what it saves.
+  </Card>
+  <Card title="Consumer" icon="🔌" accent="consumer" to="devices/consumer#sensors">
+    Which sources power an appliance, and what it costs to run.
+  </Card>
+</CardGrid>
+
+Which sensors appear depends on what you turn on in the integration's
+**Options**. Every sensor's card says which option creates it. *Total costs +
+Levelized* means the **Total costs** toggle, with the cost method set to
+*Levelized* or *Both*. See
+[Sensor options & presets](sensor-options.md).
+
+:::warning[Names may still change]
+
+Power Insight is in beta, so entity names may change until version 1.0.
+
+:::
+
+## Reading the sensor names
+
+A handful of words come back in almost every sensor name. Once you know them,
+the names explain themselves.
+
+### Where power goes
+
+The power-flow sensors on the grid, PV and battery describe **where that
+device's power goes**, never what the device itself uses. They read
+*Import to …*, *Production to …* or *Discharge to …*, followed by one of four
+destinations:
+
+| Destination | Means |
+|---|---|
+| **home consumption** | your household appliances, with or without their own sensor |
+| **batteries** | charging a battery |
+| **system standby** | the idle draw of your energy equipment, such as PV inverters at night. Not appliances on standby. |
+| **grid** | export |
+
+So a battery's *Discharge to system standby* is battery power feeding, say, a
+PV inverter at night, not the battery's own standby draw.
+
+### Ratio and share
+
+Both are percentages, but they divide by different things:
+
+- A **ratio** divides by **the device's own power**. A PV system's
+  *Production to grid ratio* of 40 % means 40 % of *its* production is
+  exported.
+- A **share** divides by **a total for the whole home**. The same system's
+  *Share of grid export* of 80 % means it supplies 80 % of *everything your
+  home exports*.
+
+### Rate and total
+
+- A sensor ending in **rate** is **money per hour right now** (`EUR/h`),
+  like a speedometer.
+- A **Total** adds that rate up over time (`EUR`) and keeps counting across
+  restarts, like an odometer. Totals work with Home Assistant's statistics
+  and can be put behind a utility meter for daily or monthly figures.
+
+### Standard and levelized
+
+Money sensors come in two flavours, chosen in the options:
+
+- **Standard** values electricity at your **live grid price**. Power from your
+  own solar and battery counts as free.
+- **Levelized** also counts what your **hardware** cost (purchase,
+  installation, maintenance), spread over every kWh it delivers over its
+  lifetime. It answers "is my solar or battery actually paying off?"
+
+See [How it works](how-it-works.md) for the details.
+
+### Savings, avoided cost and financial return
+
+- **Avoided cost** is what your own power kept off your grid bill.
+- **Cost savings** is avoided cost minus what the device costs to run.
+- **Financial return** is cost savings plus what exporting earned.
+
+## Units and currency
+
+Power is in `W`, energy in `kWh`. The docs write money in `EUR` for brevity:
+your sensors use **your Home Assistant currency** instead (`$/h`, `£`, …).

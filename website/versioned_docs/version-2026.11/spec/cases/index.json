@@ -1,0 +1,99 @@
+{
+  "cases": [
+    {
+      "id": "grid-only",
+      "title": "Grid only",
+      "file": "grid-only.json",
+      "states": [
+        "import_only",
+        "grid_idle",
+        "grid_unavailable"
+      ]
+    },
+    {
+      "id": "pv-self-consumption",
+      "title": "PV self-consumption",
+      "file": "pv-self-consumption.json",
+      "states": [
+        "sunny_partial",
+        "pv_covers_all",
+        "pv_standby",
+        "pv_unavailable"
+      ]
+    },
+    {
+      "id": "pv-export",
+      "title": "PV export",
+      "file": "pv-export.json",
+      "states": [
+        "export_surplus",
+        "export_all",
+        "zero_gross"
+      ]
+    },
+    {
+      "id": "metered-load",
+      "title": "Metered load",
+      "file": "metered-load.json",
+      "states": [
+        "load_and_base",
+        "over_metered"
+      ]
+    },
+    {
+      "id": "captive-load",
+      "title": "Captive load",
+      "file": "captive-load.json",
+      "states": [
+        "captive_load",
+        "load_exceeds"
+      ]
+    },
+    {
+      "id": "battery-basics",
+      "title": "Battery basics",
+      "file": "battery-basics.json",
+      "states": [
+        "charging",
+        "discharging",
+        "idle"
+      ]
+    },
+    {
+      "id": "captive-battery",
+      "title": "Captive battery",
+      "file": "captive-battery.json",
+      "states": [
+        "captive_depletes_first",
+        "source_in_standby"
+      ]
+    },
+    {
+      "id": "group-captivity",
+      "title": "Group captivity",
+      "file": "group-captivity.json",
+      "states": [
+        "hall_tight_pair",
+        "unsatisfiable_overlap"
+      ]
+    },
+    {
+      "id": "two-pv-systems",
+      "title": "Two PV systems",
+      "file": "two-pv-systems.json",
+      "states": [
+        "every_watt_spoken_for"
+      ]
+    },
+    {
+      "id": "mixed-export-house",
+      "title": "Mixed export house",
+      "file": "mixed-export-house.json",
+      "states": [
+        "export_non_exporting_battery",
+        "export_with_standby",
+        "discharge_dynamic_prices"
+      ]
+    }
+  ]
+}

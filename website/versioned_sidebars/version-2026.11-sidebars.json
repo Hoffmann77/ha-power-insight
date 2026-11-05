@@ -1,0 +1,67 @@
+{
+  "docs": [
+    "index",
+    "installation",
+    "getting-started",
+    {
+      "type": "category",
+      "label": "Devices",
+      "link": {
+        "type": "doc",
+        "id": "devices/index"
+      },
+      "items": [
+        "devices/grid",
+        "devices/pv",
+        "devices/battery",
+        "devices/consumer",
+        "devices/home"
+      ]
+    },
+    "sensors",
+    "sensor-options",
+    "how-it-works",
+    {
+      "type": "category",
+      "label": "Advanced",
+      "items": [
+        "advanced/costs-and-savings",
+        "advanced/power-attribution",
+        "advanced/history"
+      ]
+    },
+    "glossary",
+    "troubleshooting",
+    {
+      "type": "category",
+      "label": "Reference cases",
+      "link": {
+        "type": "doc",
+        "id": "spec/index"
+      },
+      "items": [
+        "spec/grid-only",
+        "spec/pv-self-consumption",
+        "spec/pv-export",
+        "spec/metered-load",
+        "spec/captive-load",
+        "spec/battery-basics",
+        "spec/captive-battery",
+        "spec/group-captivity",
+        "spec/two-pv-systems",
+        "spec/mixed-export-house"
+      ]
+    }
+  ],
+  "dev": [
+    "dev/testing",
+    "dev/engine-calculations",
+    "dev/production-readiness",
+    "dev/carried-over-history",
+    "dev/source-share-allocation-problem",
+    "dev/entity-naming",
+    "dev/releasing",
+    "dev/options-flow-redesign",
+    "dev/case-diagram-handoff"
+  ]
+}

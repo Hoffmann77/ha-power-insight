@@ -1,0 +1,47 @@
+---
+title: Captive battery
+description: "bat1 may only charge from pv1. That single restriction changes the answer in two opposite ways depending on whether pv1 is producing: when it is, the captive sink depletes it before anyone else may share it; when it is not, the sink has nowhere legal to draw from."
+---
+
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
+
+export const CASE = referenceCase('captive-battery');
+
+# Captive battery
+
+{CASE.summary}
+
+## What this case shows
+
+<ul>
+  {CASE.shows.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](index.mdx#how-to-read-a-chart).
+
+## Captive depletes first {#captive_depletes_first}
+
+<FlowSankey case={CASE} state="captive_depletes_first" properties={PROPERTIES} sensors={SENSORS} />
+
+## Source in standby {#source_in_standby}
+
+<FlowSankey case={CASE} state="source_in_standby" properties={PROPERTIES} sensors={SENSORS} />
+
+## Why this case exists
+
+One restriction, two opposite consequences — which is why both snapshots share a
+wiring.
+
+When the captive battery's allowed source is producing, the battery **depletes
+it first**: it takes all of `pv1`, and the unrestricted consumer is left with
+the grid. A naive implementation that shared each source proportionally would
+hand the battery a slice of grid power it is not allowed to touch, so this
+snapshot separates the two implementations immediately.
+
+When that same source drops into standby it stops being a source at all. The
+battery now has nowhere legal to draw from, and rather than dividing by zero the
+row collapses to zeros and the shortfall is reported as a **restriction
+deficit**.

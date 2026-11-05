@@ -1,0 +1,52 @@
+---
+title: Grid only
+description: "One meter and nothing else. Every published property still has a value here, which makes this the simplest place to see what the engine does at the edges: a single source, a house that draws nothing, and a sensor that has dropped out."
+---
+
+import {referenceCase, PROPERTIES, SENSORS} from './cases/all';
+
+export const CASE = referenceCase('grid-only');
+
+# Grid only
+
+{CASE.summary}
+
+## What this case shows
+
+<ul>
+  {CASE.shows.map((d) => (
+    <li key={d}>{d}</li>
+  ))}
+</ul>
+
+Each snapshot below is one set of readings on this wiring, drawn as a flow
+chart — [how to read it](index.mdx#how-to-read-a-chart).
+
+## Import only {#import_only}
+
+<FlowSankey case={CASE} state="import_only" properties={PROPERTIES} sensors={SENSORS} />
+
+## Grid idle {#grid_idle}
+
+<FlowSankey case={CASE} state="grid_idle" properties={PROPERTIES} sensors={SENSORS} />
+
+## Grid unavailable {#grid_unavailable}
+
+<FlowSankey case={CASE} state="grid_unavailable" properties={PROPERTIES} sensors={SENSORS} />
+
+## Why this case exists
+
+Every case needs something to be read against, and for a long time that job was
+done by a four-adapter house. It should not have been. A single grid meter is
+enough to give **every** property in the catalog a value — all four layers of
+it, provenance and money included — which makes this the simplest place to see
+what the engine does when there is nothing to be clever about.
+
+Every answer here can be checked in your head: one source means a provenance row
+of exactly `1`, no local generation means marginal and levelized cost agree, and
+nothing is saved because there was nothing to save it against. Read the bigger
+houses against it.
+
+The third snapshot is the one worth arguing with. When the only meter drops
+out, almost everything correctly reports nothing at all — and one rate reports
+zero instead.
