@@ -89,7 +89,7 @@ The **Cost method** controls whether and how cost sensors are created:
 |---|---|
 | **None** | No cost sensors. |
 | **Standard** | Priced at the live grid price. Needs an electricity price sensor on your grid connection. |
-| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](how-it-works.md#lcoe-levelized-cost-of-electricity) / [LCOS](how-it-works.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
+| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](advanced/costs-and-savings.md#lcoe-levelized-cost-of-electricity) / [LCOS](advanced/costs-and-savings.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
 | **Both** | One sensor for each method. |
 
 - **Total costs** — adds running totals that keep counting across restarts.
@@ -116,7 +116,7 @@ consumer, the same money appears as its *Avoided cost* — don't add a
 consumer's avoided cost to the producing devices' savings or avoided cost. On a
 consumer, **Avoided cost by source** splits its avoided cost by the PV system or
 battery that served it. See
-[How savings are calculated](how-it-works.md#how-savings-and-financial-return-are-calculated).
+[How savings are calculated](advanced/costs-and-savings.md#how-savings-and-financial-return-are-calculated).
 
 ### Financial return
 
@@ -172,4 +172,4 @@ flow stops and tells you which devices need attention:
 > **Reconfigure** on each device to add them (e.g. a price sensor for costs,
 > lifetime values for levelized sensors), then save again.
 
-Fix the devices (see [Configuration](devices/index.md)) and save the options again.
+Fix the devices (see [Configuration](devices/index.mdx)) and save the options again.

@@ -67,7 +67,7 @@ Pick the noun that matches the quantity — do not invent synonyms.
 | `… from {source}` | % | A dynamic per-source attribution sensor (one per source). |
 
 `ratio` and `share` are **not interchangeable** — see
-[Power distribution](../how-it-works.md#the-four-channels) for the precise
+[Power distribution](../advanced/power-attribution.md#the-four-channels) for the precise
 denominators. Prose that describes a `ratio` as "share of total home power" (or
 vice versa) is a bug.
 

@@ -24,8 +24,13 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Advanced',
-      items: ['advanced/history'],
+      items: [
+        'advanced/costs-and-savings',
+        'advanced/power-attribution',
+        'advanced/history',
+      ],
     },
+    'glossary',
     'troubleshooting',
     {
       type: 'category',

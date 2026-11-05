@@ -129,6 +129,8 @@ html[data-theme='dark'] {
 /* Wide tables scroll rather than squeezing the prose column. */
 .markdown table {
   display: block;
+  width: fit-content;
+  max-width: 100%;
   overflow-x: auto;
   border-collapse: separate;
   border-spacing: 0;

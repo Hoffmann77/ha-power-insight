@@ -51,7 +51,7 @@ limit. If the battery charges from elsewhere — say it is set to solar only but
 tops up from the grid at night — that power is still counted, as coming from
 your other sources, and the watts show up in the `restriction_deficit`
 attribute of its operating-cost sensors. See
-[When a device draws from outside its sources](../how-it-works.md#when-a-device-draws-from-outside-its-sources).
+[When a device draws from outside its sources](../advanced/power-attribution.md#when-a-device-draws-from-outside-its-sources).
 
 :::note[Reconfigure prompt]
 
@@ -65,8 +65,8 @@ stays correct.
 
 These behave exactly as for a [PV system](pv.mdx#lifetime-production). Together,
 *lifetime cost ÷ lifetime throughput* gives this battery's
-[**LCOS**](../how-it-works.md#lcos-levelized-cost-of-storage). Changing them later
-applies a [correction factor](../how-it-works.md#the-correction-factor).
+[**LCOS**](../advanced/costs-and-savings.md#lcos-levelized-cost-of-storage). Changing them later
+applies a [correction factor](../advanced/costs-and-savings.md#the-correction-factor).
 
 :::note
 
@@ -146,7 +146,7 @@ Every money sensor comes in two flavours, chosen per section in the options:
 - **Standard** values electricity at your **live grid price**; your own
   stored solar power counts as free.
 - **Levelized** also counts what your hardware cost, spread over every kWh it
-  delivers (LCOS, see [How it works](../how-it-works.md#lcos-levelized-cost-of-storage)). Needs
+  delivers (LCOS, see [How it works](../advanced/costs-and-savings.md#lcos-levelized-cost-of-storage)). Needs
   **Lifetime production** and **Lifetime cost**.
 
 Each sensor ending in *rate* is money per hour right now; the matching
@@ -214,7 +214,7 @@ Everything this battery brings in: cost savings **plus** export compensation.
 The levelized variant also counts what producing the exported energy cost,
 so it can be lower than the levelized savings while you export for less than
 the LCOS. See
-[Why is my levelized financial return lower…](../how-it-works.md#why-is-my-levelized-financial-return-lower-than-my-levelized-savings)
+[Why is my levelized financial return lower…](../advanced/costs-and-savings.md#why-is-my-levelized-financial-return-lower-than-my-levelized-savings)
 
 </SensorCard>
 

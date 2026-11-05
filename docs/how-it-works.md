@@ -1,349 +1,136 @@
 # How it works
 
-A short tour of the ideas Power Insight is built on. Understanding these makes
-the sensors and options much easier to reason about.
+Power Insight needs no extra hardware and no energy meters. It watches the
+**power sensors** you already have, recalculates whenever one of them
+changes, and turns the result into sensors. This page explains the ideas behind those
+sensors without the formulas; the [Advanced](#going-deeper) pages have the
+full details.
+
+## What goes in
+
+For every device you add, Power Insight reads **one power sensor** (in W, kW
+or MW) that tells it how much power flows right now. For anything to do with
+money it also reads your **electricity price** (a sensor or an
+`input_number`), plus a few numbers you type in once, such as what you are
+paid for exports or what your solar system cost.
+
+Because it only ever uses the **current** power and the **current** price,
+dynamic tariffs work out of the box: every second is priced at the price that
+held during that second.
 
 ## Sign conventions
 
-Power Insight expects instantaneous power sensors with these signs:
+Every power sensor needs to say which way the power flows. Power Insight
+expects these signs:
 
-| Device | Positive value means | Negative value means |
+| Device | Positive means | Negative means |
 |---|---|---|
-| **Grid** | Importing from the grid | Exporting to the grid |
-| **PV** | Producing | Consuming (standby) |
-| **Battery** | Discharging | Charging |
-
-If a sensor uses the opposite sign, turn on **Invert power sign** on that
-device. Power Insight normalises W / kW / MW automatically, so the unit itself
-doesn't matter — only the sign.
-
-## Gross power and the power split
-
-The central quantity is **gross power**:
-
-```
-gross_power = grid_import + PV_production + battery_discharge
-```
-
-This is all the power entering your home right now. Power Insight splits it into
-where it goes — **home consumption**, **export** to the grid, battery
-**charging**, and **system standby** — and exposes each slice in Watts, as a
-**ratio** (% of the scope's own power: a device's output, or gross power for
-the whole home), and as a **share** (a device's slice of that channel's
-home-wide total).
-
-Every derived quantity is computed lazily from live values, and any sensor
-whose inputs are unavailable simply reports *unavailable* rather than a wrong
-number.
-
-### The four channels
-
-Gross power leaves the system through exactly four **channels**. Each channel
-has a natural **sink** — the device type that receives that power:
-
-| Abbrev | Channel | Sink device | Sensor wording |
-|---|---|---|---|
-| **EXP** | Export | Grid | *… to grid* |
-| **CON** | Self-consumption | Consumers (loads) | *… to home consumption* |
-| **CHG** | Charging | Batteries | *… to batteries* |
-| **STB** | Standby | PV systems (their own night draw) | *… to system standby* |
-
-"System standby" is the idle draw of the energy system's own equipment — not
-household appliances on standby, which count as home consumption.
-
-Every **provider** — the devices that *feed* gross power (grid import, PV
-production, battery discharge) — expresses its relationship to a channel two
-ways, alongside its power in Watts (*Production to home consumption*):
-
-- **ratio** — of *this provider's own* output, the fraction going to the
-  channel (`channel_power ÷ provider_output`) — *Production to home
-  consumption ratio*.
-- **share** — of *the whole channel's* power, the fraction *this provider*
-  supplied (`provider_contribution ÷ channel_total`) — *Share of home
-  consumption*.
-
-Not every provider feeds every channel. The grid cannot export to itself, so it
-has no EXP sensors; otherwise each provider carries a `_ratio` and a `_share`
-for each channel it can feed:
-
-| Provider | EXP | CON | CHG | STB |
-|---|:--:|:--:|:--:|:--:|
-| **Grid** | — | ✓ | ✓ | ✓ |
-| **PV** | ✓ | ✓ | ✓ | ✓ |
-| **Battery** | ✓ | ✓ | ✓ | ✓ |
-
-CHG is the only channel with explicit routing (a battery's **Charges from**
-list), so it has **two complementary sensor families** — don't confuse them:
-
-- the provider-side aggregate **Share of battery charging** ("X % of *all* charging in the
-  home is supplied by the grid"), on the grid/PV/battery device; and
-- the sink-side per-source breakdown **Charging share from &lt;source&gt;**
-  ("X % of *this battery's* charging comes from the grid"), on the battery — see
-  [Charging-source attribution](#charging-source-attribution).
-
-CHG sensors on a provider only appear when that provider is actually a
-configured charge source for some battery; STB, having no routing, is
-attributed to providers in proportion to their share of gross power.
-
-## Cost of electricity (COE)
-
-The **cost of electricity** is a blended per-kWh price across your whole energy
-mix — what one kWh actually costs you right now, given how much is coming from
-the grid vs. your own devices. Multiply it by power and you get a **cost rate**
-(currency per hour); integrate that over time and you get a **total cost**.
-
-There are two ways to price your *own* devices:
-
-- **Standard** uses the live grid import price for everything — it answers "what
-  would this power have cost if I'd bought it from the grid?"
-- **Levelized** prices each device by its own lifetime cost per kWh (see below).
-
-## LCOE (Levelized Cost of Electricity)
-
-**LCOE** spreads a PV system's *total lifetime cost* across *all the energy it
-produces over its life*:
-
-```
-LCOE = lifetime_cost / lifetime_production      (currency per kWh)
-```
-
-It answers "what does a kWh of my own solar really cost, once I account for what
-the system cost me?" You provide `lifetime_cost` and `lifetime_production` per
-device; Power Insight derives the LCOE. Levelized sensors only exist for devices
-that have these values.
-
-## LCOS (Levelized Cost of Storage)
-
-**LCOS** is the battery equivalent of LCOE — the lifetime cost of the battery
-spread across the energy it stores/delivers over its life. A battery's levelized
-sensors use its LCOS in place of an LCOE.
-
-:::note
-
-LCOS is computed with the same `cost / throughput` formula as LCOE, where the
-throughput is the energy the battery **discharges** over its life. That energy
-is metered at the battery's AC port, so round-trip losses are already netted
-out of it — which is why Power Insight asks for no efficiency figure.
-
-:::
-
-## The correction factor
-
-Levelized values are recorded over time (in the accumulated totals). If you later
-change a device's lifetime cost or production, its LCOE/LCOS changes — but you
-don't want history to become inconsistent.
-
-Power Insight solves this with a **correction factor**:
-
-```
-correction_factor = current_lcoe / default_lcoe
-```
-
-Because the factor is constant, multiplying the recorded base totals by it
-**retroactively and exactly rescales** all the displayed levelized values to the
-new cost basis. A total that mixes energy from several devices — a battery
-charged from two PV systems, say — keeps a share per device, so each share is
-rescaled by its own device's factor.
-
-The correction reaches the device's **whole history** on purpose. LCOE and
-LCOS are lifetime averages, so a revised lifetime cost or production is the
-right price for energy already recorded too — whether the first estimate was
-off, a repair added to the cost, or the device produces less than expected.
-Two things follow:
-
-- **The long-term statistics show the correction as one step** in the hour you
-  made the edit; earlier statistics are not rewritten.
-- **Replaced hardware is a new device.** New panels or a new battery have a
-  lifetime of their own: add them as a new device and remove the old one
-  rather than editing its lifetime values.
-
-When a device is removed, its final corrected contribution is frozen into a
-ledger so the combined totals never drop, and its share in other devices'
-totals keeps its last factor.
-
-This is why the reconfigure page warns:
-
-> If you change the lifetime cost or lifetime production values, Power Insight
-> applies a correction factor that retroactively rescales this device's
-> already-recorded levelized values to stay consistent.
-
-## Export compensation
-
-**Export compensation** is what you are paid per kWh exported to the grid. It
-drives:
-
-- **Export compensation rate** (currency/h) = current export power × the rate.
-- **Total export compensation** = that rate integrated over time.
-
-## How savings and financial return are calculated
-
-Power Insight tracks three related but distinct financial quantities:
-
-**Cost savings** — the money you save by *not importing* power you would
-otherwise have bought. Your own generation (PV, battery discharge) covers some
-of your load; the savings are the grid price of that avoided import, minus the
-operating cost of the device that provided it:
-
-```
-cost_savings = avoided_import_cost − operating_costs
-```
-
-For PV the main operating cost is standby consumption at night. For batteries it
-is the cost of the energy used to charge them, adjusted for round-trip losses.
-
-**Export compensation** — the revenue you earn from power exported to the
-grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
-
-**Financial return** — the combined picture: savings plus export compensation.
-
-```
-financial_return = cost_savings + export_compensation
-```
-
-Use **cost savings** when you want to know how much you avoided spending. Use
-**financial return** when you want one number that includes everything your
-devices are earning for you.
-
-### Why is my levelized financial return lower than my levelized savings?
-
-In the levelized version, every kWh a device produces carries its lifetime
-cost (LCOE for PV, LCOS for a battery) — the kWh it exports included. So the
-levelized financial return also subtracts what the exported energy cost to
-produce:
-
-```
-levelized_financial_return = levelized_cost_savings
-                           + exported_kWh × (export_compensation − LCOE)
-```
-
-When your feed-in tariff is below the device's LCOE/LCOS, each exported kWh
-loses money and the financial return ends up **below** the savings. That is
-not an error: it tells you self-consumption pays for the device while
-exporting does not. If you never export, the two are equal.
-
-**Example.** A PV system with an LCOE of 0.10 sends 1 kWh into the home and
-exports 1 kWh; the grid price is 0.30 and the feed-in tariff 0.08.
-
-| Total | Calculation | Value |
-|---|---|---|
-| Levelized cost savings | 1 × (0.30 − 0.10) | **0.20** |
-| Levelized financial return | 0.20 + 1 × (0.08 − 0.10) | **0.18** |
-
-The standard (non-levelized) values treat your own generation as free, so
-there the financial return is never below the savings.
-
-### Why does my battery have negative cost savings?
-
-Any device can show negative cost savings if it doesn't earn enough to cover its
-costs. Batteries specifically **always** show negative cost savings *while
-charging*, because Power Insight tracks the cost of the energy going into the
-battery. That cost is "paid back" as positive savings when the battery later
-discharges and offsets a grid import. Over a full charge/discharge cycle the
-battery's net contribution is what matters.
-
-## Charging-source attribution
-
-When a battery charges, its stored energy comes from some mix of the grid and
-your PV systems — configured in the battery's **Charges from** list. Power
-Insight traces that mix in real time to:
-
-- attribute the battery's charging cost to the right source, and
-- power the **charging source share** sensors ("70 % solar, 30 % grid").
-
-The same tracing decides where a smart-plug **consumer** restricted to specific
-sources (its **Powered by** list) draws its power, and how the power you export
-is sourced.
-
-### How the mix is decided
-
-Your local generation — solar production and battery discharge — is limited, and
-while you are *importing* from the grid it is the scarce, cheaper resource. Power
-Insight hands it out in a fixed priority order, and the grid fills whatever is
-left over:
-
-1. **Locked devices first.** A battery set to charge from *solar only*, or a
-   smart plug that runs on *excess solar*, has no fallback — so it gets first
-   claim on its allowed local sources.
-2. **Your home base load next.** The always-on household consumption you don't
-   meter directly takes the local power it needs before any flexible device
-   does.
-3. **Flexible devices last.** A battery allowed to charge from the grid *can*
-   fall back on it, so it only receives the local generation the first two steps
-   left behind; the grid covers the rest of its draw.
-
-When you are *exporting* — your solar is in surplus — local power isn't scarce,
-so this ordering doesn't apply and every device is simply attributed to the live
-mix.
-
-### Why two devices can show different mixes
-
-Because local generation is allocated in order rather than split evenly, two
-devices drawing power at the same instant can show different source mixes:
-
-- A battery locked to solar shows **100 % solar** while any is available; a
-  battery that can also use the grid, charging at the same moment, may show
-  mostly **grid** — it receives only the solar the locked battery and your home
-  load didn't take.
-- The mix shifts with your **household load**: the more your home consumes
-  directly, the less local generation reaches a flexible battery, so its grid
-  share rises — even though nothing about the battery itself changed.
-- Two PV systems of different sizes show it too: a battery drawing from the
-  larger one keeps more solar (a lower grid share) than one drawing from the
-  smaller, because more of the larger system survives the earlier steps.
-
-Energy lost in a charge/discharge cycle needs no correction here: the battery's
-charging and discharging are both metered at its AC port, so the losses are
-already the difference between the two.
-
-### When a device draws from outside its sources
-
-The sources you pick under **Specific devices** describe what you *expect* your
-energy manager to do. They are not a hard limit: Power Insight counts every watt
-your meters report, even when it can't have come from the sources you picked.
-
-So when a device draws more than its allowed sources supply at that moment, the
-extra is counted as coming from your other sources. The typical case is a
-battery set to charge from solar only that tops up from the grid at night: with
-no solar to draw on, its whole charge is counted — and priced — as grid power.
-
-The watts drawn from outside the selection are shown in the
-`restriction_deficit` attribute of the device's *Operating cost rate* and
-*Levelized operating cost rate* sensors. It reads `0` while the device sticks to
-its sources, and exists only on devices set to **Specific devices**.
-
-A deficit is not necessarily a mistake. A battery that prefers solar but tops up
-from the grid when its charge runs low is still best set to solar only: with the
-grid in its list, Power Insight would count its charging as grid power first
-whenever your home imports. Set to solar only, its charging counts as solar
-whenever there is solar, and the deficit shows just the grid top-ups — which is
-what really happened.
-A deficit that never goes away, on the other hand, usually means the selection
-no longer matches what your energy manager does; **Reconfigure** the device.
-
-:::info[The exact rules]
-
-The precise allocation — the three tiers above and their edge cases — is
-written up for contributors in
-[Engine calculation decisions](dev/engine-calculations.md).
-
-:::
-
-## Scopes
-
-Sensor selection is organised into **scopes**: the whole-home aggregate
-(**combined**) plus one scope per device type (**grid**, **pv_system**,
-**battery**, **consumer**). Each scope only offers the options its sensors
-support, and a choice applies to *all* devices of that type. See
-[Sensors, presets & options](sensor-options.md).
-
-## Accumulation
-
-**Total** sensors integrate a rate (currency/h) over time using a left-Riemann
-method — each stretch of time is counted at the rate that held through it —
-and persist their running total in Home Assistant's recorder so it survives
-restarts. While a rate is unavailable (a meter has dropped out) the total
-pauses, and it resumes when the meter reports again; the time in between is
-not counted. There is no staleness timeout: a sensor that is still available
-is trusted, even if it has not reported for a while. What a device earned before
-Power Insight counted it can be carried over from its app, in the device's
-**Already accumulated** section (see [Carried-over history](advanced/history.md)).
+| **Grid** | buying from the grid | selling to the grid |
+| **PV system** | producing | drawing power (inverter standby) |
+| **Battery** | discharging | charging |
+| **Consumer** | — | drawing power |
+
+Most smart plugs report their draw as a positive number. If one of your
+sensors uses the opposite sign, turn on **Invert power sign** for that
+device. The unit doesn't matter: W, kW and MW are all converted.
+
+## Following the power
+
+At any moment, power **comes in** from three kinds of source:
+
+- the **grid** (what you buy),
+- your **PV systems** (what they produce),
+- your **batteries** (what they discharge).
+
+It **goes out** to four places:
+
+- **home consumption**: your appliances,
+- **batteries**: charging,
+- **system standby**: the idle draw of your energy equipment, such as an
+  inverter at night,
+- the **grid**: export.
+
+What comes in always equals what goes out. Power Insight works out, for every
+source, how much of its power ends up in each destination. That is what the
+*… to home consumption*, *… to grid* and similar sensors show. The
+[sensor reference](sensors.mdx#reading-the-sensor-names) explains how to read
+their names.
+
+**Example.** The sun produces 3,000 W, the house uses 1,000 W and the battery
+charges at 1,500 W. The remaining 500 W go to the grid. The PV system's
+*Production to home consumption* reads 1,000 W, *Production to batteries*
+1,500 W and *Production to grid* 500 W.
+
+When a battery or consumer may only use **specific sources**, for example a
+battery that charges from solar only, Power Insight respects that when
+splitting the power. [Where the power comes from](advanced/power-attribution.md)
+explains the rules.
+
+## Putting a price on it
+
+Once Power Insight knows where every watt comes from, it can price it. There
+are two ways to do that, and you choose which one you want in the options.
+
+**Standard** uses your **grid price**. Power from the grid costs what you
+pay for it; power from your own solar and batteries counts as **free**. This
+answers the everyday question: *how much is my solar saving me on my
+electricity bill?*
+
+**Levelized** also counts what your **hardware** cost. You enter what a
+device cost over its lifetime (purchase, installation, maintenance) and how
+much energy it will deliver over that lifetime. Dividing one by the other
+gives a price per kWh for your own power, the
+[LCOE](glossary.md#lcoe) for solar or [LCOS](glossary.md#lcos) for a
+battery. This answers the investor's question: *is my solar system actually
+paying off?*
+
+**Example.** Grid power costs 0.30 per kWh. Your solar system cost 12,000 and
+will produce 120,000 kWh over 25 years, so its LCOE is 0.10 per kWh. Every
+kWh of solar you use yourself saves **0.30** (Standard), or **0.20** once the
+hardware is paid for (Levelized).
+
+## Costs, savings and earnings
+
+From those prices Power Insight builds a few kinds of money sensor:
+
+| | What it means |
+|---|---|
+| **Cost** | What running something costs, such as your home, a consumer, or a battery's charging. |
+| **Avoided cost** | What your own power kept off your grid bill. |
+| **Cost savings** | Avoided cost minus what the device costs to run. |
+| **Export compensation** | What you are paid for power you export. |
+| **Financial return** | Cost savings **plus** export compensation: everything a device brings in. |
+
+A battery's savings go **negative while it charges** from the grid: that
+energy costs money. They turn positive when it discharges and replaces grid
+power. Over a full cycle, the total is what counts.
+
+## Rates and totals
+
+Money sensors come in pairs:
+
+- A **rate** is money **per hour, right now** (`EUR/h`), like a speedometer.
+- A **total** adds the rate up over time (`EUR`), like an odometer. Totals
+  survive restarts and work with Home Assistant's long-term statistics and
+  utility meters.
+
+If a power or price sensor becomes unavailable, the rates show
+*unavailable* rather than a wrong number, and the totals pause until it
+comes back. Power Insight never guesses.
+
+Already have years of history in your inverter's app? You can
+[carry it over](advanced/history.md) so your totals start where your system
+really is.
+
+## Going deeper
+
+- [Costs, savings and the maths](advanced/costs-and-savings.md): the
+  formulas behind the cost and savings sensors, LCOE and LCOS, and what
+  happens when you change a device's lifetime values.
+- [Where the power comes from](advanced/power-attribution.md): the four flow
+  channels, *ratio* vs. *share*, and how a battery's or consumer's source mix
+  is decided.
+- [Carried-over history](advanced/history.md): bringing your existing totals
+  into Power Insight.
+- [Glossary](glossary.md): every term on one page.
+- [Reference cases](spec/index.mdx): worked example homes with flow diagrams.
