@@ -1,7 +1,10 @@
 # Sensor options & presets
 
-Power Insight can create a lot of sensors. The **Options** flow lets you choose
-exactly which ones exist — for the whole home and per device type.
+Power Insight can create a lot of sensors, but you don't need all of them.
+The integration's **Options** let you choose which ones exist: start with a
+ready-made **sensor set**, or pick sensors per device type with **Custom**.
+Each sensor's card on its [device page](devices/index.mdx) names the option
+that creates it.
 
 Open it from **Settings → Devices & services → Power Insight → Configure**.
 
@@ -33,10 +36,9 @@ Levelized sensors in a set only appear for devices that have lifetime values.
 
 ## Custom: one page per device type
 
-Choosing **Custom** walks you through one page per **scope** — the devices the
-selection applies to. Only scopes you have devices for are shown.
+Choosing **Custom** walks you through one page per device type. Only scopes you have devices for are shown.
 
-| Scope | Applies to |
+| Page | Applies to |
 |---|---|
 | **Combined** | Whole-home sensors, on the *Combined* device. |
 | **Grid** | Your grid connection. |
@@ -45,7 +47,7 @@ selection applies to. Only scopes you have devices for are shown.
 | **Consumer** | All consumers. |
 
 Each page groups its options into sections. Which ones a page shows depends on
-what its sensors support — see [the matrix below](#which-scope-offers-what).
+what its sensors support — see [the table below](#which-page-offers-what).
 
 ### Power
 
@@ -72,7 +74,7 @@ what its sensors support — see [the matrix below](#which-scope-offers-what).
   drawn so far, over its whole lifetime. Turns on *Energy from each source*
   too, since the shares are worked out from those totals. *(consumer only)*
 
-See [Where a device's power goes](sensors.mdx) for how to read these names.
+See [Reading the sensor names](sensors.mdx#reading-the-sensor-names) for how to read these names.
 
 ### Export compensation
 
@@ -127,7 +129,7 @@ cost — exporting below cost loses money.
 The **Financial return method** works like the cost method, and **Total
 financial return** adds running totals.
 
-## Which scope offers what
+## Which page offers what
 
 | Option | Combined | Grid | PV | Battery | Consumer |
 |---|:---:|:---:|:---:|:---:|:---:|
@@ -153,8 +155,7 @@ financial return** adds running totals.
 | Financial return method — Levelized | ✅ | — | ✅ | ✅ | — |
 | Total financial return | ✅ | — | ✅ | ✅ | — |
 
-*(Derived from `SCOPE_SUPPORTED_OPTIONS` in the integration; a ✅ means the
-option is offered on that scope.)*
+A ✅ means the option is offered on that page.
 
 ## Diagnostics
 
@@ -172,4 +173,4 @@ flow stops and tells you which devices need attention:
 > **Reconfigure** on each device to add them (e.g. a price sensor for costs,
 > lifetime values for levelized sensors), then save again.
 
-Fix the devices (see [Configuration](devices/index.mdx)) and save the options again.
+Fix the devices (see [Devices](devices/index.mdx)) and save the options again.

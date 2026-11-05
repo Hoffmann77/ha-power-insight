@@ -11,6 +11,17 @@ Assistant the Marketplace offers you the last release that still works with
 it.
 :::
 
+## Before you start
+
+- Home Assistant **2026.11** or newer.
+- The [Recorder](https://www.home-assistant.io/integrations/recorder/)
+  enabled (default) — accumulated total sensors store their running total in the
+  recorder and restore it across restarts.
+- An **instantaneous power sensor** (W, kW or MW) for your grid connection and
+  for each PV system, battery, and consumer you want to track.
+- For cost and savings sensors: a **grid electricity price** entity (a `sensor`
+  or `input_number`) reporting the current import price per kWh.
+
 ## Install from the Marketplace (recommended)
 
 Power Insight is not in the Marketplace catalog yet, so add it from its link.
@@ -60,16 +71,4 @@ release.
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=power_insight)
 
-Continue with **[Getting started](getting-started.md)** to configure your energy
-mix.
-
-## Requirements
-
-- Home Assistant **2026.11** or newer.
-- The [Recorder](https://www.home-assistant.io/integrations/recorder/)
-  enabled (default) — accumulated total sensors store their running total in the
-  recorder and restore it across restarts.
-- An **instantaneous power sensor** (W, kW or MW) for your grid connection and
-  for each PV system, battery, and consumer you want to track.
-- For cost and savings sensors: a **grid electricity price** entity (a `sensor`
-  or `input_number`) reporting the current import price per kWh.
+Continue with **[Getting started](getting-started.md)** to add your devices.
