@@ -167,19 +167,18 @@ html[data-theme='dark'] {
 /* ---------- Admonitions ---------- */
 
 .theme-admonition {
-  border: 1px solid var(--pi-border);
-  border-left-width: 4px;
+  --pi-adm: var(--pi-muted);
+  border: 1px solid color-mix(in srgb, var(--pi-adm) 30%, var(--pi-border));
   border-radius: var(--pi-radius);
   box-shadow: none;
-  background: var(--pi-surface);
+  background: color-mix(in srgb, var(--pi-adm) 6%, var(--ifm-background-color));
   font-size: 0.95rem;
 }
 
-.theme-admonition.alert--info { border-left-color: var(--ifm-color-info); }
-.theme-admonition.alert--success { border-left-color: var(--pi-battery); }
-.theme-admonition.alert--warning { border-left-color: var(--pi-solar); }
-.theme-admonition.alert--danger { border-left-color: var(--ifm-color-danger); }
-.theme-admonition.alert--secondary { border-left-color: var(--pi-muted); }
+.theme-admonition.alert--info { --pi-adm: var(--ifm-color-info); }
+.theme-admonition.alert--success { --pi-adm: var(--pi-battery); }
+.theme-admonition.alert--warning { --pi-adm: var(--pi-solar); }
+.theme-admonition.alert--danger { --pi-adm: var(--ifm-color-danger); }
 
 /* ---------- Details / collapsibles ---------- */
 
