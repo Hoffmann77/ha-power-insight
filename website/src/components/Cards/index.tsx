@@ -10,7 +10,7 @@ type Accent = 'grid' | 'solar' | 'battery' | 'consumer' | 'neutral';
 //     <Card title="Grid" icon="⚡" accent="grid" to="/devices/grid">…</Card>
 //   </CardGrid>
 // `to` without a leading slash is a doc id path ("installation"), resolved
-// against the docs version being viewed so a card on /next stays on /next.
+// against the docs version being viewed so a card never jumps to another version.
 function useDocHref(to?: string): string | undefined {
   const version = useActiveVersion(undefined);
   if (!to || to.startsWith('/') || /^[a-z]+:/.test(to)) return to;

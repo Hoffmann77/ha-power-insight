@@ -7,17 +7,18 @@ name: Docs
 # -> Source: "GitHub Actions" (it was previously "Deploy from a branch",
 # pointing at gh-pages, which `mike` managed).
 on:
+  # The published site carries released versions only, so a change to `docs/`
+  # changes nothing a visitor sees until a release cuts it into a version. Only
+  # the released versions (website/versioned_*, versions.json) and the site
+  # machinery (theme, components, config) are worth a deploy.
   push:
     branches:
       - main
-      # Integration branch: built and type-checked, never published. Without
-      # it the docs are unverified until they reach main, which is far too
-      # late to find a broken link or a bad MDX page.
-      - feature/refactor-engine
     paths:
-      - 'docs/**'
       - 'website/**'
       - '.github/workflows/docs.yaml'
+  # Pull requests still build `docs/` too (under /next), so a broken link or a
+  # bad MDX page fails the pull request rather than the release that cuts it.
   pull_request:
     paths:
       - 'docs/**'
@@ -60,8 +61,12 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
+      # Only the deploy leaves `docs/` out (see docusaurus.config.ts); every
+      # other build includes it, so its links are checked.
       - name: Build
         run: npm run build
+        env:
+          DOCS_RELEASED_ONLY: ${{ github.ref == 'refs/heads/main' }}
 
       # GitHub Pages allows exactly one deployment per repository, so a pull
       # request cannot get its own URL without giving up the Actions publishing
