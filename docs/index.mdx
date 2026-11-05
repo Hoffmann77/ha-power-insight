@@ -4,28 +4,24 @@ sidebar_label: Home
 slug: /
 ---
 
-import Logo from './assets/logo.png';
-
 # Power Insight
 
-<div style={{textAlign: 'center', margin: '1.5rem 0'}}>
-  <img src={Logo} alt="Power Insight" width="320" />
+<div className="pi-hero">
+  <p className="pi-hero__tagline">
+    See what the electricity in your home costs, what your solar and battery
+    save you, and where every watt comes from — live, in Home Assistant.
+  </p>
+  <div className="pi-hero__actions">
+    <ButtonLink primary to="installation">Install</ButtonLink>
+    <ButtonLink to="getting-started">Get started</ButtonLink>
+  </div>
 </div>
 
-**Real-time insight into the cost, savings, and distribution of the electrical
-power in your home.**
-
-Power Insight tracks the real-time power flow, electricity costs, savings, and
-CO₂ impact of your home's energy mix — grid, solar, batteries, and individual
-consumers in one place.
-
-Add your PV systems and batteries to see how much they impact the power in your
-home, and add electrical consumers to get detailed insight into current and
-total costs and the distribution of the energy sources they use.
-
-Because every calculation is driven by **instantaneous power values**, Power
-Insight works great with **dynamic electricity prices** — the numbers you see
-always reflect the price you are paying right now.
+Power Insight reads the **power sensors you already have** — your grid meter,
+your PV inverter, your battery, and any smart plugs — and turns them into
+sensors for cost, savings and power flow. Because everything is calculated
+from live power, it works great with **dynamic electricity prices**: the
+numbers always reflect the price you are paying right now.
 
 :::note[CO₂ tracking is not available yet]
 
@@ -44,29 +40,47 @@ until the 1.0 release.
 
 ## What you get
 
-- **Power distribution** — how the power entering your home splits between grid
-  import/export, self-consumption, battery charging, and PV standby, in Watts,
-  ratios (%), and shares (%).
-- **Cost of electricity** — a blended per-kWh price across your whole energy
-  mix, plus real-time cost-rate sensors (€/h) and running totals.
-- **Savings** — money earned by exporting surplus power to the grid, plus money
-  avoided by self-consuming your own generation instead of importing.
-- **Levelized costs (LCOE / LCOS)** — spread each device's total lifetime cost
-  across every kWh it produces, so you can see the true cost of your own power.
-- **Per-device attribution** — which source charged your battery, and which mix
-  of grid/solar/battery is currently powering each consumer.
+<CardGrid>
+  <Card title="Power flow" icon="⚡" accent="grid">
+    Where your power comes from and where it goes — grid, solar, battery and
+    home — in watts and percent.
+  </Card>
+  <Card title="Cost of electricity" icon="💶" accent="consumer">
+    A live price per kWh across your whole energy mix, the cost per hour, and
+    running totals.
+  </Card>
+  <Card title="Savings" icon="☀️" accent="solar">
+    Money earned by exporting solar power, and money saved by using it
+    yourself instead of buying from the grid.
+  </Card>
+  <Card title="Per-device insight" icon="🔋" accent="battery">
+    Which source charged your battery, and which mix of grid, solar and
+    battery powers each appliance.
+  </Card>
+</CardGrid>
 
-## How to read these docs
+## Where to go next
 
-| Page | What it covers |
-| --- | --- |
-| **[Installation](installation.md)** | Install from the Marketplace (recommended) or manually. |
-| **[Getting started](getting-started.md)** | Name the hub, pick a preset, add your devices. |
-| **[Configuration](configuration/index.md)** | Every setting for the grid, PV, battery, and consumer devices. |
-| **[Sensors, presets & options](configuration/options-and-presets.md)** | Choose exactly which sensors get created. |
-| **[Entity reference](entities.md)** | The full, accurate list of every sensor Power Insight can create. |
-| **[Core concepts](concepts.md)** | LCOE/LCOS, sign conventions, how savings are calculated. |
-| **[Reference cases](spec/index.mdx)** | Worked examples that pin down exactly how the engine attributes power. |
+<CardGrid>
+  <Card title="Installation" icon="📦" to="installation">
+    Install from the Marketplace or manually.
+  </Card>
+  <Card title="Getting started" icon="🚀" to="getting-started">
+    Create the hub, pick a sensor set, add your devices.
+  </Card>
+  <Card title="Devices" icon="⚙️" to="devices/">
+    Set up your grid, solar, batteries and consumers.
+  </Card>
+  <Card title="Sensors" icon="📈" to="sensors">
+    What each sensor means and when it appears.
+  </Card>
+  <Card title="How it works" icon="💡" to="how-it-works">
+    How costs and savings are calculated, in plain words.
+  </Card>
+  <Card title="Reference cases" icon="🧪" to="spec">
+    Worked example homes with flow diagrams.
+  </Card>
+</CardGrid>
 
 ## Limitations
 

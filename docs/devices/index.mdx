@@ -1,0 +1,64 @@
+# Devices
+
+Power Insight works with the **devices** you tell it about: one for each
+grid connection, PV system, battery and consumer. For each one you pick the
+Home Assistant sensor that reports its power, plus a few details such as your
+electricity price or what the hardware cost.
+
+Add a device with **Add device** on the Power Insight integration page, and
+change it later with its **Reconfigure** button.
+
+<CardGrid>
+  <Card title="Grid connection" icon="⚡" accent="grid" to="devices/grid">
+    Your import/export meter and electricity price. Exactly one is needed.
+  </Card>
+  <Card title="PV system" icon="☀️" accent="solar" to="devices/pv">
+    A solar array or inverter. Add one per system.
+  </Card>
+  <Card title="Battery" icon="🔋" accent="battery" to="devices/battery">
+    A home battery. Add one per battery.
+  </Card>
+  <Card title="Consumer" icon="🔌" accent="consumer" to="devices/consumer">
+    An appliance, EV charger or heat pump with its own power sensor.
+  </Card>
+  <Card title="Whole home" icon="🏠" to="devices/home">
+    Created for you: totals for the whole home.
+  </Card>
+</CardGrid>
+
+Each device page has two parts: **Settings**, what you enter when adding the
+device, and **Sensors**, what Power Insight then creates for it. Which
+sensors are created is chosen once per device type in the integration's
+**Options**; see [Sensor options & presets](../sensor-options.md).
+
+## Which settings are required?
+
+Only the **power sensor** is always required. Other settings become required
+once you turn on sensors that need them. For example the grid **electricity price entity** is only required once
+you enable any cost or savings sensor, and the **lifetime** values are only
+required once you enable any levelized sensor.
+
+If you enable an option that a device is missing data for, the options flow tells
+you which devices need attention:
+
+> These devices are missing values the selected sensors need: … Open
+> **Reconfigure** on each device to add them (e.g. a price sensor for costs,
+> lifetime values for levelized sensors), then save again.
+
+<details>
+<summary>How device settings are stored</summary>
+
+Each device is a Home Assistant **config subentry** of the main Power Insight
+entry. Its configuration is split into:
+
+- `adapter.config` — the device's own settings (power entity, price entity,
+  export compensation, charge sources, and the derived LCOE/LCOS).
+- top-level `data` — the raw **lifetime** inputs (`lifetime_production`,
+  `lifetime_cost`, `co2_footprint`) used to derive levelized costs, the
+  moment Power Insight started counting the device (`counting_since`), and
+  its [carried-over history](../advanced/history.md) as entered (`history`).
+
+You do not edit these directly — the config flow does it for you — but it
+explains why some fields (lifetime values) behave differently from the rest.
+
+</details>

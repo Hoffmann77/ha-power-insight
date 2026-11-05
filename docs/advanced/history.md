@@ -6,6 +6,18 @@ happened since: how much was produced, exported, charged and discharged, and
 often how much you saved. Enter those figures and your running totals start
 where your system really is, not at zero.
 
+:::tip[In short]
+
+1. Open your PV system's or battery's app and note its totals: what it
+   produced, exported, charged and discharged.
+2. Enter them in the device's **Already accumulated: energy (kWh)** section.
+3. Enter your **Average grid tariff** once, on the grid connection.
+
+Everything below explains the details; you only need it if the form refuses
+your figures or the totals look surprising.
+
+:::
+
 ## Where to enter it
 
 Every grid, PV system and battery form ends in two optional **Already

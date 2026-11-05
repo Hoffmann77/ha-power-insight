@@ -3,7 +3,7 @@
 This is the reference for how Power Insight names its sensors. New sensors must
 follow it so the entity set stays predictable and self-explanatory. The
 canonical list of shipped sensors lives in the
-[Entity reference](../entities.md); this page is the *rule set* behind it.
+[Entity reference](../sensors.mdx); this page is the *rule set* behind it.
 
 ## Name = device + entity
 
@@ -67,7 +67,7 @@ Pick the noun that matches the quantity — do not invent synonyms.
 | `… from {source}` | % | A dynamic per-source attribution sensor (one per source). |
 
 `ratio` and `share` are **not interchangeable** — see
-[Power distribution](../concepts.md#the-four-channels) for the precise
+[Power distribution](../advanced/power-attribution.md#the-four-channels) for the precise
 denominators. Prose that describes a `ratio` as "share of total home power" (or
 vice versa) is a bug.
 

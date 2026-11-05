@@ -1,35 +1,274 @@
-/* Site-wide theme. Keeps the light-blue accent the MkDocs site used, so the
-   published docs stay recognisable across the move. No webfont is loaded:
-   everything inherits Infima's system font stack, which keeps the site
-   self-contained and offline-viewable. */
+/* Site-wide theme.
+   No webfont is loaded: everything uses the system font stack, which keeps the
+   site self-contained and offline-viewable. The palette is an energy palette —
+   a deep blue primary (the grid), a solar amber accent and a battery green —
+   used consistently by callouts, badges and cards. */
 
 :root {
-  --ifm-color-primary: #0277bd;
-  --ifm-color-primary-dark: #026aa9;
-  --ifm-color-primary-darker: #02649f;
-  --ifm-color-primary-darkest: #015383;
-  --ifm-color-primary-light: #0384d1;
-  --ifm-color-primary-lighter: #038adb;
-  --ifm-color-primary-lightest: #049bf5;
-  --ifm-code-font-size: 92%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.08);
+  --ifm-color-primary: #0369a1;
+  --ifm-color-primary-dark: #035f91;
+  --ifm-color-primary-darker: #035989;
+  --ifm-color-primary-darkest: #024971;
+  --ifm-color-primary-light: #0373b1;
+  --ifm-color-primary-lighter: #0479b9;
+  --ifm-color-primary-lightest: #0489d1;
+
+  --pi-solar: #d97706;
+  --pi-battery: #059669;
+  --pi-grid: var(--ifm-color-primary);
+  --pi-consumer: #7c3aed;
+
+  --pi-surface: #f8fafc;
+  --pi-surface-raised: #ffffff;
+  --pi-border: #e2e8f0;
+  --pi-muted: #64748b;
+  --pi-radius: 10px;
+  --pi-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px rgba(15, 23, 42, 0.06);
+
+  --ifm-background-color: #ffffff;
+  --ifm-font-color-base: #1e293b;
+  --ifm-heading-color: #0f172a;
+  --ifm-font-size-base: 16.5px;
+  --ifm-line-height-base: 1.7;
+  --ifm-heading-font-weight: 650;
+  --ifm-h1-font-size: 2.25rem;
+  --ifm-h2-font-size: 1.6rem;
+  --ifm-h3-font-size: 1.2rem;
+  --ifm-code-font-size: 88%;
+  --ifm-code-background: #f1f5f9;
+  --ifm-code-border-radius: 5px;
+  --ifm-code-padding-horizontal: 0.35rem;
+  --ifm-global-radius: var(--pi-radius);
+  --ifm-toc-border-color: var(--pi-border);
+  --ifm-table-border-color: var(--pi-border);
+  --ifm-table-stripe-background: transparent;
+  --ifm-navbar-shadow: 0 1px 0 var(--pi-border);
+  --ifm-footer-background-color: var(--pi-surface);
+  --docusaurus-highlighted-code-line-bg: rgba(15, 23, 42, 0.07);
 }
 
-[data-theme='dark'] {
-  --ifm-color-primary: #4fc3f7;
-  --ifm-color-primary-dark: #2eb7f5;
-  --ifm-color-primary-darker: #1eb1f4;
-  --ifm-color-primary-darkest: #0a95d6;
-  --ifm-color-primary-light: #70cff9;
-  --ifm-color-primary-lighter: #80d5fa;
-  --ifm-color-primary-lightest: #b0e5fc;
-  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.12);
+html[data-theme='dark'] {
+  --ifm-color-primary: #38bdf8;
+  --ifm-color-primary-dark: #1bb3f7;
+  --ifm-color-primary-darker: #0badf6;
+  --ifm-color-primary-darkest: #0893d1;
+  --ifm-color-primary-light: #55c7f9;
+  --ifm-color-primary-lighter: #64ccfa;
+  --ifm-color-primary-lightest: #8fdafb;
+
+  --pi-solar: #fbbf24;
+  --pi-battery: #34d399;
+  --pi-consumer: #a78bfa;
+
+  --pi-surface: #111827;
+  --pi-surface-raised: #1a2232;
+  --pi-border: #273244;
+  --pi-muted: #94a3b8;
+  --pi-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.25);
+
+  --ifm-background-color: #0b1120;
+  --ifm-background-surface-color: #0b1120;
+  --ifm-font-color-base: #d6dee9;
+  --ifm-heading-color: #f1f5f9;
+  --ifm-code-background: #1e293b;
+  --ifm-footer-background-color: #0d1424;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.1);
 }
 
-/* Tables in the entity reference and the reference-case pages carry a lot of
-   columns; let them scroll rather than squeezing the prose column. */
+/* ---------- Prose ---------- */
+
+.markdown {
+  --ifm-h1-vertical-rhythm-bottom: 1;
+}
+
+.markdown h1:first-child {
+  letter-spacing: -0.02em;
+}
+
+.markdown h2 {
+  margin-top: 2.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--pi-border);
+  letter-spacing: -0.01em;
+}
+
+.markdown h3 {
+  margin-top: 2rem;
+}
+
+.markdown > p:first-of-type {
+  font-size: 1.08rem;
+}
+
+.markdown a {
+  text-underline-offset: 0.18em;
+}
+
+.markdown code {
+  border: 1px solid var(--pi-border);
+}
+
+.markdown pre code {
+  border: none;
+}
+
+.markdown hr {
+  border-color: var(--pi-border);
+  margin: 2.5rem 0;
+}
+
+/* Keep the prose column comfortable to read on wide screens. */
+@media (min-width: 1440px) {
+  .theme-doc-markdown {
+    max-width: 52rem;
+  }
+}
+
+/* ---------- Tables ---------- */
+
+/* Wide tables scroll rather than squeezing the prose column. */
 .markdown table {
   display: block;
+  width: fit-content;
+  max-width: 100%;
   overflow-x: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius);
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
+.markdown table thead tr {
+  background: var(--pi-surface);
+}
+
+.markdown table th {
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.markdown table th,
+.markdown table td {
+  border: none;
+  border-bottom: 1px solid var(--pi-border);
+  padding: 0.6rem 0.85rem;
+  vertical-align: top;
+}
+
+.markdown table tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown table tbody tr:hover {
+  background: var(--pi-surface);
+}
+
+/* ---------- Admonitions ---------- */
+
+.theme-admonition {
+  --pi-adm: var(--pi-muted);
+  border: 1px solid color-mix(in srgb, var(--pi-adm) 30%, var(--pi-border));
+  border-radius: var(--pi-radius);
+  box-shadow: none;
+  background: color-mix(in srgb, var(--pi-adm) 6%, var(--ifm-background-color));
+  font-size: 0.95rem;
+}
+
+.theme-admonition.alert--info { --pi-adm: var(--ifm-color-info); }
+.theme-admonition.alert--success { --pi-adm: var(--pi-battery); }
+.theme-admonition.alert--warning { --pi-adm: var(--pi-solar); }
+.theme-admonition.alert--danger { --pi-adm: var(--ifm-color-danger); }
+
+/* ---------- Details / collapsibles ---------- */
+
+.markdown details {
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius);
+  background: var(--pi-surface);
+  box-shadow: none;
+  --ifm-alert-foreground-color: var(--ifm-font-color-base);
+}
+
+.markdown details summary {
+  font-weight: 600;
+}
+
+/* ---------- Navigation ---------- */
+
+.navbar__title {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.menu {
+  font-size: 0.94rem;
+}
+
+.menu__link {
+  border-radius: 6px;
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--ifm-color-primary) 10%, transparent);
+}
+
+.table-of-contents {
+  font-size: 0.85rem;
+}
+
+.pagination-nav__link {
+  border-color: var(--pi-border);
+  border-radius: var(--pi-radius);
+}
+
+.pagination-nav__link:hover {
+  border-color: var(--ifm-color-primary);
+}
+
+/* ---------- Reusable bits for MDX pages ---------- */
+
+/* Coloured device chips: <span className="pi-chip pi-chip--solar">PV</span> */
+.pi-chip {
+  display: inline-block;
+  padding: 0.05rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.6;
+  vertical-align: middle;
+  color: var(--pi-chip-color, var(--pi-muted));
+  background: color-mix(in srgb, var(--pi-chip-color, var(--pi-muted)) 12%, transparent);
+}
+
+.pi-chip--grid { --pi-chip-color: var(--pi-grid); }
+.pi-chip--solar { --pi-chip-color: var(--pi-solar); }
+.pi-chip--battery { --pi-chip-color: var(--pi-battery); }
+.pi-chip--consumer { --pi-chip-color: var(--pi-consumer); }
+
+/* Hero block on the landing page. */
+.pi-hero {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.pi-hero__tagline {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--ifm-heading-color);
+  max-width: 36rem;
+  margin: 0.5rem auto 1.5rem;
+  line-height: 1.5;
+}
+
+.pi-hero__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}

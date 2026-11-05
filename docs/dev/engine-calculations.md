@@ -11,7 +11,7 @@ worked example where the arithmetic is not obvious.
 
 ## Conventions this builds on
 
-- **Sign convention** (see [Core concepts](../concepts.md)): grid `+` import /
+- **Sign convention** (see [Core concepts](../how-it-works.md)): grid `+` import /
   `-` export; PV/battery `+` produce/discharge / `-` standby/charge; consumer
   `-` = load.
 - **Flow roles.** Each snapshot every adapter is classified from its signed
@@ -701,7 +701,7 @@ Users adopt Power Insight years after their PV system or battery went in, and
 the device's app knows what happened since. They can enter it in the device's
 *Already accumulated* section, as kWh, as amounts, or both; the running totals
 then read what they counted plus what they carry over. The user's side is
-[Carried-over history](../history.md); the design is in
+[Carried-over history](../advanced/history.md); the design is in
 [carried-over-history](carried-over-history.md).
 
 :::note[Decision: history is added when a total is reported, never accumulated]
