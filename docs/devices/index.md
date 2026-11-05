@@ -1,4 +1,4 @@
-# Configuration overview
+# Devices
 
 Power Insight configuration has two layers:
 
@@ -29,7 +29,7 @@ configuration is split into:
 - top-level `data` — the raw **lifetime** inputs (`lifetime_production`,
   `lifetime_cost`, `co2_footprint`) used to derive levelized costs, the
   moment Power Insight started counting the device (`counting_since`), and
-  its [carried-over history](../history.md) as entered (`history`).
+  its [carried-over history](../advanced/history.md) as entered (`history`).
 
 You do not edit these directly — the config flow does it for you — but it
 explains why some fields (lifetime values) behave differently from the rest.
@@ -50,5 +50,5 @@ you which devices need attention:
 
 ## Sensor selection
 
-See **[Sensors, presets & options](options-and-presets.md)** for presets, the
+See **[Sensors, presets & options](../sensor-options.md)** for presets, the
 per-scope Custom flow, and the full mapping of options to sensors.

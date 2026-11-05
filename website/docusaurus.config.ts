@@ -108,13 +108,14 @@ const config: Config = {
           items: [
             {label: 'Installation', to: '/installation'},
             {label: 'Getting started', to: '/getting-started'},
-            {label: 'Core concepts', to: '/concepts'},
+            // /next until the next release is cut: 2026.7 still uses the old page names.
+            {label: 'How it works', to: '/next/how-it-works'},
           ],
         },
         {
           title: 'Reference',
           items: [
-            {label: 'Entity reference', to: '/entities'},
+            {label: 'Sensor reference', to: '/next/sensors'},
             {label: 'Reference cases', to: '/spec'},
             {label: 'Engine decisions', to: '/dev/engine-calculations'},
             {label: 'Engine testing', to: '/next/dev/testing'},

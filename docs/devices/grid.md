@@ -62,7 +62,7 @@ effect. It is safe to leave empty.
 > device has its own.
 > **Amounts:** the whole home's total savings and export compensation from
 > your app. Both are split between your PV systems and batteries. See
-> [Carried-over history](../history.md).
+> [Carried-over history](../advanced/history.md).
 
 ## Sensors this device can create
 
@@ -81,8 +81,8 @@ grid device owns **both sides of the meter**.
 | Export compensation rate | currency/h | *Export compensation rate* |
 | Total export compensation | currency | *Total export compensation* |
 
-See the [Entity reference](../entities.md#grid-connection) for exactly what each
-sensor means, and [Sensors, presets & options](options-and-presets.md) for how to
+See the [Entity reference](../sensors.md#grid-connection) for exactly what each
+sensor means, and [Sensors, presets & options](../sensor-options.md) for how to
 enable them.
 
 :::info[Grid electricity has no levelized cost]

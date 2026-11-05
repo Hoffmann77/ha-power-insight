@@ -1,6 +1,6 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 
-// Mirrors the nav the MkDocs site had, plus the reference-case specification.
+// User docs first, in reading order; the reference cases close the list.
 const sidebars: SidebarsConfig = {
   docs: [
     'index',
@@ -8,20 +8,19 @@ const sidebars: SidebarsConfig = {
     'getting-started',
     {
       type: 'category',
-      label: 'Configuration',
-      items: [
-        'configuration/index',
-        'configuration/grid',
-        'configuration/pv',
-        'configuration/battery',
-        'configuration/consumer',
-        'configuration/options-and-presets',
-      ],
+      label: 'Devices',
+      link: {type: 'doc', id: 'devices/index'},
+      items: ['devices/grid', 'devices/pv', 'devices/battery', 'devices/consumer'],
     },
-    'entities',
-    'concepts',
-    'history',
-    'faq',
+    'sensors',
+    'sensor-options',
+    'how-it-works',
+    {
+      type: 'category',
+      label: 'Advanced',
+      items: ['advanced/history'],
+    },
+    'troubleshooting',
     {
       type: 'category',
       label: 'Reference cases',

@@ -7,7 +7,7 @@ amounts, or both.
 
 This page was the plan. It is implemented: the decisions are recorded in
 [Engine calculation decisions](engine-calculations.md#history-carried-over-from-a-devices-app),
-the user's side is [Carried-over history](../history.md), and this page keeps
+the user's side is [Carried-over history](../advanced/history.md), and this page keeps
 a map of the code and what is still open.
 
 ## The decisions

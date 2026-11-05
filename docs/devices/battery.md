@@ -51,7 +51,7 @@ limit. If the battery charges from elsewhere — say it is set to solar only but
 tops up from the grid at night — that power is still counted, as coming from
 your other sources, and the watts show up in the `restriction_deficit`
 attribute of its operating-cost sensors. See
-[When a device draws from outside its sources](../concepts.md#when-a-device-draws-from-outside-its-sources).
+[When a device draws from outside its sources](../how-it-works.md#when-a-device-draws-from-outside-its-sources).
 
 :::note[Reconfigure prompt]
 
@@ -65,8 +65,8 @@ stays correct.
 
 These behave exactly as for a [PV system](pv.md#lifetime-production). Together,
 *lifetime cost ÷ lifetime throughput* gives this battery's
-[**LCOS**](../concepts.md#lcos-levelized-cost-of-storage). Changing them later
-applies a [correction factor](../concepts.md#the-correction-factor).
+[**LCOS**](../how-it-works.md#lcos-levelized-cost-of-storage). Changing them later
+applies a [correction factor](../how-it-works.md#the-correction-factor).
 
 :::note
 
@@ -79,7 +79,7 @@ CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
 > Optional, in two sections, one per route. **Energy (kWh):** *Charged*,
 > *Discharged* and any grid charging, and optionally its own export to the
 > grid and its own average grid tariff (else the grid's). **Amounts:** the savings and export compensation your app shows,
-> taken as they are. See [Carried-over history](../history.md).
+> taken as they are. See [Carried-over history](../advanced/history.md).
 
 ## Sensors this device can create
 
@@ -94,13 +94,13 @@ These show how much of the battery's current charging power comes from each
 source — for example "currently 70 % from solar, 30 % from the grid". Only
 sources you selected in **Charges from** appear.
 
-See the [Entity reference](../entities.md#battery) for the full list.
+See the [Entity reference](../sensors.md#battery) for the full list.
 
 :::info[Why is my battery's savings negative while charging?]
 
 Batteries always cost money to charge, so their savings go negative while
 charging and positive while discharging. This is expected — see the
-[FAQ](../faq.md#why-does-my-battery-have-negative-cost-savings).
+[FAQ](../troubleshooting.md#why-does-my-battery-have-negative-cost-savings).
 
 :::
 ## Reading the battery's totals

@@ -1,8 +1,8 @@
-# Entity reference
+# Sensor reference
 
 This is the full list of sensors Power Insight can create, grouped by scope.
 Which sensors actually appear depends on the options you enable — see
-[Sensors, presets & options](configuration/options-and-presets.md).
+[Sensors, presets & options](sensor-options.md).
 
 :::info[Currency units]
 
@@ -28,7 +28,7 @@ Every percentage sensor is one or the other, and the denominator differs:
 - **`Share of …`** — this device's slice of a **home-wide total** (e.g. *Share
   of grid export* = this system's exports ÷ *all power exported by the home*).
 
-See [Power distribution → ratio vs. share](concepts.md#the-four-channels)
+See [Power distribution → ratio vs. share](how-it-works.md#the-four-channels)
 for the full definition.
 
 :::
@@ -115,7 +115,7 @@ repeat it.
 :::note[Combined levelized totals are derived, not integrated]
 
 The *levelized* totals are computed as the sum of each device's own
-levelized total (scaled by its [correction factor](concepts.md#the-correction-factor))
+levelized total (scaled by its [correction factor](how-it-works.md#the-correction-factor))
 plus a ledger of removed devices — so editing lifetime values is retroactive
 and removing a device never drops its historical contribution.
 
@@ -132,7 +132,7 @@ accumulating anything.
 ## Grid connection
 
 Import and export both live on the grid device (the single point where they
-physically happen). See [Grid connection configuration](configuration/grid.md).
+physically happen). See [Grid connection configuration](devices/grid.md).
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
@@ -158,7 +158,7 @@ physically happen). See [Grid connection configuration](configuration/grid.md).
 
 Per PV device. Export sensors require **Exports to the grid** to be on;
 levelized sensors require lifetime values (an LCOE). See
-[PV system configuration](configuration/pv.md).
+[PV system configuration](devices/pv.md).
 
 ### Real-time sensors
 
@@ -215,15 +215,15 @@ battery-to-battery charging — so in most setups they are absent.)
 | Charging source shares (one per configured source) | % | Share of the battery's current charging power coming from each source (e.g. "70 % solar, 30 % grid"). One sensor per source selected in **Charges from**. | Charging source shares |
 
 For the battery, the levelized quantities use the battery's
-[**LCOS**](concepts.md#lcos-levelized-cost-of-storage) instead of an LCOE. See
-[Battery configuration](configuration/battery.md).
+[**LCOS**](how-it-works.md#lcos-levelized-cost-of-storage) instead of an LCOE. See
+[Battery configuration](devices/battery.md).
 
 ---
 
 ## Consumer
 
 Per consumer device. Consumer support is still under development. See
-[Consumer configuration](configuration/consumer.md).
+[Consumer configuration](devices/consumer.md).
 
 | Sensor | Unit | Meaning | Enabled by |
 |---|---|---|---|
@@ -237,7 +237,7 @@ Per consumer device. Consumer support is still under development. See
 On a battery or consumer set to **Specific devices**, both operating-cost rate
 sensors carry a `restriction_deficit` attribute: the watts the device currently
 draws from outside its selected sources. See
-[When a device draws from outside its sources](concepts.md#when-a-device-draws-from-outside-its-sources).
+[When a device draws from outside its sources](how-it-works.md#when-a-device-draws-from-outside-its-sources).
 
 ### Accumulated totals
 

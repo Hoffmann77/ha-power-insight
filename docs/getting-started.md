@@ -66,17 +66,17 @@ fields are *required* depends on the sensors you enabled — for example, cost
 sensors need a price entity and levelized sensors need lifetime values. See the
 per-device pages:
 
-- [Grid connection](configuration/grid.md)
-- [PV system](configuration/pv.md)
-- [Battery](configuration/battery.md)
-- [Consumer](configuration/consumer.md)
+- [Grid connection](devices/grid.md)
+- [PV system](devices/pv.md)
+- [Battery](devices/battery.md)
+- [Consumer](devices/consumer.md)
 
 :::warning[Mind the sign convention]
 
 Power Insight expects: **Grid** — positive = import, negative = export;
 **PV / battery** — positive = producing/discharging, negative =
 consuming/charging. If your sensor uses the opposite sign, turn on **Invert
-power direction**. See [Sign conventions](concepts.md#sign-conventions).
+power direction**. See [Sign conventions](how-it-works.md#sign-conventions).
 
 :::
 
@@ -92,8 +92,8 @@ sensors exist. You can:
 Turning a sensor off **disables** it in Home Assistant but does not delete it, so
 its history is preserved and it comes back the moment you re-enable the option.
 
-See **[Sensors, presets & options](configuration/options-and-presets.md)** for
-the full reference, and the **[Entity reference](entities.md)** for every sensor
+See **[Sensors, presets & options](sensor-options.md)** for
+the full reference, and the **[Entity reference](sensors.md)** for every sensor
 Power Insight can create.
 
 ## 4. (Optional) Seed accumulated totals
@@ -102,4 +102,4 @@ Accumulated **total** sensors (e.g. *Total cost savings*) start counting from
 zero. To carry over what your PV system or battery earned before, enter the
 figures from its app in the **Already accumulated** section when you add the
 device, or later under its **Reconfigure** page (see
-[Carried-over history](history.md)).
+[Carried-over history](advanced/history.md)).

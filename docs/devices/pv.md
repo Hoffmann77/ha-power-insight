@@ -51,7 +51,7 @@ earned.
 > Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors.
 
 Together, *lifetime cost ÷ lifetime production* gives this system's
-[**LCOE**](../concepts.md#lcoe-levelized-cost-of-electricity).
+[**LCOE**](../how-it-works.md#lcoe-levelized-cost-of-electricity).
 
 ### CO₂ footprint
 
@@ -70,12 +70,12 @@ CO₂ sensors are **not implemented yet**; this field currently has no effect.
 > money, with its own average grid tariff or the grid's. **Amounts:** the
 > savings and export compensation your app shows, taken as they are. Your
 > totals then start where your system really is. See
-> [Carried-over history](../history.md).
+> [Carried-over history](../advanced/history.md).
 
 ## Changing lifetime values later
 
 If you reconfigure the lifetime cost or production, Power Insight applies a
-[**correction factor**](../concepts.md#the-correction-factor) that retroactively
+[**correction factor**](../how-it-works.md#the-correction-factor) that retroactively
 rescales this device's already-recorded levelized values so history stays
 consistent. The rescaling reaches the whole history and shows in the long-term
 statistics as one step at the time of the edit.
@@ -99,5 +99,5 @@ one instead: the new hardware has a lifetime of its own.
 | Cost savings rate (+ Total) | currency/h, currency | *Savings method = Standard* (+ *Accumulate*) |
 | Levelized cost savings rate (+ Total) | currency/h, currency | *Savings method = Levelized* (+ *Accumulate*) |
 
-See the [Entity reference](../entities.md#pv-system) for the exact meaning of
+See the [Entity reference](../sensors.md#pv-system) for the exact meaning of
 each sensor.

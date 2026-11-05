@@ -46,7 +46,7 @@ limit. If the consumer draws more than its selected sources supply — say it is
 set to solar only but keeps running after the sun goes down — that power is
 still counted, as coming from your other sources, and the watts show up in
 the `restriction_deficit` attribute of its operating-cost sensors. See
-[When a device draws from outside its sources](../concepts.md#when-a-device-draws-from-outside-its-sources).
+[When a device draws from outside its sources](../how-it-works.md#when-a-device-draws-from-outside-its-sources).
 
 :::note[Reconfigure prompt]
 
@@ -84,4 +84,4 @@ Every source gets a sensor, even one outside the consumer's selected sources:
 when the meters show the consumer drawing from elsewhere, that energy is
 counted where it came from.
 
-See the [Entity reference](../entities.md#consumer) for details.
+See the [Entity reference](../sensors.md#consumer) for details.

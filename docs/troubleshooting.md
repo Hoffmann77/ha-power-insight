@@ -1,4 +1,4 @@
-# FAQ
+# Troubleshooting & FAQ
 
 ## How are savings calculated?
 
@@ -19,7 +19,7 @@ Power Insight separates three financial concepts:
 For PV systems the operating cost is mainly standby consumption at night; for
 batteries it's the cost of the energy used to charge them, adjusted for
 round-trip losses. See
-[How savings and financial return are calculated](concepts.md#how-savings-and-financial-return-are-calculated).
+[How savings and financial return are calculated](how-it-works.md#how-savings-and-financial-return-are-calculated).
 
 ## Why does my battery have negative cost savings?
 
@@ -28,7 +28,7 @@ costs — and a battery **always** shows negative cost savings while charging,
 because Power Insight tracks the cost of the energy going into it. That cost
 turns into positive savings when the battery later discharges and offsets a grid
 import. See
-[the concepts page](concepts.md#why-does-my-battery-have-negative-cost-savings).
+[the concepts page](how-it-works.md#why-does-my-battery-have-negative-cost-savings).
 
 ## Does Power Insight work with dynamic electricity prices?
 
@@ -52,7 +52,7 @@ Those sensors need extra data. Cost sensors need an **electricity price entity**
 on the grid; levelized sensors need **lifetime production and cost** on the
 device. The options flow will name any device that's missing data and ask you to
 **Reconfigure** it. See
-[Sensors, presets & options](configuration/options-and-presets.md#missing-data-guard).
+[Sensors, presets & options](sensor-options.md#missing-data-guard).
 
 ## Are there CO₂ sensors?
 
@@ -70,11 +70,11 @@ Because the PV energy that went into the battery is now credited to the
 battery, when it discharges into your home. The combined savings drop a
 little too: a battery gives back less than it takes in (typically 85–92 %),
 and only energy that reaches your home saves the grid price. See
-[Adding a battery's history](history.md#adding-a-batterys-history-lowers-the-pv-systems-savings).
+[Adding a battery's history](advanced/history.md#adding-a-batterys-history-lowers-the-pv-systems-savings).
 
 ## How do I carry over historical totals?
 
 Enter the figures from your PV system's or battery's app in the device's
 **Already accumulated** section, when you add it or under **Reconfigure** (see
-[Carried-over history](history.md)). The totals then add them to what
+[Carried-over history](advanced/history.md)). The totals then add them to what
 Power Insight counts.

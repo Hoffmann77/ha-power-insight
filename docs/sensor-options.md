@@ -1,4 +1,4 @@
-# Sensors, presets & options
+# Sensor options & presets
 
 Power Insight can create a lot of sensors. The **Options** flow lets you choose
 exactly which ones exist — for the whole home and per device type.
@@ -72,7 +72,7 @@ what its sensors support — see [the matrix below](#which-scope-offers-what).
   drawn so far, over its whole lifetime. Turns on *Energy from each source*
   too, since the shares are worked out from those totals. *(consumer only)*
 
-See [Where a device's power goes](../entities.md) for how to read these names.
+See [Where a device's power goes](sensors.md) for how to read these names.
 
 ### Export compensation
 
@@ -89,7 +89,7 @@ The **Cost method** controls whether and how cost sensors are created:
 |---|---|
 | **None** | No cost sensors. |
 | **Standard** | Priced at the live grid price. Needs an electricity price sensor on your grid connection. |
-| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](../concepts.md#lcoe-levelized-cost-of-electricity) / [LCOS](../concepts.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
+| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](how-it-works.md#lcoe-levelized-cost-of-electricity) / [LCOS](how-it-works.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
 | **Both** | One sensor for each method. |
 
 - **Total costs** — adds running totals that keep counting across restarts.
@@ -116,7 +116,7 @@ consumer, the same money appears as its *Avoided cost* — don't add a
 consumer's avoided cost to the producing devices' savings or avoided cost. On a
 consumer, **Avoided cost by source** splits its avoided cost by the PV system or
 battery that served it. See
-[How savings are calculated](../concepts.md#how-savings-and-financial-return-are-calculated).
+[How savings are calculated](how-it-works.md#how-savings-and-financial-return-are-calculated).
 
 ### Financial return
 
@@ -172,4 +172,4 @@ flow stops and tells you which devices need attention:
 > **Reconfigure** on each device to add them (e.g. a price sensor for costs,
 > lifetime values for levelized sensors), then save again.
 
-Fix the devices (see [Configuration](index.md)) and save the options again.
+Fix the devices (see [Configuration](devices/index.md)) and save the options again.

@@ -1,4 +1,4 @@
-# Core concepts
+# How it works
 
 A short tour of the ideas Power Insight is built on. Understanding these makes
 the sensors and options much easier to reason about.
@@ -334,7 +334,7 @@ Sensor selection is organised into **scopes**: the whole-home aggregate
 (**combined**) plus one scope per device type (**grid**, **pv_system**,
 **battery**, **consumer**). Each scope only offers the options its sensors
 support, and a choice applies to *all* devices of that type. See
-[Sensors, presets & options](configuration/options-and-presets.md).
+[Sensors, presets & options](sensor-options.md).
 
 ## Accumulation
 
@@ -346,4 +346,4 @@ pauses, and it resumes when the meter reports again; the time in between is
 not counted. There is no staleness timeout: a sensor that is still available
 is trusted, even if it has not reported for a while. What a device earned before
 Power Insight counted it can be carried over from its app, in the device's
-**Already accumulated** section (see [Carried-over history](history.md)).
+**Already accumulated** section (see [Carried-over history](advanced/history.md)).
