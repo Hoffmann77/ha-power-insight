@@ -1,0 +1,176 @@
+# Sensor options & presets
+
+Power Insight can create a lot of sensors, but you don't need all of them.
+The integration's **Options** let you choose which ones exist: start with a
+ready-made **sensor set**, or pick sensors per device type with **Custom**.
+Each sensor's card on its [device page](devices/index.mdx) names the option
+that creates it.
+
+Open it from **Settings → Devices & services → Power Insight → Configure**.
+
+:::tip[Turning a sensor off never loses data]
+
+Any sensors you turn off are **disabled** in Home Assistant, not deleted, so
+historical data is preserved. You can re-enable them at any time.
+
+:::
+
+## Sensor sets
+
+The quickest way to configure sensors is a sensor set, which applies the same
+selection to all your devices at once:
+
+| Sensor set | What it adds |
+|---|---|
+| **Minimal** | Power split (%), where each consumer's power comes from, and financial return (with running totals). |
+| **Recommended** | Adds the power split in W, battery charging sources, and running totals for costs, savings and export compensation. |
+| **Extended** | Adds live cost, savings and export compensation rates (per hour), each device's share of the home totals, and each consumer's power and energy from every source, and its lifetime energy mix. |
+| **Custom** | Choose sensors per device type on the following pages. |
+
+Each set builds on the previous one. **Recommended** suits most homes.
+
+A set stays what it says: when a release adds sensors to *Recommended* or
+*Extended*, an installation on that set gets them at its next start. Only a
+*Custom* selection is left exactly as you made it.
+Levelized sensors in a set only appear for devices that have lifetime values.
+
+## Custom: one page per device type
+
+Choosing **Custom** walks you through one page per device type. Only scopes you have devices for are shown.
+
+| Page | Applies to |
+|---|---|
+| **Combined** | Whole-home sensors, on the *Combined* device. |
+| **Grid** | Your grid connection. |
+| **PV system** | All PV systems. |
+| **Battery** | All batteries. |
+| **Consumer** | All consumers. |
+
+Each page groups its options into sections. Which ones a page shows depends on
+what its sensors support — see [the table below](#which-page-offers-what).
+
+### Power
+
+- **Power split (W)** — where the power goes, in Watts. On a device: *Import /
+  Production / Discharge to home consumption*, *to batteries*, *to system
+  standby*, *to grid*. On *Combined*: *Home consumption power*, *Battery
+  charging power*, *System standby power*. The grid also gets *Import power*
+  and *Export power*.
+- **Power split (%)** — the same split as a percentage of the device's own
+  output (or, on *Combined*, of all power entering the home).
+- **Share of home totals (%)** — how much of the home's consumption, battery
+  charging, system standby and export this device supplies. On a consumer:
+  its share of the home's total consumption.
+- **Home base load** — a device for everything your home uses that has no
+  sensor of its own. *(Combined only)*
+- **Charging sources (%)** — how much of a battery's charging comes from each
+  source. *(battery only)*
+- **Power sources (%)** — how much of a consumer's power comes from each
+  source. *(consumer only)*
+- **Power from each source (W)** — the same, in watts. *(consumer only)*
+- **Energy from each source (kWh)** — a running total of the energy a consumer
+  has drawn from each source. *(consumer only)*
+- **Energy sources (%)** — each source's share of everything a consumer has
+  drawn so far, over its whole lifetime. Turns on *Energy from each source*
+  too, since the shares are worked out from those totals. *(consumer only)*
+
+See [Reading the sensor names](sensors.mdx#reading-the-sensor-names) for how to read these names.
+
+### Export compensation
+
+- **Export compensation rate** — what the device currently earns per hour from
+  exports.
+- **Total export compensation** — running total of the export compensation
+  earned.
+
+### Costs
+
+The **Cost method** controls whether and how cost sensors are created:
+
+| Method | Meaning |
+|---|---|
+| **None** | No cost sensors. |
+| **Standard** | Priced at the live grid price. Needs an electricity price sensor on your grid connection. |
+| **Levelized** | Priced at each device's lifetime cost per kWh ([LCOE](advanced/costs-and-savings.md#lcoe-levelized-cost-of-electricity) / [LCOS](advanced/costs-and-savings.md#lcos-levelized-cost-of-storage)). Needs lifetime values. |
+| **Both** | One sensor for each method. |
+
+- **Total costs** — adds running totals that keep counting across restarts.
+
+What "cost" means differs per device: the grid's *Import cost rate*, a PV
+system's or battery's *Operating cost* (its own draw — standby, or charging),
+and a consumer's *Operating cost* (running it, based on where its power comes
+from).
+
+:::info
+
+Grid power has no levelized cost, so the **Grid** page only offers
+**Standard**.
+
+:::
+
+### Savings
+
+Savings are the money you did not pay the grid because your own devices
+supplied the power. The **Savings method** works like the cost method, and
+**Total savings** adds running totals. A PV system and a battery also get an
+*Avoided cost*: their savings before their own costs are taken off. On a
+consumer, the same money appears as its *Avoided cost* — don't add a
+consumer's avoided cost to the producing devices' savings or avoided cost. On a
+consumer, **Avoided cost by source** splits its avoided cost by the PV system or
+battery that served it. See
+[How savings are calculated](advanced/costs-and-savings.md#how-savings-and-financial-return-are-calculated).
+
+### Financial return
+
+Savings plus what your exports earn. In the levelized version the exported
+energy also costs its device's LCOE/LCOS, so the levelized financial return
+is *lower* than the levelized savings whenever you export for less than that
+cost — exporting below cost loses money.
+The **Financial return method** works like the cost method, and **Total
+financial return** adds running totals.
+
+## Which page offers what
+
+| Option | Combined | Grid | PV | Battery | Consumer |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Power split (W) | ✅ | ✅ | ✅ | ✅ | — |
+| Power split (%) | ✅ | ✅ | ✅ | ✅ | — |
+| Share of home totals (%) | — | ✅ | ✅ | ✅ | ✅ |
+| Home base load | ✅ | — | — | — | — |
+| Charging sources (%) | — | — | — | ✅ | — |
+| Power sources (%) | — | — | — | — | ✅ |
+| Power from each source (W) | — | — | — | — | ✅ |
+| Energy from each source (kWh) | — | — | — | — | ✅ |
+| Energy sources (%) | — | — | — | — | ✅ |
+| Export compensation rate | — | ✅ | ✅ | ✅ | — |
+| Total export compensation | — | ✅ | ✅ | ✅ | — |
+| Cost method — Standard | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Cost method — Levelized | ✅ | — | ✅ | ✅ | ✅ |
+| Total costs | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Savings method — Standard | ✅ | — | ✅ | ✅ | ✅ |
+| Savings method — Levelized | ✅ | — | ✅ | ✅ | — |
+| Total savings | ✅ | — | ✅ | ✅ | ✅ |
+| Avoided cost by source | — | — | — | — | ✅ |
+| Financial return method — Standard | ✅ | — | ✅ | ✅ | — |
+| Financial return method — Levelized | ✅ | — | ✅ | ✅ | — |
+| Total financial return | ✅ | — | ✅ | ✅ | — |
+
+A ✅ means the option is offered on that page.
+
+## Diagnostics
+
+The first Options page also has a global toggle:
+
+- **Debug sensors** — adds diagnostic sensors with the raw values used in the
+  calculations. Leave off unless troubleshooting.
+
+## Missing-data guard
+
+If you enable an option that a device doesn't have the data for, the options
+flow stops and tells you which devices need attention:
+
+> These devices are missing values the selected sensors need: … Open
+> **Reconfigure** on each device to add them (e.g. a price sensor for costs,
+> lifetime values for levelized sensors), then save again.
+
+Fix the devices (see [Devices](devices/index.mdx)) and save the options again.

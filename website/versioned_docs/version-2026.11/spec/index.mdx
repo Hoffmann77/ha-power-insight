@@ -1,0 +1,186 @@
+---
+title: Reference cases
+description: Small, fixed homes shown with everything the Power Insight engine computes for them.
+---
+
+import DocCardList from '@theme/DocCardList';
+import {REFERENCE_CASES, PROPERTIES} from './cases/all';
+
+# Reference cases
+
+Some of what the engine reports is plain arithmetic. Some of it is a **modelling
+choice** — a place where more than one answer is defensible, and Power Insight
+picks one.
+
+Each **reference case** is a small, deliberately-chosen home: one wiring and a
+few snapshots of its readings. Every page shows what the engine computes for
+those readings — every property it publishes, in every layer — so you can see
+the model at work, and disagree with it, without reading a line of Python.
+
+**Every value on these pages comes from the engine.** The readings are fixed;
+the results are recomputed whenever the engine changes, and frozen with each
+version of these docs. An older version of the docs therefore shows what the
+engine did at that version, and comparing two versions shows exactly what
+changed.
+
+Whether the engine's answers are *right* is checked elsewhere: every modelling
+decision has a small test worked out by hand, and every property's formula is
+checked against the engine over hundreds of generated homes. A decision that
+changes shows up here as moved numbers, and there as a failing test.
+
+## The cases
+
+The cases form a **ladder**. It starts at a house with one meter in it and adds
+exactly one device — or flips exactly one configuration flag — per rung, so a
+diagram is always the previous diagram plus one thing. Read it in order and
+nothing arrives unexplained.
+
+The last three cases break the one-thing-at-a-time growth deliberately. They are
+**specialists**: Hall's condition quantifies over *subsets* of sinks and cannot
+be shown with fewer than two sources and two restricted sinks; its mirror image,
+one sink allowed a *group* of sources, needs a competitor for that group and a
+source only the competitor may use; and unequal export permissions mean nothing
+without two dischargers that differ. They are allowed to be large because what
+they show cannot be shown in anything smaller.
+
+<DocCardList />
+
+### What each case shows
+
+<table>
+  <thead>
+    <tr>
+      <th>Rung</th>
+      <th>Case</th>
+      <th>Shows</th>
+    </tr>
+  </thead>
+  <tbody>
+    {REFERENCE_CASES.map((c, i) => (
+      <tr key={c.id}>
+        <td>{i}</td>
+        <td>
+          <a href={`${c.id}`}>{c.title}</a>
+        </td>
+        <td>
+          <ul style={{margin: 0, paddingLeft: '1.1rem'}}>
+            {c.shows.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+## How to read a chart
+
+Each snapshot of a case gets its own section on the case page, and its own
+chart. The chart reads left to right in three columns:
+
+- **Sources** — every device delivering power this snapshot. A device is a
+  source or a sink by its **reading's sign**, so the same grid is a source while
+  importing and a sink while exporting: the columns change between snapshots.
+- **Channels** — the four things gross power is used for: grid export, home
+  consumption, battery charging and system standby. Every link from a source
+  into a channel is one of that device's sensors, such as *Production to grid*.
+- **Sinks** — every device drawing power, plus the **home base load** (the
+  dashed bar): everything consumed without a sensor on it. It has no device
+  behind it and is derived rather than measured.
+
+Ribbons keep the colour of the source they come from, so the bundle arriving at
+a sink *is* that sink's provenance. Their width is watts, always. The switch at
+the top only changes the labels:
+
+| Switch | The ribbon labels show |
+| --- | --- |
+| **W** | Watts. |
+| **% of source** | The fraction of the source's output — the `… ratio` sensors. |
+| **% of sink** | The fraction of the channel or sink it feeds — the `Share of …` sensors and the provenance shares. |
+| **€/h** | The engine's cost rates, read as published. **Market** and **Levelized** switch between the two price families; nothing is priced in the browser. |
+
+Hover, focus or tap a ribbon or a bar to light up its path and see the Home
+Assistant sensor that shows it, with the exact fraction next to each figure.
+A figure marked as derived is not a sensor: the chart computed it from stored
+values (the home base load has no per-source sensor, for instance).
+
+Some snapshots exist to show the edges:
+
+- A **hatched** part of a bar is a reading the other meters do not explain —
+  the metering imbalance. The engine balances the readings, and the ribbons
+  follow its balanced flows.
+- **▲ restriction relaxed** marks a sink drawing from a source its
+  configuration rules out, because the readings cannot be met otherwise.
+- When a reading is **unavailable**, the engine publishes no flows at all, and
+  the chart says so instead of drawing any.
+
+### The table under each chart
+
+| Tab | What it lists |
+| --- | --- |
+| **Readings and totals** | What each meter read, and what those readings add up to. |
+| **Source × sink** | Every flow from a source to a sink — and which ones the configuration rules out. |
+| **Per-source channels** | Each source's power into each channel, with its ratio or share. |
+| **Every engine value** | Everything the engine computed for the snapshot, in the engine's four layers, each with its exact fraction. Hover a name for its definition. |
+
+A value shown as *unavailable* is the engine publishing nothing at all, usually
+because a reading it needs has dropped out.
+
+## How a value gets here
+
+Each case is a small class in `tests/engine/reference/`: the wiring, the
+readings, and the prose you are reading, and nothing else.
+
+```python
+class GridOnly(ReferenceCase):
+    """One meter and nothing else. ...
+
+    Shows:
+
+    * With no local device, the whole gross power is the home base load.
+    """
+
+    case_id = "grid-only"
+    title = "Grid only"
+
+    grid = Grid()
+
+    class ImportOnly(Snapshot):
+        """The house runs on the grid alone; every watt is base load."""
+
+        grid = 1200
+        price = F(3, 10)
+```
+
+The summary at the top of a case page is the class docstring, the caption on
+each snapshot's chart is its `Snapshot` docstring, and every value in the tables is
+what the engine returns for those readings. A tool passes each snapshot through
+the engine and writes the results next to these pages; CI fails any change to
+the engine that moves a published number without re-publishing it, so the
+numbers here are always the engine's own for this version of the docs.
+
+## Open questions
+
+A snapshot carrying an **open question** is one where the engine produces an
+answer but which answer is *right* has not been settled. Each one is spelled
+out in its snapshot's section on the case page. If you have a
+view, the issue tracker is the place for it — that is exactly what publishing
+these cases is meant to invite.
+
+<ul>
+  {REFERENCE_CASES.flatMap((c) =>
+    c.states
+      .filter((s) => s.open_question)
+      .map((s) => (
+        <li key={`${c.id}/${s.id}`}>
+          <a href={`${c.id}#${s.id}`}>
+            <code>
+              {c.id} / {s.id}
+            </code>
+          </a>{' '}
+          — {s.open_question}
+        </li>
+      )),
+  )}
+</ul>

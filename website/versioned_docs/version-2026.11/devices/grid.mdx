@@ -1,0 +1,155 @@
+# Grid connection
+
+The grid connection is the **import/export meter** of your home and the price
+baseline for every cost and savings calculation. **Exactly one grid connection
+is required** per energy mix — if you have two grid connections, model them as
+two separate config entries.
+
+Add it with **Add device → Grid connection**.
+
+## Settings
+
+### Power sensor
+
+> Sensor with the grid power in W, kW or MW. Positive = import, negative =
+> export.
+
+This is the only always-required field. It must report instantaneous power (not
+energy). Power Insight normalises W / kW / MW automatically.
+
+### Invert power sign
+
+> Turn on if your sensor uses the opposite sign.
+
+Use this when your meter reports **import as negative** (or export as positive).
+
+### Electricity price
+
+> Sensor or number with the current price per kWh you pay for grid power. Required for cost, savings and financial return sensors.
+
+This can be a live/dynamic price sensor (for example from a dynamic-tariff
+integration) or a static `input_number`. Because Power Insight uses the *current*
+value at every calculation, dynamic tariffs are fully supported.
+
+The sensor must report a **price per unit of energy** as its unit of
+measurement. `EUR/kWh`, `€/kWh`, `ct/kWh`, `EUR/MWh` and `EUR/Wh` (or the same
+in any other currency) are all converted to a price per kWh; a sensor in any
+other unit — or with no unit at all — is refused, because taken at face value
+a `ct/kWh` tariff would make every cost a hundred times too large. An
+`input_number` needs its unit of measurement set accordingly.
+
+Power Insight does not convert currencies. If the price names a currency other
+than the one Home Assistant is set to, a repair issue says so.
+
+### Grid CO₂ intensity
+
+> Sensor with the grid's current CO₂ intensity in g/kWh (e.g. from
+> [Electricity Maps](https://www.home-assistant.io/integrations/co2signal/)).
+> Optional; reserved for CO₂ sensors.
+
+:::note
+
+CO₂ sensors are **not implemented yet**, so this field currently has no
+effect. It is safe to leave empty.
+
+:::
+
+### Already accumulated
+
+> Optional, in two sections. **Energy (kWh):** what the whole home exported
+> to the grid and the average grid tariff over that period — your PV
+> systems' and batteries' savings are calculated with this tariff, unless a
+> device has its own.
+> **Amounts:** the whole home's total savings and export compensation from
+> your app. Both are split between your PV systems and batteries. See
+> [Carried-over history](../advanced/history.md).
+
+## Sensors
+
+Turn these on in the integration's **Options → Grid sensors**. Import and
+export both happen at your grid connection, so this one device carries
+**both sides of the meter**.
+
+### Power flow
+
+<SensorCards>
+
+<SensorCard title="Import and export" sensors={[
+  {name: 'Import power', unit: 'W', on: 'Power split (W)'},
+  {name: 'Export power', unit: 'W', on: 'Power split (W)'},
+]}>
+
+How much power you are **buying** from the grid right now, and how much
+surplus you are **selling** back. Only one of the two is above 0 at any
+moment.
+
+</SensorCard>
+
+<SensorCard title="Where the import goes" sensors={[
+  {name: 'Import to home consumption', unit: 'W', on: 'Power split (W)'},
+  {name: 'Import to batteries', unit: 'W', on: 'Power split (W)'},
+  {name: 'Import to system standby', unit: 'W', on: 'Power split (W)'},
+  {name: 'Import to home consumption ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Import to batteries ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Import to system standby ratio', unit: '%', on: 'Power split (%)'},
+]}>
+
+Splits the grid import by what it is used for: your
+[appliances](../sensors.mdx#where-power-goes), charging a battery, or the idle
+draw of your energy equipment. The *ratio* sensors show the same split as a
+percentage **of the import**.
+
+The *batteries* sensors only exist when at least one battery is allowed to
+charge from the grid.
+
+</SensorCard>
+
+<SensorCard title="The grid's share of the home" sensors={[
+  {name: 'Share of home consumption', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of battery charging', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of system standby', unit: '%', on: 'Share of home totals (%)'},
+]}>
+
+How much of **everything your home consumes** (or charges into batteries, or
+loses to standby) is currently covered by the grid. If this reads 30 %, the
+other 70 % comes from your solar and batteries.
+
+</SensorCard>
+
+</SensorCards>
+
+### Cost and earnings
+
+<SensorCards>
+
+<SensorCard title="Import cost" sensors={[
+  {name: 'Import cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Total import cost', unit: 'EUR', on: 'Total costs'},
+]}>
+
+What your grid import costs per hour right now (import power × your current
+electricity price), and the running total. Needs the
+[Electricity price](#electricity-price) setting.
+
+</SensorCard>
+
+<SensorCard title="Export compensation" sensors={[
+  {name: 'Export compensation rate', unit: 'EUR/h', on: 'Export compensation rate'},
+  {name: 'Total export compensation', unit: 'EUR', on: 'Total export compensation'},
+]}>
+
+What your home earns per hour by exporting, across all exporting PV systems
+and batteries, and the running total. Each device's own share appears on that
+device.
+
+</SensorCard>
+
+</SensorCards>
+
+:::info[No levelized costs for the grid]
+
+Levelized costs (LCOE/LCOS) spread the price of hardware **you own** over its
+lifetime. Grid power has no such hardware, so the grid only offers the
+**Standard** cost method.
+
+:::

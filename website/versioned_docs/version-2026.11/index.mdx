@@ -1,0 +1,95 @@
+---
+title: Power Insight for Home Assistant
+sidebar_label: Home
+slug: /
+---
+
+# Power Insight
+
+<div className="pi-hero">
+  <p className="pi-hero__tagline">
+    See what the electricity in your home costs, what your solar and battery
+    save you, and where every watt comes from — live, in Home Assistant.
+  </p>
+  <div className="pi-hero__actions">
+    <ButtonLink primary to="installation">Install</ButtonLink>
+    <ButtonLink to="getting-started">Get started</ButtonLink>
+  </div>
+</div>
+
+Power Insight reads the **power sensors you already have** — your grid meter,
+your PV inverter, your battery, and any smart plugs — and turns them into
+sensors for cost, savings and power flow. Because everything is calculated
+from live power, it works great with **dynamic electricity prices**: the
+numbers always reflect the price you are paying right now.
+
+:::note[CO₂ tracking is not available yet]
+
+Carbon-intensity / CO₂ tracking is planned but not yet implemented in this
+release. The configuration flow may ask for a Grid CO₂ intensity or a CO₂
+footprint, but **no CO₂ sensors are created yet**.
+
+:::
+
+:::warning[Beta software]
+
+Power Insight is in beta (`0.1.0b1`). Entity names and options may change
+until the 1.0 release.
+
+:::
+
+## What you get
+
+<CardGrid>
+  <Card title="Power flow" icon="⚡" accent="grid">
+    Where your power comes from and where it goes — grid, solar, battery and
+    home — in watts and percent.
+  </Card>
+  <Card title="Cost of electricity" icon="💶" accent="consumer">
+    A live price per kWh across your whole energy mix, the cost per hour, and
+    running totals.
+  </Card>
+  <Card title="Savings" icon="☀️" accent="solar">
+    Money earned by exporting solar power, and money saved by using it
+    yourself instead of buying from the grid.
+  </Card>
+  <Card title="Per-device insight" icon="🔋" accent="battery">
+    Which source charged your battery, and which mix of grid, solar and
+    battery powers each appliance.
+  </Card>
+</CardGrid>
+
+## Where to go next
+
+<CardGrid>
+  <Card title="Installation" icon="📦" to="installation">
+    Install from the Marketplace or manually.
+  </Card>
+  <Card title="Getting started" icon="🚀" to="getting-started">
+    Create the hub, pick a sensor set, add your devices.
+  </Card>
+  <Card title="Devices" icon="⚙️" to="devices/">
+    Set up your grid, solar, batteries and consumers.
+  </Card>
+  <Card title="Sensors" icon="📈" to="sensors">
+    What each sensor means and when it appears.
+  </Card>
+  <Card title="How it works" icon="💡" to="how-it-works">
+    How costs and savings are calculated, in plain words.
+  </Card>
+  <Card title="Reference cases" icon="🧪" to="spec">
+    Worked example homes with flow diagrams.
+  </Card>
+</CardGrid>
+
+## Limitations
+
+- **Instantaneous power sensors required.** Calculations are driven by live
+  power (W/kW/MW) readings, not energy meters. Each PV system, battery, consumer
+  and the grid connection must expose a power sensor.
+- **One grid connection per entry.** A config entry models a single grid
+  connection / energy mix. Two grid connections are modelled as two config
+  entries.
+- **CO₂ / carbon intensity is not yet implemented.** See the note above.
+- **Consumer entities are still under development.**
+- **Entity names may change** until the 1.0 release.
