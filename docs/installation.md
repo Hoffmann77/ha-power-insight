@@ -5,15 +5,17 @@ integration. It ships as the `power_insight` custom component and is installed
 through the **Marketplace**, built into Home Assistant since 2026.11 under
 **Settings → Marketplace**.
 
-:::info[Home Assistant 2026.11 or newer]
-This release needs Home Assistant 2026.11.0 or newer. On an older Home
-Assistant the Marketplace offers you the last release that still works with
-it.
+:::info[Home Assistant 2026.2 or newer]
+This release needs Home Assistant 2026.2.0 or newer. The Marketplace is built
+into Home Assistant 2026.11; on an older one, install through
+[HACS](https://hacs.xyz) as a custom repository, or manually. Before 2026.11 a
+repair issue is not linked to its config entry; Power Insight cleans up its own
+issues instead, so they behave the same.
 :::
 
 ## Before you start
 
-- Home Assistant **2026.11** or newer.
+- Home Assistant **2026.2** or newer (2026.11 or newer for the Marketplace).
 - The [Recorder](https://www.home-assistant.io/integrations/recorder/)
   enabled (default) — accumulated total sensors store their running total in the
   recorder and restore it across restarts.

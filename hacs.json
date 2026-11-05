@@ -2,7 +2,7 @@
   "name": "PowerInsight",
   "render_readme": true,
   "content_in_root": false,
-  "homeassistant": "2026.11.0",
+  "homeassistant": "2026.2.0",
   "zip_release": true,
   "filename": "power_insight.zip"
 }

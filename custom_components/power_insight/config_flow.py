@@ -29,6 +29,7 @@ from .history_store import (
     check_view,
     is_standalone,
 )
+from . import issues
 from .const import (
     DOMAIN,
     CONF_KEY,
@@ -2141,7 +2142,7 @@ class AdapterSubentryFlow(ConfigSubentryFlow):
                 if self._adapter_type in ("grid", "pv_system"):
                     for sub in parent_entry.subentries.values():
                         if sub.data.get("adapter", {}).get("adapter_type") == "battery":
-                            ir.async_create_issue(
+                            issues.async_create_issue(
                                 self.hass,
                                 DOMAIN,
                                 f"reconfigure_battery_{sub.subentry_id}",

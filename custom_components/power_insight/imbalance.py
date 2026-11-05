@@ -17,6 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 
+from . import issues
 from .const import DOMAIN
 from .power_insight import PowerInsight
 
@@ -64,7 +65,7 @@ class ImbalanceMonitor:
 
         share = self._share(start, now)
         if share > RAISE_ABOVE and not self._raised:
-            ir.async_create_issue(
+            issues.async_create_issue(
                 self.hass,
                 DOMAIN,
                 self.issue_id,
