@@ -12,8 +12,8 @@ workflow:
 
 | Trigger | What happens |
 |---|---|
-| Pull request touching `docs/` or `website/` | Type-check and build only — a broken link or a bad MDX page fails the PR. |
-| Push to `main` | Build and publish to GitHub Pages. |
+| Pull request touching `docs/` or `website/` | Type-check and build, `docs/` included — a broken link or a bad MDX page fails the PR. Nothing is published. |
+| Push to `main` touching `website/` | Build the **released versions only** and publish them to GitHub Pages. A push that only changes `docs/` deploys nothing: visitors would see no difference. |
 | Manual *Run workflow* | Same as a push to `main`. |
 
 Publishing uses the **GitHub Actions Pages source**, so there is no `gh-pages`
@@ -54,6 +54,7 @@ previous MkDocs + `mike` setup required.
 cd website
 npm install
 npm start          # dev server with hot reload on http://localhost:3000
+                   # (your edits to docs/ are under /ha-power-insight/next)
 ```
 
 Two checks worth running before pushing, because CI runs both:
@@ -88,19 +89,28 @@ fix to it `2026.9.1`. The number lives in two places that must agree —
 
 ## Versioning
 
-The site publishes **the released docs at the root** and the in-development docs
-under `/next`, with a version selector in the navbar.
+The published site carries **the released versions only**: the latest at the
+root, older ones in the navbar's version selector. The unreleased docs are
+never published.
 
 | Where you edit | Where it appears |
 |---|---|
-| `docs/` | `/next` — labelled *Next (unreleased)* |
+| `docs/` | nowhere yet — locally and in pull-request builds under `/next` (*Next (unreleased)*) |
 | `website/versioned_docs/version-2026.7/` | the site root — what visitors get by default |
+
+The deploy build leaves `docs/` out by setting `DOCS_RELEASED_ONLY=true`
+(see `website/docusaurus.config.ts`). To check that locally:
+
+```bash
+cd website
+DOCS_RELEASED_ONLY=true npm run build
+```
 
 Docusaurus versions by **snapshotting source**, not built output. Cutting a
 version copies the whole of `docs/` — markdown, the reference-case JSON, all of it —
 into `website/versioned_docs/`, and that copy is then frozen. Day-to-day work
-happens in `docs/` and lands under `/next`; nothing you write there changes what
-a visitor sees until the next version is cut.
+happens in `docs/`; nothing you write there changes what a visitor sees until
+the next version is cut.
 
 ### Cutting a version at release time
 

@@ -5,6 +5,13 @@ import type * as Preset from '@docusaurus/preset-classic';
 // The markdown lives at the repository root in `docs/`, not inside this
 // directory: contributors edit prose next to the code it documents, and this
 // folder holds only the site machinery. Everything below is wired around that.
+
+// The published site carries the released versions only. The deploy build sets
+// DOCS_RELEASED_ONLY=true; everywhere else (`npm start`, pull-request builds)
+// `docs/` is built too, under /next, so it can be read and its links checked
+// before it is ever released.
+const releasedOnly = process.env.DOCS_RELEASED_ONLY === 'true';
+
 const config: Config = {
   title: 'Power Insight',
   tagline:
@@ -44,12 +51,13 @@ const config: Config = {
           editUrl:
             'https://github.com/Hoffmann77/ha-power-insight/edit/main/docs/',
           showLastUpdateTime: true,
-          // Visitors land on the released docs; `docs/` is the in-development
-          // version and is served under /next. Cut a new one at release time
-          // with `npm run docusaurus docs:version <MAJOR.MINOR>`.
-          versions: {
-            current: {label: 'Next (unreleased)', path: 'next'},
-          },
+          // Visitors get the released versions. `docs/` is the unreleased
+          // version: never published, only built for previews and checks. A
+          // release turns it into a version (see docs/dev/releasing.md).
+          includeCurrentVersion: !releasedOnly,
+          ...(releasedOnly
+            ? {}
+            : {versions: {current: {label: 'Next (unreleased)', path: 'next'}}}),
         },
         blog: false,
         theme: {customCss: './src/css/custom.css'},
@@ -83,15 +91,11 @@ const config: Config = {
       title: 'Power Insight',
       items: [
         {type: 'docSidebar', sidebarId: 'docs', position: 'left', label: 'Docs'},
-        {to: '/spec', label: 'Reference cases', position: 'left'},
-        // A plain link, not a `docSidebar` item: released versions predate the
-        // `dev` sidebar, and developer docs only track the in-development code.
-        {
-          to: '/next/dev/testing',
-          label: 'Developers',
-          position: 'left',
-          activeBaseRegex: '/next/dev/',
-        },
+        // `doc` items resolve inside the version being viewed. Both pages exist
+        // in every version; a `docSidebar` item for the developer docs would
+        // not, since 2026.7 predates the `dev` sidebar.
+        {type: 'doc', docId: 'spec/index', label: 'Reference cases', position: 'left'},
+        {type: 'doc', docId: 'dev/engine-calculations', label: 'Developers', position: 'left'},
         {type: 'docsVersionDropdown', position: 'right'},
         {
           href: 'https://github.com/Hoffmann77/ha-power-insight',
@@ -108,17 +112,15 @@ const config: Config = {
           items: [
             {label: 'Installation', to: '/installation'},
             {label: 'Getting started', to: '/getting-started'},
-            // /next until the next release is cut: 2026.7 still uses the old page names.
-            {label: 'How it works', to: '/next/how-it-works'},
           ],
         },
         {
+          // Footer links point at the latest release, so only pages every
+          // version has belong here; the sidebar has the rest.
           title: 'Reference',
           items: [
-            {label: 'Sensor reference', to: '/next/sensors'},
             {label: 'Reference cases', to: '/spec'},
             {label: 'Engine decisions', to: '/dev/engine-calculations'},
-            {label: 'Engine testing', to: '/next/dev/testing'},
           ],
         },
         {
