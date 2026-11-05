@@ -10,6 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 from homeassistant.util import dt as dt_util
 
+from . import issues
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_COUNTING_SINCE,
@@ -76,13 +77,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
     # apply, and leave those still raised alone: an issue the user ignored
     # stays ignored across restarts and reloads.
     with (
-        ir.async_refresh_issues(
+        issues.async_refresh_issues(
             hass,
             DOMAIN,
             issue_id_pattern=_SETUP_ISSUES,
             config_entry_id=entry.entry_id,
         ),
-        ir.async_refresh_issues(hass, DOMAIN, issue_ids=_unlinked_issues(hass, entry)),
+        issues.async_refresh_issues(hass, DOMAIN, issue_ids=_unlinked_issues(hass, entry)),
     ):
         # Raised when a device was set up, or when a source was added
         # (config_flow.py); dismissed when the device is reconfigured. Setup
@@ -90,7 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
         # there and lets those of removed devices lapse.
         for subentry_id in entry.subentries:
             for _, prefix, _ in _RESTRICTIONS.values():
-                ir.async_keep_issue(hass, DOMAIN, f"{prefix}{subentry_id}")
+                issues.async_keep_issue(hass, DOMAIN, f"{prefix}{subentry_id}")
 
         if power_insight.grid_adapter is None:
             # Without a grid connection nothing can be calculated; raise a
@@ -98,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
             # below still runs so the platform (and its empty sensor set) loads
             # cleanly. The checks that need the grid are not run, so their
             # issues are kept as they are.
-            ir.async_create_issue(
+            issues.async_create_issue(
                 hass,
                 DOMAIN,
                 f"no_grid_configured_{entry.entry_id}",
@@ -109,7 +110,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MyConfigEntry) -> bool:
                 translation_placeholders={"entry_title": entry.title},
             )
             for kind in _GRID_CHECKS:
-                ir.async_keep_issue(hass, DOMAIN, f"{kind}_{entry.entry_id}")
+                issues.async_keep_issue(hass, DOMAIN, f"{kind}_{entry.entry_id}")
             source_entities: list[str] = []
             history = {}
         else:
@@ -195,6 +196,8 @@ def _unlinked_issues(hass: HomeAssistant, entry: MyConfigEntry) -> list[str]:
     the refresh of the entry's own issues does not see them. Setup decides on
     them once more: raised again, they belong to the entry from then on.
     """
+    if not issues.LINKS_ENTRY:
+        return []  # nothing is linked to an entry before 2026.11
     ids = {f"{kind}_{entry.entry_id}" for kind in _ENTRY_ISSUES}
     ids.update(
         f"{prefix}{subentry_id}"
@@ -206,7 +209,7 @@ def _unlinked_issues(hass: HomeAssistant, entry: MyConfigEntry) -> list[str]:
         issue_id
         for issue_id in sorted(ids)
         if (issue := registry.async_get_issue(DOMAIN, issue_id)) is not None
-        and issue.config_entry_id is None
+        and issues.issue_config_entry_id(issue) is None
     ]
 
 
@@ -236,7 +239,7 @@ def _check_source_restrictions(hass: HomeAssistant, entry: MyConfigEntry) -> Non
         }
         sources = adapter.get("config", {}).get(field) or []
         if any(source_id not in valid_source_ids for source_id in sources):
-            ir.async_create_issue(
+            issues.async_create_issue(
                 hass,
                 DOMAIN,
                 f"{prefix}{subentry.subentry_id}",
@@ -292,7 +295,7 @@ def _check_shared_power_entities(hass: HomeAssistant, entry: MyConfigEntry) -> N
         return  # the setup refresh deletes the issue
 
     entity_id, names = next(iter(shared.items()))
-    ir.async_create_issue(
+    issues.async_create_issue(
         hass, DOMAIN, issue_id,
         config_entry_id=entry.entry_id,
         is_fixable=False,
@@ -322,13 +325,13 @@ def _check_price_entity(
     for entity_id in power_insight.source_entities_price:
         state = hass.states.get(entity_id)
         if state is None or state.state in ("unavailable", "unknown"):
-            ir.async_keep_issue(hass, DOMAIN, unit_issue)
-            ir.async_keep_issue(hass, DOMAIN, currency_issue)
+            issues.async_keep_issue(hass, DOMAIN, unit_issue)
+            issues.async_keep_issue(hass, DOMAIN, currency_issue)
             return
         unit = state.attributes.get("unit_of_measurement")
         parsed = parse_price_unit(unit)
         if parsed is None:
-            ir.async_create_issue(
+            issues.async_create_issue(
                 hass, DOMAIN, unit_issue,
                 config_entry_id=entry.entry_id,
                 is_fixable=False,
@@ -343,7 +346,7 @@ def _check_price_entity(
 
         currency = parsed[1] if parsed else None
         if currency is not None and currency != hass.config.currency:
-            ir.async_create_issue(
+            issues.async_create_issue(
                 hass, DOMAIN, currency_issue,
                 config_entry_id=entry.entry_id,
                 is_fixable=False,
@@ -376,6 +379,13 @@ async def async_unload_entry(
     event_handler.untrack_entities()
 
     return unload
+
+
+async def async_remove_entry(
+    hass: HomeAssistant, entry: MyConfigEntry
+) -> None:
+    """Delete a removed entry's repair issues (needed before 2026.11)."""
+    issues.async_delete_entry_issues(hass, DOMAIN, entry.entry_id)
 
 
 async def async_migrate_entry(

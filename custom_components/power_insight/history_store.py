@@ -32,6 +32,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 
+from . import issues
 from .const import (
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_COUNTING_SINCE,
@@ -406,7 +407,7 @@ def async_check_tariff(
     )
     if not devices:
         return
-    ir.async_create_issue(
+    issues.async_create_issue(
         hass,
         DOMAIN,
         issue_id,

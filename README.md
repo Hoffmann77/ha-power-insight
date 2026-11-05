@@ -7,7 +7,7 @@
 **Real-time insight into the cost, savings, and distribution of the electrical power in your home.**
 
 [![Marketplace](https://img.shields.io/badge/Marketplace-custom%20repository-41BDF5.svg?style=flat-square)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=Hoffmann77&repository=ha-power-insight&category=integration)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.11%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2026.2%2B-41BDF5.svg?style=flat-square)](https://www.home-assistant.io/)
 [![Release](https://img.shields.io/github/v/release/Hoffmann77/ha-power-insight?include_prereleases&style=flat-square)](https://github.com/Hoffmann77/ha-power-insight/releases)
 [![Tests](https://img.shields.io/github/actions/workflow/status/Hoffmann77/ha-power-insight/tests.yaml?branch=main&label=tests&style=flat-square)](https://github.com/Hoffmann77/ha-power-insight/actions/workflows/tests.yaml)
 [![License](https://img.shields.io/github/license/Hoffmann77/ha-power-insight?style=flat-square)](LICENSE)
@@ -62,7 +62,7 @@ always reflect the price you are paying right now.
 ## 🚀 Quick start
 
 1. **Install** from the Marketplace (Settings → Marketplace, Home Assistant
-   2026.11 or newer) or manually —
+   2026.11 or newer), through HACS, or manually —
    [installation guide](https://hoffmann77.github.io/ha-power-insight/installation/).
 2. **Add the integration** (Settings → Devices & services → Add integration →
    Power Insight), give it a name, and pick a **sensor preset**.
@@ -73,7 +73,9 @@ always reflect the price you are paying right now.
 
 ## 📦 Installation
 
-Power Insight needs **Home Assistant 2026.11** or newer.
+Power Insight needs **Home Assistant 2026.2** or newer. The Marketplace is
+built into Home Assistant 2026.11; on an older one, install through
+[HACS](https://hacs.xyz) (custom repository) or manually.
 
 ### Marketplace (recommended)
 
