@@ -6,7 +6,7 @@ levelized cost of storage. If you have multiple batteries, add one device each.
 
 Add it with **Add device → Battery**.
 
-## Fields
+## Settings
 
 ### Name
 
@@ -63,7 +63,7 @@ stays correct.
 
 ### Lifetime production / Lifetime cost / CO₂ footprint
 
-These behave exactly as for a [PV system](pv.md#lifetime-production). Together,
+These behave exactly as for a [PV system](pv.mdx#lifetime-production). Together,
 *lifetime cost ÷ lifetime throughput* gives this battery's
 [**LCOS**](../how-it-works.md#lcos-levelized-cost-of-storage). Changing them later
 applies a [correction factor](../how-it-works.md#the-correction-factor).
@@ -81,28 +81,152 @@ CO₂ footprint has no effect yet — CO₂ sensors are not implemented.
 > grid and its own average grid tariff (else the grid's). **Amounts:** the savings and export compensation your app shows,
 > taken as they are. See [Carried-over history](../advanced/history.md).
 
-## Sensors this device can create
+## Sensors
 
-The battery has the same sensor set as a [PV system](pv.md#sensors-this-device-can-create),
-plus:
+Turn these on in the integration's **Options → Battery sensors**. The choice applies to
+every battery, and each one gets its own set of sensors.
 
-| Sensor | Unit | Enabled by |
-|---|---|---|
-| Charging source shares (one per configured source) | % | *Charging sources (%)* |
+### Power flow
 
-These show how much of the battery's current charging power comes from each
-source — for example "currently 70 % from solar, 30 % from the grid". Only
-sources you selected in **Charges from** appear.
+<SensorCards>
 
-See the [Entity reference](../sensors.md#battery) for the full list.
+<SensorCard title="Where the discharge goes" sensors={[
+  {name: 'Discharge to home consumption', unit: 'W', on: 'Power split (W)'},
+  {name: 'Discharge to batteries', unit: 'W', on: 'Power split (W)'},
+  {name: 'Discharge to system standby', unit: 'W', on: 'Power split (W)'},
+  {name: 'Discharge to grid', unit: 'W', on: 'Power split (W)'},
+  {name: 'Discharge to home consumption ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Discharge to batteries ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Discharge to system standby ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Discharge to grid ratio', unit: '%', on: 'Power split (%)'},
+]}>
 
-:::info[Why is my battery's savings negative while charging?]
+Splits this battery's discharge by
+[where it goes](../sensors.mdx#where-power-goes): your appliances, charging a
+battery, the idle draw of other energy equipment, or the grid. The *ratio*
+sensors give the same split as a percentage **of this battery's own discharge** —
+*Discharge to grid ratio* at 40 % means 40 % of it is exported.
 
-Batteries always cost money to charge, so their savings go negative while
-charging and positive while discharging. This is expected — see the
-[FAQ](../troubleshooting.md#why-does-my-battery-have-negative-cost-savings).
+- The *grid* sensors need **Exports to the grid** on.
+- The *batteries* sensors only exist when another battery is allowed to
+  charge from this one, which is rare.
+
+</SensorCard>
+
+<SensorCard title="This battery's share of the home" sensors={[
+  {name: 'Share of home consumption', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of battery charging', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of system standby', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of grid export', unit: '%', on: 'Share of home totals (%)'},
+]}>
+
+How much of **the whole home's** consumption, battery charging, standby and
+export this battery covers right now. Compare with the *ratio* sensors above:
+a ratio divides by this battery's discharge, a share by the home's total.
+
+</SensorCard>
+
+<SensorCard title="What charges the battery" sensors={[
+  {name: 'Charging share from <source>', unit: '%', on: 'Charging sources (%)'},
+]}>
+
+One sensor per source the battery may charge from, named after it — for
+example *Charging share from Rooftop*. Together they show the current mix,
+such as 70 % solar and 30 % grid. With **Power sources** set to *Specific
+devices*, only the sources you selected get a sensor.
+
+</SensorCard>
+
+</SensorCards>
+
+### Cost, savings and earnings
+
+Every money sensor comes in two flavours, chosen per section in the options:
+
+- **Standard** values electricity at your **live grid price**; your own
+  stored solar power counts as free.
+- **Levelized** also counts what your hardware cost, spread over every kWh it
+  delivers (LCOS, see [How it works](../how-it-works.md#lcos-levelized-cost-of-storage)). Needs
+  **Lifetime production** and **Lifetime cost**.
+
+Each sensor ending in *rate* is money per hour right now; the matching
+*Total* adds it up and keeps counting across restarts.
+
+<SensorCards>
+
+<SensorCard title="Operating cost" sensors={[
+  {name: 'Operating cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized operating cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total operating cost', unit: 'EUR', on: 'Total costs'},
+  {name: 'Total levelized operating cost', unit: 'EUR', on: 'Total costs + Levelized'},
+]}>
+
+What **charging** the battery costs: grid power at the grid price, solar
+power for free (Standard) or at the PV system's LCOE (Levelized). Its
+standby draw is included.
+
+</SensorCard>
+
+<SensorCard title="Avoided cost" sensors={[
+  {name: 'Avoided cost rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Total avoided cost', unit: 'EUR', on: 'Total savings'},
+]}>
+
+What this battery's power kept **off your grid bill**: the power it put into
+your home, valued at the grid price. This is the saving *before* its own
+operating cost is taken off.
+
+</SensorCard>
+
+<SensorCard title="Cost savings" sensors={[
+  {name: 'Cost savings rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Levelized cost savings rate', unit: 'EUR/h', on: 'Savings method: Levelized'},
+  {name: 'Total cost savings', unit: 'EUR', on: 'Total savings'},
+  {name: 'Total levelized cost savings', unit: 'EUR', on: 'Total savings + Levelized'},
+]}>
+
+The **net** saving: avoided cost minus operating cost. The levelized variant
+also subtracts the battery's LCOS, so it shows whether the hardware pays off. Export
+earnings are not included — see *Financial return*.
+
+It goes **negative while the battery charges from the grid** and positive
+while it discharges — that is expected.
+
+</SensorCard>
+
+<SensorCard title="Export compensation" requires="Exports to the grid is on" sensors={[
+  {name: 'Export compensation rate', unit: 'EUR/h', on: 'Export compensation rate'},
+  {name: 'Total export compensation', unit: 'EUR', on: 'Total export compensation'},
+]}>
+
+What this battery earns by exporting, at its **Export compensation per kWh**.
+
+</SensorCard>
+
+<SensorCard title="Financial return" requires="Exports to the grid is on" sensors={[
+  {name: 'Financial return rate', unit: 'EUR/h', on: 'Financial return method: Standard'},
+  {name: 'Levelized financial return rate', unit: 'EUR/h', on: 'Financial return method: Levelized'},
+  {name: 'Total financial return', unit: 'EUR', on: 'Total financial return'},
+  {name: 'Total levelized financial return', unit: 'EUR', on: 'Total financial return + Levelized'},
+]}>
+
+Everything this battery brings in: cost savings **plus** export compensation.
+The levelized variant also counts what producing the exported energy cost,
+so it can be lower than the levelized savings while you export for less than
+the LCOS. See
+[Why is my levelized financial return lower…](../how-it-works.md#why-is-my-levelized-financial-return-lower-than-my-levelized-savings)
+
+</SensorCard>
+
+</SensorCards>
+
+:::tip[Levelized sensors missing?]
+
+Levelized sensors are only created once **Lifetime production** and
+**Lifetime cost** are filled in on this device's **Reconfigure** page.
 
 :::
+
 ## Reading the battery's totals
 
 A battery does not produce energy. It buys energy when it charges and replaces

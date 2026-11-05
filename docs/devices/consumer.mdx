@@ -1,0 +1,177 @@
+# Consumer
+
+A consumer represents an electrical load — an appliance, EV charger, heat pump,
+etc. Power Insight tracks how much power it draws and where that power comes from.
+
+Add it with **Add device → Consumer**.
+
+:::warning[Under development]
+
+Consumer support is still being built out, and more consumer sensors are
+planned.
+
+:::
+
+## Settings
+
+### Name
+
+> For example "Rooftop" or "Heat pump". Used in the device and sensor names.
+
+### Power sensor
+
+> Sensor that reports this device's power in W, kW or MW. Negative = power drawn
+> by the consumer. Most smart plugs report their draw as a positive value — turn
+> on **Invert power sign** for those.
+
+### Invert power sign
+
+> Turn on if your sensor uses the opposite sign.
+
+### Power sources / Powered by
+
+> **Whole mix** — the power comes from all sources in proportion to what they supply.
+>
+> **Specific devices** — only from the sources you select below, e.g. a battery that charges from solar only.
+
+> The sources that power this consumer. Only used with **Specific devices**.
+
+Default: **Whole mix**. Choose **Specific devices** for a load your energy
+manager runs on particular sources — for example a smart plug that only switches
+on with excess solar. The grid and your PV systems are selectable.
+
+The selection describes what you expect your energy manager to do, not a hard
+limit. If the consumer draws more than its selected sources supply — say it is
+set to solar only but keeps running after the sun goes down — that power is
+still counted, as coming from your other sources, and the watts show up in
+the `restriction_deficit` attribute of its operating-cost sensors. See
+[When a device draws from outside its sources](../how-it-works.md#when-a-device-draws-from-outside-its-sources).
+
+:::note[Reconfigure prompt]
+
+When you remove a grid or PV device this consumer is restricted to, Power
+Insight raises a repair issue asking you to **reconfigure** the consumer.
+
+:::
+
+A consumer has no cost, price, or lifetime fields of its own — its cost is
+derived from the mix of sources currently supplying it (grid / solar / battery).
+
+## Sensors
+
+Turn these on in the integration's **Options → Consumer sensors**. The choice
+applies to every consumer.
+
+### Where its power comes from
+
+<SensorCards>
+
+<SensorCard title="Source mix right now" sensors={[
+  {name: 'Power share from <source>', unit: '%', on: 'Power sources (%)'},
+  {name: 'Power from <source>', unit: 'W', on: 'Power from each source (W)'},
+]}>
+
+One sensor per source in your home — the grid, each PV system and each
+battery — named after it, e.g. *Power share from Rooftop*. They answer "what
+is the heat pump running on right now?": say 55 % solar and 45 % grid, or the
+same split in watts.
+
+The watts add up to the consumer's draw. While your meters disagree they can
+come out slightly below its own meter — see *Metering imbalance* on the
+[whole home](home.mdx).
+
+</SensorCard>
+
+<SensorCard title="Source mix over time" sensors={[
+  {name: 'Energy from <source>', unit: 'kWh', on: 'Energy from each source (kWh)'},
+  {name: 'Energy share from <source>', unit: '%', on: 'Energy sources (%)'},
+  {name: 'Energy from removed devices', unit: 'kWh', on: 'Energy from each source (kWh)'},
+  {name: 'Energy share from removed devices', unit: '%', on: 'Energy sources (%)'},
+]}>
+
+Running totals of how much energy came from each source — "312 kWh of solar
+and 540 kWh from the grid" — and the lifetime mix that makes (37 % solar,
+63 % grid). For a daily or monthly mix, put the *Energy from …* sensors
+behind a [utility meter](https://www.home-assistant.io/integrations/utility_meter/).
+
+The *removed devices* sensors only appear after you remove a source; they
+keep the energy it supplied so the totals don't shrink.
+
+</SensorCard>
+
+<SensorCard title="Consumption share" sensors={[
+  {name: 'Consumption share', unit: '%', on: 'Consumption share (%)'},
+]}>
+
+This consumer's slice of everything your home consumes right now.
+
+</SensorCard>
+
+</SensorCards>
+
+:::warning[Don't add *Energy from …* to the Energy dashboard]
+
+These sensors split energy the consumer's own meter already counts. Adding
+them next to that meter counts the same energy twice.
+
+:::
+
+### Cost and savings
+
+<SensorCards>
+
+<SensorCard title="Operating cost" sensors={[
+  {name: 'Operating cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized operating cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total operating cost', unit: 'EUR', on: 'Total costs'},
+  {name: 'Total levelized operating cost', unit: 'EUR', on: 'Total costs + Levelized'},
+]}>
+
+What running this consumer costs, based on where its power comes from. With
+**Standard**, grid power costs the live grid price and your own solar and
+battery power is free. With **Levelized**, your own power is priced at the
+lifetime cost per kWh of the device that supplied it.
+
+</SensorCard>
+
+<SensorCard title="Avoided cost" sensors={[
+  {name: 'Avoided cost rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Total avoided cost', unit: 'EUR', on: 'Total savings'},
+  {name: 'Avoided cost from <source>', unit: 'EUR/h', on: 'Avoided cost by source'},
+  {name: 'Total avoided cost from <source>', unit: 'EUR', on: 'Avoided cost by source + Total savings'},
+  {name: 'Total avoided cost from removed devices', unit: 'EUR', on: 'Avoided cost by source + Total savings'},
+]}>
+
+What this consumer did **not** pay the grid because your solar or battery
+powered it. The *from …* sensors split that by PV system and battery (the
+grid has none: it is what was avoided).
+
+Your PV systems and batteries report the same money as their own savings, so
+don't add the two together.
+
+</SensorCard>
+
+</SensorCards>
+
+:::note[`restriction_deficit` attribute]
+
+With **Power sources** set to *Specific devices*, both operating-cost rate
+sensors carry a `restriction_deficit` attribute: the watts the consumer is
+drawing from outside its selected sources. See
+[When a device draws from outside its sources](../how-it-works.md#when-a-device-draws-from-outside-its-sources).
+
+:::
+
+<details>
+<summary>What happens when you remove a source</summary>
+
+The consumer's *Energy from …* sensor for that source is disabled, keeping its
+history; delete it yourself if you no longer want it. Its final value moves
+into *Energy from removed devices*, so the consumer's totals don't lose it.
+
+*Energy from removed devices* has no state class: it steps up once at each
+removal, and that energy is already in the old sensor's history, so long-term
+statistics would count it twice. A total that was not counting when its
+source was removed (option off, or entity disabled) has nothing to keep.
+
+</details>

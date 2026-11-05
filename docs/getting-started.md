@@ -66,10 +66,10 @@ fields are *required* depends on the sensors you enabled — for example, cost
 sensors need a price entity and levelized sensors need lifetime values. See the
 per-device pages:
 
-- [Grid connection](devices/grid.md)
-- [PV system](devices/pv.md)
-- [Battery](devices/battery.md)
-- [Consumer](devices/consumer.md)
+- [Grid connection](devices/grid.mdx)
+- [PV system](devices/pv.mdx)
+- [Battery](devices/battery.mdx)
+- [Consumer](devices/consumer.mdx)
 
 :::warning[Mind the sign convention]
 
@@ -93,7 +93,7 @@ Turning a sensor off **disables** it in Home Assistant but does not delete it, s
 its history is preserved and it comes back the moment you re-enable the option.
 
 See **[Sensors, presets & options](sensor-options.md)** for
-the full reference, and the **[Entity reference](sensors.md)** for every sensor
+the full reference, and the **[Entity reference](sensors.mdx)** for every sensor
 Power Insight can create.
 
 ## 4. (Optional) Seed accumulated totals

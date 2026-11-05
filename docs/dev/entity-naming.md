@@ -3,7 +3,7 @@
 This is the reference for how Power Insight names its sensors. New sensors must
 follow it so the entity set stays predictable and self-explanatory. The
 canonical list of shipped sensors lives in the
-[Entity reference](../sensors.md); this page is the *rule set* behind it.
+[Entity reference](../sensors.mdx); this page is the *rule set* behind it.
 
 ## Name = device + entity
 

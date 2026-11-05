@@ -1,0 +1,215 @@
+# PV system
+
+A PV system represents a solar array / inverter. Power Insight tracks how much
+it produces, how much of that you self-consume vs. export, and the financial
+impact. If you have multiple PV systems, add one device each — the sensor
+*selection* applies to all of them, but each system gets its own set of sensors.
+
+Add it with **Add device → PV system**.
+
+## Settings
+
+### Name
+
+> For example "Rooftop" or "Heat pump". Used in the device and sensor names.
+
+### Power sensor
+
+> Sensor with this device's power in W, kW or MW. Positive = producing,
+> negative = drawing (standby).
+
+### Invert power sign
+
+> Turn on if your sensor uses the opposite sign.
+
+### Exports to the grid
+
+> Turn on if this device can export power to the grid.
+
+Default: **on** for PV systems. When off, the *Production to grid* (+ ratio),
+*Share of grid export* and export-compensation sensors are not created.
+
+### Export compensation per kWh
+
+> What you are paid per kWh exported to the grid. Required for savings, financial return and export compensation sensors.
+
+It is a rate in your currency per kWh. There is no default — a rate that
+fits one country is wrong in the next — so it is asked for whenever the device
+exports to the grid; enter `0` if you are not paid for it.
+
+Both this and *Exports to the grid* can be changed later under **Reconfigure**.
+A new rate applies from then on: an export rate is a price that changes over
+time, so the totals already accumulated keep the rate that held when they were
+earned.
+
+### Lifetime production
+
+> Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors.
+
+### Lifetime cost
+
+> Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors.
+
+Together, *lifetime cost ÷ lifetime production* gives this system's
+[**LCOE**](../how-it-works.md#lcoe-levelized-cost-of-electricity).
+
+### CO₂ footprint
+
+> CO₂ emitted to make and install this device, in kg. Optional; reserved for CO₂ sensors.
+
+:::note
+
+CO₂ sensors are **not implemented yet**; this field currently has no effect.
+
+:::
+
+### Already accumulated
+
+> Optional, in two sections, one per route. **Energy (kWh):** *Produced*,
+> and optionally its own export to the grid; Power Insight calculates the
+> money, with its own average grid tariff or the grid's. **Amounts:** the
+> savings and export compensation your app shows, taken as they are. Your
+> totals then start where your system really is. See
+> [Carried-over history](../advanced/history.md).
+
+## Changing lifetime values later
+
+If you reconfigure the lifetime cost or production, Power Insight applies a
+[**correction factor**](../how-it-works.md#the-correction-factor) that retroactively
+rescales this device's already-recorded levelized values so history stays
+consistent. The rescaling reaches the whole history and shows in the long-term
+statistics as one step at the time of the edit.
+
+If you replace the hardware itself, add it as a new device and remove the old
+one instead: the new hardware has a lifetime of its own.
+
+## Sensors
+
+Turn these on in the integration's **Options → PV system sensors**. The choice applies to
+every PV system, and each one gets its own set of sensors.
+
+### Power flow
+
+<SensorCards>
+
+<SensorCard title="Where the production goes" sensors={[
+  {name: 'Production to home consumption', unit: 'W', on: 'Power split (W)'},
+  {name: 'Production to batteries', unit: 'W', on: 'Power split (W)'},
+  {name: 'Production to system standby', unit: 'W', on: 'Power split (W)'},
+  {name: 'Production to grid', unit: 'W', on: 'Power split (W)'},
+  {name: 'Production to home consumption ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Production to batteries ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Production to system standby ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Production to grid ratio', unit: '%', on: 'Power split (%)'},
+]}>
+
+Splits this PV system's production by
+[where it goes](../sensors.mdx#where-power-goes): your appliances, charging a
+battery, the idle draw of other energy equipment, or the grid. The *ratio*
+sensors give the same split as a percentage **of this PV system's own production** —
+*Production to grid ratio* at 40 % means 40 % of it is exported.
+
+- The *grid* sensors need **Exports to the grid** on.
+- The *batteries* sensors only exist when a battery is allowed to charge
+  from this system.
+
+</SensorCard>
+
+<SensorCard title="This PV system's share of the home" sensors={[
+  {name: 'Share of home consumption', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of battery charging', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of system standby', unit: '%', on: 'Share of home totals (%)'},
+  {name: 'Share of grid export', unit: '%', on: 'Share of home totals (%)'},
+]}>
+
+How much of **the whole home's** consumption, battery charging, standby and
+export this PV system covers right now. Compare with the *ratio* sensors above:
+a ratio divides by this PV system's production, a share by the home's total.
+
+</SensorCard>
+
+</SensorCards>
+
+### Cost, savings and earnings
+
+Every money sensor comes in two flavours, chosen per section in the options:
+
+- **Standard** values electricity at your **live grid price**; your own
+  solar power counts as free.
+- **Levelized** also counts what your hardware cost, spread over every kWh it
+  delivers (LCOE, see [How it works](../how-it-works.md#lcoe-levelized-cost-of-electricity)). Needs
+  **Lifetime production** and **Lifetime cost**.
+
+Each sensor ending in *rate* is money per hour right now; the matching
+*Total* adds it up and keeps counting across restarts.
+
+<SensorCards>
+
+<SensorCard title="Operating cost" sensors={[
+  {name: 'Operating cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized operating cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total operating cost', unit: 'EUR', on: 'Total costs'},
+  {name: 'Total levelized operating cost', unit: 'EUR', on: 'Total costs + Levelized'},
+]}>
+
+What this PV system's **own draw** costs — mostly the inverter's standby
+at night.
+
+</SensorCard>
+
+<SensorCard title="Avoided cost" sensors={[
+  {name: 'Avoided cost rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Total avoided cost', unit: 'EUR', on: 'Total savings'},
+]}>
+
+What this PV system's power kept **off your grid bill**: the power it put into
+your home, valued at the grid price. This is the saving *before* its own
+operating cost is taken off.
+
+</SensorCard>
+
+<SensorCard title="Cost savings" sensors={[
+  {name: 'Cost savings rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Levelized cost savings rate', unit: 'EUR/h', on: 'Savings method: Levelized'},
+  {name: 'Total cost savings', unit: 'EUR', on: 'Total savings'},
+  {name: 'Total levelized cost savings', unit: 'EUR', on: 'Total savings + Levelized'},
+]}>
+
+The **net** saving: avoided cost minus operating cost. The levelized variant
+also subtracts this system's LCOE, so it shows whether the hardware pays off. Export
+earnings are not included — see *Financial return*.
+
+</SensorCard>
+
+<SensorCard title="Export compensation" requires="Exports to the grid is on" sensors={[
+  {name: 'Export compensation rate', unit: 'EUR/h', on: 'Export compensation rate'},
+  {name: 'Total export compensation', unit: 'EUR', on: 'Total export compensation'},
+]}>
+
+What this PV system earns by exporting, at its **Export compensation per kWh**.
+
+</SensorCard>
+
+<SensorCard title="Financial return" requires="Exports to the grid is on" sensors={[
+  {name: 'Financial return rate', unit: 'EUR/h', on: 'Financial return method: Standard'},
+  {name: 'Levelized financial return rate', unit: 'EUR/h', on: 'Financial return method: Levelized'},
+  {name: 'Total financial return', unit: 'EUR', on: 'Total financial return'},
+  {name: 'Total levelized financial return', unit: 'EUR', on: 'Total financial return + Levelized'},
+]}>
+
+Everything this PV system brings in: cost savings **plus** export compensation.
+The levelized variant also counts what producing the exported energy cost,
+so it can be lower than the levelized savings while you export for less than
+the LCOE. See
+[Why is my levelized financial return lower…](../how-it-works.md#why-is-my-levelized-financial-return-lower-than-my-levelized-savings)
+
+</SensorCard>
+
+</SensorCards>
+
+:::tip[Levelized sensors missing?]
+
+Levelized sensors are only created once **Lifetime production** and
+**Lifetime cost** are filled in on this device's **Reconfigure** page.
+
+:::

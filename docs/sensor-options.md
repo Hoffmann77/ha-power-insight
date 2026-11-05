@@ -72,7 +72,7 @@ what its sensors support — see [the matrix below](#which-scope-offers-what).
   drawn so far, over its whole lifetime. Turns on *Energy from each source*
   too, since the shares are worked out from those totals. *(consumer only)*
 
-See [Where a device's power goes](sensors.md) for how to read these names.
+See [Where a device's power goes](sensors.mdx) for how to read these names.
 
 ### Export compensation
 

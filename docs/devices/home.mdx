@@ -1,0 +1,210 @@
+---
+title: Whole home
+description: Sensors that sum up your whole home, on the Combined and Home base load devices.
+---
+
+# Whole home
+
+You don't add the whole home yourself: Power Insight creates it from the
+devices you have set up. Its sensors live on two devices:
+
+- **Combined**: totals across your whole home. The device name already says
+  "combined", so the sensor names don't repeat it.
+- **Home base load** (optional): everything your home uses that has **no
+  sensor of its own**, meaning total consumption minus your consumers.
+
+Turn the sensors on in the integration's **Options → Combined sensors**.
+
+## Power flow
+
+<SensorCards>
+
+<SensorCard title="Where the home's power goes" sensors={[
+  {name: 'Home consumption power', unit: 'W', on: 'Power split (W)'},
+  {name: 'Battery charging power', unit: 'W', on: 'Power split (W)'},
+  {name: 'System standby power', unit: 'W', on: 'Power split (W)'},
+  {name: 'Home consumption ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Battery charging ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'System standby ratio', unit: '%', on: 'Power split (%)'},
+  {name: 'Export ratio', unit: '%', on: 'Power split (%)'},
+]}>
+
+All power entering your home (grid import, solar and battery discharge),
+split by [where it goes](../sensors.mdx#where-power-goes):
+
+- **Home consumption** is everything your appliances draw, metered or not,
+  from any source.
+- **Battery charging** is power going into your batteries.
+- **System standby** is the idle draw of your energy equipment, such as PV
+  inverters at night. It does *not* include appliances on standby.
+
+The *ratio* sensors show the same split as a percentage of all power entering
+the home, plus the share that is exported.
+
+</SensorCard>
+
+<SensorCard title="Debug readings" diagnostic sensors={[
+  {name: 'Available power', unit: 'W', on: 'Debug sensors'},
+  {name: 'Metering imbalance', unit: 'W', on: 'Debug sensors'},
+]}>
+
+**Available power** is all power entering the home: grid import + PV
+production + battery discharge.
+
+**Metering imbalance** is how much more your metered devices drew than your
+sources supplied. Meters that update at slightly different moments make it
+briefly non-zero, and Power Insight evens that out on its own. If it stays
+large, a meter is probably set up wrong (an inverted sign, or a consumer
+meter inside another metered circuit), and a repair issue tells you so.
+
+</SensorCard>
+
+</SensorCards>
+
+## Cost
+
+Every money sensor comes in a **Standard** and a **Levelized** flavour. See
+[How it works](../how-it-works.md) for the difference. Sensors ending in
+*rate* are money per hour right now; *Total* sensors add it up across
+restarts.
+
+<SensorCards>
+
+<SensorCard title="Price of your electricity" sensors={[
+  {name: 'Blended price of electricity', unit: 'EUR/kWh', on: 'Cost method: Standard'},
+  {name: 'Levelized blended price of electricity', unit: 'EUR/kWh', on: 'Cost method: Levelized'},
+]}>
+
+What one kWh costs you right now, averaged over your whole energy mix. With
+**Standard**, grid power counts at the grid price and your own power is free.
+This is **not** your grid tariff: it drops as your solar and battery cover
+more of the load. **Levelized** prices your own power at each device's
+lifetime cost per kWh instead.
+
+</SensorCard>
+
+<SensorCard title="Cost per hour" sensors={[
+  {name: 'Cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+]}>
+
+What all the power entering your home costs per hour right now: the power
+× the blended price above. The cards below split it by destination.
+
+</SensorCard>
+
+<SensorCard title="Consumption cost" sensors={[
+  {name: 'Consumption cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized consumption cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total consumption cost', unit: 'EUR', on: 'Total costs'},
+]}>
+
+The part of the cost that goes to **home consumption**: what running your
+household costs.
+
+</SensorCard>
+
+<SensorCard title="Charging cost" sensors={[
+  {name: 'Charging cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized charging cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total charging cost', unit: 'EUR', on: 'Total costs'},
+]}>
+
+The part of the cost that goes into **charging your batteries**.
+
+</SensorCard>
+
+<SensorCard title="Standby and export cost" sensors={[
+  {name: 'Levelized system standby cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Levelized export cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+]}>
+
+The rest of the levelized cost: what your energy equipment's idle draw costs,
+and what producing the power you export cost. Only levelized, because at the
+grid price your own power is free.
+
+</SensorCard>
+
+<SensorCard title="Device operating cost" sensors={[
+  {name: 'Device operating cost rate', unit: 'EUR/h', on: 'Cost method: Standard'},
+  {name: 'Levelized device operating cost rate', unit: 'EUR/h', on: 'Cost method: Levelized'},
+  {name: 'Total levelized device operating cost', unit: 'EUR', on: 'Total costs + Levelized'},
+]}>
+
+What running your PV and battery hardware costs (their charging and standby
+draw), summed over all of them. Each device shows its own share as
+*Operating cost*.
+
+</SensorCard>
+
+</SensorCards>
+
+## Savings and financial return
+
+<SensorCards>
+
+<SensorCard title="Cost savings" sensors={[
+  {name: 'Cost savings rate', unit: 'EUR/h', on: 'Savings method: Standard'},
+  {name: 'Levelized cost savings rate', unit: 'EUR/h', on: 'Savings method: Levelized'},
+  {name: 'Total cost savings', unit: 'EUR', on: 'Total savings'},
+  {name: 'Total levelized cost savings', unit: 'EUR', on: 'Total savings + Levelized'},
+]}>
+
+Money saved by using your own power instead of buying it, minus what your
+devices cost to run. Export earnings are not included; see *Financial return*.
+
+</SensorCard>
+
+<SensorCard title="Financial return" sensors={[
+  {name: 'Financial return rate', unit: 'EUR/h', on: 'Financial return method: Standard'},
+  {name: 'Levelized financial return rate', unit: 'EUR/h', on: 'Financial return method: Levelized'},
+  {name: 'Total financial return', unit: 'EUR', on: 'Total financial return'},
+  {name: 'Total levelized financial return', unit: 'EUR', on: 'Total financial return + Levelized'},
+]}>
+
+Everything your solar and batteries bring in: cost savings **plus** export
+compensation. The levelized version also counts what producing the exported
+energy cost, so it is lower than the levelized savings while you export for
+less than that cost.
+
+</SensorCard>
+
+</SensorCards>
+
+<details>
+<summary>How the combined levelized totals are worked out</summary>
+
+The combined *levelized* totals are not counted on their own. Each one is the
+sum of every device's own levelized total, plus whatever devices you have since
+removed contributed. That way, editing a device's lifetime values corrects the
+past too (see the [correction factor](../how-it-works.md#the-correction-factor)),
+and removing a device never wipes out what it saved.
+
+While a device's own total has no value yet, for example just after a
+restart, the combined total shows as **unavailable** rather than a partial
+sum, which would look like a false drop in your statistics. A device whose
+total you turned off is left out.
+
+</details>
+
+## Home base load
+
+Turn on **Home base load** under *Options → Combined sensors → Power* to get a
+separate device for everything without a sensor of its own: your fridge,
+lights, router and so on. Its power is your total home consumption minus the
+consumers you have added.
+
+<SensorCards>
+
+<SensorCard title="Base load" sensors={[
+  {name: 'Power', unit: 'W', on: 'Home base load'},
+  {name: 'Avoided cost rate', unit: 'EUR/h', on: 'Home base load'},
+]}>
+
+**Power** is what the rest of the house draws right now. Its attributes show
+where that power comes from (grid, solar, battery). **Avoided cost rate** is
+what your own power saved on that part of the house, at the grid price.
+
+</SensorCard>
+
+</SensorCards>
