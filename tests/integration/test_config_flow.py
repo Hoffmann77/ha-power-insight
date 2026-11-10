@@ -1034,3 +1034,61 @@ async def test_reconfigure_changes_the_feed_in_rate(hass: HomeAssistant) -> None
     assert result["type"] == FlowResultType.ABORT
     new = entry.subentries[PV_SUB_ID].data["adapter"]["config"]
     assert new["export_compensation"] == 0.12
+
+
+async def test_subentry_pv_stores_its_curtailment(hass: HomeAssistant) -> None:
+    """The curtailment field is offered on setup, defaults to off and is stored."""
+    entry = MockConfigEntry(domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS)
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.pv_power", "100", {"unit_of_measurement": "W"})
+
+    result = await hass.config_entries.subentries.async_init(
+        (entry.entry_id, "adapter"), context={"source": "user"}
+    )
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], user_input={"next_step_id": "pv_system"}
+    )
+    keys = {str(key): key for key in result["data_schema"].schema}
+    assert "curtails_at_negative_prices" in keys
+    assert keys["curtails_at_negative_prices"].default() is False
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "name": "Roof",
+            "power_entity": "sensor.pv_power",
+            "power_entity_inverted": False,
+            "exports_power": True,
+            "export_compensation": 0.08,
+            "curtails_at_negative_prices": True,
+        },
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    config = next(iter(entry.subentries.values())).data["adapter"]["config"]
+    assert config["curtails_at_negative_prices"] is True
+
+
+async def test_reconfigure_sets_the_grid_export_limit(hass: HomeAssistant) -> None:
+    """The grid's export limit is optional and editable after setup."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="My PowerInsight", options=BASE_OPTIONS,
+        subentries_data=[make_grid_subentry_data()],
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("sensor.grid_power", "0", {"unit_of_measurement": "W"})
+
+    result = await entry.start_subentry_reconfigure_flow(hass, GRID_SUB_ID)
+    assert result["type"] == FlowResultType.FORM
+    assert "export_limit" in {str(key) for key in result["data_schema"].schema}
+
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"],
+        user_input={
+            "power_entity": "sensor.grid_power",
+            "power_entity_inverted": False,
+            "export_limit": 800,
+        },
+    )
+    assert result["type"] == FlowResultType.ABORT
+    config = entry.subentries[GRID_SUB_ID].data["adapter"]["config"]
+    assert config["export_limit"] == 800

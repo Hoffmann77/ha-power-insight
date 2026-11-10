@@ -28,6 +28,8 @@ CONF_POWER_ENTITY_INVERTED = "power_entity_inverted"
 # Grid adapter fields
 CONF_ELECTRICITY_PRICE_ENTITY = "grid_electricity_price_entity"
 CONF_CO2_INTENSITY_ENTITY = "co2_intensity_entity"
+# The most the grid connection may take, in W (optional; empty = no limit).
+CONF_EXPORT_LIMIT = "export_limit"
 
 # Raw calculation inputs (top-level storage)
 CONF_LIFETIME_PRODUCTION = "lifetime_production"
@@ -67,6 +69,10 @@ CONF_HISTORY = "history"
 # PV/Battery user settings (stored in adapter.config)
 CONF_EXPORTS_POWER = "exports_power"
 CONF_EXPORT_COMPENSATION = "export_compensation"
+
+# PV specific (stored in adapter.config): the home curtails this system when
+# its energy is worth less than nothing (a negative tariff or feed-in rate).
+CONF_CURTAILS_AT_NEGATIVE_PRICES = "curtails_at_negative_prices"
 
 # Battery specific (stored in adapter.config)
 CONF_CHARGE_FROM_ADAPTERS = "charge_from_adapters"

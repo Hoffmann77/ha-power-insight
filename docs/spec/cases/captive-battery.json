@@ -23,7 +23,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {
@@ -442,22 +443,22 @@
         {
           "property": "adapters_saving_rates",
           "value": {
-            "pv1": "0",
-            "bat1": "0"
+            "pv1": "3/25",
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_saving_rates",
           "value": {
-            "pv1": "0",
-            "bat1": "-1/25"
+            "pv1": "2/25",
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_saving_rates_corrected",
           "value": {
-            "pv1": "0",
-            "bat1": "-1/25"
+            "pv1": "2/25",
+            "bat1": "-3/25"
           }
         },
         {
@@ -467,22 +468,22 @@
         {
           "property": "adapters_financial_return_rates",
           "value": {
-            "pv1": "0",
-            "bat1": "0"
+            "pv1": "3/25",
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates",
           "value": {
-            "pv1": "0",
-            "bat1": "-1/25"
+            "pv1": "2/25",
+            "bat1": "-3/25"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates_corrected",
           "value": {
-            "pv1": "0",
-            "bat1": "-1/25"
+            "pv1": "2/25",
+            "bat1": "-3/25"
           }
         },
         {

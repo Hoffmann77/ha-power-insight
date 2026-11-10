@@ -1444,28 +1444,178 @@ class PowerInsight:
 
         return self._to_kilo(local) * grid_price
 
+    # -------------------------------------------------------------->
+    # STORED ENERGY: what a battery pays the local source it charges from
+    #
+    # A battery charging from a PV system (or from another battery) pays that
+    # source what the energy would have been worth in the home without the
+    # battery: every other reading as it is, the grid absorbing the difference.
+    # The freed watts first cover the grid import (worth the tariff), then are
+    # exported up to the grid's export limit (worth the source's feed-in rate,
+    # if it may export at all), and the rest is curtailed (worth nothing). A
+    # source whose home curtails it when its energy is worth less than nothing
+    # never sells below zero. The payment is a transfer between two devices'
+    # savings: the combined figures and the cost ledger do not move. See
+    # "a battery pays for local energy what it was worth elsewhere" in
+    # docs/dev/engine-calculations.md.
+    # -------------------------------------------------------------->
+
+    @property
+    def _stored_energy_prices(self) -> dict[str, float | None]:
+        """Return ``{local source uid: EUR/kWh}`` for the watts it charged into batteries.
+
+        Only sources that actually charged a battery are listed. Room under the
+        import and under the export limit is shared in proportion to watts, so
+        splitting a source in two changes nothing. ``None`` for a source whose
+        price needs the tariff while the tariff is unknown.
+        """
+        def compute() -> dict[str, float | None]:
+            grid = self.grid_adapter
+            charging = self._channel_source_power[_CHANNEL_CHARGING]
+            local = {
+                uid: watts for uid, watts in charging.items()
+                if uid != grid.uid and watts > _EPS
+            }
+            if not local:
+                return {}
+
+            total = sum(local.values())
+            imported = (
+                self._balanced_power(grid) if grid.flow_role is FlowRole.SOURCE else 0.0
+            )
+            # Grid watts into a battery are freed first; they are priced at the
+            # tariff already, as the cost of the battery's own draw.
+            import_room = max(0.0, imported - charging.get(grid.uid, 0.0))
+            covers_import = min(1.0, import_room / total)
+
+            exporters = {
+                uid: watts for uid, watts in local.items()
+                if getattr(self.get_adapter_by_uid(uid), "exports_power", False)
+            }
+            left = sum(exporters.values()) * (1.0 - covers_import)
+            limit = getattr(grid, "export_limit", None)
+            if limit is None or left <= _EPS:
+                exported = 1.0
+            else:
+                export_room = max(0.0, limit - self._balanced_export)
+                exported = min(1.0, export_room / left)
+
+            tariff = grid.coe
+            prices: dict[str, float | None] = {}
+            for uid in local:
+                adapter = self.get_adapter_by_uid(uid)
+                floor = getattr(adapter, "curtails_at_negative_prices", False)
+                price = 0.0
+                if covers_import > 0.0:
+                    if tariff is None:
+                        prices[uid] = None
+                        continue
+                    price += covers_import * self._worth(tariff, floor)
+                if uid in exporters:
+                    price += (1.0 - covers_import) * exported * self._worth(
+                        adapter.export_compensation, floor
+                    )
+                prices[uid] = price
+
+            return prices
+
+        return self._snapshot_cached("stored_energy_prices", compute)
+
+    @staticmethod
+    def _worth(price: float, curtailed: bool) -> float:
+        """Return ``price``, never below zero for a source the home curtails."""
+        return max(price, 0.0) if curtailed else price
+
+    def _stored_energy_paid_rate(self, uid: str) -> float | None:
+        """Return what a charging battery pays its local sources (EUR/h)."""
+        allocation, _ = self._source_allocation
+        row = allocation.get(uid, {})
+        prices = self._stored_energy_prices
+        total = 0.0
+        for source_uid, watts in row.items():
+            if source_uid == self.grid_adapter.uid or watts <= _EPS:
+                continue
+            price = prices.get(source_uid)
+            if price is None:
+                return None
+            total += self._to_kilo(watts) * price
+
+        return total
+
+    def _stored_energy_sold_rate(self, uid: str) -> float | None:
+        """Return what a local source is paid for the watts it charged (EUR/h)."""
+        watts = self._channel_source_power[_CHANNEL_CHARGING].get(uid, 0.0)
+        if watts <= _EPS:
+            return 0.0
+        price = self._stored_energy_prices.get(uid)
+        if price is None:
+            return None
+
+        return self._to_kilo(watts) * price
+
+    def _grid_draw_cost_rate(self, uid: str) -> float | None:
+        """Return what a sink's grid watts cost at the tariff (EUR/h)."""
+        allocation, _ = self._source_allocation
+        watts = allocation.get(uid, {}).get(self.grid_adapter.uid, 0.0)
+        if watts == 0.0:
+            return 0.0
+        tariff = self.grid_adapter.coe
+        if tariff is None:
+            return None
+
+        return self._to_kilo(watts) * tariff
+
+    def _battery_charge_cost_rate(self, uid: str) -> float | None:
+        """Return what charging costs a battery in its saving (EUR/h).
+
+        Its grid watts at the tariff, and its local watts at what they would
+        have been worth without it — at the margin and levelized alike: the
+        source carries its own LCOE, so the price never depends on it.
+        """
+        grid = self._grid_draw_cost_rate(uid)
+        paid = self._stored_energy_paid_rate(uid)
+        if grid is None or paid is None:
+            return None
+
+        return grid + paid
+
     def _source_saving_rate(
         self, adapter, *, levelized: bool, corrected: bool = False,
     ) -> float | None:
         """Return what a source earned by serving load instead of the grid.
 
-        Only the consumption channel earns: exported watts are paid through the
-        export compensation, and charging is a cost booked against the battery.
-        The grid earns nothing — it *is* the alternative being priced against.
+        The consumption channel earns the tariff it displaced; watts charged
+        into a battery earn what the battery pays for them. Either way the
+        source carries its own price on them. Exported watts are paid through
+        the export compensation instead. The grid earns nothing — it *is* the
+        alternative being priced against.
         """
         if adapter is self.grid_adapter:
             return 0.0
 
-        watts = self._channel_source_power[_CHANNEL_CONSUMPTION].get(adapter.uid, 0.0)
-        if watts == 0.0:
+        channels = self._channel_source_power
+        served = channels[_CHANNEL_CONSUMPTION].get(adapter.uid, 0.0)
+        charged = channels[_CHANNEL_CHARGING].get(adapter.uid, 0.0)
+        if served == 0.0 and charged <= _EPS:
             return 0.0  # served nothing, so saved nothing, whatever the prices
 
-        grid_price = self.grid_adapter.coe
         own = self._source_price(adapter, levelized=levelized, corrected=corrected)
-        if grid_price is None or own is None:
+        if own is None:
             return None
 
-        return self._to_kilo(watts) * (grid_price - own)
+        rate = 0.0
+        if served != 0.0:
+            grid_price = self.grid_adapter.coe
+            if grid_price is None:
+                return None
+            rate += self._to_kilo(served) * (grid_price - own)
+        if charged > _EPS:
+            sold = self._stored_energy_sold_rate(adapter.uid)
+            if sold is None:
+                return None
+            rate += sold - self._to_kilo(charged) * own
+
+        return rate
 
     def _export_compensation_rate(self, adapter) -> float | None:
         """Return what a source is paid for the watts it exported (EUR/h)."""
@@ -1499,8 +1649,12 @@ class PowerInsight:
                     adapter, levelized=levelized, corrected=corrected,
                 )
             elif adapter.flow_role is FlowRole.SINK:
-                cost = self._sink_cost_rate(
-                    adapter.uid, levelized=levelized, corrected=corrected,
+                cost = (
+                    self._battery_charge_cost_rate(adapter.uid)
+                    if adapter.uid in self.storage_adapters.uid_mapping
+                    else self._sink_cost_rate(
+                        adapter.uid, levelized=levelized, corrected=corrected,
+                    )
                 )
                 rates[adapter.uid] = None if cost is None else -cost or 0.0
             else:
@@ -1668,25 +1822,40 @@ class PowerInsight:
         grid_uid = self.grid_adapter.uid
         grid_price = self.grid_adapter.coe
         consumption = self._channel_source_power[_CHANNEL_CONSUMPTION]
+        charging = self._channel_source_power[_CHANNEL_CHARGING]
         exported = self._channel_source_power[_CHANNEL_EXPORT]
 
         out: dict[str, dict[str, float] | None] = {}
         for adapter in self.prod_adapters:
             uid = adapter.uid
             if adapter.flow_role is FlowRole.SINK:
-                own = self._sink_cost_components(uid)
-                components = (
-                    None if own is None
-                    else {key: -value for key, value in own.items()}
-                )
+                if uid in self.storage_adapters.uid_mapping:
+                    # Tariff and stored-energy price: neither is anyone's
+                    # lifetime cost, so the whole charge cost never scales.
+                    cost = self._battery_charge_cost_rate(uid)
+                    components = None if cost is None else {grid_uid: -cost}
+                else:
+                    own = self._sink_cost_components(uid)
+                    components = (
+                        None if own is None
+                        else {key: -value for key, value in own.items()}
+                    )
             elif adapter.flow_role is FlowRole.SOURCE:
-                if grid_price is None or adapter.lcoe is None:
+                served = self._to_kilo(consumption.get(uid, 0.0))
+                watts_charged = charging.get(uid, 0.0)
+                charged = self._to_kilo(watts_charged) if watts_charged > _EPS else 0.0
+                sold = self._stored_energy_sold_rate(uid)
+                if (
+                    adapter.lcoe is None
+                    or (served and grid_price is None)
+                    or sold is None
+                ):
                     components = None
                 else:
-                    served = self._to_kilo(consumption.get(uid, 0.0))
+                    earned = served * grid_price if served else 0.0
                     components = {
-                        grid_uid: served * grid_price,
-                        uid: -served * adapter.lcoe,
+                        grid_uid: earned + sold,
+                        uid: -(served + charged) * adapter.lcoe,
                     }
             else:
                 components = {}
@@ -2631,12 +2800,19 @@ class GridAdapter(BasePowerProvidingAdapter):
         power_entity_inverted: bool = False,
         price_entity: str | None = None,
         co2_entity: str | None = None,
+        export_limit: float | None = None,
         **kwargs,
     ) -> None:
-        """Initialize instance."""
+        """Initialize instance.
+
+        ``export_limit`` is the most the grid connection may take (W), ``None``
+        for no limit. The readings already obey it, so it never steers routing;
+        it only says how much more could have been exported without a battery.
+        """
         super().__init__(
             unique_id, verbose_name, power_entity, power_entity_inverted, **kwargs,
         )
+        self.export_limit = export_limit
         self._price_entity = price_entity
         if self._price_entity is not None:
             self._values[self._price_entity] = None
@@ -2887,9 +3063,15 @@ class PvAdapter(BaseProductionAdapter):
         exports_power: bool,
         export_compensation: float,
         correction_factor: float = 1.0,
+        curtails_at_negative_prices: bool = False,
         **kwargs,
     ) -> None:
-        """Initialize instance."""
+        """Initialize instance.
+
+        ``curtails_at_negative_prices``: the home curtails this system when its
+        energy is worth less than nothing, so energy a battery stored from it
+        is never worth a negative price.
+        """
         super().__init__(
             unique_id,
             verbose_name,
@@ -2902,6 +3084,7 @@ class PvAdapter(BaseProductionAdapter):
         self._lcoe = lcoe
         self._lco2_intensity = lco2_intensity
         self._correction_factor = correction_factor
+        self.curtails_at_negative_prices = curtails_at_negative_prices
 
     @property
     def lcoe(self) -> float | None:

@@ -42,6 +42,23 @@ A new rate applies from then on: an export rate is a price that changes over
 time, so the totals already accumulated keep the rate that held when they were
 earned.
 
+It also prices the solar energy a battery stores: while the home is exporting,
+the battery pays this PV system its export compensation for it — see
+[What a battery pays for the solar energy it stores](../advanced/costs-and-savings.md#what-a-battery-pays-for-the-solar-energy-it-stores).
+
+### Curtailed at negative prices
+
+> Turn on if this system is curtailed whenever its energy is worth less than nothing (a negative grid price or export compensation), e.g. by your energy manager. The solar energy a battery stores is then never valued below zero. Leave off if nothing curtails it.
+
+Default: **off**. It only matters while a price is negative. With it off, a
+battery that stores this system's energy at a negative price is *paid* for
+it, because without the battery the home would have used or exported that
+energy at the negative price. With it on, the home would have curtailed the
+system instead, so the stored energy was worth nothing. What the PV system
+itself did is never changed: energy it sent into the home at a negative price
+still shows up as negative savings. Can be changed later under
+**Reconfigure**.
+
 ### Lifetime production
 
 > Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors.

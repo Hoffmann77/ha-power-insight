@@ -236,36 +236,42 @@ grid energy when it discharges, and its totals split those two sides up:
 |---|---|---|
 | **Total operating cost** | What charging cost: grid energy at the grid price; energy from your PV systems counts as free | charging from the grid |
 | **Total levelized operating cost** | The same, with PV energy priced at that PV system's LCOE, its lifetime cost per kWh | charging from anything |
-| **Total cost savings** | Grid electricity it replaced (discharge into the home × grid price), minus the operating cost | discharging; it goes **down** while charging from the grid |
+| **Total cost savings** | Grid electricity it replaced (discharge into the home × grid price), minus what its stored energy was worth: grid energy at the grid price, PV energy at what it would have earned without the battery | discharging; it goes **down** while charging |
 | **Total financial return** | Savings plus what exports earn, if the battery may export to the grid | discharging, and exporting |
 
-- **The operating cost is already inside the savings.** Do not subtract it
-  again: the savings are the battery's net result, what discharging saved
-  minus what charging cost.
-- **Charging from PV is free in the standard totals and costs the LCOE in the
-  levelized ones.** A battery charged only from PV has a *Total operating
-  cost* near 0 but a real *Total levelized operating cost*: what the PV
-  energy it stored cost to produce.
+- **The savings are the battery's net result.** They already subtract what
+  charging cost, so do not subtract the operating cost again.
+- **The savings price PV energy at what it was worth elsewhere; the operating
+  cost does not.** Without the battery, the PV energy it stored would have
+  covered what the home was buying from the grid, or been exported, so the
+  savings charge it the grid price or the export compensation for it — see
+  [What a battery pays for the solar energy it stores](../advanced/costs-and-savings.md#what-a-battery-pays-for-the-solar-energy-it-stores).
+  The PV system earns the same amount, so your combined savings do not
+  change. The operating cost is what charging cost to make: PV energy is
+  free in the standard total and costs its LCOE in the levelized one.
 - **Financial return equals savings for most batteries.** It only adds export
   compensation, and a battery that may not export to the grid earns none.
 - **The battery's own lifetime cost (its LCOS) is in neither operating cost.**
   It is charged when energy *leaves* the battery, so it lowers the levelized
   savings and levelized financial return instead.
 
-**Example.** The battery charged 2,500 kWh from PV and discharged 2,200 kWh
-into the home; a kWh from the grid costs 0.34, the PV system's LCOE is 0.10
-and the battery's LCOS 0.15.
+**Example.** The battery charged 2,500 kWh from PV while the home was
+exporting, and discharged 2,200 kWh into the home; a kWh from the grid costs
+0.34, the PV system's export compensation is 0.08, its LCOE 0.10 and the
+battery's LCOS 0.15.
 
 | Total | Calculation | Value |
 |---|---|---|
 | Total operating cost | 0 kWh from the grid × 0.34 | **0.00** |
 | Total levelized operating cost | 2,500 kWh × 0.10 | **250.00** |
-| Total cost savings | 2,200 × 0.34 − 0 | **748.00** |
-| Total financial return | 748 + 0 export | **748.00** |
-| Total levelized cost savings | 748 − 2,200 × 0.15 (LCOS) − 250 (PV energy at its LCOE) | **168.00** |
+| Total cost savings | 2,200 × 0.34 − 2,500 × 0.08 (what the PV energy would have earned) | **548.00** |
+| Total financial return | 548 + 0 export | **548.00** |
+| Total levelized cost savings | 548 − 2,200 × 0.15 (LCOS) | **218.00** |
 
-Had 500 of the 2,500 kWh come from the grid instead, the operating cost would
-be 500 × 0.34 = 170.00, and the savings 170.00 lower: 578.00.
+The PV system's savings include the 200.00 the battery paid it. Had 500 of the
+2,500 kWh come from the grid instead, at night, the battery would have paid
+500 × 0.34 = 170.00 for them and 2,000 × 0.08 = 160.00 for the PV energy: its
+savings would be 748.00 − 330.00 = 418.00.
 
 :::info[Why does a battery that never charges from the grid have an operating cost?]
 

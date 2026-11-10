@@ -11,6 +11,7 @@ from .const import (
     CONF_INITIAL_LCOS,
     CONF_CORRECTION_FACTOR,
     CONF_EXPORTS_POWER, CONF_EXPORT_COMPENSATION,
+    CONF_EXPORT_LIMIT, CONF_CURTAILS_AT_NEGATIVE_PRICES,
     CONF_CHARGE_FROM_ADAPTERS, CONF_POWER_FROM_ADAPTERS,
     CONF_LIFETIME_COST, CONF_LIFETIME_PRODUCTION, CONF_CO2_FOOTPRINT,
 )
@@ -63,6 +64,7 @@ class GridAdapterModel:
     power_entity_inverted: bool = False
     price_entity: str | None = None
     co2_entity: str | None = None
+    export_limit: float | None = None
 
     @classmethod
     def from_subentry(cls, subentry) -> GridAdapterModel:
@@ -75,6 +77,7 @@ class GridAdapterModel:
             power_entity_inverted=config.get(CONF_POWER_ENTITY_INVERTED, False),
             price_entity=config.get(CONF_ELECTRICITY_PRICE_ENTITY),
             co2_entity=config.get(CONF_CO2_INTENSITY_ENTITY),
+            export_limit=config.get(CONF_EXPORT_LIMIT),
         )
 
     def create_adapter(self) -> GridAdapter:
@@ -86,6 +89,7 @@ class GridAdapterModel:
             power_entity_inverted=self.power_entity_inverted,
             price_entity=self.price_entity,
             co2_entity=self.co2_entity,
+            export_limit=self.export_limit,
         )
 
 
@@ -103,6 +107,7 @@ class PvAdapterModel:
     exports_power: bool
     export_compensation: float
     correction_factor: float = 1.0
+    curtails_at_negative_prices: bool = False
 
     @classmethod
     def from_subentry(cls, subentry) -> PvAdapterModel:
@@ -127,6 +132,9 @@ class PvAdapterModel:
             exports_power=config.get(CONF_EXPORTS_POWER, False),
             export_compensation=config.get(CONF_EXPORT_COMPENSATION, 0.0),
             correction_factor=config.get(CONF_CORRECTION_FACTOR) or 1.0,
+            curtails_at_negative_prices=config.get(
+                CONF_CURTAILS_AT_NEGATIVE_PRICES, False
+            ),
         )
 
     def create_adapter(self) -> PvAdapter:
@@ -141,6 +149,7 @@ class PvAdapterModel:
             exports_power=self.exports_power,
             export_compensation=self.export_compensation,
             correction_factor=self.correction_factor,
+            curtails_at_negative_prices=self.curtails_at_negative_prices,
         )
 
 

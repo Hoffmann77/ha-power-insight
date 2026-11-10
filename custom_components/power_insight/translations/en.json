@@ -350,7 +350,9 @@
             "power_from_adapters": "Powered by",
             "lifetime_production": "Lifetime production",
             "lifetime_cost": "Lifetime cost",
-            "co2_footprint": "CO₂ footprint"
+            "co2_footprint": "CO₂ footprint",
+            "export_limit": "Export limit",
+            "curtails_at_negative_prices": "Curtailed at negative prices"
           },
           "data_description": {
             "name": "For example \"Rooftop\" or \"Heat pump\". Used in the device and sensor names.",
@@ -365,7 +367,9 @@
             "power_from_adapters": "The sources that power this consumer. Only used with **Specific devices**.",
             "lifetime_production": "Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors.",
             "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors.",
-            "co2_footprint": "CO₂ emitted to make and install this device, in kg. Optional; reserved for CO₂ sensors."
+            "co2_footprint": "CO₂ emitted to make and install this device, in kg. Optional; reserved for CO₂ sensors.",
+            "export_limit": "Optional: the most your grid connection may export, in W (e.g. 800 for a balcony system, or your grid operator's limit). Leave empty for no limit. Only used to value the solar energy a battery stores: without the battery, energy above the limit would have been curtailed.",
+            "curtails_at_negative_prices": "Turn on if this system is curtailed whenever its energy is worth less than nothing (a negative grid price or export compensation), e.g. by your energy manager. The solar energy a battery stores is then never valued below zero. Leave off if nothing curtails it."
           },
           "sections": {
             "history_energy": {
@@ -428,7 +432,9 @@
             "lifetime_production": "Lifetime production",
             "lifetime_cost": "Lifetime cost",
             "exports_power": "Exports to the grid",
-            "export_compensation": "Export compensation per kWh"
+            "export_compensation": "Export compensation per kWh",
+            "export_limit": "Export limit",
+            "curtails_at_negative_prices": "Curtailed at negative prices"
           },
           "data_description": {
             "power_entity": "Sensor with this device's power in W, kW or MW.\nGrid: positive = import, negative = export.\nPV system and battery: positive = producing or discharging, negative = drawing or charging.\nConsumer: negative = drawing. Most plugs report their draw as positive — then turn on **Invert power sign**.",
@@ -441,7 +447,9 @@
             "lifetime_production": "Energy in kWh you expect this device to deliver over its lifetime: generated (PV) or discharged (battery). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
             "lifetime_cost": "Total cost over the device's lifetime (purchase, installation, maintenance). Used for levelized sensors. Changing it rescales the device's recorded levelized values.",
             "exports_power": "Turn on if this device can export power to the grid.",
-            "export_compensation": "What you are paid per kWh exported to the grid. Required for savings, financial return and export compensation sensors."
+            "export_compensation": "What you are paid per kWh exported to the grid. Required for savings, financial return and export compensation sensors.",
+            "export_limit": "Optional: the most your grid connection may export, in W (e.g. 800 for a balcony system, or your grid operator's limit). Leave empty for no limit. Only used to value the solar energy a battery stores: without the battery, energy above the limit would have been curtailed.",
+            "curtails_at_negative_prices": "Turn on if this system is curtailed whenever its energy is worth less than nothing (a negative grid price or export compensation), e.g. by your energy manager. The solar energy a battery stores is then never valued below zero. Leave off if nothing curtails it."
           },
           "sections": {
             "history_energy": {

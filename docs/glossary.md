@@ -38,8 +38,11 @@ figures. See [the correction factor](advanced/costs-and-savings.md#the-correctio
 
 ### Cost savings
 
-[Avoided cost](#avoided-cost) minus what the device costs to run. Does not
-include export earnings; see [financial return](#financial-return).
+[Avoided cost](#avoided-cost) minus what the device costs to run, measured
+against your home without the device. Solar energy a battery stores is
+charged to the battery and credited to the PV system at what it would have
+earned otherwise. Does not include export earnings; see
+[financial return](#financial-return).
 
 ### Export compensation
 

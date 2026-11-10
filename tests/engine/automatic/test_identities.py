@@ -420,7 +420,9 @@ def _(s):
     """What local supply avoided, less what the devices' own draw cost.
 
     A battery's energy cost is booked when it charges, so the only thing netted
-    against the avoided cost is the devices' own draw at the margin.
+    against the avoided cost is the devices' own draw at the margin. What a
+    battery pays a local source for stored energy is a transfer between two
+    devices' savings, so it cancels here.
     """
     return s.e.combined_avoided_cost_rate - s.e.combined_device_operating_cost_rate
 
@@ -586,12 +588,59 @@ def _(s):
     return sum(s.e.source_adapters_lcoo_rates_corrected.values())
 
 
-def _saving(price: str) -> Callable:
-    """Producing: CON watts × (tariff − own price). Drawing: −own draw cost.
+def stored_energy_prices(s: Snap) -> dict[str, float]:
+    """What a battery pays per kWh for each local source's watts it charged.
 
-    ``price`` is ``marginal``, ``levelized`` or ``corrected``: which price a
-    device's own energy, and its own draw, is valued at. Idle devices read 0
-    rather than going absent.
+    The home without the batteries, every other reading as it is: the watts
+    they took from local sources go to the grid instead. They first cover the
+    import that is left once the batteries' own grid watts are freed (worth the
+    tariff), then are exported up to the grid's export limit (worth the
+    source's feed-in rate, if it may export), and the rest is curtailed (worth
+    nothing). Both rooms are shared in proportion to watts. A source whose
+    home curtails it at negative prices never sells below zero.
+    """
+    charged = s.e.source_adapters_charging_power
+    local = {src: w for src, w in charged.items() if src != "grid" and w > 1e-9}
+    total = sum(local.values())
+    if not total:
+        return {}
+    room = max(0.0, s.sources.get("grid", 0.0) - charged["grid"])
+    covers = min(1.0, room / total)
+
+    def exports(src: str) -> bool:
+        return bool(s.home.adapter(src).config["exports_power"])
+
+    left = sum(w for src, w in local.items() if exports(src)) * (1 - covers)
+    limit = s.home.adapter("grid").config.get("export_limit")
+    sold = 1.0 if limit is None or not left else min(
+        1.0, max(0.0, limit - s.sinks.get("grid", 0.0)) / left
+    )
+
+    prices = {}
+    for src in local:
+        cfg = s.home.adapter(src).config
+        floor = cfg.get("curtails_at_negative_prices", False)
+
+        def worth(p: float) -> float:
+            return max(p, 0.0) if floor else p
+
+        prices[src] = covers * worth(s.price) + (
+            (1 - covers) * sold * worth(cfg["export_compensation"])
+            if exports(src) else 0.0
+        )
+    return prices
+
+
+def _saving(price: str) -> Callable:
+    """What each device earned against the home without it.
+
+    Producing: CON watts × (tariff − own price), plus the watts it charged
+    into batteries × (what they paid − own price). A charging battery pays its
+    grid watts at the tariff and its local watts at the stored-energy price —
+    at every price basis, since the source carries its own cost. A PV system in
+    standby pays its own draw. ``price`` is ``marginal``, ``levelized`` or
+    ``corrected``: which price a device's own energy is valued at. Idle devices
+    read 0 rather than going absent.
     """
     own_costs = {
         "marginal": "source_adapters_coo_rates",
@@ -602,11 +651,20 @@ def _saving(price: str) -> Callable:
     def fn(s):
         own_cost = getattr(s.e, own_costs[price])
         served = s.e.source_adapters_consumption_power
+        charged = s.e.source_adapters_charging_power
+        paid = stored_energy_prices(s)
         own = getattr(s, price)
         out = {}
         for d in s.devices:
             if d in s.sources:
-                out[d] = kw(served[d]) * (s.price - own(d))
+                out[d] = kw(served[d]) * (s.price - own(d)) + (
+                    kw(charged[d]) * (paid[d] - own(d)) if d in paid else 0.0
+                )
+            elif d in s.sinks and s.kind[d] == "battery":
+                out[d] = -sum(
+                    kw(w) * (s.price if src == "grid" else paid.get(src, 0.0))
+                    for src, w in s.draw_watts(d).items()
+                )
             elif d in s.sinks:
                 out[d] = -own_cost[d]
             else:
