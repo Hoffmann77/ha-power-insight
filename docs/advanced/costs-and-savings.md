@@ -151,6 +151,11 @@ The levelized version works the same way: what the energy was worth elsewhere
 does not depend on what it cost to make, so the PV still carries its own LCOE
 on the energy it stored.
 
+For the exact calculation, including how the room is shared between several
+PV systems and batteries, see
+[Stored-energy pricing](../dev/stored-energy-pricing.md) in the developer
+docs.
+
 **Export compensation** — the revenue you earn from power exported to the
 grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
 

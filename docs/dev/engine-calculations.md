@@ -548,6 +548,9 @@ have paid. Three things are knowingly left out:
 - **CO₂** is not attributed this way; see "CO₂ is not corrected until
   something publishes it".
 
+The algorithm step by step, how it is booked in every savings family, and a
+worked example: [Stored-energy pricing](stored-energy-pricing.md).
+
 Pinned by `TestStoredPvIsPricedAtItsFeedIn`,
 `TestStoredPvCoversTheImportFirst`, `TestTheExportLimitCurtailsTheRest`,
 `TestANegativeTariffIsPaidUnlessCurtailed`,
