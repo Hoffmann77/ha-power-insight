@@ -14,7 +14,7 @@ dev = [
     "pytest>=8.0",
     # Pins the exact Home Assistant it ships with (betas included), so
     # homeassistant moves with it in uv.lock. See renovate.json.
-    "pytest-homeassistant==2026.11.0b6",
+    "pytest-homeassistant==2026.11.1",
 ]
 
 [tool.pytest.ini_options]
