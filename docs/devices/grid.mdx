@@ -54,6 +54,17 @@ effect. It is safe to leave empty.
 
 :::
 
+### Export limit
+
+> Optional: the most your grid connection may export, in W (e.g. 800 for a balcony system, or your grid operator's limit). Leave empty for no limit. Only used to value the solar energy a battery stores: without the battery, energy above the limit would have been curtailed.
+
+Your meters already obey the limit, so it never changes where power is shown
+going. It only decides how much of the solar energy a battery stores could
+have been exported instead: the battery pays the export compensation for that
+part, and nothing for the rest — see
+[What a battery pays for the solar energy it stores](../advanced/costs-and-savings.md#what-a-battery-pays-for-the-solar-energy-it-stores).
+Can be changed later under **Reconfigure**.
+
 ### Already accumulated
 
 > Optional, in two sections. **Energy (kWh):** what the whole home exported

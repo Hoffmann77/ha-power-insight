@@ -23,7 +23,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {
@@ -34,7 +35,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {
@@ -591,30 +593,30 @@
         {
           "property": "adapters_saving_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "0",
-            "bat_b": "0",
+            "east": "3/100",
+            "west": "3/100",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
         {
           "property": "adapters_levelized_saving_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/100",
-            "bat_b": "-1/100",
+            "east": "1/50",
+            "west": "1/50",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
         {
           "property": "adapters_levelized_saving_rates_corrected",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/100",
-            "bat_b": "-1/100",
+            "east": "1/50",
+            "west": "1/50",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
@@ -625,30 +627,30 @@
         {
           "property": "adapters_financial_return_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "0",
-            "bat_b": "0",
+            "east": "3/100",
+            "west": "3/100",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/100",
-            "bat_b": "-1/100",
+            "east": "1/50",
+            "west": "1/50",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates_corrected",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/100",
-            "bat_b": "-1/100",
+            "east": "1/50",
+            "west": "1/50",
+            "bat_a": "-3/100",
+            "bat_b": "-3/100",
             "bat_c": "0"
           }
         },
@@ -1170,31 +1172,31 @@
         {
           "property": "adapters_saving_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-3/200",
-            "bat_b": "-3/200",
-            "bat_c": "0"
+            "east": "3/200",
+            "west": "3/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {
           "property": "adapters_levelized_saving_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/50",
-            "bat_b": "-1/50",
-            "bat_c": "-1/100"
+            "east": "1/200",
+            "west": "1/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {
           "property": "adapters_levelized_saving_rates_corrected",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/50",
-            "bat_b": "-1/50",
-            "bat_c": "-1/100"
+            "east": "1/200",
+            "west": "1/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {
@@ -1204,31 +1206,31 @@
         {
           "property": "adapters_financial_return_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-3/200",
-            "bat_b": "-3/200",
-            "bat_c": "0"
+            "east": "3/200",
+            "west": "3/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/50",
-            "bat_b": "-1/50",
-            "bat_c": "-1/100"
+            "east": "1/200",
+            "west": "1/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {
           "property": "adapters_levelized_financial_return_rates_corrected",
           "value": {
-            "east": "0",
-            "west": "0",
-            "bat_a": "-1/50",
-            "bat_b": "-1/50",
-            "bat_c": "-1/100"
+            "east": "1/200",
+            "west": "1/200",
+            "bat_a": "-9/400",
+            "bat_b": "-9/400",
+            "bat_c": "-3/200"
           }
         },
         {

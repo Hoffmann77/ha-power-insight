@@ -108,3 +108,36 @@ def test_battery_stored_base_is_used_verbatim() -> None:
 def test_battery_lcos_none_without_base_or_lifetime() -> None:
     sub = _subentry("battery", {"power_entity": "sensor.bat_power"})
     assert BatteryAdapterModel.from_subentry(sub).lcos is None
+
+
+# --- What prices stored energy: export limit and curtailment ---
+
+
+def test_grid_export_limit_reaches_the_adapter() -> None:
+    from custom_components.power_insight.adapter_models import GridAdapterModel
+
+    sub = _subentry("grid", {"power_entity": "sensor.grid_power", "export_limit": 800})
+    assert GridAdapterModel.from_subentry(sub).create_adapter().export_limit == 800
+
+
+def test_grid_without_an_export_limit_has_none() -> None:
+    """Entries made before the field existed read as having no limit."""
+    from custom_components.power_insight.adapter_models import GridAdapterModel
+
+    sub = _subentry("grid", {"power_entity": "sensor.grid_power"})
+    assert GridAdapterModel.from_subentry(sub).create_adapter().export_limit is None
+
+
+def test_pv_curtailment_reaches_the_adapter() -> None:
+    sub = _subentry(
+        "pv_system",
+        {"power_entity": "sensor.pv_power", "curtails_at_negative_prices": True},
+    )
+    assert PvAdapterModel.from_subentry(sub).create_adapter().curtails_at_negative_prices
+
+
+def test_pv_without_the_curtailment_field_is_not_curtailed() -> None:
+    """Entries made before the field existed assume nothing curtails the PV."""
+    sub = _subentry("pv_system", {"power_entity": "sensor.pv_power"})
+    adapter = PvAdapterModel.from_subentry(sub).create_adapter()
+    assert adapter.curtails_at_negative_prices is False

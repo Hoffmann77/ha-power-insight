@@ -110,6 +110,52 @@ cost_savings = avoided_import_cost − operating_costs
 For PV the main operating cost is standby consumption at night. For batteries it
 is the cost of the energy used to charge them, adjusted for round-trip losses.
 
+Every saving is measured against **your home without that device**. That is
+also how a battery is charged for the solar energy it stores: without the
+battery, the solar panels would still have been there, so their energy would
+have gone somewhere else.
+
+### What a battery pays for the solar energy it stores
+
+When a battery charges from a PV system (or from another battery), it pays
+that device what the energy would have been worth without the battery.
+Everything else stays as it was, and the energy goes, in this order:
+
+1. **covering what the home is buying from the grid** right now — worth the
+   grid price;
+2. **exported, up to the grid's export limit** — worth that PV system's
+   export compensation, if it may export at all;
+3. **curtailed** — anything left, worth nothing.
+
+| What is happening while the battery charges from PV | The battery pays the PV |
+|---|---|
+| The home is exporting | the export compensation (up to the export limit) |
+| The home is buying from the grid at the same time | the grid price for the part it is buying, the export compensation for the rest |
+| The home is already exporting at the export limit, or the PV may not export | nothing |
+| The grid price or export compensation is negative | that price — the battery gets paid — unless the PV is **curtailed at negative prices**, then nothing |
+
+What the battery pays, the PV earns, so the **combined** savings do not
+change — only how they are split between the two. A battery's savings then
+tell you what the battery itself adds: grid purchases its discharge replaces,
+minus what its stored energy could have earned otherwise. A PV system's
+savings include what its stored energy was worth.
+
+**Example.** The home exports while the battery stores 10 kWh of solar
+energy; the export compensation is 0.08. The battery pays 10 × 0.08 = 0.80
+for it, and the PV earns 0.80. Later the battery discharges 9 kWh (its round-
+trip losses) into the home at a grid price of 0.30, saving 9 × 0.30 = 2.70.
+Over the cycle the battery saved 2.70 − 0.80 = **1.90**, not 2.70: 0.80 of
+that would have been earned by exporting anyway.
+
+The levelized version works the same way: what the energy was worth elsewhere
+does not depend on what it cost to make, so the PV still carries its own LCOE
+on the energy it stored.
+
+For the exact calculation, including how the room is shared between several
+PV systems and batteries, see
+[Stored-energy pricing](../dev/stored-energy-pricing.md) in the developer
+docs.
+
 **Export compensation** — the revenue you earn from power exported to the
 grid. This has its own dedicated sensors (see [Export compensation](#export-compensation)).
 
@@ -154,11 +200,12 @@ there the financial return is never below the savings.
 ### Why does my battery have negative cost savings?
 
 Any device can show negative cost savings if it doesn't earn enough to cover its
-costs. Batteries specifically **always** show negative cost savings *while
-charging*, because Power Insight tracks the cost of the energy going into the
-battery. That cost is "paid back" as positive savings when the battery later
-discharges and offsets a grid import. Over a full charge/discharge cycle the
-battery's net contribution is what matters.
+costs. Batteries usually show negative cost savings *while charging*, because
+Power Insight books the cost of the energy going into the battery: grid
+energy at the grid price, solar energy at what it would have been worth
+without the battery (see above). That cost is "paid back" as positive savings
+when the battery later discharges and offsets a grid import. Over a full
+charge/discharge cycle the battery's net contribution is what matters.
 
 ## How totals are counted
 

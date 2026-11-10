@@ -8,8 +8,10 @@ sources provide — and a tenth overdraw slightly, the way unsynchronised
 sensors do.
 
 Everything a result can hinge on is varied, not just the readings: the grid
-price, every device's LCOE / LCOS, which devices may export and what they are
-paid for it, and restrictions that can name the grid as well as local devices.
+price (now and then negative), every device's LCOE / LCOS, which devices may
+export and what they are paid for it (a feed-in rate can be negative too),
+whether a PV system is curtailed at negative prices, the grid's export limit,
+and restrictions that can name the grid as well as local devices.
 The draw is seeded, so a failure reproduces.
 
 Sign convention (watts): grid ``+`` import / ``-`` export; pv/battery ``+``
@@ -128,11 +130,13 @@ def _make_home(rng: random.Random) -> Home | None:
 
     lcoe = (0.05, 0.08, 0.12, 0.20)
     lcos = (0.10, 0.15, 0.25)
-    comp = (0.0, 0.06, 0.08)
+    comp = (0.0, 0.06, 0.08, -0.02)
     # Most devices keep their lifetime cost as entered; the rest have had it
     # edited, up or down, so every corrected result has something to correct.
     factor = (1.0, 1.0, 0.8, 1.25, 1.5, 2.0)
-    adapters = [Adapter.grid()]
+    # An export limit, where there is one, sometimes binds and sometimes not.
+    limit = rng.choice((None, None, 0, 300, 800, 2000))
+    adapters = [Adapter.grid(export_limit=limit)]
     adapters += [
         Adapter.pv(
             uid,
@@ -140,6 +144,7 @@ def _make_home(rng: random.Random) -> Home | None:
             exports=rng.random() < 0.8,
             export_comp=rng.choice(comp),
             correction_factor=rng.choice(factor),
+            curtails=rng.random() < 0.4,
         )
         for uid in pv
     ]
@@ -157,7 +162,7 @@ def _make_home(rng: random.Random) -> Home | None:
     adapters += [
         Adapter.consumer(uid, power_from=restrictions.get(uid, ())) for uid in cons
     ]
-    price = rng.choice((0.18, 0.25, 0.30, 0.42))
+    price = rng.choice((0.18, 0.25, 0.30, 0.42, -0.05))
     return Home(tuple(adapters), readings, price)
 
 

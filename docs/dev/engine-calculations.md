@@ -129,8 +129,10 @@ A missing *meter* makes gross power unknowable, so everything built on it is
 on a price, so every watt, share and ratio stands, and a monetary value is
 blank only if it actually needs the tariff. A battery charging from PV alone
 still has a known levelized cost; the load drawing grid power next to it does
-not. Blanking every money value instead would throw away numbers that are
-still right.
+not. What a battery pays for stored PV needs the tariff only for the watts
+that would have covered an import: while the house exports, it is the
+feed-in rate alone. Blanking every money value instead would throw away
+numbers that are still right.
 
 Watts a source did not deliver cost nothing at any price, so a zero never
 needs one: an exporting grid does not blank a cost because the tariff is
@@ -138,7 +140,8 @@ unknown, and a device that served nothing saved nothing. Holding the last
 known tariff through a short dropout is a question for the sensor layer; the
 engine prices only what it is given.
 
-Pinned by `TestAMissingPriceBlanksOnlyWhatNeedsIt` in
+Pinned by `TestAMissingPriceBlanksOnlyWhatNeedsIt` and
+`TestStoredEnergyWhileExportingNeedsNoTariff` in
 `tests/engine/manual/test_edge_readings.py`; held in general by the
 missing-price law in `tests/engine/automatic/test_laws.py`.
 
@@ -467,19 +470,92 @@ Pinned by `TestOperatingCostHasTwoViews` in `tests/engine/manual/test_costs.py`.
 :::note[Decision: a battery's energy cost is booked when it charges]
 
 A battery charging is spending money now for a benefit later. The engine
-books the spend at charge time — the CHG bucket — and then values the
-discharge at the full grid price it displaces, carrying only the battery's
-own `LCOS` as the cost of that discharge.
+books the spend at charge time — in its saving, and in the CHG bucket — and
+then values the discharge at the full grid price it displaces, carrying only
+the battery's own `LCOS` as the cost of that discharge.
 
 The alternative (defer the charging cost and net it against the discharge)
 needs the engine to remember what the stored energy cost, which a snapshot
 model cannot do. Booking at charge time is exact per snapshot and correct
-over a full cycle: charge `−(kWh × mix price)`, discharge
+over a full cycle: charge `−(kWh × charge price)`, discharge
 `+(kWh × (grid − LCOS))`, and round-trip losses show up honestly as the
-difference between the two energies.
+difference between the two energies. What the charge price is for energy
+from a local source is the next decision.
 
 Pinned by `TestBatteryPaysWhenItCharges` and
 `TestBatteryDischargeSavesTheFullTariff` in
+`tests/engine/manual/test_battery_pricing.py`.
+
+:::
+
+:::note[Decision: a battery pays for local energy what it was worth elsewhere]
+
+A saving is measured against the home without the device (below). For a
+battery, that home still has its PV: the energy the battery stored from it
+would have gone somewhere else. Treating it as free — its marginal price —
+credited the battery with what the PV gave up, typically its feed-in income,
+and so overstated the battery's saving and understated the PV's by the same
+amount.
+
+So a charging battery pays each local source (a PV system, or another
+battery) what that energy would have been worth without the battery. Every
+other reading stays as it is and the grid absorbs the difference; the freed
+watts go, in order:
+
+1. **covering the grid import** — the import left once the batteries' own
+   grid watts are freed — worth the **grid tariff**;
+2. **exported, up to the grid's export limit** — worth the source's
+   **feed-in rate**, and only if the source may export at all;
+3. **curtailed** — the rest, worth **nothing**.
+
+Both rooms are shared between the sources in proportion to their watts, so
+splitting a PV system in two changes nothing. When the tariff or the feed-in
+rate is negative the battery is *paid* for taking the energy, because it is
+what kept the house importing or exporting at that price — unless the source
+is a PV system whose home **curtails it at negative prices**: then it would
+have been curtailed, and is worth nothing rather than less.
+
+| Situation while the battery charges from PV | Battery pays the PV |
+|---|---|
+| Home is exporting, below the export limit | the feed-in rate up to the limit, nothing for the rest |
+| Home is already exporting at the limit | nothing |
+| Home is buying from the grid at the same time | the tariff up to the amount bought, then the feed-in rate up to the limit, nothing for the rest |
+| The tariff or feed-in rate is negative | that price (the battery is paid) — or nothing, if the home curtails the PV at negative prices |
+| The feed-in rate is zero, or the PV may not export | nothing for the part that is not covering an import |
+
+The payment is a **transfer between two savings**: the battery's goes down by
+exactly what the source's goes up, so the combined saving, the financial
+return and the cost ledger do not move. It is the same at the margin and
+levelized: what the energy was worth elsewhere does not depend on what it
+cost to make, so the source carries its own `LCOE` on every watt it produced
+— the ones it stored included — and a feed-in rate below that `LCOE` shows
+up as the source's loss, not the battery's. The operating cost (`coo` /
+`lcoo`) stays at the cost of the mix: it is the ledger's view of what
+running the hardware costs, not an attribution between devices.
+
+Only the counterfactual is chosen, never the reading: a PV system serving
+the house at a negative tariff still shows that loss, curtailment field or
+not, because that is what happened — and the signal that curtailing would
+have paid. Three things are knowingly left out:
+
+- **A battery source** that may not export would, without the receiving
+  battery, have kept its energy for later, not curtailed it; its later worth
+  is unknowable from a snapshot, so the export part is valued at nothing.
+  Battery-to-battery charging is rare.
+- **History carried over from a device's app** keeps its own rule: period
+  totals cannot tell whether the home was importing or exporting at the
+  moment a battery charged.
+- **CO₂** is not attributed this way; see "CO₂ is not corrected until
+  something publishes it".
+
+The algorithm step by step, how it is booked in every savings family, and a
+worked example: [Stored-energy pricing](stored-energy-pricing.md).
+
+Pinned by `TestStoredPvIsPricedAtItsFeedIn`,
+`TestStoredPvCoversTheImportFirst`, `TestTheExportLimitCurtailsTheRest`,
+`TestANegativeTariffIsPaidUnlessCurtailed`,
+`TestACurtailedPvSellsNoLowerThanNothing` and
+`TestABatteryPaysAnotherBatteryTheSameWay` in
 `tests/engine/manual/test_battery_pricing.py`.
 
 :::
@@ -489,7 +565,10 @@ and a device with nothing to contribute reads `0.0` rather than being absent —
 so a sensor never flips unavailable just because its device went idle:
 
 - **producing / discharging into CON** → `+ delivered × (grid price − own cost)`
-- **charging / drawing standby** → `− drawn × (cost of its source mix)`
+- **charging a battery** → `+ what the battery paid − stored × own cost`
+- **a battery charging** → `− grid watts × tariff − local watts × what they
+  were worth elsewhere`
+- **a PV system drawing standby** → `− drawn × (cost of its source mix)`
 - **exporting** → `+ export compensation`, and levelized, `− exported × own LCOE`
 
 :::note[Decision: consumers do not get a saving, they get an avoided cost]
@@ -555,8 +634,11 @@ belongs on the `lcoe` inside the bracket, which is where the engine's
 The same applies to an operating cost, and worse: a battery's charging
 cost is a blend of the *source* devices' prices, so the battery's own
 factor is not merely misplaced there, it is unrelated. A battery's factor
-scales its own `LCOS`, which prices its discharge; what it pays to charge is
-priced by the factors of the devices it charged from.
+scales its own `LCOS`, which prices its discharge; what it costs to charge
+is priced by the factors of the devices it charged from. In its *saving*
+the battery pays a local source what the energy was worth elsewhere, which
+no lifetime cost touches; the source carries its own `LCOE` on those watts,
+so the source's factor lands in the source's saving.
 
 Pinned by `TestCorrectionFactorScalesTheLcoe` and
 `TestBatteryFactorScalesItsOwnLcosOnly` in
@@ -922,6 +1004,11 @@ imported, at the tariff. The feed-in rate answers a different question
 already credited separately, through the export compensation, in the
 financial return. Valuing self-consumption at the feed-in rate would count
 the export decision twice.
+
+The same question decides what a battery pays for the PV energy it stores:
+without the battery, the PV would still have been there, and its energy
+would have covered an import or been exported — see "a battery pays for
+local energy what it was worth elsewhere".
 
 Pinned by `TestSavingsAreMeasuredWithoutTheDevice` in
 `tests/engine/manual/test_savings.py`.

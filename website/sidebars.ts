@@ -57,6 +57,7 @@ const sidebars: SidebarsConfig = {
   dev: [
     'dev/testing',
     'dev/engine-calculations',
+    'dev/stored-energy-pricing',
     'dev/production-readiness',
     'dev/carried-over-history',
     'dev/source-share-allocation-problem',

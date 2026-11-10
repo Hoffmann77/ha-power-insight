@@ -22,7 +22,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {
@@ -33,7 +34,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {
@@ -44,7 +46,8 @@
         "lco2_intensity": "50",
         "exports_power": true,
         "export_compensation": "0",
-        "correction_factor": "1"
+        "correction_factor": "1",
+        "curtails_at_negative_prices": false
       }
     },
     {

@@ -51,6 +51,8 @@ from .const import (
     CONF_CURRENT_CO2_INTENSITY,
     CONF_EXPORTS_POWER,
     CONF_EXPORT_COMPENSATION,
+    CONF_EXPORT_LIMIT,
+    CONF_CURTAILS_AT_NEGATIVE_PRICES,
     CONF_CHARGE_FROM_ADAPTERS,
     CONF_POWER_FROM_ADAPTERS,
     CONF_SOURCE_MODE,
@@ -559,6 +561,10 @@ def make_money_selector(currency: str) -> selector.NumberSelector:
 
 CO2_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(min=1, max=10**8, unit_of_measurement="kg", mode="box")
+)
+
+POWER_LIMIT_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(min=0, max=10**7, step=1, unit_of_measurement="W", mode="box")
 )
 
 PERCENT_SELECTOR = selector.NumberSelector(
@@ -1228,6 +1234,15 @@ GRID_FIELDS: dict[str, AdapterField] = {
         validator=validate_entity_exists,
         error_key="invalid_co2_entity",
     ),
+    # Optional: only says how much more could have been exported without a
+    # battery, which prices the energy a battery stores. Never steers routing.
+    CONF_EXPORT_LIMIT: AdapterField(
+        selector=POWER_LIMIT_SELECTOR,
+        required=False,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
 }
 
 PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
@@ -1272,6 +1287,17 @@ PV_SYSTEM_FIELDS: dict[str, AdapterField | CalculatedAdapterField] = {
         currency_selector_fn=make_compensation_selector,
         required=False,
         required_fn=_export_compensation_required,
+        in_config_flow=True,
+        in_reconfigure_flow=True,
+        store_in_adapter_config=True,
+    ),
+    # Whether the home curtails this system when its energy is worth less than
+    # nothing. Off makes no assumption; on floors the price a battery pays for
+    # this system's energy at zero. A behaviour of the home, so editable.
+    CONF_CURTAILS_AT_NEGATIVE_PRICES: AdapterField(
+        selector=BOOLEAN_SELECTOR,
+        required=True,
+        default=False,
         in_config_flow=True,
         in_reconfigure_flow=True,
         store_in_adapter_config=True,

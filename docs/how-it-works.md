@@ -101,9 +101,12 @@ From those prices Power Insight builds a few kinds of money sensor:
 | **Export compensation** | What you are paid for power you export. |
 | **Financial return** | Cost savings **plus** export compensation: everything a device brings in. |
 
-A battery's savings go **negative while it charges** from the grid: that
-energy costs money. They turn positive when it discharges and replaces grid
-power. Over a full cycle, the total is what counts.
+A battery's savings go **negative while it charges**: grid energy costs
+money, and solar energy it stores is charged at what it would have earned
+otherwise — usually the export compensation, which the PV system earns
+instead. They turn positive when it discharges and replaces grid power. Over
+a full cycle, the total is what counts. See
+[What a battery pays for the solar energy it stores](advanced/costs-and-savings.md#what-a-battery-pays-for-the-solar-energy-it-stores).
 
 ## Rates and totals
 

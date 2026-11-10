@@ -317,13 +317,37 @@ class TestAMissingPriceBlanksOnlyWhatNeedsIt(Home):
 
     @expect("adapters_saving_rates")
     def test_saving_rates(self):
-        """pv1's saving needs the tariff; bat1's marginal cost does not.
+        """Both savings need the tariff here, so neither is published.
 
         pv1 served 400 W that would otherwise have been imported, worth an
-        unknown tariff. bat1 charged on PV, whose marginal price is 0 whatever
-        the tariff, so it cost 0.
+        unknown tariff. bat1 charged 600 W of pv1 while the house imported
+        300 W: without bat1, 300 of those watts would have replaced import, so
+        what bat1 pays pv1 — and pv1 earns — is worth the unknown tariff too.
         """
-        return {"pv1": None, "bat1": 0}
+        return {"pv1": None, "bat1": None}
+
+
+class TestStoredEnergyWhileExportingNeedsNoTariff(Home):
+    """Decision: a missing grid tariff blanks only the values that need it.
+
+    The house exports 400 W with no known tariff while bat1 stores 600 W of
+    pv1. Without bat1 those watts would have been exported too, so what bat1
+    pays pv1 is the feed-in rate of 2/25 EUR/kWh — no tariff needed. See "a
+    missing price blanks only what needs it" in engine-calculations.md.
+    """
+
+    grid = Grid(-400, price=None)
+    pv1 = Pv(1000, exports=True, export_comp=F(2, 25))
+    bat1 = Battery(-600)
+
+    @expect("adapters_saving_rates")
+    def test_saving_rates(self):
+        """bat1 pays 0.6 kW × 2/25 = 6/125 EUR/h and pv1 earns it.
+
+        Nothing in the house is consumed, so neither saving touches the
+        unknown tariff, and both are published.
+        """
+        return {"pv1": F(6, 125), "bat1": F(-6, 125)}
 
 
 class TestOverdrawMeetsInTheMiddle(Home):

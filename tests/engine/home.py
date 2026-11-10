@@ -134,11 +134,12 @@ class Adapter:
         inverted: bool = False,
         name: str = "Grid",
         has_price_entity: bool = True,
+        export_limit: float | None = None,
     ) -> "Adapter":
         return cls(
             "grid",
             "grid",
-            {"name": name},
+            {"name": name, "export_limit": export_limit},
             inverted=inverted,
             has_price=has_price_entity,
         )
@@ -153,6 +154,7 @@ class Adapter:
         exports: bool = False,
         export_comp: float = 0.0,
         correction_factor: float = 1.0,
+        curtails: bool = False,
         inverted: bool = False,
         name: str | None = None,
     ) -> "Adapter":
@@ -166,6 +168,7 @@ class Adapter:
                 "exports_power": exports,
                 "export_compensation": export_comp,
                 "correction_factor": correction_factor,
+                "curtails_at_negative_prices": curtails,
             },
             inverted=inverted,
         )
@@ -241,6 +244,8 @@ class Adapter:
                 power_entity_inverted=self.inverted,
                 price_entity=GRID_PRICE_ENTITY if self.has_price else None,
                 co2_entity=None,
+                # Older frozen inputs predate the limit: no limit.
+                export_limit=cfg.get("export_limit"),
             )
         if self.kind == "pv":
             return PvAdapter(
@@ -253,6 +258,7 @@ class Adapter:
                 exports_power=cfg["exports_power"],
                 export_compensation=cfg["export_compensation"],
                 correction_factor=cfg["correction_factor"],
+                curtails_at_negative_prices=cfg.get("curtails_at_negative_prices", False),
             )
         if self.kind == "battery":
             return BatteryAdapter(

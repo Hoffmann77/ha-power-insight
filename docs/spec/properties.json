@@ -817,14 +817,16 @@
       "title": "Cost saving rate per device",
       "unit": "EUR/h",
       "layer": 4,
-      "definition": "What each PV system or battery saved per hour by displacing an import — and what it cost while drawing, as a negative. An idle device reads 0 rather than going absent.",
+      "definition": "What each PV system or battery saved per hour against the home without it: by displacing an import, and by what a battery paid it for energy it stored — and what it cost while drawing, as a negative. An idle device reads 0 rather than going absent.",
       "formula": null,
       "depends_on": ["sink_adapters_source_shares", "combined_avoided_cost_rate"],
       "answer_shape": "map_fixed_keys",
       "keys": "devices",
       "derivation_steps": [
         "A producing or discharging device earns the tariff on the power it put into self-consumption.",
-        "A charging or standby device is debited what its own draw cost, so its rate is negative.",
+        "A charging battery pays the tariff on its grid power, and pays each local source what that source's power was worth without the battery: the tariff for the part that would have covered the grid import, the source's feed-in rate for the part that could have been exported under the grid's export limit, nothing for the rest. A negative price counts as nothing for a PV system its home curtails at negative prices.",
+        "The local source earns exactly what the battery paid it, so the combined saving does not move.",
+        "A PV system in standby is debited what its own draw cost, so its rate is negative.",
         "An idle device reads 0."
       ],
       "note": "Export revenue is not counted here — that belongs to the financial return."
@@ -834,12 +836,15 @@
       "title": "Levelized cost saving rate per device",
       "unit": "EUR/h",
       "layer": 4,
-      "definition": "As the cost saving rate per device, with every supplying source priced at its levelized cost, so a device's own generation cost is netted out of what it saved.",
+      "definition": "As the cost saving rate per device, with each device's own generation priced at its levelized cost, so that cost is netted out of what it saved.",
       "formula": null,
       "depends_on": ["adapters_saving_rates", "source_adapters_dynamic_lcoe"],
       "answer_shape": "map_fixed_keys",
       "keys": "devices",
-      "derivation_steps": ["Repeat the saving derivation with levelized prices in place of marginal ones."]
+      "derivation_steps": [
+        "Repeat the saving derivation, netting each device's own LCOE / LCOS out of every watt it produced — the ones a battery stored included.",
+        "What a battery pays a local source for stored energy is the same as at the margin: what the energy was worth elsewhere does not depend on what it cost to make."
+      ]
     },
     "adapters_levelized_saving_rates_corrected": {
       "title": "Levelized cost saving rate per device, corrected",

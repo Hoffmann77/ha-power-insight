@@ -105,13 +105,24 @@ def with_config(adapter: Adapter, **changes: Any) -> Adapter:
 
 def test_scaling_every_power_scales_watts_and_money_only() -> None:
     """Three times the power: three times the watts and euros per hour, and not
-    one share, ratio or per-kWh price changes."""
+    one share, ratio or per-kWh price changes. The grid's export limit is a
+    power too, so it scales with the readings."""
     k = 3
 
     def compare(home: Home) -> list[str]:
+        adapters = tuple(
+            with_config(a, export_limit=a.config["export_limit"] * k)
+            if a.kind == "grid" and a.config.get("export_limit") is not None
+            else a
+            for a in home.adapters
+        )
         before = results(home)
         after = results(
-            replace(home, readings={u: w * k for u, w in home.readings.items()})
+            replace(
+                home,
+                adapters=adapters,
+                readings={u: w * k for u, w in home.readings.items()},
+            )
         )
         expected = {
             name: scale(value, k) if CATALOG[name]["unit"] in POWER_SCALED else value
