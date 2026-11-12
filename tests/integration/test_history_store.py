@@ -140,6 +140,40 @@ async def test_the_solved_history_is_frozen_until_figures_change(
     assert stored_records(entry)[PV_SUB_ID].flows.to_home == pytest.approx(4500.0)
 
 
+async def test_records_from_before_the_transfer_are_re_solved_once(
+    hass: HomeAssistant,
+) -> None:
+    """Records stored before the stored-energy transfer (no ``format``) are
+    re-solved once from the same figures, so an existing install moves to
+    the new split at the first setup. The battery was removed meanwhile: its
+    record is re-solved too, so the transfer is booked on both sides. After
+    that the history is frozen again.
+    """
+    entry = await _single(hass)
+    assert entry.data["history"]["format"] == 2
+    assert hass.config_entries.async_remove_subentry(entry, BAT_SUB_ID)
+    await hass.async_block_till_done()
+
+    history = copy.deepcopy(entry.data["history"])
+    del history["format"]
+    for record in history["records"].values():
+        del record["flows"]["stored_price"], record["flows"]["to_batteries"]
+    hass.config_entries.async_update_entry(entry, data={**entry.data, "history": history})
+    await hass.async_block_till_done()  # the update reloads, which re-solves
+    await _reload(hass, entry)
+    records = stored_records(entry)
+    assert entry.data["history"]["format"] == 2
+    assert records[BAT_SUB_ID].flows.stored_price == {PV_SUB_ID: 0.08}
+    assert records[PV_SUB_ID].flows.to_batteries == pytest.approx({BAT_SUB_ID: 2500.0})
+
+    history = copy.deepcopy(entry.data["history"])
+    history["records"][PV_SUB_ID]["flows"]["to_home"] = 1.0
+    hass.config_entries.async_update_entry(entry, data={**entry.data, "history": history})
+    await hass.async_block_till_done()
+    await _reload(hass, entry)
+    assert stored_records(entry)[PV_SUB_ID].flows.to_home == 1.0
+
+
 async def test_a_removed_device_keeps_its_history(hass: HomeAssistant) -> None:
     """Removing the battery re-solves nothing: the PV keeps the 3,500 kWh it
     was credited with, and the battery's record and last price stay, so its

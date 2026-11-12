@@ -75,8 +75,9 @@ once every device has a tariff.
 Apps disagree on what self-consumption means: some include the energy that
 went into a battery, some the energy that came back out of it. Power Insight
 credits PV energy that charges a battery to the **battery**, when it
-discharges into your home. Counting it for the PV system as well would count
-it twice. *Produced* and *exported* mean the same in every app, so Power
+discharges into your home; the battery pays the PV system what the energy
+would have earned otherwise. Counting the energy for the PV system as well
+would count it twice. *Produced* and *exported* mean the same in every app, so Power
 Insight works out the rest itself.
 
 :::
@@ -108,9 +109,16 @@ The history follows the same rules as everything Power Insight counts:
 | --- | --- | --- |
 | PV → home | the PV system | the grid tariff |
 | PV → grid | the PV system | the export compensation |
-| PV → battery | the battery, when it discharges | — |
+| PV → battery | the battery, when it discharges | the battery pays the PV system its export compensation (nothing if it may not export) |
 | Battery → home | the battery | the grid tariff |
 | Grid → battery | the battery | costs the grid tariff |
+
+The payment for stored PV energy follows
+[the rule for live readings](costs-and-savings.md#what-a-battery-pays-for-the-solar-energy-it-stores)
+with one price. Your app's totals cannot tell when the home was buying from
+the grid while the battery charged, so the history assumes the most common
+case: the energy would have been exported. What the battery pays, the PV
+system earns, so the combined savings stay the same.
 
 **Example.** Your PV system produced 10,000 kWh; 4,000 kWh were exported; your
 battery charged 2,500 kWh from the PV system and discharged 2,200 kWh; a kWh
@@ -119,19 +127,29 @@ from the grid cost 0.34 on average and export paid 0.08.
 | | PV system | Battery |
 | --- | --- | --- |
 | Energy into the home | 10,000 − 4,000 − 2,500 = 3,500 kWh | 2,200 kWh |
-| Total cost savings | 3,500 × 0.34 = **1,190.00** | 2,200 × 0.34 = **748.00** |
-| Total avoided cost | **1,190.00** | **748.00** |
+| Total avoided cost | 3,500 × 0.34 = **1,190.00** | 2,200 × 0.34 = **748.00** |
+| Stored PV energy | earns 2,500 × 0.08 = 200.00 | pays 200.00 |
+| Total cost savings | 1,190 + 200 = **1,390.00** | 748 − 200 = **548.00** |
 | Total export compensation | 4,000 × 0.08 = **320.00** | — |
 
-*Total avoided cost* is the savings before a device's own costs: the same as
-its savings here, since neither device paid for grid power. Had the battery
-charged 500 kWh from the grid, its savings would be 748 − 500 × 0.34 =
-578.00 and its avoided cost still 748.00. A battery entered as amounts only
-carries no avoided cost (`no_energy`): its savings already have its grid
-charging taken off, and without the kWh there is no telling how much.
+*Total avoided cost* is what a device's energy into your home saved at the
+grid tariff, before anything it paid. Had the battery charged 500 kWh from
+the grid, it would have paid 500 × 0.34 = 170 for those and 2,000 × 0.08 =
+160 for its PV energy: savings 748 − 170 − 160 = 418.00, avoided cost still
+748.00. A battery entered as amounts only carries no avoided cost
+(`no_energy`): its savings already have its grid charging taken off, and
+without the kWh there is no telling how much.
+
+If you enter a device's **Savings** amount yourself, it is taken as it is,
+and neither that device nor the ones it shares stored energy with books the
+payment: Power Insight cannot tell what your app's figure already includes.
+A battery you add later does not book it either, since its history covers a
+period the PV systems' history does not.
 
 The levelized totals also subtract what the energy cost to produce, at the
-device's *current* LCOE or LCOS. So if you later change a device's lifetime
+device's *current* LCOE or LCOS. The PV system carries its LCOE on the energy
+it stored too: the battery paid it the export compensation, not the cost of
+making it. So if you later change a device's lifetime
 cost, its carried-over history is restated along with everything else.
 
 ## Several PV systems or batteries
@@ -157,23 +175,29 @@ the same however it falls.
 
 Once a battery has history, the PV energy that went into it is credited to
 the **battery**, when it discharges into your home, and no longer to the PV
-system. So the PV system's savings drop by the value of what it charged the
-battery with, and the battery's savings carry what it delivered.
+system. The PV system is paid the export compensation for it instead. So the
+PV system's savings drop by the grid price of what it charged the battery
+with, less that payment, and the battery's savings carry what it delivered,
+less the payment.
 
 The combined savings drop a little too, and that is correct: a battery gives
 back less than it takes in, and only energy that reaches your home saves the
 grid price. Before the battery had history, its losses were counted as if
 they had saved money.
 
-**Example.** Before the battery had history, the PV system's savings read
-4,200. Afterwards the PV system reads 2,100 and the battery 1,800, so 3,900
-combined:
+**Example.** At a grid price of 0.30 and an export compensation of 0.08,
+the battery charged 7,000 kWh from the PV system. Before the battery had
+history, the PV system's savings read 4,200. Afterwards the PV system reads
+2,660 and the battery 1,240, so 3,900 combined:
 
 | | Value |
 |---|---|
-| PV energy into the battery, at the grid price | 4,200 − 2,100 = 2,100 |
+| PV energy into the battery, at the grid price | 7,000 × 0.30 = 2,100 |
+| Paid by the battery to the PV system | 7,000 × 0.08 = 560 |
+| PV system: 4,200 − 2,100 + 560 | 2,660 |
 | Battery energy into the home, at the grid price | 1,800 |
-| Lost in the battery | 300 |
+| Battery: 1,800 − 560 | 1,240 |
+| Lost in the battery: 2,100 − 1,800 | 300 |
 
 The battery gave back 1,800 ÷ 2,100 ≈ 86 % of what it took in, a typical
 round-trip efficiency (85–92 %). To check against your app, divide the

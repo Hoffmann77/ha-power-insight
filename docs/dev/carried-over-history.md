@@ -20,7 +20,10 @@ Four notes under *The monetary model*, each covered by integration tests:
   pre-assigned), solved on save and then frozen;
 - entered amounts are the truth; only their cost of energy follows
   corrections, and a total missing a term carries nothing;
-- a removed device keeps its history, at its last price.
+- a removed device keeps its history, at its last price;
+- in the history, a battery pays for stored PV at its feed-in rate (nothing
+  if the PV may not export), except a standalone battery or a pair with an
+  entered savings amount, which keep the rule from before.
 
 ## Where it lives
 
@@ -38,7 +41,7 @@ Four notes under *The monetary model*, each covered by integration tests:
 | --- | --- |
 | Device subentry `counting_since` | When Power Insight started counting the device: the cutoff for its history. Set when the subentry is created. |
 | Device subentry `history` | The figures as entered. The grid's are the whole home's (`home_fed_in`, `average_tariff`, `home_savings`, `home_export_compensation`). |
-| Entry `data["history"]` | `records` (one solved record per device), `last_price` (each device's levelized price at the last setup), and the last solve's `entered`, `home` and `inputs`. A removed device's stay. |
+| Entry `data["history"]` | `records` (one solved record per device), `last_price` (each device's levelized price at the last setup), the last solve's `entered`, `home` and `inputs`, and `format` (2 since the stored-energy transfer; older records are re-solved once). A removed device's stay. |
 
 Entered figures may disagree by the larger of 1 kWh and 1 % before they are
 refused (`SLACK_KWH`, `SLACK_SHARE` in `history.py`).
@@ -63,7 +66,9 @@ supplies its own tariff and export.
   date per sensor would close it; not worth its complexity until users ask.
 - **A standalone battery with several PV systems** splits its local charging
   evenly between them: there are no shared totals to weigh by. It only
-  decides which PV's LCOE prices its levelized charging.
+  decides which PV's LCOE prices its levelized charging. It pays no PV
+  system for its stored energy: their side of its period is not in their
+  history, so the transfer could only be booked on one side.
 - **Not carried over:** consumer totals (*avoided cost*, *consumption cost*,
   and every per-source total) and PV standby cost. No app reports them per
   device. A PV system's or battery's *avoided cost* is carried over: it is

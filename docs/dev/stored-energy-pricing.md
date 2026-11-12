@@ -259,10 +259,12 @@ How it is tested:
 
 ## Not covered
 
-- **History carried over from a device's app** keeps its own rule: period
-  totals cannot tell whether the house was importing or exporting at the
-  moment a battery charged. See
-  [Carried-over history](carried-over-history.md).
+- **History carried over from a device's app** is booked the same way, at one
+  price: period totals cannot tell whether the house was importing or
+  exporting at the moment a battery charged, so a battery pays each PV system
+  its feed-in rate (nothing if it may not export). A battery added later, or
+  a pair where either device entered its own savings, keeps the rule from
+  before. See [Carried-over history](carried-over-history.md).
 - **CO₂** is not attributed this way, as no CO₂ sensor exists yet.
 - **A battery source that may not export.** Without the receiving battery it
   would have kept its energy for later rather than curtail it. That later

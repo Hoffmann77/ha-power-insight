@@ -2,9 +2,10 @@
 
 The expected values are the worked examples in
 docs/dev/carried-over-history.md, derived by hand from the engine's credit
-rules: PV → home earns the tariff, PV → battery earns the PV nothing, the
-battery earns the tariff when it discharges, and levelized figures subtract
-the energy's current LCOE / LCOS.
+rules: PV → home earns the tariff, PV → battery earns the PV its feed-in rate
+(the battery pays it, docs/dev/stored-energy-pricing.md), the battery earns
+the tariff when it discharges, and levelized figures subtract the energy's
+current LCOE / LCOS.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from custom_components.power_insight.history import (
     ERROR_SAVINGS_NOT_SPLITTABLE,
     ERROR_TARIFF_REQUIRED,
     MISSING_ENERGY,
+    MISSING_FEED_IN_TARIFF,
     MISSING_PRICE,
     MISSING_TARIFF,
     MISSING_WAITING,
@@ -105,51 +107,68 @@ def test_the_battery_share_is_taken_out_of_the_pv() -> None:
 def test_single_pv_and_battery_carry_the_worked_example() -> None:
     """Every carried-over total of the plan's first example.
 
-    PV: 3,500 × 0.34 = 1,190 saved; 840 levelized (− 3,500 × 0.10); 320 export
-    compensation (4,000 × 0.08); 1,510 financial return; 760 levelized
-    (840 + 320 − 4,000 × 0.10). Entering self-consumption (6,000 kWh) would
-    have read 2,040, the battery's 2,500 kWh counted twice.
+    The battery pays the PV 2,500 × 0.08 = 200 for the energy it stored.
 
-    Battery: 2,200 × 0.34 = 748 saved; 168 levelized (− 2,200 × 0.15 for its
-    own LCOS, − 2,500 × 0.10 for the PV energy it charged); no grid charging,
-    so no standard operating cost, and 250 levelized.
+    PV: 3,500 × 0.34 + 200 = 1,390 saved, of which 1,190 avoided; 790
+    levelized (− 6,000 × 0.10, its LCOE on everything that reached the home
+    or the battery); 320 export compensation (4,000 × 0.08); 1,710 financial
+    return; 710 levelized (790 + 320 − 4,000 × 0.10). Entering
+    self-consumption (6,000 kWh) would have read 2,040, the battery's
+    2,500 kWh counted twice.
+
+    Battery: 2,200 × 0.34 − 200 = 548 saved, of which 748 avoided; 218
+    levelized (− 2,200 × 0.15 for its own LCOS); no grid charging, so no
+    standard operating cost, and 250 levelized (2,500 × 0.10, the cost of
+    making what it stored).
     """
     records = _single()
 
     assert _totals(records["pv"]) == pytest.approx({
-        "total_cost_savings": 1190.0,
+        "total_cost_savings": 1390.0,
         "total_avoided_cost": 1190.0,
-        "total_levelized_cost_savings": 840.0,
+        "total_levelized_cost_savings": 790.0,
         "total_export_compensation": 320.0,
-        "total_financial_return": 1510.0,
-        "total_levelized_financial_return": 760.0,
+        "total_financial_return": 1710.0,
+        "total_levelized_financial_return": 710.0,
     })
     assert _totals(records["bat"]) == pytest.approx({
-        "total_cost_savings": 748.0,
+        "total_cost_savings": 548.0,
         "total_avoided_cost": 748.0,
-        "total_levelized_cost_savings": 168.0,
+        "total_levelized_cost_savings": 218.0,
         "total_export_compensation": 0.0,
-        "total_financial_return": 748.0,
-        "total_levelized_financial_return": 168.0,
+        "total_financial_return": 548.0,
+        "total_levelized_financial_return": 218.0,
         "total_operating_cost": 0.0,
         "total_levelized_operating_cost": 250.0,
     })
 
 
 def test_a_correction_restates_both_devices_history() -> None:
-    """Doubling the PV's lifetime cost (LCOE 0.10 → 0.20) is priced at read
-    time, so it restates the history: the PV saves 3,500 × 0.14 = 490
-    levelized, and the battery 748 − 330 − 2,500 × 0.20 = −82, because its
-    charging now costs twice as much. Standard savings do not move.
+    """Lifetime costs are priced at read time, so a correction restates the
+    history. Doubling both (LCOE 0.10 → 0.20, LCOS 0.15 → 0.30): the PV
+    saves 1,390 − 6,000 × 0.20 = 190 levelized, the battery
+    548 − 2,200 × 0.30 = −112. Standard savings do not move.
+
+    The PV's LCOE alone restates only the PV: the battery pays the PV's
+    feed-in rate for what it stored, whatever making it cost, so it keeps
+    its 218.
     """
     records = _single()
-    prices = {**PRICES, "pv": 0.20}
+    prices = {**PRICES, "pv": 0.20, "bat": 0.30}
 
     pv, bat = _totals(records["pv"], prices), _totals(records["bat"], prices)
-    assert pv["total_levelized_cost_savings"] == pytest.approx(490.0)
-    assert bat["total_levelized_cost_savings"] == pytest.approx(-82.0)
-    assert pv["total_cost_savings"] == pytest.approx(1190.0)
-    assert bat["total_cost_savings"] == pytest.approx(748.0)
+    assert pv["total_levelized_cost_savings"] == pytest.approx(190.0)
+    assert bat["total_levelized_cost_savings"] == pytest.approx(-112.0)
+    assert pv["total_cost_savings"] == pytest.approx(1390.0)
+    assert bat["total_cost_savings"] == pytest.approx(548.0)
+
+    prices = {**PRICES, "pv": 0.20}
+    assert _totals(records["pv"], prices)["total_levelized_cost_savings"] == (
+        pytest.approx(190.0)
+    )
+    assert _totals(records["bat"], prices)["total_levelized_cost_savings"] == (
+        pytest.approx(218.0)
+    )
 
 
 def test_grid_import_is_not_a_source() -> None:
@@ -167,9 +186,10 @@ def test_grid_import_is_not_a_source() -> None:
 
 def test_grid_charging_is_the_entered_figure() -> None:
     """500 of the 2,500 kWh charged came from the grid: they cost the battery
-    500 × 0.34 = 170, which comes off its savings (748 − 170 = 578) and is its
-    operating cost. Only the other 2,000 come out of the PV's output, so
-    4,000 reach the home from the PV.
+    500 × 0.34 = 170, which comes off its savings and is its operating cost.
+    Only the other 2,000 come out of the PV's output, so 4,000 reach the
+    home from the PV, and the battery pays it 2,000 × 0.08 = 160 for them:
+    748 − 170 − 160 = 418.
     """
     records = _solve(
         _home(), _pv(produced=10000.0), _battery(grid_charged=500.0)
@@ -178,27 +198,28 @@ def test_grid_charging_is_the_entered_figure() -> None:
     assert records["pv"].flows.to_home == pytest.approx(4000.0)
 
     bat = _totals(records["bat"])
-    assert bat["total_cost_savings"] == pytest.approx(578.0)
+    assert bat["total_cost_savings"] == pytest.approx(418.0)
     assert bat["total_operating_cost"] == pytest.approx(170.0)
 
 
 def test_avoided_cost_is_the_savings_before_the_operating_cost() -> None:
     """The battery's 2,200 kWh into the home avoided 2,200 × 0.34 = 748,
-    whatever it charged from. Its savings (578) are that less the 170 its
-    grid charging cost, so avoided cost − operating cost = savings, as for
-    the counted part. The PV's avoided cost is its savings: 4,000 kWh into
-    the home × 0.34 = 1,360, with nothing of its own to take off.
+    whatever it charged from. Its savings (418) are that less the 170 its
+    grid charging cost and the 160 it paid the PV for its stored energy. The
+    PV's avoided cost is the 4,000 kWh it put into the home × 0.34 = 1,360;
+    its savings (1,520) add the 160 it was paid. As for the counted part,
+    the transfer is a saving, never an avoided cost, and it cancels out.
     """
     records = _solve(
         _home(), _pv(produced=10000.0), _battery(grid_charged=500.0)
     )
     pv, bat = _totals(records["pv"]), _totals(records["bat"])
     assert bat["total_avoided_cost"] == pytest.approx(748.0)
-    assert bat["total_avoided_cost"] - bat["total_operating_cost"] == pytest.approx(
-        bat["total_cost_savings"]
+    assert bat["total_avoided_cost"] - bat["total_operating_cost"] - 160.0 == (
+        pytest.approx(bat["total_cost_savings"])
     )
     assert pv["total_avoided_cost"] == pytest.approx(1360.0)
-    assert pv["total_avoided_cost"] == pytest.approx(pv["total_cost_savings"])
+    assert pv["total_cost_savings"] == pytest.approx(1520.0)
 
 
 def test_an_amounts_only_battery_carries_no_avoided_cost() -> None:
@@ -232,6 +253,115 @@ def test_batteries_do_not_charge_each_other() -> None:
     assert records["bat"].flows.from_pv == pytest.approx({"pv": 1000.0})
     assert records["bat2"].flows.from_pv == pytest.approx({"pv": 1000.0})
     assert records["pv"].flows.to_home == pytest.approx(10000.0 - 4000.0 - 2000.0)
+
+
+# ---------------------------------------------------------------------------
+# Stored energy: the battery pays the PV its feed-in rate
+# ---------------------------------------------------------------------------
+
+
+def test_stored_pv_is_paid_at_its_feed_in_rate() -> None:
+    """The decision. Without the battery, the 2,500 kWh it stored would have
+    been fed in at 0.08 (a period's totals cannot tell the moments the home
+    was importing instead), so the battery pays the PV 200 and the PV earns
+    it. That moves 200 of savings, and with it the PV's LCOE on the
+    2,500 kWh (250) from the battery to the PV. Combined, nothing moves:
+    1,938 standard and 1,008 levelized, as under the rule before.
+    """
+    records = _single()
+    assert records["bat"].flows.stored_price == {"pv": FEED_IN}
+    assert records["pv"].flows.to_batteries == pytest.approx({"bat": 2500.0})
+
+    pv, bat = _totals(records["pv"]), _totals(records["bat"])
+    assert pv["total_cost_savings"] - 1190.0 == pytest.approx(200.0)
+    assert 748.0 - bat["total_cost_savings"] == pytest.approx(200.0)
+    assert pv["total_cost_savings"] + bat["total_cost_savings"] == pytest.approx(1938.0)
+    assert pv["total_levelized_cost_savings"] + bat[
+        "total_levelized_cost_savings"
+    ] == pytest.approx(840.0 + 168.0)
+
+
+def test_a_pv_that_may_not_export_is_paid_nothing() -> None:
+    """A PV system that may not export would have curtailed what the battery
+    stored, so the battery pays nothing for it: its savings stay 748. The PV
+    still carries its LCOE on everything it made, so its levelized savings
+    are 7,500 × 0.34 − 10,000 × 0.10 = 1,550, the battery's
+    748 − 2,200 × 0.15 = 418.
+    """
+    records = _solve(
+        _home(fed_in=0.0), _pv(produced=10000.0, exports=False), _battery()
+    )
+    assert records["bat"].flows.stored_price == {"pv": 0.0}
+
+    pv, bat = _totals(records["pv"]), _totals(records["bat"])
+    assert pv["total_cost_savings"] == pytest.approx(2550.0)
+    assert bat["total_cost_savings"] == pytest.approx(748.0)
+    assert pv["total_levelized_cost_savings"] == pytest.approx(1550.0)
+    assert bat["total_levelized_cost_savings"] == pytest.approx(418.0)
+
+
+def test_an_entered_savings_amount_keeps_the_old_rule() -> None:
+    """The battery entered its app's savings (800): that amount is taken as
+    it is, so neither device books the transfer. The PV earns nothing for
+    the stored energy (1,190), and the battery's levelized savings still
+    take the PV's LCOE on what it stored: 800 − 330 − 250 = 220.
+    """
+    records = _solve(_home(), _pv(produced=10000.0), _battery(savings=800.0))
+    assert records["bat"].flows.stored_price == {}
+    assert records["pv"].flows.to_batteries == {}
+
+    pv, bat = _totals(records["pv"]), _totals(records["bat"])
+    assert pv["total_cost_savings"] == pytest.approx(1190.0)
+    assert pv["total_levelized_cost_savings"] == pytest.approx(840.0)
+    assert bat["total_cost_savings"] == pytest.approx(800.0)
+    assert bat["total_levelized_cost_savings"] == pytest.approx(220.0)
+
+
+def test_a_standalone_battery_keeps_the_old_rule() -> None:
+    """A battery added later has a period of its own; the PV systems' side
+    of that period is not in their history, so the transfer could be booked
+    on one side only. It is booked on neither: the battery's 1,000 kWh from
+    each PV system cost it their LCOE in levelized savings, nothing in
+    standard ones (1,800 × 0.30 = 540).
+    """
+    records = _solve(
+        _home(),
+        _pv("roof", produced=8000.0),
+        _pv("carport", produced=2000.0),
+        _battery("late", standalone=True, charged=2000.0, discharged=1800.0, tariff=0.30),
+    )
+    assert records["late"].flows.stored_price == {}
+    late = _totals(records["late"], {**PRICES, "late": 0.15})
+    assert late["total_cost_savings"] == pytest.approx(540.0)
+    assert late["total_levelized_cost_savings"] == pytest.approx(
+        540.0 - 1800 * 0.15 - 2000 * 0.10
+    )
+
+
+def test_an_unknown_feed_in_rate_blanks_both_sides() -> None:
+    """The PV may export but has no feed-in rate, so what the battery pays
+    for its stored energy is unknown: both devices' savings carry nothing
+    and say why, never one without the other.
+    """
+    records = _solve(_home(), _pv(produced=10000.0, feed_in_tariff=None), _battery())
+    pv = history_totals(records["pv"], PRICES.get)
+    bat = history_totals(records["bat"], PRICES.get)
+    assert pv.missing["total_cost_savings"] == MISSING_FEED_IN_TARIFF
+    assert bat.missing["total_cost_savings"] == MISSING_FEED_IN_TARIFF
+    assert bat.values["total_operating_cost"] == 0.0
+
+
+def test_a_record_stored_before_the_transfer_reads_as_before() -> None:
+    """A record stored without the transfer's fields prices as it did: the
+    battery pays nothing and takes the PV's LCOE. The store re-solves such
+    records once at setup (``test_history_store.py``), so this only guards
+    reading one.
+    """
+    data = _single()["bat"].to_dict()
+    del data["flows"]["stored_price"], data["flows"]["to_batteries"]
+    bat = _totals(Record.from_dict(data))
+    assert bat["total_cost_savings"] == pytest.approx(748.0)
+    assert bat["total_levelized_cost_savings"] == pytest.approx(168.0)
 
 
 # ---------------------------------------------------------------------------
@@ -326,18 +456,21 @@ def test_amounts_only_is_taken_at_face_value() -> None:
 
 def test_a_home_amount_is_split_by_the_calculated_savings() -> None:
     """Total savings of 2,000 entered for the home are split in proportion
-    to the calculated 1,190 and 748: PV 1,228.07, battery 771.93. The
-    levelized figures still follow the kWh: 878.07 and 191.93.
+    to the calculated 1,390 and 548 (the stored-energy transfer of 200
+    included): PV 1,434.47, battery 565.53. The levelized figures still
+    follow the kWh: 1,434.47 − 6,000 × 0.10 = 834.47 and
+    565.53 − 2,200 × 0.15 = 235.53.
     """
     records = _solve(_home(savings=2000.0), _pv(produced=10000.0), _battery())
     pv, bat = _totals(records["pv"]), _totals(records["bat"])
-    assert pv["total_cost_savings"] == pytest.approx(2000.0 * 1190 / 1938, abs=0.01)
-    assert bat["total_cost_savings"] == pytest.approx(2000.0 * 748 / 1938, abs=0.01)
-    assert pv["total_levelized_cost_savings"] == pytest.approx(878.07, abs=0.01)
-    assert bat["total_levelized_cost_savings"] == pytest.approx(191.93, abs=0.01)
-    # A dealt-out amount is the truth for avoided cost too.
-    assert pv["total_avoided_cost"] == pytest.approx(pv["total_cost_savings"])
-    assert bat["total_avoided_cost"] == pytest.approx(bat["total_cost_savings"])
+    assert pv["total_cost_savings"] == pytest.approx(2000.0 * 1390 / 1938, abs=0.01)
+    assert bat["total_cost_savings"] == pytest.approx(2000.0 * 548 / 1938, abs=0.01)
+    assert pv["total_levelized_cost_savings"] == pytest.approx(834.47, abs=0.01)
+    assert bat["total_levelized_cost_savings"] == pytest.approx(235.53, abs=0.01)
+    # A dealt-out amount is the truth for avoided cost too, the transfer
+    # taken back out.
+    assert pv["total_avoided_cost"] == pytest.approx(pv["total_cost_savings"] - 200.0)
+    assert bat["total_avoided_cost"] == pytest.approx(bat["total_cost_savings"] + 200.0)
 
 
 def test_a_home_amount_skips_what_devices_entered_themselves() -> None:
@@ -396,11 +529,14 @@ def test_a_devices_own_tariff_carries_its_savings() -> None:
 def test_a_devices_own_tariff_wins_and_the_grids_is_the_fallback() -> None:
     """The grid's 0.34 is the home's average; the battery was given its own
     0.30 and uses it, the PV system was not and falls back to the grid's.
+    The 200 the battery pays for its stored energy needs no tariff.
     """
     records = _solve(_home(), _pv(produced=10000.0), _battery(tariff=0.30))
     assert records["pv"].tariff == 0.34
     assert records["bat"].tariff == 0.30
-    assert _totals(records["bat"])["total_cost_savings"] == pytest.approx(2200 * 0.30)
+    assert _totals(records["bat"])["total_cost_savings"] == pytest.approx(
+        2200 * 0.30 - 200
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -425,7 +561,7 @@ def test_a_total_missing_a_term_carries_nothing() -> None:
     bat = history_totals(records["bat"], {"pv": 0.10}.get)
     assert bat.values["total_levelized_cost_savings"] is None
     assert bat.missing["total_levelized_cost_savings"] == MISSING_PRICE
-    assert bat.values["total_cost_savings"] == pytest.approx(748.0)
+    assert bat.values["total_cost_savings"] == pytest.approx(548.0)
 
 
 def test_energy_that_is_not_there_needs_no_price() -> None:
