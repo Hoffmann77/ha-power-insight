@@ -542,9 +542,11 @@ have paid. Three things are knowingly left out:
   battery, have kept its energy for later, not curtailed it; its later worth
   is unknowable from a snapshot, so the export part is valued at nothing.
   Battery-to-battery charging is rare.
-- **History carried over from a device's app** keeps its own rule: period
-  totals cannot tell whether the home was importing or exporting at the
-  moment a battery charged.
+- **History carried over from a device's app** cannot follow it exactly:
+  period totals cannot tell whether the home was importing or exporting at
+  the moment a battery charged. It uses the most common case, the feed-in
+  rate; see "in the history, a battery pays for stored PV at its feed-in
+  rate".
 - **CO₂** is not attributed this way; see "CO₂ is not corrected until
   something publishes it".
 
@@ -874,6 +876,46 @@ Covered by `tests/integration/test_history.py`
 `test_amounts_only_is_taken_at_face_value`,
 `test_a_total_missing_a_term_carries_nothing` and
 `test_a_correction_restates_both_devices_history`).
+
+:::
+
+:::note[Decision: in the history, a battery pays for stored PV at its feed-in rate]
+
+Live, a battery pays the PV system what its stored energy was worth without
+the battery (see "a battery pays for local energy what it was worth
+elsewhere"). The history follows that booking with the one price a period's
+totals can give: the PV system's feed-in rate if it may export, nothing if it
+may not. Each battery pays `from_pv × that rate` to every PV system it
+charged from, and that PV system earns it, in the standard and the levelized
+savings alike; in the levelized ones the PV system, not the battery, carries
+its LCOE on what it stored. A battery's levelized operating cost keeps the
+cost of the mix, and its avoided cost the tariff on what it delivered: the
+transfer is a saving, never a cost or an avoided cost. The combined totals do
+not move.
+
+The alternatives were to leave the history on the rule from before the
+transfer, which freezes the skewed split into every starting value (years of
+free solar in the battery's totals, missing from the PV's), or to estimate
+the moments the home imported. Totals have no time detail, so the import,
+the export limit and negative prices are left out: the feed-in rate is the
+common case and the one the matrix gives while the home exports.
+
+Two pairs keep the old rule, on both sides so the combined totals still do
+not move: a pair where either device entered its own savings amount, which
+is taken as it is because its rule is the app's; and a battery added later
+(standalone), whose period is not the PV systems' history. Records stored
+before this rule are re-solved once, from the same figures, at the first
+setup.
+
+Not pinned in the engine tier: it prices entered history, not readings.
+Covered by `tests/integration/test_history.py`
+(`test_stored_pv_is_paid_at_its_feed_in_rate`,
+`test_a_pv_that_may_not_export_is_paid_nothing`,
+`test_an_entered_savings_amount_keeps_the_old_rule`,
+`test_a_standalone_battery_keeps_the_old_rule` and
+`test_an_unknown_feed_in_rate_blanks_both_sides`) and
+`tests/integration/test_history_store.py`
+(`test_records_from_before_the_transfer_are_re_solved_once`).
 
 :::
 

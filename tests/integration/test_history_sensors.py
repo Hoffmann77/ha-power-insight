@@ -3,7 +3,8 @@
 The home is the plan's first example (docs/dev/carried-over-history.md): one
 PV system that produced 10,000 kWh and one battery that charged 2,500 kWh
 from it and discharged 2,200, 4,000 kWh fed in, a tariff of 0.34, feed-in
-0.08, LCOE 0.10 and LCOS 0.15. Every reading is 0 W, so the sensors count
+0.08, LCOE 0.10 and LCOS 0.15. The battery pays the PV 2,500 × 0.08 = 200
+for the energy it stored. Every reading is 0 W, so the sensors count
 nothing themselves and each total reads exactly what it carries over.
 """
 
@@ -137,24 +138,25 @@ def _value(hass: HomeAssistant, entry: MockConfigEntry, unique_suffix: str) -> f
 
 async def test_device_totals_carry_their_history(hass: HomeAssistant) -> None:
     """Each device's totals read what it counted (nothing) plus the plan's
-    first example: the PV 1,190 saved, 840 levelized, 320 export
-    compensation, 1,510 and 760 financial return; the battery 748 and 168
-    saved, 250 levelized operating cost from the PV energy it charged. Each
-    avoided cost is its savings, since neither paid for grid power.
+    first example: the PV 1,390 saved (1,190 avoided plus the 200 the
+    battery paid it), 790 levelized (− 6,000 × 0.10), 320 export
+    compensation, 1,710 and 710 financial return; the battery 548 saved
+    (748 avoided less the 200), 218 levelized (− 2,200 × 0.15), 250
+    levelized operating cost from the PV energy it charged.
     """
     entry = _entry()
     await _counting(hass, entry)
 
     expected = {
-        f"{PV_SUB_ID}_total_cost_savings": 1190.0,
+        f"{PV_SUB_ID}_total_cost_savings": 1390.0,
         f"{PV_SUB_ID}_total_avoided_cost": 1190.0,
-        f"{PV_SUB_ID}_total_levelized_cost_savings": 840.0,
+        f"{PV_SUB_ID}_total_levelized_cost_savings": 790.0,
         f"{PV_SUB_ID}_total_export_compensation": 320.0,
-        f"{PV_SUB_ID}_total_financial_return": 1510.0,
-        f"{PV_SUB_ID}_total_levelized_financial_return": 760.0,
-        f"{BAT_SUB_ID}_total_cost_savings": 748.0,
+        f"{PV_SUB_ID}_total_financial_return": 1710.0,
+        f"{PV_SUB_ID}_total_levelized_financial_return": 710.0,
+        f"{BAT_SUB_ID}_total_cost_savings": 548.0,
         f"{BAT_SUB_ID}_total_avoided_cost": 748.0,
-        f"{BAT_SUB_ID}_total_levelized_cost_savings": 168.0,
+        f"{BAT_SUB_ID}_total_levelized_cost_savings": 218.0,
         f"{BAT_SUB_ID}_total_operating_cost": 0.0,
         f"{BAT_SUB_ID}_total_levelized_operating_cost": 250.0,
     }
@@ -165,8 +167,9 @@ async def test_device_totals_carry_their_history(hass: HomeAssistant) -> None:
 async def test_whole_home_totals_carry_every_devices_history(
     hass: HomeAssistant,
 ) -> None:
-    """A combined total stays the sum of its devices: savings 1,190 + 748,
-    financial return 1,510 + 748, levelized savings 840 + 168, and the
+    """A combined total stays the sum of its devices: savings 1,390 + 548,
+    financial return 1,710 + 548, levelized savings 790 + 218 (the same as
+    before the stored-energy transfer, which cancels out), and the
     charging cost is the battery's grid charging, none. The grid's export
     compensation is the whole home's: the PV's 320.
     """
@@ -190,7 +193,7 @@ async def test_attributes_split_carried_over_from_tracked(hass: HomeAssistant) -
     await _counting(hass, entry)
 
     attributes = _state(hass, entry, f"{PV_SUB_ID}_total_cost_savings").attributes
-    assert attributes["carried_over"] == pytest.approx(1190.0)
+    assert attributes["carried_over"] == pytest.approx(1390.0)
     assert attributes["carried_over_until"] == SINCE
     assert attributes["tracked"] == pytest.approx(0.0)
 
@@ -202,7 +205,7 @@ async def test_a_reload_does_not_add_the_history_twice(hass: HomeAssistant) -> N
     entry = _entry()
     await _counting(hass, entry)
     expected = {
-        f"{PV_SUB_ID}_total_cost_savings": 1190.0,
+        f"{PV_SUB_ID}_total_cost_savings": 1390.0,
         "combined_total_cost_savings": 1938.0,
     }
     assert {s: _value(hass, entry, s) for s in expected} == pytest.approx(expected)
@@ -238,8 +241,8 @@ async def test_a_total_missing_a_term_says_why(hass: HomeAssistant) -> None:
 async def test_a_removed_device_stays_in_the_whole_home_totals(
     hass: HomeAssistant,
 ) -> None:
-    """Removing the battery keeps its 748 in the combined savings, so they
-    still read 1,938, and its levelized 168 in the combined levelized
+    """Removing the battery keeps its 548 in the combined savings, so they
+    still read 1,938, and its levelized 218 in the combined levelized
     savings, through the ledger that froze its total as displayed.
     """
     entry = _entry()
@@ -260,8 +263,9 @@ async def test_a_correction_restates_the_carried_over_history(
 ) -> None:
     """Doubling the PV's correction factor (LCOE 0.10 → 0.20) restates the
     history at the reload it causes: the PV's levelized savings become
-    3,500 × 0.14 = 490 and the battery's 748 − 330 − 500 = −82, because the
-    PV energy it charged now costs twice as much. Standard savings stay.
+    1,390 − 6,000 × 0.20 = 190. The battery keeps its 218: it pays the PV's
+    feed-in rate for what it stored, whatever making it cost. Standard
+    savings stay.
     """
     entry = _entry()
     await _counting(hass, entry)
@@ -274,12 +278,12 @@ async def test_a_correction_restates_the_carried_over_history(
     await _settle(hass)
 
     assert _value(hass, entry, f"{PV_SUB_ID}_total_levelized_cost_savings") == (
-        pytest.approx(490.0)
+        pytest.approx(190.0)
     )
     assert _value(hass, entry, f"{BAT_SUB_ID}_total_levelized_cost_savings") == (
-        pytest.approx(-82.0)
+        pytest.approx(218.0)
     )
-    assert _value(hass, entry, f"{PV_SUB_ID}_total_cost_savings") == pytest.approx(1190.0)
+    assert _value(hass, entry, f"{PV_SUB_ID}_total_cost_savings") == pytest.approx(1390.0)
 
 
 async def test_an_existing_install_can_add_change_and_clear_its_history(

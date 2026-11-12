@@ -217,6 +217,14 @@ class Flows:
     exported: float
     from_grid: float = 0.0
     from_pv: dict[str, float] = field(default_factory=dict)  # a battery's charging
+    #: A battery's price per kWh for each PV system it pays for its stored
+    #: energy: the source's feed-in rate, or 0 if it may not export (``None``
+    #: while that rate is unknown). A source of ``from_pv`` missing here is
+    #: not paid, and prices that charging at its LCOE instead (the rule
+    #: before the stored-energy transfer; see :func:`_stored_pairs`).
+    stored_price: dict[str, float | None] = field(default_factory=dict)
+    #: A PV system's kWh into each battery that pays it for them.
+    to_batteries: dict[str, float] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -224,6 +232,8 @@ class Flows:
             "exported": self.exported,
             "from_grid": self.from_grid,
             "from_pv": dict(self.from_pv),
+            "stored_price": dict(self.stored_price),
+            "to_batteries": dict(self.to_batteries),
         }
 
     @classmethod
@@ -233,6 +243,8 @@ class Flows:
             exported=data["exported"],
             from_grid=data.get("from_grid", 0.0),
             from_pv=dict(data.get("from_pv", {})),
+            stored_price=dict(data.get("stored_price", {})),
+            to_batteries=dict(data.get("to_batteries", {})),
         )
 
 
@@ -513,13 +525,28 @@ def _split_shared(
         return {}, (), problems
 
     exported = allocation.get(_EXPORT, {})
+    charged_from = {
+        uid: {
+            p: _round(allocation.get(_charging(uid), {}).get(p, 0.0)) for p in sources
+        }
+        for uid, sources in charging.items()
+    }
+    pairs = _stored_pairs(energetic, charging)
+    by_uid = {d.uid: d for d in energetic}
     flows = {}
     for device in energetic:
         uid = device.uid
-        from_pv: dict[str, float] = {}
-        if device.kind == BATTERY:
-            row = allocation.get(_charging(uid), {})
-            from_pv = {p: _round(row.get(p, 0.0)) for p in charging.get(uid, ())}
+        from_pv = charged_from.get(uid, {})
+        stored_price = {
+            source: _stored_price(by_uid[source])
+            for battery, source in pairs
+            if battery == uid
+        }
+        to_batteries = {
+            battery: charged_from[battery][source]
+            for battery, source in pairs
+            if source == uid
+        }
         flows[uid] = Flows(
             to_home=_round(allocation[_HOME].get(uid, 0.0)),
             exported=_round(
@@ -527,8 +554,43 @@ def _split_shared(
             ),
             from_grid=(device.grid_charged or 0.0) if device.kind == BATTERY else 0.0,
             from_pv=from_pv,
+            stored_price=stored_price,
+            to_batteries=to_batteries,
         )
     return flows, (), []
+
+
+def _stored_pairs(
+    energetic: list[DeviceInputs], charging: dict[str, list[str]]
+) -> list[tuple[str, str]]:
+    """The ``(battery, PV system)`` pairs that book the stored-energy transfer.
+
+    Live, a battery pays the PV system what the energy it stored would have
+    been worth without the battery, and the PV system earns it. A period's
+    totals cannot tell whether the home was importing at the moment, nor
+    when an export limit or a negative price applied, so the history uses
+    the most common case: the PV system's feed-in rate if it may export,
+    nothing if it may not.
+
+    Only devices that share the home's period are split together, so only
+    they can book both sides; a pair where either device entered its own
+    savings is skipped, because that amount is taken as it is and its rule is
+    the app's, not ours. Both keep the rule from before the transfer, so the
+    combined savings never move.
+    """
+    entered = {d.uid for d in energetic if d.savings is not None}
+    return [
+        (battery, source)
+        for battery, sources in charging.items()
+        if battery not in entered
+        for source in sources
+        if source not in entered
+    ]
+
+
+def _stored_price(source: DeviceInputs) -> float | None:
+    """What a kWh of ``source``'s stored energy is paid: its feed-in rate."""
+    return source.feed_in_tariff if source.exports else 0.0
 
 
 def _standalone_flows(
@@ -536,8 +598,9 @@ def _standalone_flows(
 ) -> tuple[Flows | None, Problem | None]:
     """A device added later stands alone: no shared totals to split.
 
-    A PV system's energy into batteries earns it nothing, so it only lowers
-    what reached the home. A battery's local charging is split evenly over the
+    A PV system's energy into batteries earns it nothing (the batteries'
+    side of its period is not in its history, so no transfer is booked), so
+    it only lowers what reached the home. A battery's local charging is split evenly over the
     PV systems it may charge from: there are no period totals to weigh them
     by, and it only decides whose LCOE prices that charging.
     """
@@ -717,11 +780,39 @@ def _flows(record: Record) -> Flows:
 
 
 def _energy_savings(record: Record) -> float:
-    """Standard savings from the kWh: the tariff avoided, less grid charging."""
+    """Standard savings from the kWh.
+
+    The tariff avoided, less grid charging, plus the stored-energy transfer:
+    what a PV system earns from the batteries it charged, or a battery pays
+    for the PV energy it stored.
+    """
     flows = _flows(record)
-    return _cost(flows.to_home, record.tariff, MISSING_TARIFF) - _cost(
-        flows.from_grid, record.tariff, MISSING_TARIFF
+    return (
+        _cost(flows.to_home, record.tariff, MISSING_TARIFF)
+        - _cost(flows.from_grid, record.tariff, MISSING_TARIFF)
+        + _stored_transfer(record)
     )
+
+
+def _stored_transfer(record: Record) -> float:
+    """What a PV system earned for its stored energy, or a battery paid (< 0).
+
+    0 for an amounts-only history, and for a device whose pairs keep the rule
+    from before the transfer (see :func:`_stored_pairs`).
+    """
+    flows = record.flows
+    if flows is None:
+        return 0.0
+    earned = _cost(
+        sum(flows.to_batteries.values()),
+        record.feed_in_tariff if record.exports else 0.0,
+        MISSING_FEED_IN_TARIFF,
+    )
+    paid = sum(
+        _cost(flows.from_pv.get(source, 0.0), price, MISSING_FEED_IN_TARIFF)
+        for source, price in flows.stored_price.items()
+    )
+    return earned - paid
 
 
 def history_totals(
@@ -744,11 +835,20 @@ def history_totals(
         return _energy_savings(record)
 
     def energy_cost() -> float:
-        """The levelized cost of what the device delivered, and of its charging."""
+        """The levelized cost of the energy behind the savings.
+
+        A device's own LCOE / LCOS on what it delivered into the home, and a
+        PV system's on what it stored in a battery that paid for it: like
+        live, the battery's price for it never depends on a lifetime cost.
+        A battery's charging from a PV system it does not pay is priced at
+        that system's LCOE instead.
+        """
         flows = _flows(record)
-        cost = _cost(flows.to_home, price(record.uid), MISSING_PRICE)
+        delivered = flows.to_home + sum(flows.to_batteries.values())
+        cost = _cost(delivered, price(record.uid), MISSING_PRICE)
         for source, kwh in flows.from_pv.items():
-            cost += _cost(kwh, price(source), MISSING_PRICE)
+            if source not in flows.stored_price:
+                cost += _cost(kwh, price(source), MISSING_PRICE)
         return cost
 
     def levelized_savings() -> float:
@@ -778,15 +878,16 @@ def history_totals(
         """The tariff on what the device delivered into the home.
 
         Built from the savings rather than from the kWh, so an entered or
-        dealt-out savings amount carries through, and avoided cost less
-        operating cost is the savings, as it is for the counted part. A PV
-        system's history has no standby, so its avoided cost *is* its
-        savings; a battery's adds back what its grid charging cost — which
-        an amounts-only history does not know.
+        dealt-out savings amount carries through. The stored-energy transfer
+        is taken back out, as for the counted part, where avoided cost is
+        the tariff on what a device put into the home. A PV system's history
+        has no standby, so that is all for it; a battery's adds back what its
+        grid charging cost — which an amounts-only history does not know.
         """
+        avoided = savings() - _stored_transfer(record)
         if record.kind == BATTERY:
-            return savings() + operating_cost()
-        return savings()
+            return avoided + operating_cost()
+        return avoided
 
     formulas: dict[str, Callable[[], float]] = {
         TOTAL_COST_SAVINGS: savings,

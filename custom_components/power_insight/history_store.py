@@ -67,6 +67,12 @@ _INPUTS = "inputs"
 _HOME = "home"
 _RECORDS = "records"
 _LAST_PRICE = "last_price"
+_FORMAT = "format"
+
+#: The format of the stored records. 2 books the stored-energy transfer
+#: between a battery and the PV systems it charged from; records stored
+#: before it (no ``format``) are re-solved once from their stored inputs.
+RECORD_FORMAT = 2
 
 #: The history fields of each form, as stored in the subentry, and the solver
 #: input each one is. The grid's are the whole home's, named apart from a
@@ -218,8 +224,12 @@ def async_sync_history(
     entered = {v.uid: v.entered for v in views if v.entered}
     last_entered = stored.get(_ENTERED, {})
     updated = dict(stored)
+    # Records from an older format are re-solved once from the same figures,
+    # the removed devices' included: their transfer is booked on both sides
+    # or on neither.
+    outdated = bool(stored.get(_RECORDS)) and stored.get(_FORMAT, 1) < RECORD_FORMAT
 
-    if {u: e for u, e in last_entered.items() if u in live} != entered:
+    if outdated or {u: e for u, e in last_entered.items() if u in live} != entered:
         solution = solve_views(entry, views)
         if solution is not None and solution.problems:
             _LOGGER.warning(
@@ -246,9 +256,10 @@ def async_sync_history(
                 **{
                     uid: record.to_dict()
                     for uid, record in solution.records.items()
-                    if uid in live
+                    if outdated or uid in live
                 },
             }
+            updated[_FORMAT] = RECORD_FORMAT
 
     if updated.get(_RECORDS):
         prices = dict(updated.get(_LAST_PRICE, {}))
